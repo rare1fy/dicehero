@@ -1,0 +1,666 @@
+// === 增强版音效系统 ===
+
+type SoundType = 
+  | 'roll' | 'select' | 'hit' | 'armor' | 'heal' | 'enemy' 
+  | 'victory' | 'defeat' | 'skill' | 'coin' | 'levelup' 
+  | 'critical' | 'poison' | 'burn' | 'shield_break' | 'reroll'
+  | 'map_move' | 'shop_buy' | 'campfire' | 'event' | 'boss_appear'
+  | 'dice_lock' | 'augment_activate' | 'turn_end';
+
+let audioCtx: AudioContext | null = null;
+let bgmOscillators: OscillatorNode[] = [];
+let bgmGains: GainNode[] = [];
+let bgmPlaying = false;
+let masterVolume = 0.5;
+let sfxEnabled = true;
+let bgmEnabled = true;
+
+const getCtx = (): AudioContext => {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return audioCtx;
+};
+
+// 创建一个带有滤波器的振荡器
+const createFilteredOsc = (
+  ctx: AudioContext, 
+  type: OscillatorType, 
+  freq: number, 
+  filterFreq: number,
+  gain: number,
+  dest: AudioNode
+) => {
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  
+  osc.type = type;
+  osc.frequency.value = freq;
+  filter.type = 'lowpass';
+  filter.frequency.value = filterFreq;
+  g.gain.value = gain;
+  
+  osc.connect(filter);
+  filter.connect(g);
+  g.connect(dest);
+  
+  return { osc, gain: g, filter };
+};
+
+export const playSound = (type: SoundType) => {
+  if (!sfxEnabled) return;
+  
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = masterVolume;
+    master.connect(ctx.destination);
+
+    switch (type) {
+      case 'roll': {
+        // 多音层骰子滚动音效
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        const noise = ctx.createOscillator();
+        const ng = ctx.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+        g.gain.setValueAtTime(0.08, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.15);
+        
+        // 添加碰撞感
+        noise.type = 'sawtooth';
+        noise.frequency.setValueAtTime(800, now);
+        noise.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+        ng.gain.setValueAtTime(0.03, now);
+        ng.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        noise.connect(ng); ng.connect(master);
+        noise.start(now); noise.stop(now + 0.08);
+        break;
+      }
+      
+      case 'select': {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523, now); // C5
+        osc.frequency.exponentialRampToValueAtTime(784, now + 0.06); // G5
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.08);
+        break;
+      }
+      
+      case 'dice_lock': {
+        // 骰子锁定（选中）的清脆声
+        [659, 880].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.05, now + i * 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.1);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.1);
+        });
+        break;
+      }
+      
+      case 'hit': {
+        // 多层打击音效
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.25);
+        
+        // 冲击波层
+        const impact = ctx.createOscillator();
+        const ig = ctx.createGain();
+        impact.type = 'square';
+        impact.frequency.setValueAtTime(60, now);
+        impact.frequency.exponentialRampToValueAtTime(20, now + 0.1);
+        ig.gain.setValueAtTime(0.1, now);
+        ig.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        impact.connect(ig); ig.connect(master);
+        impact.start(now); impact.stop(now + 0.15);
+        break;
+      }
+      
+      case 'critical': {
+        // 暴击音效 — 更强烈
+        [80, 120, 200].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = i === 2 ? 'square' : 'sawtooth';
+          o.frequency.setValueAtTime(f, now);
+          o.frequency.exponentialRampToValueAtTime(f * 0.3, now + 0.3);
+          g.gain.setValueAtTime(0.12, now + i * 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.02); o.stop(now + 0.35);
+        });
+        break;
+      }
+      
+      case 'armor': {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+        g.gain.setValueAtTime(0.08, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.2);
+        break;
+      }
+      
+      case 'shield_break': {
+        // 护甲破碎
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.3);
+        break;
+      }
+      
+      case 'heal': {
+        // 温暖的治疗音效
+        [523, 659, 784].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.06, now + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.3);
+        });
+        break;
+      }
+      
+      case 'enemy': {
+        // 敌人攻击 — 强力冲击音效（多层叠加）
+        // 层1: 低频重击
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.3);
+        g.gain.setValueAtTime(0.35, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.35);
+        
+        // 层2: 中频冲击波
+        const osc2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(200, now);
+        osc2.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+        g2.gain.setValueAtTime(0.25, now);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc2.connect(g2); g2.connect(master);
+        osc2.start(now); osc2.stop(now + 0.2);
+        
+        // 层3: 高频碎裂感
+        const osc3 = ctx.createOscillator();
+        const g3 = ctx.createGain();
+        osc3.type = 'sawtooth';
+        osc3.frequency.setValueAtTime(500, now);
+        osc3.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+        g3.gain.setValueAtTime(0.15, now);
+        g3.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc3.connect(g3); g3.connect(master);
+        osc3.start(now); osc3.stop(now + 0.12);
+        break;
+      }
+      
+      case 'poison': {
+        // 毒液滴落感
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.2);
+        break;
+      }
+      
+      case 'burn': {
+        // 火焰噼啪声
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+        g.gain.setValueAtTime(0.08, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.25);
+        break;
+      }
+      
+      case 'skill': {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+        g.gain.setValueAtTime(0.08, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.3);
+        break;
+      }
+      
+      case 'coin': {
+        // 金币叮当声
+        [1047, 1319, 1568].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.04, now + i * 0.06);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.15);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.15);
+        });
+        break;
+      }
+      
+      case 'reroll': {
+        // 重骰音效 — 骰子翻滚
+        for (let i = 0; i < 5; i++) {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'square';
+          o.frequency.value = 150 + Math.random() * 200;
+          g.gain.setValueAtTime(0.04, now + i * 0.03);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.05);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.03); o.stop(now + i * 0.03 + 0.05);
+        }
+        break;
+      }
+      
+      case 'victory': {
+        // 胜利凯旋
+        [523, 659, 784, 1047].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.08, now + i * 0.12);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.5);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.5);
+        });
+        break;
+      }
+      
+      case 'defeat': {
+        // 失败的沉重感
+        [200, 150, 100, 60].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.1, now + i * 0.2);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.6);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.2); o.stop(now + i * 0.2 + 0.6);
+        });
+        break;
+      }
+      
+      case 'levelup': {
+        // 升级的辉煌感
+        [440, 554, 659, 880].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.07, now + i * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.4);
+        });
+        break;
+      }
+      
+      case 'map_move': {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(392, now);
+        osc.frequency.exponentialRampToValueAtTime(523, now + 0.08);
+        g.gain.setValueAtTime(0.04, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.1);
+        break;
+      }
+      
+      case 'shop_buy': {
+        // 购买音效 — 收银机感
+        [880, 1047, 1319].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.05, now + i * 0.07);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.15);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.15);
+        });
+        break;
+      }
+      
+      case 'campfire': {
+        // 篝火噼啪声
+        for (let i = 0; i < 3; i++) {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.value = 100 + Math.random() * 100;
+          g.gain.setValueAtTime(0.03, now + i * 0.1 + Math.random() * 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.15);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.15);
+        }
+        break;
+      }
+      
+      case 'event': {
+        // 神秘事件音效
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(330, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
+        osc.frequency.exponentialRampToValueAtTime(330, now + 0.4);
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.5);
+        break;
+      }
+      
+      case 'boss_appear': {
+        // Boss出场 — 低沉震撼
+        [55, 65, 82, 55].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.12, now + i * 0.3);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.3 + 0.5);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.3); o.stop(now + i * 0.3 + 0.5);
+        });
+        break;
+      }
+      
+      case 'augment_activate': {
+        // 增幅模块激活
+        [659, 784, 988].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.04, now + i * 0.04);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.12);
+          o.connect(g); g.connect(master);
+          o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.12);
+        });
+        break;
+      }
+      
+      case 'turn_end': {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
+        g.gain.setValueAtTime(0.05, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 0.25);
+        break;
+      }
+    }
+  } catch (e) {
+    console.error('Audio error:', e);
+  }
+};
+
+// === 背景音乐系统 ===
+// RPG风格音序器 — 多声部旋律+和弦+节奏
+
+interface BGMConfig {
+  melody: number[];       // 主旋律音符
+  bass: number[];         // 低音进行
+  tempo: number;          // 每拍毫秒
+  melodyType: OscillatorType;
+  bassType: OscillatorType;
+  melodyVol: number;
+  bassVol: number;
+  drumPattern: boolean[]; // 鼓点节拍（true=重拍）
+  drumVol: number;
+}
+
+const BGM_CONFIGS: Record<string, BGMConfig> = {
+  explore: {
+    // 小调民谣风 — Am Em F G 和弦进行上的旋律
+    melody: [440, 523, 494, 440, 392, 440, 523, 587, 523, 494, 440, 392, 349, 392, 440, 494],
+    bass:   [220, 220, 165, 165, 175, 175, 196, 196, 220, 220, 165, 165, 175, 175, 196, 196],
+    tempo: 320,
+    melodyType: 'sine',
+    bassType: 'triangle',
+    melodyVol: 0.018,
+    bassVol: 0.012,
+    drumPattern: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+    drumVol: 0.008,
+  },
+  battle: {
+    // 紧张战斗进行曲 — Dm Bb C Dm 快节奏小调
+    melody: [294, 349, 440, 392, 349, 294, 262, 294, 349, 392, 440, 523, 494, 440, 349, 294],
+    bass:   [147, 147, 117, 117, 131, 131, 147, 147, 147, 147, 117, 117, 131, 131, 147, 147],
+    tempo: 180,
+    melodyType: 'square',
+    bassType: 'sawtooth',
+    melodyVol: 0.015,
+    bassVol: 0.012,
+    drumPattern: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, true],
+    drumVol: 0.02,
+  },
+  boss: {
+    // 威压Boss战 — 低沉厚重，半音阶下行 + 强力鼓点
+    melody: [220, 208, 196, 220, 175, 165, 196, 208, 220, 262, 247, 220, 196, 175, 165, 147],
+    bass:   [110, 110, 98, 98, 87, 87, 98, 98, 110, 110, 98, 98, 87, 87, 73, 73],
+    tempo: 240,
+    melodyType: 'sawtooth',
+    bassType: 'sawtooth',
+    melodyVol: 0.014,
+    bassVol: 0.016,
+    drumPattern: [true, false, false, true, true, false, false, true, true, false, true, false, true, true, false, true],
+    drumVol: 0.025,
+  },
+};
+
+let bgmInterval: ReturnType<typeof setInterval> | null = null;
+let currentBgmType: string = '';
+
+export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
+  if (!bgmEnabled) return;
+  if (currentBgmType === type && bgmPlaying) return;
+  
+  stopBGM();
+  
+  const cfg = BGM_CONFIGS[type];
+  if (!cfg) return;
+  
+  currentBgmType = type;
+  bgmPlaying = true;
+  let noteIndex = 0;
+  
+  bgmInterval = setInterval(() => {
+    if (!bgmPlaying) return;
+    
+    try {
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const idx = noteIndex % cfg.melody.length;
+      const melodyNote = cfg.melody[idx];
+      const bassNote = cfg.bass[idx];
+      const beatDur = cfg.tempo / 1000;
+      
+      // === 主旋律 ===
+      const melOsc = ctx.createOscillator();
+      const melGain = ctx.createGain();
+      const melFilter = ctx.createBiquadFilter();
+      
+      melOsc.type = cfg.melodyType;
+      melOsc.frequency.value = melodyNote;
+      melFilter.type = 'lowpass';
+      melFilter.frequency.value = 1200;
+      melFilter.Q.value = 1;
+      melGain.gain.setValueAtTime(cfg.melodyVol * masterVolume, now);
+      melGain.gain.setValueAtTime(cfg.melodyVol * masterVolume * 0.8, now + beatDur * 0.7);
+      melGain.gain.exponentialRampToValueAtTime(0.001, now + beatDur * 0.95);
+      
+      melOsc.connect(melFilter);
+      melFilter.connect(melGain);
+      melGain.connect(ctx.destination);
+      melOsc.start(now);
+      melOsc.stop(now + beatDur);
+      
+      // === 低音伴奏 === (每2拍换一次)
+      if (idx % 2 === 0) {
+        const bassOsc = ctx.createOscillator();
+        const bassGain = ctx.createGain();
+        const bassFilter = ctx.createBiquadFilter();
+        
+        bassOsc.type = cfg.bassType;
+        bassOsc.frequency.value = bassNote;
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.value = 400;
+        bassGain.gain.setValueAtTime(cfg.bassVol * masterVolume, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + beatDur * 1.8);
+        
+        bassOsc.connect(bassFilter);
+        bassFilter.connect(bassGain);
+        bassGain.connect(ctx.destination);
+        bassOsc.start(now);
+        bassOsc.stop(now + beatDur * 2);
+      }
+      
+      // === 鼓点/打击层 ===
+      if (cfg.drumPattern[idx]) {
+        // 低频鼓点（kick）
+        const kickOsc = ctx.createOscillator();
+        const kickGain = ctx.createGain();
+        kickOsc.type = 'sine';
+        kickOsc.frequency.setValueAtTime(80, now);
+        kickOsc.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+        kickGain.gain.setValueAtTime(cfg.drumVol * masterVolume, now);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        kickOsc.connect(kickGain);
+        kickGain.connect(ctx.destination);
+        kickOsc.start(now);
+        kickOsc.stop(now + 0.12);
+        
+        // 高频噪声层（snare感）
+        const noiseOsc = ctx.createOscillator();
+        const noiseGain = ctx.createGain();
+        noiseOsc.type = 'square';
+        noiseOsc.frequency.setValueAtTime(200 + Math.random() * 100, now);
+        noiseOsc.frequency.exponentialRampToValueAtTime(80, now + 0.04);
+        noiseGain.gain.setValueAtTime(cfg.drumVol * 0.3 * masterVolume, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        noiseOsc.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        noiseOsc.start(now);
+        noiseOsc.stop(now + 0.06);
+      }
+      
+      // === 和弦填充 (每4拍) ===
+      if (idx % 4 === 0) {
+        // 三度音
+        const chordOsc = ctx.createOscillator();
+        const chordGain = ctx.createGain();
+        chordOsc.type = 'sine';
+        chordOsc.frequency.value = melodyNote * 1.2; // 小三度
+        chordGain.gain.setValueAtTime(cfg.melodyVol * 0.3 * masterVolume, now);
+        chordGain.gain.exponentialRampToValueAtTime(0.001, now + beatDur * 2);
+        chordOsc.connect(chordGain);
+        chordGain.connect(ctx.destination);
+        chordOsc.start(now);
+        chordOsc.stop(now + beatDur * 2);
+        
+        // 五度音
+        const chord5Osc = ctx.createOscillator();
+        const chord5Gain = ctx.createGain();
+        chord5Osc.type = 'sine';
+        chord5Osc.frequency.value = melodyNote * 1.5; // 纯五度
+        chord5Gain.gain.setValueAtTime(cfg.melodyVol * 0.2 * masterVolume, now);
+        chord5Gain.gain.exponentialRampToValueAtTime(0.001, now + beatDur * 2);
+        chord5Osc.connect(chord5Gain);
+        chord5Gain.connect(ctx.destination);
+        chord5Osc.start(now);
+        chord5Osc.stop(now + beatDur * 2);
+      }
+      
+      noteIndex++;
+    } catch (e) {
+      console.error('BGM error:', e);
+    }
+  }, cfg.tempo);
+};
+
+export const stopBGM = () => {
+  bgmPlaying = false;
+  currentBgmType = '';
+  if (bgmInterval) {
+    clearInterval(bgmInterval);
+    bgmInterval = null;
+  }
+};
+
+export const setMasterVolume = (vol: number) => {
+  masterVolume = Math.max(0, Math.min(1, vol));
+};
+
+export const setSfxEnabled = (enabled: boolean) => {
+  sfxEnabled = enabled;
+};
+
+export const setBgmEnabled = (enabled: boolean) => {
+  bgmEnabled = enabled;
+  if (!enabled) stopBGM();
+};
+
+export const getMasterVolume = () => masterVolume;
+export const isSfxEnabled = () => sfxEnabled;
+export const isBgmEnabled = () => bgmEnabled;

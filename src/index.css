@@ -1,0 +1,1709 @@
+@import "tailwindcss";
+
+/* ========================================
+   骰境：永夜骰途 — 8-Bit 像素风暗黑地牢主题
+   ======================================== */
+
+/* === 字体加载 — Fusion Pixel 12px 开源像素字体 === */
+@font-face {
+  font-family: 'FusionPixel';
+  src: url('/fonts/fusion-pixel-12px-monospaced-zh_hans.woff2') format('woff2');
+  font-display: block;
+  font-weight: 400;
+  font-style: normal;
+  unicode-range: U+4E00-9FFF, U+3000-303F, U+FF00-FFEF, U+2000-206F, U+3400-4DBF, U+20000-2A6DF;
+}
+@font-face {
+  font-family: 'FusionPixel';
+  src: url('/fonts/fusion-pixel-12px-monospaced-latin.woff2') format('woff2');
+  font-display: block;
+  font-weight: 400;
+  font-style: normal;
+  unicode-range: U+0000-024F, U+0300-036F, U+0400-04FF, U+1E00-1EFF, U+2100-214F;
+}
+
+/* === 像素字体系统 === */
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    background-color: #080b0e;
+    /* 关闭所有抗锯齿，让像素保持锐利 */
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  * {
+    /* 统一使用 FusionPixel 像素字体 */
+    font-family: 'FusionPixel', monospace !important;
+    /* 关闭字体平滑，保持像素锐利 */
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: unset;
+    font-smooth: never;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* === 像素风游戏滚动条 === */
+/* Webkit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dungeon-bg);
+  border-left: 2px solid var(--dungeon-panel-border);
+  border-right: 2px solid var(--dungeon-panel-border);
+}
+
+::-webkit-scrollbar-thumb {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      var(--dungeon-panel-highlight) 0px,
+      var(--dungeon-panel-highlight) 3px,
+      var(--dungeon-panel-border) 3px,
+      var(--dungeon-panel-border) 4px
+    );
+  border: 2px solid var(--dungeon-panel-border);
+  border-radius: 0;
+  min-height: 24px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      var(--pixel-green-dark) 0px,
+      var(--pixel-green-dark) 3px,
+      var(--pixel-green) 3px,
+      var(--pixel-green) 4px
+    );
+  border-color: var(--pixel-green);
+  box-shadow: 0 0 6px rgba(60,200,100,0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--pixel-green);
+  border-color: var(--pixel-green-light);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--dungeon-bg);
+}
+
+/* 横向滚动条轨道 */
+::-webkit-scrollbar-track:horizontal {
+  border-left: none;
+  border-right: none;
+  border-top: 2px solid var(--dungeon-panel-border);
+  border-bottom: 2px solid var(--dungeon-panel-border);
+}
+
+/* 顶部/底部箭头按钮 — 像素三角 */
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+  height: 8px;
+  background: var(--dungeon-panel);
+  border: 2px solid var(--dungeon-panel-border);
+  border-bottom: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath d='M2 0L0 3h4z' fill='%236a6a7e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 4px 3px;
+}
+
+::-webkit-scrollbar-button:single-button:vertical:increment {
+  height: 8px;
+  background: var(--dungeon-panel);
+  border: 2px solid var(--dungeon-panel-border);
+  border-top: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath d='M0 0l2 3 2-3z' fill='%236a6a7e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 4px 3px;
+}
+
+::-webkit-scrollbar-button:single-button:vertical:decrement:hover,
+::-webkit-scrollbar-button:single-button:vertical:increment:hover {
+  background-color: var(--dungeon-panel-highlight);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dungeon-panel-highlight) var(--dungeon-bg);
+}
+
+/* === 像素字体类 === */
+.font-pixel {
+  font-family: 'FusionPixel', monospace !important;
+}
+.font-pixel-en {
+  font-family: 'FusionPixel', monospace !important;
+}
+
+/* === 8-Bit 暗黑地牢配色CSS变量 — 西幻深渊主题 === */
+:root {
+  /* 深青灰 / 黑曜石基底 */
+  --dungeon-bg: #080b0e;
+  --dungeon-bg-light: #0e1317;
+  --dungeon-panel: #141a22;
+  --dungeon-panel-border: #1e2a34;
+  --dungeon-panel-highlight: #2a3a48;
+  --dungeon-text: #b8c4cc;
+  --dungeon-text-dim: #5a6e7e;
+  --dungeon-text-bright: #e0e8f0;
+  
+  /* 强调色 — 熔岩橙 / 流光金 */
+  --pixel-red: #d44a2a;
+  --pixel-red-dark: #8b2210;
+  --pixel-red-light: #f07050;
+  --pixel-blue: #3c6cc8;
+  --pixel-blue-dark: #1a3c8b;
+  --pixel-blue-light: #68a0e8;
+  --pixel-purple: #7a30c0;
+  --pixel-purple-dark: #4a1080;
+  --pixel-purple-light: #a858e8;
+  --pixel-gold: #d4a030;
+  --pixel-gold-dark: #8b6a10;
+  --pixel-gold-light: #f0c850;
+  --pixel-green: #38c060;
+  --pixel-green-dark: #188838;
+  --pixel-green-light: #60e880;
+  --pixel-orange: #e07830;
+  --pixel-orange-dark: #a05010;
+  --pixel-orange-light: #f0a050;
+  
+  /* 辅助色 — 荧光青 / 深渊紫 (符文、魔法) */
+  --pixel-cyan: #30d8d0;
+  --pixel-cyan-dark: #108880;
+  --pixel-cyan-light: #60f0e8;
+  --pixel-abyss: #6020a0;
+  --pixel-abyss-light: #9050d0;
+  
+  /* 像素边框样式 */
+  --pixel-border-width: 3px;
+  --pixel-border-radius: 2px;
+}
+
+/* === 像素边框系统 === */
+.pixel-border {
+  border: var(--pixel-border-width) solid var(--dungeon-panel-border);
+  border-radius: var(--pixel-border-radius);
+  /* 像素化的3D凸起效果 */
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.05),
+    0 0 0 1px rgba(0,0,0,0.8);
+}
+
+.pixel-border-sunken {
+  border: var(--pixel-border-width) solid var(--dungeon-panel-border);
+  border-radius: var(--pixel-border-radius);
+  /* 像素化的3D凹陷效果 */
+  box-shadow: 
+    inset 2px 2px 0 rgba(0,0,0,0.4),
+    inset -2px -2px 0 rgba(255,255,255,0.05),
+    0 0 0 1px rgba(0,0,0,0.8);
+}
+
+.pixel-border-glow {
+  border: var(--pixel-border-width) solid var(--pixel-green);
+  border-radius: var(--pixel-border-radius);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    inset 2px 2px 0 rgba(255,255,255,0.05),
+    0 0 8px var(--pixel-green),
+    0 0 0 1px rgba(0,0,0,0.8);
+}
+
+/* === 像素按钮 === */
+.pixel-btn {
+  font-family: 'FusionPixel', monospace !important;
+  border: 3px solid;
+  border-radius: 2px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.1s step-end;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pixel-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.2);
+}
+
+.pixel-btn:active {
+  transform: translateY(2px);
+  filter: brightness(0.8);
+}
+
+.pixel-btn-primary {
+  background: linear-gradient(180deg, #1ca840 0%, #0e6828 60%, #084a18 100%);
+  border-color: var(--pixel-green);
+  color: var(--pixel-green-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    0 4px 0 #042a0c,
+    0 0 10px rgba(56,192,96,0.25);
+}
+
+.pixel-btn-danger {
+  background: linear-gradient(180deg, #c03828 0%, #882010 60%, #601008 100%);
+  border-color: var(--pixel-red);
+  color: var(--pixel-red-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    0 4px 0 #2a0808,
+    0 0 10px rgba(212,74,42,0.25);
+}
+
+.pixel-btn-gold {
+  background: linear-gradient(180deg, #c09028 0%, #886010 60%, #604008 100%);
+  border-color: var(--pixel-gold);
+  color: var(--pixel-gold-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    0 4px 0 #2a2008,
+    0 0 10px rgba(212,160,48,0.25);
+}
+
+.pixel-btn-purple {
+  background: linear-gradient(180deg, #7028a8 0%, #481070 60%, #300850 100%);
+  border-color: var(--pixel-purple);
+  color: var(--pixel-purple-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    0 4px 0 #180830,
+    0 0 10px rgba(122,48,192,0.25);
+}
+
+.pixel-btn-ghost {
+  background-color: rgba(26,26,46,0.6);
+  border-color: var(--dungeon-panel-border);
+  color: var(--dungeon-text-dim);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.2),
+    inset 2px 2px 0 rgba(255,255,255,0.03);
+}
+
+.pixel-btn-ghost:hover {
+  color: var(--dungeon-text);
+  border-color: var(--dungeon-panel-highlight);
+}
+
+/* === 像素面板 — 深渊石板质感 === */
+.pixel-panel {
+  background: linear-gradient(180deg, rgba(20,26,34,0.98) 0%, rgba(14,19,23,0.99) 100%);
+  border: 3px solid var(--dungeon-panel-border);
+  border-radius: 2px;
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.04),
+    0 0 0 1px rgba(0,0,0,0.9),
+    0 4px 14px rgba(0,0,0,0.6);
+}
+
+.pixel-panel-dark {
+  background: linear-gradient(180deg, rgba(14,19,23,0.98) 0%, rgba(8,11,14,0.99) 100%);
+  border: 3px solid rgba(30,42,52,0.6);
+  border-radius: 2px;
+  box-shadow: 
+    inset 2px 2px 0 rgba(0,0,0,0.4),
+    inset -2px -2px 0 rgba(255,255,255,0.02),
+    0 0 0 1px rgba(0,0,0,0.9);
+}
+
+/* === 像素HP条 === */
+.pixel-hp-bar {
+  border: 2px solid #3a3a4e;
+  border-radius: 1px;
+  background-color: #0a0a14;
+  box-shadow: 
+    inset 2px 2px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(0,0,0,0.8);
+  overflow: hidden;
+  position: relative;
+}
+
+.pixel-hp-fill-healthy {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pixel-green) 0px,
+    var(--pixel-green) 4px,
+    var(--pixel-green-dark) 4px,
+    var(--pixel-green-dark) 8px
+  );
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+}
+
+.pixel-hp-fill-warning {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pixel-gold) 0px,
+    var(--pixel-gold) 4px,
+    var(--pixel-gold-dark) 4px,
+    var(--pixel-gold-dark) 8px
+  );
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+}
+
+.pixel-hp-fill-critical {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pixel-red) 0px,
+    var(--pixel-red) 4px,
+    var(--pixel-red-dark) 4px,
+    var(--pixel-red-dark) 8px
+  );
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+  animation: pixel-critical-pulse 0.8s step-end infinite;
+}
+
+.pixel-hp-fill-armor {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pixel-blue) 0px,
+    var(--pixel-blue) 4px,
+    var(--pixel-blue-dark) 4px,
+    var(--pixel-blue-dark) 8px
+  );
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+}
+
+/* === 像素骰子 === */
+.pixel-dice {
+  width: 52px;
+  height: 52px;
+  border: 3px solid;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s step-end, box-shadow 0.2s ease;
+  position: relative;
+  image-rendering: pixelated;
+}
+
+.pixel-dice:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.15);
+}
+
+.pixel-dice-red {
+  background-color: var(--pixel-red-dark);
+  border-color: var(--pixel-red);
+  color: var(--pixel-red-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.1),
+    0 3px 0 #4a0808;
+}
+
+.pixel-dice-blue {
+  background-color: var(--pixel-blue-dark);
+  border-color: var(--pixel-blue);
+  color: var(--pixel-blue-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.1),
+    0 3px 0 #081a4a;
+}
+
+.pixel-dice-purple {
+  background-color: var(--pixel-purple-dark);
+  border-color: var(--pixel-purple);
+  color: var(--pixel-purple-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.1),
+    0 3px 0 #2a084a;
+}
+
+.pixel-dice-gold {
+  background-color: var(--pixel-gold-dark);
+  border-color: var(--pixel-gold);
+  color: var(--pixel-gold-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.1),
+    0 3px 0 #4a3808;
+}
+
+.pixel-dice-selected {
+  transform: translateY(-16px) !important;
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    0 8px 0 rgba(0,0,0,0.5),
+    0 0 16px currentColor,
+    0 0 30px currentColor !important;
+  filter: brightness(1.2) saturate(1.2);
+}
+
+.pixel-dice-spent {
+  opacity: 0.2;
+  filter: grayscale(1);
+  transform: scale(0.85);
+  cursor: default;
+}
+
+.pixel-dice-invalid {
+  opacity: 0.25;
+  filter: grayscale(0.8);
+  transform: scale(0.9);
+}
+
+/* === 像素骰子点数 (用方块表示) === */
+.dice-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  image-rendering: pixelated;
+}
+
+/* === 粒子浮动动画 (像素化) === */
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-100px) translateX(15px);
+    opacity: 0;
+  }
+}
+
+.animate-particle-float {
+  animation: particle-float 3s steps(12) infinite;
+}
+
+/* === 像素化战斗闪光 === */
+@keyframes pixel-battle-flash {
+  0% { opacity: 0; }
+  50% { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
+.animate-battle-flash {
+  animation: pixel-battle-flash 0.15s steps(3);
+}
+
+/* === 像素弹跳 === */
+@keyframes pixel-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-dice-bounce {
+  animation: pixel-bounce 0.4s steps(4);
+}
+
+/* === 像素脉冲 === */
+@keyframes pixel-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 4px currentColor;
+    opacity: 0.8;
+  }
+  50% { 
+    box-shadow: 0 0 12px currentColor, 0 0 20px currentColor;
+    opacity: 1;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pixel-pulse 2s steps(4) infinite;
+}
+
+/* === 像素伤害弹出 === */
+@keyframes pixel-damage-pop {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.5) translateY(-16px);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1.2) translateY(-48px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(-64px);
+    opacity: 0;
+  }
+}
+
+.animate-damage-pop {
+  animation: pixel-damage-pop 1.2s steps(8) forwards;
+}
+
+/* === 像素屏幕震动 === */
+@keyframes pixel-screen-shake {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  10% { transform: translateX(-6px) translateY(3px); }
+  20% { transform: translateX(6px) translateY(-4px); }
+  30% { transform: translateX(-5px) translateY(4px); }
+  40% { transform: translateX(5px) translateY(-3px); }
+  50% { transform: translateX(-4px) translateY(2px); }
+  60% { transform: translateX(4px) translateY(-2px); }
+  70% { transform: translateX(-3px) translateY(1px); }
+  80% { transform: translateX(2px) translateY(-1px); }
+}
+
+.animate-screen-shake {
+  animation: pixel-screen-shake 0.5s steps(8);
+}
+
+/* === 像素治愈闪光 === */
+@keyframes pixel-heal-glow {
+  0% { box-shadow: inset 0 0 0 rgba(60,200,100,0); }
+  50% { box-shadow: inset 0 0 16px rgba(60,200,100,0.3); }
+  100% { box-shadow: inset 0 0 0 rgba(60,200,100,0); }
+}
+
+.animate-heal-glow {
+  animation: pixel-heal-glow 0.8s steps(4);
+}
+
+/* === 像素毒雾脉冲 === */
+@keyframes pixel-poison-pulse {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(139,60,200,0.15); }
+}
+
+.animate-poison-pulse {
+  animation: pixel-poison-pulse 1s steps(2) infinite;
+}
+
+/* === 像素灼烧边缘 === */
+@keyframes pixel-burn-edge {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(200,64,60,0); }
+  50% { box-shadow: inset 0 -12px 20px rgba(200,64,60,0.2); }
+}
+
+.animate-burn-edge {
+  animation: pixel-burn-edge 1s steps(2) infinite;
+}
+
+/* === 像素慢转 === */
+@keyframes pixel-spin-slow {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: pixel-spin-slow 2s steps(4) infinite;
+}
+
+/* === Boss出场动画 (像素化) === */
+@keyframes pixel-boss-entrance {
+  0% { transform: scale(0); opacity: 0; }
+  33% { transform: scale(1.3); opacity: 1; }
+  66% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-boss-entrance {
+  animation: pixel-boss-entrance 0.6s steps(6);
+}
+
+/* === 增幅激活闪光 (像素化) === */
+@keyframes pixel-augment-flash {
+  0% { background-color: rgba(60,200,100,0); }
+  50% { background-color: rgba(60,200,100,0.3); }
+  100% { background-color: rgba(60,200,100,0); }
+}
+
+.animate-augment-flash {
+  animation: pixel-augment-flash 0.5s steps(3);
+}
+
+/* === 像素星光 === */
+@keyframes pixel-twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+.animate-twinkle {
+  animation: pixel-twinkle 2s steps(2) infinite;
+}
+
+/* === 呼吸灯 (像素化) === */
+@keyframes pixel-breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+.animate-breathe {
+  animation: pixel-breathe 3s steps(4) infinite;
+}
+
+/* === 像素HP危急脉冲 === */
+@keyframes pixel-critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* === 渐变背景动画 (像素化) === */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s steps(16) infinite;
+}
+
+/* === 扫描线效果 (CRT感) === */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  z-index: 999;
+}
+
+/* === Range input 样式 (像素化) === */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 0;
+  background: var(--pixel-green);
+  cursor: pointer;
+  border: 2px solid var(--pixel-green-light);
+  box-shadow: 0 0 4px rgba(60,200,100,0.4);
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 0;
+  background: var(--dungeon-bg);
+  border: 2px solid var(--dungeon-panel-border);
+}
+
+/* === 旧版骰子发光（保持API兼容） === */
+.dice-glow-red {
+  box-shadow: 0 0 10px var(--pixel-red), 0 0 20px rgba(200,64,60,0.3);
+}
+
+.dice-glow-blue {
+  box-shadow: 0 0 10px var(--pixel-blue), 0 0 20px rgba(60,108,200,0.3);
+}
+
+.dice-glow-purple {
+  box-shadow: 0 0 10px var(--pixel-purple), 0 0 20px rgba(139,60,200,0.3);
+}
+
+.dice-glow-gold {
+  box-shadow: 0 0 10px var(--pixel-gold), 0 0 20px rgba(200,168,60,0.3);
+}
+
+/* === HP条渐变（兼容旧API） === */
+.hp-bar-gradient {
+  background: repeating-linear-gradient(90deg, var(--pixel-red) 0px, var(--pixel-red) 4px, var(--pixel-red-dark) 4px, var(--pixel-red-dark) 8px);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+  animation: pixel-critical-pulse 0.8s step-end infinite;
+}
+.hp-bar-healthy {
+  background: repeating-linear-gradient(90deg, var(--pixel-green) 0px, var(--pixel-green) 4px, var(--pixel-green-dark) 4px, var(--pixel-green-dark) 8px);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+}
+.hp-bar-warning {
+  background: repeating-linear-gradient(90deg, var(--pixel-gold) 0px, var(--pixel-gold) 4px, var(--pixel-gold-dark) 4px, var(--pixel-gold-dark) 8px);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+}
+.hp-bar-critical {
+  background: repeating-linear-gradient(90deg, var(--pixel-red) 0px, var(--pixel-red) 4px, var(--pixel-red-dark) 4px, var(--pixel-red-dark) 8px);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+  animation: pixel-critical-pulse 0.8s step-end infinite;
+}
+
+/* === 像素化地图网格背景 === */
+.pixel-grid-bg {
+  background-image: 
+    linear-gradient(rgba(30,42,52,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,42,52,0.3) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* === 像素化暗纹背景 — 深渊主题 === */
+.dungeon-bg {
+  background-color: var(--dungeon-bg);
+  background-image: 
+    radial-gradient(ellipse at 20% 50%, rgba(122,48,192,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(224,120,48,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(48,216,208,0.02) 0%, transparent 40%);
+}
+
+/* === 像素闪烁文字 === */
+@keyframes pixel-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.pixel-blink {
+  animation: pixel-blink 1s steps(1) infinite;
+}
+
+/* === 像素化下拉阴影文字 === */
+.pixel-text-shadow {
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+}
+
+.pixel-text-shadow-colored {
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.6), 0 0 8px currentColor;
+}
+
+/* === 像素地图路径线 === */
+.pixel-path-line {
+  stroke-dasharray: 4 4;
+  stroke-width: 2;
+}
+
+/* === 像素化敌人呼吸动画 === */
+@keyframes pixel-enemy-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.animate-enemy-idle {
+  animation: pixel-enemy-idle 1.5s steps(4) infinite;
+}
+
+/* === 像素化框选指示器 === */
+@keyframes pixel-select-indicator {
+  0%, 100% { border-color: rgba(60,200,100,0.8); }
+  50% { border-color: rgba(60,200,100,0.3); }
+}
+
+.pixel-select-glow {
+  animation: pixel-select-indicator 1s steps(2) infinite;
+}
+
+/* ====================================
+   沉浸式第一人称战斗界面样式 v2.0
+   ==================================== */
+
+/* === 地牢环境背景 — 石砖地牢 + 泥土质感 === */
+.battle-dungeon-env {
+  background: 
+    /* 顶部拱顶暗角 */
+    radial-gradient(ellipse at 50% -10%, rgba(20,16,12,0.6) 0%, transparent 50%),
+    /* 左右石墙暗角 */
+    radial-gradient(ellipse at 0% 50%, rgba(12,10,8,0.85) 0%, transparent 35%),
+    radial-gradient(ellipse at 100% 50%, rgba(12,10,8,0.85) 0%, transparent 35%),
+    /* 底部地面渐暗 */
+    linear-gradient(to top, rgba(10,8,6,0.95) 0%, rgba(10,8,6,0.4) 30%, transparent 50%),
+    /* 石砖墙壁纹理 — 大块石砖 */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 26px,
+      rgba(60,50,38,0.25) 26px,
+      rgba(40,32,22,0.35) 28px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 40px,
+      rgba(50,42,30,0.18) 40px,
+      rgba(35,28,18,0.28) 42px,
+      transparent 42px
+    ),
+    /* 错位半砖纹理（让石墙更真实） */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 20px,
+      rgba(55,45,32,0.1) 20px,
+      rgba(55,45,32,0.1) 22px,
+      transparent 22px
+    ),
+    /* 石墙表面微噪点 — 模拟粗糙质感 */
+    radial-gradient(circle at 15% 25%, rgba(80,65,45,0.06) 0%, transparent 8px),
+    radial-gradient(circle at 45% 15%, rgba(70,58,40,0.05) 0%, transparent 6px),
+    radial-gradient(circle at 75% 35%, rgba(85,70,50,0.04) 0%, transparent 10px),
+    radial-gradient(circle at 30% 45%, rgba(65,52,35,0.05) 0%, transparent 7px),
+    radial-gradient(circle at 85% 20%, rgba(75,62,42,0.06) 0%, transparent 9px),
+    /* 苔藓/潮湿痕迹 */
+    radial-gradient(ellipse at 10% 70%, rgba(40,65,30,0.04) 0%, transparent 30px),
+    radial-gradient(ellipse at 90% 60%, rgba(35,55,28,0.03) 0%, transparent 25px),
+    /* 火把暖光氛围 */
+    radial-gradient(ellipse at 5% 20%, rgba(180,120,50,0.04) 0%, transparent 20%),
+    radial-gradient(ellipse at 95% 20%, rgba(180,120,50,0.04) 0%, transparent 20%),
+    /* 中央微弱光照 */
+    radial-gradient(ellipse at 50% 35%, rgba(100,80,50,0.03) 0%, transparent 40%);
+  background-color: #0c0a08;
+}
+
+/* === 透视地板 — 石板+泥土道路 === */
+.battle-floor-perspective {
+  position: absolute;
+  bottom: 0;
+  left: -20%;
+  right: -20%;
+  height: 55%;
+  background:
+    /* 石板地砖 — 暖色调灰棕 */
+    repeating-linear-gradient(
+      90deg,
+      rgba(70,58,42,0.4) 0px,
+      rgba(70,58,42,0.4) 2px,
+      transparent 2px,
+      transparent 44px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(65,52,38,0.35) 0px,
+      rgba(65,52,38,0.35) 2px,
+      transparent 2px,
+      transparent 28px
+    ),
+    /* 泥土底色渐变 */
+    linear-gradient(to top, 
+      rgba(28,22,14,0.98) 0%, 
+      rgba(22,18,12,0.7) 40%, 
+      rgba(18,14,10,0.3) 70%, 
+      transparent 100%
+    ),
+    /* 石板间的泥土填缝 */
+    repeating-linear-gradient(
+      90deg,
+      rgba(50,38,24,0.15) 0px,
+      transparent 3px,
+      transparent 42px,
+      rgba(50,38,24,0.15) 44px
+    ),
+    /* 散落的碎石纹理 */
+    radial-gradient(circle at 20% 60%, rgba(80,65,45,0.12) 0%, transparent 4px),
+    radial-gradient(circle at 55% 40%, rgba(75,60,40,0.10) 0%, transparent 3px),
+    radial-gradient(circle at 80% 70%, rgba(85,68,48,0.08) 0%, transparent 5px),
+    radial-gradient(circle at 35% 80%, rgba(70,55,38,0.10) 0%, transparent 4px);
+  transform: perspective(300px) rotateX(50deg);
+  transform-origin: bottom center;
+  /* 地面泥土暖棕色调 */
+  background-color: rgba(24,18,12,0.5);
+}
+
+/* === 敌人舞台光效 — 火把照明 === */
+.enemy-stage-glow {
+  background: 
+    radial-gradient(
+      ellipse at 50% 45%,
+      rgba(180,120,50,0.05) 0%,
+      rgba(140,90,40,0.03) 25%,
+      transparent 55%
+    ),
+    /* 敌人脚下阴影光环 */
+    radial-gradient(
+      ellipse at 50% 75%,
+      rgba(0,0,0,0.55) 0%,
+      transparent 30%
+    );
+}
+
+/* === 敌人头顶信息栏 === */
+.enemy-overhead-info {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  z-index: 20;
+}
+
+/* === 敌人名牌 — 深渊石板风格 === */
+.enemy-nameplate {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(8,11,14,0.88) 15%,
+    rgba(8,11,14,0.92) 50%,
+    rgba(8,11,14,0.88) 85%,
+    transparent 100%
+  );
+  border-top: 2px solid var(--dungeon-panel-border);
+  border-bottom: 2px solid var(--dungeon-panel-border);
+  padding: 2px 16px;
+}
+
+/* === 敌人 idle 呼吸动画 === */
+@keyframes enemy-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-3px) scale(1.005); }
+  50% { transform: translateY(-5px) scale(1.012); }
+  75% { transform: translateY(-3px) scale(1.005); }
+}
+
+.animate-enemy-breathe {
+  animation: enemy-breathe 2.5s steps(8) infinite;
+}
+
+/* === 敌人受击闪白 === */
+@keyframes enemy-hit-flash {
+  0% { filter: brightness(1); }
+  25% { filter: brightness(3); }
+  50% { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
+}
+
+.animate-enemy-hit {
+  animation: enemy-hit-flash 0.3s steps(4);
+}
+
+/* === 敌人攻击前摇晃 === */
+@keyframes enemy-attack-windup {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(-6px) scale(1.05); }
+  60% { transform: translateX(4px) scale(1.08); }
+  100% { transform: translateY(30px) scale(1.15); }
+}
+
+/* === 环境雾气飘动 === */
+@keyframes env-fog-drift {
+  0% { transform: translateX(-10%) translateY(0); opacity: 0.03; }
+  25% { opacity: 0.06; }
+  50% { transform: translateX(10%) translateY(-5px); opacity: 0.04; }
+  75% { opacity: 0.06; }
+  100% { transform: translateX(-10%) translateY(0); opacity: 0.03; }
+}
+
+.animate-fog-drift {
+  animation: env-fog-drift 12s steps(24) infinite;
+}
+
+/* === 火把/光源闪烁 === */
+@keyframes torch-flicker {
+  0%, 100% { opacity: 0.4; filter: brightness(1); }
+  25% { opacity: 0.6; filter: brightness(1.1); }
+  50% { opacity: 0.3; filter: brightness(0.9); }
+  75% { opacity: 0.55; filter: brightness(1.05); }
+}
+
+.animate-torch-flicker {
+  animation: torch-flicker 2s steps(4) infinite;
+}
+
+/* === 第一人称双手系统 === */
+.first-person-hands {
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  height: 180px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* 左手 — 持骰子 */
+.hand-left {
+  position: absolute;
+  left: -20px;
+  bottom: -20px;
+  transform: rotate(15deg) scale(1);
+  transform-origin: bottom left;
+  z-index: 5;
+  transition: transform 0.15s ease;
+}
+
+/* 左手空闲时的轻微摇摆 */
+@keyframes hand-idle-left {
+  0%, 100% { transform: rotate(15deg) translateY(0); }
+  50% { transform: rotate(17deg) translateY(-3px); }
+}
+
+.hand-left:not(.hand-left-rolling):not(.hand-left-throw) {
+  animation: hand-idle-left 3s ease-in-out infinite;
+}
+
+@keyframes hand-roll-dice {
+  0% { transform: rotate(15deg) translateY(0) scale(1); }
+  10% { transform: rotate(30deg) translateY(-35px) scale(1.1); }
+  25% { transform: rotate(-5deg) translateY(-50px) scale(1.15); }
+  40% { transform: rotate(35deg) translateY(-30px) scale(1.1); }
+  55% { transform: rotate(5deg) translateY(-45px) scale(1.12); }
+  70% { transform: rotate(25deg) translateY(-20px) scale(1.05); }
+  85% { transform: rotate(10deg) translateY(-10px) scale(1); }
+  100% { transform: rotate(15deg) translateY(0) scale(1); }
+}
+
+.hand-left-rolling {
+  animation: hand-roll-dice 0.5s steps(8) infinite;
+}
+
+/* 左手扔骰子出牌动作 */
+@keyframes hand-throw-dice {
+  0% { transform: rotate(15deg) translateY(0) scale(1); }
+  20% { transform: rotate(40deg) translateY(-40px) translateX(30px) scale(1.2); }
+  50% { transform: rotate(-10deg) translateY(-60px) translateX(60px) scale(1.3); }
+  80% { transform: rotate(20deg) translateY(-20px) translateX(20px) scale(1.05); }
+  100% { transform: rotate(15deg) translateY(0) scale(1); }
+}
+
+.hand-left-throw {
+  animation: hand-throw-dice 0.5s steps(8) ease-out;
+}
+
+/* 右手 — 持剑 */
+.hand-right {
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  transform: rotate(-15deg) scale(1);
+  transform-origin: bottom right;
+  z-index: 5;
+  transition: transform 0.15s ease;
+}
+
+/* 右手空闲时的轻微摇摆 */
+@keyframes hand-idle-right {
+  0%, 100% { transform: rotate(-15deg) translateY(0); }
+  50% { transform: rotate(-13deg) translateY(-3px); }
+}
+
+.hand-right:not(.hand-right-attacking) {
+  animation: hand-idle-right 3s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+/* 右手攻击挥砍 — 大幅度弧线斩击（流畅版） */
+@keyframes hand-sword-slash {
+  0% { 
+    transform: rotate(-15deg) translateY(0) translateX(0) scale(1); 
+  }
+  15% { 
+    transform: rotate(-55deg) translateY(-30px) translateX(15px) scale(1.15); 
+  }
+  30% { 
+    transform: rotate(50deg) translateY(-90px) translateX(-110px) scale(1.45); 
+    filter: brightness(1.6);
+  }
+  42% { 
+    transform: rotate(55deg) translateY(-100px) translateX(-125px) scale(1.5); 
+    filter: brightness(1.8);
+  }
+  55% { 
+    transform: rotate(35deg) translateY(-70px) translateX(-80px) scale(1.3); 
+    filter: brightness(1.3);
+  }
+  75% { 
+    transform: rotate(5deg) translateY(-25px) translateX(-20px) scale(1.08); 
+  }
+  100% { 
+    transform: rotate(-15deg) translateY(0) translateX(0) scale(1); 
+  }
+}
+
+.hand-right-attacking {
+  animation: hand-sword-slash 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* === 玩家HUD面板 — 黑曜石底部 === */
+.player-hud-panel {
+  background: linear-gradient(
+    to bottom,
+    rgba(12,16,22,0.97) 0%,
+    rgba(8,11,14,0.99) 100%
+  );
+  border-top: 3px solid var(--dungeon-panel-border);
+  box-shadow: 
+    inset 0 3px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(42,58,72,0.2),
+    0 -6px 20px rgba(0,0,0,0.7);
+}
+
+/* === 战斗动作按钮 — 更大更醒目 === */
+.battle-action-btn {
+  border: 3px solid;
+  border-radius: 2px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+}
+
+.battle-action-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.08),
+    transparent
+  );
+  animation: btn-shine 3s steps(12) infinite;
+}
+
+@keyframes btn-shine {
+  0% { left: -100%; }
+  30% { left: 150%; }
+  100% { left: 150%; }
+}
+
+/* === 暗角叠加层 === */
+.battle-vignette {
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    transparent 35%,
+    rgba(10,10,15,0.45) 75%,
+    rgba(10,10,15,0.75) 100%
+  );
+  pointer-events: none;
+}
+
+/* === 意图指示器 — 简洁图标+光效风格 === */
+.intent-indicator {
+  border-radius: 2px;
+}
+
+.intent-indicator-attack {
+  color: var(--pixel-red-light);
+  text-shadow: 0 0 8px rgba(200,64,60,0.6);
+}
+
+.intent-indicator-defend {
+  color: var(--pixel-blue-light);
+  text-shadow: 0 0 8px rgba(60,108,200,0.6);
+}
+
+.intent-indicator-skill {
+  color: var(--pixel-purple-light);
+  text-shadow: 0 0 8px rgba(139,60,200,0.6);
+}
+
+/* 意图脉冲动画 */
+@keyframes intent-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.12); filter: brightness(1.3); }
+}
+.intent-pulse {
+  animation: intent-pulse 1.5s steps(4) infinite;
+}
+
+/* === 环境像素火把 === */
+@keyframes torch-pixel-dance {
+  0%, 100% { box-shadow: 0 0 6px 2px rgba(200,124,60,0.3), 0 -4px 8px rgba(232,208,104,0.15); }
+  25% { box-shadow: 0 0 8px 3px rgba(200,124,60,0.4), 0 -6px 10px rgba(232,208,104,0.2); }
+  50% { box-shadow: 0 0 5px 2px rgba(200,64,60,0.3), 0 -3px 6px rgba(200,124,60,0.15); }
+  75% { box-shadow: 0 0 7px 3px rgba(200,124,60,0.35), 0 -5px 9px rgba(232,208,104,0.18); }
+}
+
+.torch-glow-left, .torch-glow-right {
+  animation: torch-pixel-dance 2s steps(4) infinite;
+}
+
+.torch-glow-right {
+  animation-delay: 0.5s;
+}
+
+/* === 骰子增强展示 === */
+.dice-showcase {
+  position: relative;
+}
+
+.dice-showcase-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 4px;
+  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* 骰子选中后的华丽光效 — 快速响应 */
+@keyframes dice-selected-glow {
+  0%, 100% { 
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 -8px 0 rgba(0,0,0,0.5);
+    filter: brightness(1.2) saturate(1.3);
+    transform: translateY(-14px) scale(1.1);
+  }
+  50% { 
+    box-shadow: 0 0 20px currentColor, 0 0 35px currentColor, 0 0 50px currentColor, 0 -8px 0 rgba(0,0,0,0.5);
+    filter: brightness(1.5) saturate(1.5);
+    transform: translateY(-16px) scale(1.12);
+  }
+}
+
+.dice-selected-enhanced {
+  animation: dice-selected-glow 1s steps(4) infinite;
+  z-index: 10;
+}
+
+/* 骰子取消选中 — 即时回落，无拖沓感 */
+.dice-deselect-snap {
+  transition: transform 0.08s steps(2), box-shadow 0.08s steps(2), filter 0.08s steps(2) !important;
+}
+
+/* === 出牌预览增强 === */
+@keyframes outcome-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 8px rgba(60,200,100,0.4), 0 0 16px rgba(60,200,100,0.15), inset 0 0 8px rgba(60,200,100,0.1);
+    transform: scale(1);
+    border-color: var(--pixel-green);
+  }
+  50% { 
+    box-shadow: 0 0 16px rgba(60,200,100,0.6), 0 0 32px rgba(60,200,100,0.3), 0 0 48px rgba(60,200,100,0.15), inset 0 0 16px rgba(60,200,100,0.15);
+    transform: scale(1.03);
+    border-color: var(--pixel-green-light);
+  }
+}
+
+.outcome-preview-enhanced {
+  animation: outcome-pulse 1.5s steps(4) infinite;
+  background: linear-gradient(135deg, rgba(26,139,52,0.25) 0%, rgba(26,26,46,0.95) 100%);
+  border: 3px solid var(--pixel-green);
+  border-radius: 3px;
+  padding: 6px 12px;
+  backdrop-filter: blur(4px);
+}
+
+/* === 斩击特效 === */
+@keyframes slash-effect {
+  0% { 
+    clip-path: polygon(45% 0%, 50% 0%, 55% 100%, 45% 100%);
+    opacity: 1;
+    filter: brightness(2);
+  }
+  20% {
+    clip-path: polygon(15% 0%, 50% 0%, 85% 100%, 45% 100%);
+    opacity: 1;
+    filter: brightness(2.5);
+  }
+  50% {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    opacity: 0.8;
+    filter: brightness(2);
+  }
+  100% { 
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    opacity: 0;
+    filter: brightness(1);
+  }
+}
+
+.slash-effect {
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.95) 0%,
+    rgba(255,220,200,0.7) 20%,
+    rgba(200,64,60,0.5) 50%,
+    transparent 80%
+  );
+  animation: slash-effect 0.35s steps(8) forwards;
+}
+
+/* === 敌人脚下阴影 === */
+.enemy-ground-shadow {
+  width: 120%;
+  height: 20px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 70%);
+  border-radius: 50%;
+  margin: 0 auto;
+  margin-top: -4px;
+  margin-left: -10%;
+  filter: blur(2px);
+}
+
+/* === 战斗区牌型预览面板 === */
+.battle-hand-preview {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+@keyframes hand-preview-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(60,200,100,0.3), 0 0 16px rgba(60,200,100,0.1);
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(60,200,100,0.5), 0 0 30px rgba(60,200,100,0.2);
+    transform: translateX(-50%) scale(1.03);
+  }
+}
+
+.battle-hand-preview-active {
+  animation: hand-preview-pulse 2s steps(4) infinite;
+}
+
+/* === 技能触发飘字 === */
+@keyframes skill-trigger-float {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1.2);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-40px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-80px) scale(0.9);
+  }
+}
+
+.skill-trigger-text {
+  animation: skill-trigger-float 1.5s steps(12) forwards;
+  position: absolute;
+  pointer-events: none;
+  z-index: 55;
+}
+
+/* ====================================
+   像素渐变系统 — 给像素美术增加层次感
+   ==================================== */
+
+/* 像素抖动渐变（Dithering）— 给面板和背景增加像素质感 */
+.pixel-dither-overlay {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVQIW2NkYPj/n4EBzAAAGiAD/Rl5MfwAAAAASUVORK5CYII=");
+  background-size: 2px 2px;
+  image-rendering: pixelated;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+/* 像素渐变边框 — 用于骰子和面板 */
+.pixel-gradient-border {
+  position: relative;
+}
+.pixel-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.3) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 像素渐变发光 — 给重要元素增加光晕 */
+.pixel-gradient-glow-red {
+  background: linear-gradient(180deg, rgba(200,64,60,0.15) 0%, rgba(139,26,20,0.3) 100%);
+}
+.pixel-gradient-glow-blue {
+  background: linear-gradient(180deg, rgba(60,108,200,0.15) 0%, rgba(26,60,139,0.3) 100%);
+}
+.pixel-gradient-glow-purple {
+  background: linear-gradient(180deg, rgba(139,60,200,0.15) 0%, rgba(90,26,139,0.3) 100%);
+}
+.pixel-gradient-glow-gold {
+  background: linear-gradient(180deg, rgba(200,168,60,0.15) 0%, rgba(139,116,20,0.3) 100%);
+}
+
+/* 像素骰子渐变底色 — 深渊主题 */
+.pixel-dice-red {
+  background: linear-gradient(180deg, #b03028 0%, #6b1510 100%) !important;
+  border-color: var(--pixel-red);
+  color: var(--pixel-red-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,200,200,0.12),
+    0 3px 0 #4a0808;
+}
+
+.pixel-dice-blue {
+  background: linear-gradient(180deg, #2e5aaa 0%, #152e70 100%) !important;
+  border-color: var(--pixel-blue);
+  color: var(--pixel-blue-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(200,200,255,0.12),
+    0 3px 0 #081a4a;
+}
+
+.pixel-dice-purple {
+  background: linear-gradient(180deg, #6828a0 0%, #3c1068 100%) !important;
+  border-color: var(--pixel-purple);
+  color: var(--pixel-purple-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(220,200,255,0.12),
+    0 3px 0 #20084a;
+}
+
+.pixel-dice-gold {
+  background: linear-gradient(180deg, #a08828 0%, #6b5a10 100%) !important;
+  border-color: var(--pixel-gold);
+  color: var(--pixel-gold-light);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,240,200,0.12),
+    0 3px 0 #4a3808;
+}
+
+/* ====================================
+   增强地牢场景装饰
+   ==================================== */
+
+/* 石墙纹理 — 暖棕色石砖缝 */
+.dungeon-stone-wall {
+  background-image:
+    /* 水平砖缝 */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 22px,
+      rgba(40,30,18,0.5) 22px,
+      rgba(40,30,18,0.5) 24px,
+      transparent 24px,
+      transparent 46px,
+      rgba(35,26,16,0.4) 46px,
+      rgba(35,26,16,0.4) 48px
+    ),
+    /* 垂直砖缝（错位） */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 36px,
+      rgba(38,28,16,0.35) 36px,
+      rgba(38,28,16,0.35) 38px
+    );
+}
+
+/* 锁链装饰 */
+@keyframes chain-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+.dungeon-chain {
+  animation: chain-sway 4s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* 地面裂缝 */
+.dungeon-crack {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='30'%3E%3Cpath d='M0 15 L10 12 L18 18 L28 10 L38 16 L48 8 L60 14' stroke='rgba(0,0,0,0.4)' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 60px 30px;
+}
+
+/* 血迹/苔藓斑点 */
+.dungeon-stain {
+  background-image: 
+    radial-gradient(ellipse at 20% 60%, rgba(139,26,20,0.08) 0%, transparent 15px),
+    radial-gradient(ellipse at 70% 30%, rgba(46,74,26,0.06) 0%, transparent 12px),
+    radial-gradient(ellipse at 45% 80%, rgba(139,26,20,0.05) 0%, transparent 10px);
+}
+
+/* 蜘蛛网装饰 */
+.dungeon-cobweb-left {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0 Q20 10 40 40 M0 0 Q10 20 40 40 M0 0 L40 40 M0 0 Q15 5 40 15 M0 0 Q5 15 15 40' stroke='rgba(106,106,126,0.15)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: top left;
+  background-size: 40px 40px;
+}
+
+.dungeon-cobweb-right {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M40 0 Q20 10 0 40 M40 0 Q30 20 0 40 M40 0 L0 40 M40 0 Q25 5 0 15 M40 0 Q35 15 25 40' stroke='rgba(106,106,126,0.15)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: 40px 40px;
+}
+
+/* 滴水效果 */
+@keyframes water-drip {
+  0% { transform: translateY(0); opacity: 0.6; }
+  80% { transform: translateY(30px); opacity: 0.3; }
+  100% { transform: translateY(30px); opacity: 0; }
+}
+
+.dungeon-drip {
+  animation: water-drip 3s steps(6) infinite;
+}
+
+/* ====================================
+   新版地图 — 杀戮尖塔风格分支路径
+   ==================================== */
+
+/* 地图节点基础样式 */
+.map-node {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--dungeon-panel-border);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.15s steps(3);
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    inset 2px 2px 0 rgba(255,255,255,0.03);
+}
+
+.map-node-reachable {
+  cursor: pointer;
+  border-color: var(--dungeon-panel-highlight);
+}
+
+.map-node-reachable:hover {
+  transform: scale(1.15);
+  filter: brightness(1.2);
+}
+
+.map-node-current {
+  border-color: var(--pixel-gold) !important;
+  box-shadow: 
+    0 0 12px var(--pixel-gold),
+    0 0 24px rgba(200,168,60,0.3),
+    inset -2px -2px 0 rgba(0,0,0,0.3) !important;
+}
+
+.map-node-completed {
+  opacity: 0.3;
+  transform: scale(0.85);
+  filter: grayscale(0.5);
+}
+
+.map-node-locked {
+  opacity: 0.25;
+}
+
+/* 地图节点类型颜色 */
+.map-node-enemy { background: linear-gradient(180deg, rgba(200,168,60,0.2) 0%, rgba(139,116,20,0.35) 100%); }
+.map-node-elite { background: linear-gradient(180deg, rgba(200,64,60,0.2) 0%, rgba(139,26,20,0.35) 100%); }
+.map-node-boss { background: linear-gradient(180deg, rgba(139,60,200,0.25) 0%, rgba(90,26,139,0.4) 100%); }
+.map-node-shop { background: linear-gradient(180deg, rgba(60,200,100,0.15) 0%, rgba(26,139,52,0.3) 100%); }
+.map-node-event { background: linear-gradient(180deg, rgba(60,108,200,0.15) 0%, rgba(26,60,139,0.3) 100%); }
+.map-node-campfire { background: linear-gradient(180deg, rgba(200,124,60,0.2) 0%, rgba(139,80,20,0.35) 100%); }
+
+/* 地图节点脉冲动画 — 可达节点 */
+@keyframes map-node-pulse {
+  0%, 100% { box-shadow: 0 0 4px currentColor, inset -2px -2px 0 rgba(0,0,0,0.3); }
+  50% { box-shadow: 0 0 12px currentColor, 0 0 20px currentColor, inset -2px -2px 0 rgba(0,0,0,0.3); }
+}
+
+.map-node-pulse {
+  animation: map-node-pulse 2s steps(4) infinite;
+}
+
+/* 地图路径线 */
+.map-path-line {
+  stroke-width: 2;
+  fill: none;
+}
+
+.map-path-active {
+  stroke: var(--pixel-gold);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(200,168,60,0.5));
+}
+
+.map-path-completed {
+  stroke: var(--dungeon-panel-highlight);
+  opacity: 0.3;
+}
+
+.map-path-locked {
+  stroke: var(--dungeon-panel-border);
+  stroke-dasharray: 4 4;
+  opacity: 0.12;
+}
+
+/* 地图背景装饰 — 深渊石壁 */
+.map-bg-dungeon {
+  background-color: #060809;
+  background-image:
+    /* 石墙纹理 — 深青灰 */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 30px,
+      rgba(30,42,52,0.10) 30px,
+      rgba(30,42,52,0.10) 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 48px,
+      rgba(30,42,52,0.08) 48px,
+      rgba(30,42,52,0.08) 50px
+    ),
+    /* 深渊紫氛围 */
+    radial-gradient(ellipse at 30% 30%, rgba(96,32,160,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 70%, rgba(224,120,48,0.02) 0%, transparent 50%);
+}
+
+/* ====================================
+   字体尺寸修正 — Fusion Pixel 12px 最佳渲染
+   ==================================== */
+/* Fusion Pixel 12px 在 12px/24px/36px/48px 时像素完美 */
+.text-pixel-sm { font-size: 12px; line-height: 1.2; }
+.text-pixel-md { font-size: 24px; line-height: 1.2; }
+.text-pixel-lg { font-size: 36px; line-height: 1.2; }
+.text-pixel-xl { font-size: 48px; line-height: 1.2; }
+
