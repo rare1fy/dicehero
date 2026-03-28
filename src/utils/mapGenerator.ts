@@ -1,4 +1,5 @@
 import { MapNode, NodeType } from '../types/game';
+import { MAP_CONFIG } from '../config';
 
 /**
  * 杀戮尖塔风格地图生成器
@@ -15,17 +16,14 @@ export interface MapNodeExt extends MapNode {
 
 export const generateMap = (): MapNode[] => {
   const nodes: MapNodeExt[] = [];
-  const layers = 15;
+  const layers = MAP_CONFIG.totalLayers;
   
   // 每层节点数量配置（更有变化）
   const getLayerNodeCount = (depth: number): number => {
-    if (depth === 0) return 1;        // 起点层只有1个入口（单一起点）
-    if (depth === 1) return 3;        // 第1层固定3个分支（选择路线）
-    if (depth === 7) return 1;        // 中层Boss只有1个
-    if (depth === 14) return 1;       // 最终Boss只有1个
-    if (depth === 6 || depth === 13) return 2; // Boss前休息2个
-    // 随机2-4个
-    return 2 + Math.floor(Math.random() * 3);
+    const fixed = MAP_CONFIG.fixedLayers[depth];
+    if (fixed) return fixed.count;
+    const [min, max] = MAP_CONFIG.randomLayerNodeRange;
+    return min + Math.floor(Math.random() * (max - min + 1));
   };
 
   // 生成所有节点
@@ -45,15 +43,12 @@ export const generateMap = (): MapNode[] => {
       const id = `node-${l}-${i}`;
       let type: NodeType = 'enemy';
       
-      if (l === 0) {
+      const fixed = MAP_CONFIG.fixedLayers[l];
+      if (fixed && fixed.type) {
+        type = fixed.type as NodeType;
+      } else if (l === 0) {
         type = 'enemy';
-      } else if (l === layers - 1) {
-        type = 'boss';
-      } else if (l === 7) {
-        type = 'boss';
-      } else if (l === layers - 2 || l === 6) {
-        type = 'campfire';
-      } else {
+      } else if (!fixed) {
         type = getRandomNodeType();
       }
 
@@ -136,7 +131,8 @@ export const generateMap = (): MapNode[] => {
     const currentLayer = nodes.filter(n => n.depth === l);
     
     currentLayer.forEach(node => {
-      if ([0, 6, 7, 13, 14].includes(l)) return;
+      const fixedLayerIds = Object.keys(MAP_CONFIG.fixedLayers).map(Number);
+      if (fixedLayerIds.includes(l)) return;
       
       const parentNodes = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
       
@@ -151,7 +147,8 @@ export const generateMap = (): MapNode[] => {
 
   // 确保路径多样性 — 避免连续2个篝火
   for (let l = 1; l < layers; l++) {
-    if ([0, 6, 7, 13, 14].includes(l)) continue;
+    const fixedIds = Object.keys(MAP_CONFIG.fixedLayers).map(Number);
+    if (fixedIds.includes(l)) continue;
     
     const currentLayer = nodes.filter(n => n.depth === l);
     currentLayer.forEach(node => {
@@ -189,10 +186,9 @@ export const getNodeX = (node: MapNode, allNodes: MapNode[]): number => {
 
 function getRandomNodeType(): NodeType {
   const rand = Math.random();
-  if (rand < 0.12) return 'elite';
-  if (rand < 0.24) return 'campfire';
-  if (rand < 0.38) return 'shop';
-  if (rand < 0.56) return 'event';
+  for (const { type, cumWeight } of MAP_CONFIG.nodeTypeWeights) {
+    if (rand < cumWeight) return type;
+  }
   return 'enemy';
 }
 

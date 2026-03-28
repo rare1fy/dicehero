@@ -1,6 +1,7 @@
 import { Augment } from '../types/game';
+import { AUGMENT_SCALING } from '../config';
 
-const getScale = (level: number) => 1 + (level - 1) * 0.5;
+const getScale = (level: number) => 1 + (level - 1) * AUGMENT_SCALING.scaleFactor;
 
 export { getScale };
 

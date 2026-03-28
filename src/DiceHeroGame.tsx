@@ -45,22 +45,23 @@ import { AugmentCard } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
+import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG } from './config';
 
 export default function DiceHeroGame() {
   const [game, setGame] = useState<GameState>({
-    hp: 100,
-    maxHp: 100,
-    armor: 0,
-    freeRerollsLeft: 1,
-    freeRerollsPerTurn: 1,
-    globalRerolls: 5,
-    playsLeft: 1,
-    maxPlays: 1,
-    souls: 0,
-    slots: 4,
-    diceCount: 3,
+    hp: PLAYER_INITIAL.hp,
+    maxHp: PLAYER_INITIAL.maxHp,
+    armor: PLAYER_INITIAL.armor,
+    freeRerollsLeft: PLAYER_INITIAL.freeRerollsPerTurn,
+    freeRerollsPerTurn: PLAYER_INITIAL.freeRerollsPerTurn,
+    globalRerolls: PLAYER_INITIAL.globalRerolls,
+    playsLeft: PLAYER_INITIAL.playsPerTurn,
+    maxPlays: PLAYER_INITIAL.playsPerTurn,
+    souls: PLAYER_INITIAL.souls,
+    slots: PLAYER_INITIAL.augmentSlots,
+    diceCount: PLAYER_INITIAL.diceCount,
     handLevels: {},
-    augments: [null, null, null, null],
+    augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
     currentNodeId: null,
     map: generateMap(),
     phase: 'start',
@@ -250,29 +251,18 @@ export default function DiceHeroGame() {
         startBattle(node);
       }
     } else if (node.type === 'shop') {
-      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, 2);
+            const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
+      const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
       const shopItems: ShopItem[] = [
-        { 
-          id: 'reroll', 
-          type: 'reroll', 
-          label: '全局重骰', 
-          desc: '增加 1 次全局重骰机会', 
-          price: Math.floor(Math.random() * 61) + 20 
-        },
-        { 
-          id: 'dice', 
-          type: 'dice', 
-          label: '额外骰子', 
-          desc: '增加 1 个骰子 (上限 6)', 
-          price: Math.floor(Math.random() * 61) + 20 
-        },
+        ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: randPrice() })),
         ...augs.map(aug => ({
           id: aug.id,
           type: 'augment' as const,
           augment: aug,
           label: aug.name,
           desc: aug.description,
-          price: Math.floor(Math.random() * 61) + 20
+          price: randPrice()
         }))
       ];
       setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
@@ -960,11 +950,7 @@ export default function DiceHeroGame() {
 
     // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
     if (enemy.rerollReward) {
-      const eliteRewards: { type: 'reroll' | 'diceCount' | 'freeRerollPerTurn', value: number, label: string }[] = [
-        { type: 'diceCount', value: 1, label: '+1 骰子' },
-        { type: 'reroll', value: 2, label: '+2 全局重骰' },
-        { type: 'freeRerollPerTurn', value: 1, label: '+1 每回合免费重骰' }
-      ];
+      const eliteRewards = LOOT_CONFIG.eliteRewards;
       const selectedReward = eliteRewards[Math.floor(Math.random() * eliteRewards.length)];
       
       if (selectedReward.type === 'freeRerollPerTurn') {
@@ -977,7 +963,7 @@ export default function DiceHeroGame() {
     if (enemy.dropAugment) {
       const options: Augment[] = [];
       const pool = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < 3; i++) options.push(pool[i]);
+      for (let i = 0; i < LOOT_CONFIG.augmentChoiceCount; i++) options.push(pool[i]);
       loot.push({ id: 'augment', type: 'augment', augmentOptions: options, collected: false });
     }
     if (enemy.dropMaxPlays) {
@@ -1148,29 +1134,18 @@ export default function DiceHeroGame() {
     if (next === 4 || next === 9) {
       setGame(prev => ({ ...prev, phase: 'campfire', currentNode: next }));
     } else if (next === 5) {
-      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, 2);
+            const [minP, maxP] = SHOP_CONFIG.priceRange;
+      const rp = () => Math.floor(Math.random() * (maxP - minP + 1)) + minP;
+      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
       const shopItems: ShopItem[] = [
-        { 
-          id: 'reroll', 
-          type: 'reroll', 
-          label: '全局重骰', 
-          desc: '增加 1 次全局重骰机会', 
-          price: Math.floor(Math.random() * 61) + 20 
-        },
-        { 
-          id: 'dice', 
-          type: 'dice', 
-          label: '额外骰子', 
-          desc: '增加 1 个骰子 (上限 6)', 
-          price: Math.floor(Math.random() * 61) + 20 
-        },
+        ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: rp() })),
         ...augs.map(aug => ({
           id: aug.id,
           type: 'augment' as const,
           augment: aug,
           label: aug.name,
           desc: aug.description,
-          price: Math.floor(Math.random() * 61) + 20
+          price: rp()
         }))
       ];
       setGame(prev => ({ ...prev, phase: 'shop', currentNode: next, shopItems }));

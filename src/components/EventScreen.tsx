@@ -9,6 +9,18 @@ import { CSSParticles } from './ParticleEffects';
 import { PixelQuestion, PixelHeart, PixelCoin, PixelSword, PixelSkull, PixelStar, PixelShield, PixelZap, PixelDice, PixelFlame, PixelMagic, PixelCrown, PixelArrowUp, PixelArrowDown, PixelPoison, PixelInfo, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
 import { getAugmentIcon } from '../utils/uiHelpers';
+import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
+
+/** 图标ID到组件的映射 */
+const ICON_MAP: Record<string, React.ReactNode> = {
+  skull: <PixelSkull size={6} />,
+  star: <PixelStar size={6} />,
+  flame: <PixelFlame size={6} />,
+  heart: <PixelHeart size={6} />,
+  shopBag: <PixelShopBag size={6} />,
+  refresh: <PixelRefresh size={6} />,
+  question: <PixelQuestion size={6} />,
+};
 
 export const EventScreen: React.FC = () => {
   const { game, setGame, addToast, addLog, startBattle } = useGameContext();
@@ -16,259 +28,129 @@ export const EventScreen: React.FC = () => {
   const [event, setEvent] = useState<{title: string, desc: string, icon: React.ReactNode, options: {label: string, sub: string, action: () => void, color: string}[]}>();
 
   useEffect(() => {
-    const handTypesToUpgrade = ['对子', '连对', '顺子', '同花', '葫芦'];
-    const randomHandType = handTypesToUpgrade[Math.floor(Math.random() * handTypesToUpgrade.length)];
-
-    const events = [
-      {
-        title: '阴影中的怪物',
-        desc: '你在一处阴影中发现了一只落单的怪物，它似乎正在守护着一个散发着微光的宝箱。',
-        icon: <PixelSkull size={6} />,
-        options: [
-          { 
-            label: '发起战斗', 
-            sub: '击败它以获取宝箱中的战利品',
-            color: 'bg-red-600 hover:bg-red-500',
-            action: () => {
-              const currentNode = game.map.find(n => n.id === game.currentNodeId);
-              if (currentNode) startBattle(currentNode);
-            }
-          },
-          { 
-            label: '悄悄绕过', 
-            sub: '避免战斗，但可能会在穿过荆棘时受伤 (-5 HP)',
-            color: 'bg-zinc-700 hover:bg-zinc-600',
-            action: () => {
-              addToast('穿过荆棘受伤 -5 HP', 'damage');
-              setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 5), phase: 'map' }));
-              addLog('悄悄绕过了怪物，但受到了 5 点伤害。');
-            }
-          }
-        ]
-      },
-      {
-        title: '古老祭坛',
-        desc: '你发现了一个被遗忘的祭坛，上面刻着两种不同的符文。你可以选择其中一种力量。',
-        icon: <PixelStar size={6} />,
-        options: [
-          { 
-            label: '贪婪符文', 
-            sub: '立即获得 40 枚金币',
-            color: 'bg-amber-600 hover:bg-amber-500',
-            action: () => {
-              setGame(prev => ({ ...prev, souls: prev.souls + 40, phase: 'map' }));
-              addLog('在祭坛获得了 40 金币。');
-            }
-          },
-          { 
-            label: '力量符文', 
-            sub: '永久增加 1 颗初始骰子',
-            color: 'bg-blue-600 hover:bg-blue-500',
-            action: () => {
-              setGame(prev => ({ ...prev, diceCount: Math.min(6, prev.diceCount + 1), phase: 'map' }));
-              addLog('在祭坛获得了 1 颗骰子。');
-            }
-          }
-        ]
-      },
-      {
-        title: '虚空交易',
-        desc: '一个虚幻的身影出现在你面前，向你展示了禁忌的知识。但代价是你的生命力。',
-        icon: <PixelSkull size={6} />,
-        options: [
-          { 
-            label: `强化【${randomHandType}】`, 
-            sub: `提升该牌型的基础威力 (-15 HP)`,
-            color: 'bg-purple-600 hover:bg-purple-500',
-            action: () => {
-              addToast(`禁忌知识的代价 -15 HP`, 'damage');
-              setGame(prev => {
-                const currentLevel = prev.handLevels[randomHandType] || 1;
-                return {
-                  ...prev,
-                  hp: Math.max(1, prev.hp - 15),
-                  handLevels: { ...prev.handLevels, [randomHandType]: currentLevel + 1 },
-                  phase: 'map'
-                };
-              });
-              addLog(`消耗 15 生命，【${randomHandType}】升级了！`);
-            }
-          },
-          { 
-            label: '洞察未来', 
-            sub: '获得 3 次全局重骰机会',
-            color: 'bg-zinc-700 hover:bg-zinc-600',
-            action: () => {
-              addToast('+3 全局重骰', 'buff');
-              setGame(prev => ({ ...prev, globalRerolls: prev.globalRerolls + 3, phase: 'map' }));
-              addLog('获得了 3 次全局重骰机会。');
-            }
-          }
-        ]
-      },
-      {
-        title: '致命陷阱',
-        desc: '你触发了一个隐藏的机关！无数箭矢从墙壁中射出。',
-        icon: <PixelFlame size={6} />,
-        options: [
-          { 
-            label: '全力躲避', 
-            sub: '虽然避开了要害，但仍受了重伤 (-20 HP)',
-            color: 'bg-orange-600 hover:bg-orange-500',
-            action: () => {
-              addToast('陷阱触发！-20 HP', 'damage');
-              setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), phase: 'map' }));
-              addLog('踩中陷阱，扣除 20 生命。');
-            }
-          },
-          { 
-            label: '舍财保命', 
-            sub: '丢弃一些金币来触发备用机关 (-30 金币)',
-            color: 'bg-zinc-700 hover:bg-zinc-600',
-            action: () => {
-              setGame(prev => ({ ...prev, souls: Math.max(0, prev.souls - 30), phase: 'map' }));
-              addLog('丢弃了 30 金币以避开陷阱。');
-            }
-          }
-        ]
-      },
-      // === 新增事件 ===
-      {
-        title: '神秘旅商',
-        desc: '一位戴着面具的旅商从暗处走来，他的背包里似乎有些不寻常的东西。',
-        icon: <PixelShopBag size={6} />,
-        options: [
-          { 
-            label: '购买生命药剂', 
-            sub: '花费 25 金币回复 30 HP',
-            color: 'bg-emerald-600 hover:bg-emerald-500',
-            action: () => {
-              if (game.souls >= 25) {
-                setGame(prev => ({ ...prev, souls: prev.souls - 25, hp: Math.min(prev.maxHp, prev.hp + 30), phase: 'map' }));
-                addLog('购买了生命药剂，回复 30 HP。');
-              } else {
-                setGame(prev => ({ ...prev, phase: 'map' }));
-                addLog('金币不足，旅商失望地离开了。');
-              }
-            }
-          },
-          { 
-            label: '购买强化药水', 
-            sub: '花费 35 金币，永久提升最大生命 10 点',
-            color: 'bg-blue-600 hover:bg-blue-500',
-            action: () => {
-              if (game.souls >= 35) {
-                setGame(prev => ({ ...prev, souls: prev.souls - 35, maxHp: prev.maxHp + 10, hp: prev.hp + 10, phase: 'map' }));
-                addLog('购买了强化药水，最大生命 +10！');
-              } else {
-                setGame(prev => ({ ...prev, phase: 'map' }));
-                addLog('金币不足，旅商失望地离开了。');
-              }
-            }
-          }
-        ]
-      },
-      {
-        title: '命运之轮',
-        desc: '你发现了一个古老的命运之轮，轮盘上刻满了神秘的符号。你可以转动它，但结果难以预料。',
-        icon: <PixelRefresh size={6} />,
-        options: [
-          { 
-            label: '转动命运之轮', 
-            sub: '随机获得：+50 金币 / +2 重骰 / -15 HP',
-            color: 'bg-cyan-600 hover:bg-cyan-500',
-            action: () => {
-              const roll = Math.random();
-              if (roll < 0.4) {
-                addToast('🎰 幸运！+50 金币', 'gold');
-                setGame(prev => ({ ...prev, souls: prev.souls + 50, phase: 'map' }));
-                addLog('🎰 命运之轮转出了 50 金币！');
-              } else if (roll < 0.7) {
-                addToast('🎰 幸运！+2 全局重骰', 'buff');
-                setGame(prev => ({ ...prev, globalRerolls: prev.globalRerolls + 2, phase: 'map' }));
-                addLog('🎰 命运之轮赐予了 2 次全局重骰！');
-              } else {
-                addToast('🎰 厄运降临！-15 HP', 'damage');
-                setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 15), phase: 'map' }));
-                addLog('🎰 命运之轮带来了厄运，损失 15 HP！');
-              }
-            }
-          },
-          { 
-            label: '谨慎离开', 
-            sub: '不冒险，安全通过',
-            color: 'bg-zinc-700 hover:bg-zinc-600',
-            action: () => {
-              setGame(prev => ({ ...prev, phase: 'map' }));
-              addLog('你明智地选择了离开命运之轮。');
-            }
-          }
-        ]
-      },
-      {
-        title: '暗影锻炉',
-        desc: '一座被遗弃的锻炉仍在燃烧着幽蓝色的火焰。你可以利用它来强化自己的能力。',
-        icon: <PixelFlame size={6} />,
-        options: [
-          { 
-            label: '锻造护甲', 
-            sub: '消耗 20 HP，本场游戏每回合额外获得 1 次免费重骰',
-            color: 'bg-blue-600 hover:bg-blue-500',
-            action: () => {
-              addToast('暗影锻炉灼伤 -20 HP，每回合免费重骰 +1', 'damage');
-              setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), freeRerollsPerTurn: prev.freeRerollsPerTurn + 1, phase: 'map' }));
-              addLog('在暗影锻炉中锻造了护甲，每回合免费重骰 +1！');
-            }
-          },
-          { 
-            label: '淬炼武器', 
-            sub: '消耗 20 HP，永久增加 1 次出牌机会',
-            color: 'bg-orange-600 hover:bg-orange-500',
-            action: () => {
-              addToast('暗影锻炉灼伤 -20 HP，出牌次数 +1', 'damage');
-              setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), maxPlays: prev.maxPlays + 1, phase: 'map' }));
-              addLog('在暗影锻炉中淬炼了武器，出牌次数 +1！');
-            }
-          }
-        ]
-      },
-      {
-        title: '迷途灵魂',
-        desc: '一个迷途的灵魂向你求助，它愿意用自己的力量作为报答。但你也可以选择吞噬它。',
-        icon: <PixelHeart size={6} />,
-        options: [
-          { 
-            label: '帮助灵魂', 
-            sub: '回复 20 HP，获得 20 金币',
-            color: 'bg-pink-600 hover:bg-pink-500',
-            action: () => {
-              setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + 20), souls: prev.souls + 20, phase: 'map' }));
-              addLog('帮助了迷途灵魂，获得了它的祝福。');
-            }
-          },
-          { 
-            label: '吞噬灵魂', 
-            sub: `强化【${randomHandType}】但损失 10 HP`,
-            color: 'bg-red-600 hover:bg-red-500',
-            action: () => {
-              addToast(`吞噬灵魂 -10 HP，【${randomHandType}】升级！`, 'damage');
-              setGame(prev => {
-                const currentLevel = prev.handLevels[randomHandType] || 1;
-                return {
-                  ...prev,
-                  hp: Math.max(1, prev.hp - 10),
-                  handLevels: { ...prev.handLevels, [randomHandType]: currentLevel + 1 },
-                  phase: 'map'
-                };
-              });
-              addLog(`吞噬了灵魂，【${randomHandType}】升级了！`);
-            }
-          }
-        ]
-      }
-    ];
-    setEvent(events[Math.floor(Math.random() * events.length)]);
+    // 随机选择一个可升级牌型
+    const randomHandType = UPGRADEABLE_HAND_TYPES[Math.floor(Math.random() * UPGRADEABLE_HAND_TYPES.length)];
+    
+    // 从配置池中随机选择一个事件
+    const eventConfig = EVENTS_POOL[Math.floor(Math.random() * EVENTS_POOL.length)];
+    
+    // 将配置数据转换为运行时事件
+    const resolvedEvent = resolveEvent(eventConfig, randomHandType);
+    setEvent(resolvedEvent);
   }, []);
+
+  /** 将配置表中的 action 解释为实际的游戏操作 */
+  const executeAction = (action: EventOptionConfig['action'], handType: string) => {
+    const resolvedLog = action.log?.replace(/{handType}/g, handType);
+    const resolvedToast = action.toast?.replace(/{handType}/g, handType);
+
+    switch (action.type) {
+      case 'startBattle': {
+        const currentNode = game.map.find(n => n.id === game.currentNodeId);
+        if (currentNode) startBattle(currentNode);
+        return;
+      }
+      case 'modifyHp': {
+        const val = action.value || 0;
+        if (resolvedToast) addToast(resolvedToast, action.toastType || (val < 0 ? 'damage' : 'heal'));
+        setGame(prev => ({ ...prev, hp: Math.max(1, Math.min(prev.maxHp, prev.hp + val)), phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'modifySouls': {
+        const val = action.value || 0;
+        if (resolvedToast) addToast(resolvedToast, action.toastType || 'gold');
+        setGame(prev => ({ ...prev, souls: Math.max(0, prev.souls + val), phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'modifyDiceCount': {
+        setGame(prev => ({ ...prev, diceCount: Math.min(6, prev.diceCount + (action.value || 0)), phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'upgradeHandType': {
+        const hpCost = action.value || 0; // negative
+        if (resolvedToast) addToast(resolvedToast, 'damage');
+        setGame(prev => {
+          const currentLevel = prev.handLevels[handType] || 1;
+          return {
+            ...prev,
+            hp: Math.max(1, prev.hp + hpCost),
+            handLevels: { ...prev.handLevels, [handType]: currentLevel + 1 },
+            phase: 'map'
+          };
+        });
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'modifyGlobalRerolls': {
+        if (resolvedToast) addToast(resolvedToast, action.toastType || 'buff');
+        setGame(prev => ({ ...prev, globalRerolls: prev.globalRerolls + (action.value || 0), phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'modifyMaxHp': {
+        const val = action.value || 0;
+        setGame(prev => ({ ...prev, souls: prev.souls - 35, maxHp: prev.maxHp + val, hp: prev.hp + val, phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'modifyFreeRerollsPerTurn': {
+        if (resolvedToast) addToast(resolvedToast, action.toastType || 'damage');
+        setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), freeRerollsPerTurn: prev.freeRerollsPerTurn + (action.value || 0), phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'modifyMaxPlays': {
+        if (resolvedToast) addToast(resolvedToast, action.toastType || 'damage');
+        setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), maxPlays: prev.maxPlays + (action.value || 0), phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+      case 'randomOutcome': {
+        if (!action.outcomes) return;
+        const roll = Math.random();
+        let cumWeight = 0;
+        for (const outcome of action.outcomes) {
+          cumWeight += outcome.weight;
+          if (roll < cumWeight) {
+            if (outcome.toast) addToast(outcome.toast, outcome.toastType || 'buff');
+            // 执行子动作
+            for (const subAction of outcome.actions) {
+              executeAction({ ...subAction, toast: undefined, log: undefined }, handType);
+            }
+            setGame(prev => ({ ...prev, phase: 'map' }));
+            if (outcome.log) addLog(outcome.log);
+            return;
+          }
+        }
+        return;
+      }
+      case 'noop': {
+        setGame(prev => ({ ...prev, phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
+        return;
+      }
+    }
+  };
+
+  /** 将配置表事件转换为运行时事件 */
+  const resolveEvent = (config: EventConfig, handType: string) => {
+    const replacePlaceholder = (s: string) => s.replace(/{handType}/g, handType);
+    
+    return {
+      title: config.title,
+      desc: config.desc,
+      icon: ICON_MAP[config.iconId] || ICON_MAP.question,
+      options: config.options.map(opt => ({
+        label: replacePlaceholder(opt.label),
+        sub: replacePlaceholder(opt.sub),
+        color: opt.color,
+        action: () => executeAction(opt.action, handType),
+      })),
+    };
+  };
 
   if (!event) return null;
 

@@ -6,6 +6,7 @@ import { playSound } from '../utils/sound';
 import { CSSParticles } from './ParticleEffects';
 import { PixelCampfire, PixelHeart, PixelCoin, PixelZap } from './PixelIcons';
 import { getAugmentIcon } from '../utils/uiHelpers';
+import { CAMPFIRE_CONFIG } from '../config';
 import { formatDescription } from '../utils/richText';
 
 export const CampfireScreen: React.FC = () => {
@@ -30,8 +31,8 @@ export const CampfireScreen: React.FC = () => {
           ) : (
             equipped.map((aug) => {
               const level = aug.level || 1;
-              const upgradeCost = level * 40;
-              const canUpgrade = game.souls >= upgradeCost && level < 5;
+              const upgradeCost = level * CAMPFIRE_CONFIG.upgradeCostPerLevel;
+              const canUpgrade = game.souls >= upgradeCost && level < CAMPFIRE_CONFIG.maxAugmentLevel;
 
               return (
                 <div key={aug.id} className="pixel-panel p-3 flex flex-col gap-2.5">
@@ -94,7 +95,7 @@ export const CampfireScreen: React.FC = () => {
         
         <div className="space-y-3 w-full max-w-xs">
           <button 
-            onClick={() => { addToast('篝火休整 +18 HP', 'heal'); setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + 18), phase: 'map' })); }}
+            onClick={() => { addToast('篝火休整 +18 HP', 'heal'); setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + CAMPFIRE_CONFIG.restHeal), phase: 'map' })); }}
             className="w-full p-4 pixel-panel flex items-center justify-between transition-all group"
             style={{ borderColor: 'var(--pixel-orange)' }}
           >
