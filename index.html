@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Dice Battle</title>
+    <!-- 像素字体: Fusion Pixel 12px (开源泛中日韩像素字体) -->
+    <style>
+      @font-face {
+        font-family: 'FusionPixel';
+        src: url('/fonts/fusion-pixel-12px-monospaced-zh_hans.woff2') format('woff2');
+        font-display: block;
+        font-weight: 400;
+        font-style: normal;
+        unicode-range: U+4E00-9FFF, U+3000-303F, U+FF00-FFEF, U+2000-206F, U+3400-4DBF, U+20000-2A6DF, U+2A700-2B73F;
+      }
+      @font-face {
+        font-family: 'FusionPixel';
+        src: url('/fonts/fusion-pixel-12px-monospaced-latin.woff2') format('woff2');
+        font-display: block;
+        font-weight: 400;
+        font-style: normal;
+        unicode-range: U+0000-024F, U+0300-036F, U+0400-04FF, U+1E00-1EFF, U+2100-214F;
+      }
+      body { font-family: 'FusionPixel', monospace !important; }
+    </style>
+    <link rel="preload" href="/fonts/fusion-pixel-12px-monospaced-zh_hans.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/fusion-pixel-12px-monospaced-latin.woff2" as="font" type="font/woff2" crossorigin>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

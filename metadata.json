@@ -1,0 +1,5 @@
+{
+  "name": "Dice Battle",
+  "description": "一款像素风 Roguelike 骰子构筑游戏。投掷骰子，组合牌型，在永夜地牢中战斗。",
+  "requestFramePermissions": []
+}
