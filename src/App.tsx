@@ -38,6 +38,9 @@ import { ShopScreen } from './components/ShopScreen';
 import { CampfireScreen } from './components/CampfireScreen';
 import { EventScreen } from './components/EventScreen';
 import { LootScreen } from './components/LootScreen';
+import { GameOverScreen } from './components/GameOverScreen';
+import { VictoryScreen } from './components/VictoryScreen';
+import { generateSkillModules } from './data/skillModules';
 import { AugmentCard } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
@@ -234,33 +237,6 @@ export default function App() {
     addLog(`遭遇 ${newEnemy.name}！`);
   };
 
-  const generateSkillModules = (): SkillModule[] => {
-    // 从增幅池中随机选3个不同的增幅
-    const shuffled = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 3);
-    
-    // 代价类型池
-    const costTypes: SkillModule['cost'][] = [
-      { type: 'maxHp', value: 8, label: '最大生命 -8' },
-      { type: 'maxHp', value: 12, label: '最大生命 -12' },
-      { type: 'reroll', value: 1, label: '全局重骰 -1' },
-      { type: 'reroll', value: 2, label: '全局重骰 -2' },
-      { type: 'hp', value: 10, label: '当前生命 -10' },
-      { type: 'hp', value: 15, label: '当前生命 -15' },
-    ];
-    const shuffledCosts = [...costTypes].sort(() => Math.random() - 0.5);
-    
-    const icons = [<PixelZap size={4} />, <PixelSword size={4} />, <PixelMagic size={4} />];
-    
-    return selected.map((aug, i) => ({
-      id: `skill-${aug.id}-${Date.now()}`,
-      name: aug.name,
-      description: aug.description,
-      icon: icons[i],
-      augment: aug,
-      cost: shuffledCosts[i]
-    }));
-  };
 
   const startNode = (node: MapNode) => {
     playSound('select');
@@ -1255,58 +1231,14 @@ export default function App() {
   }
 
   if (game.phase === 'gameover') {
-    return (
-      <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] p-6 text-center relative overflow-hidden sm:border-x-3 border-[var(--dungeon-panel-border)] scanlines">
-        <div className="absolute inset-0 pixel-grid-bg opacity-20" />
-        <CSSParticles type="ember" count={8} />
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="relative z-10 w-full"
-        >
-          <div className="flex justify-center mb-6"><PixelSkull size={8} /></div>
-          <h1 className="text-3xl font-black mb-5 text-[var(--pixel-red)] pixel-text-shadow tracking-wide">◆ 意识消散 ◆</h1>
-          <p className="text-[var(--dungeon-text-dim)] mb-10 max-w-xs mx-auto leading-relaxed text-[11px]">你在永夜的深处迷失了方向，所有的记忆与意志都化为了虚无...</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full max-w-[220px] mx-auto py-3 pixel-btn pixel-btn-danger text-sm block"
-          >
-            ▶ 重塑意识
-          </button>
-        </motion.div>
-      </div>
-    );
+    return <GameContext.Provider value={contextValue}><GameOverScreen /></GameContext.Provider>;
   }
+
 
   if (game.phase === 'victory') {
-    return (
-      <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] p-6 text-center relative overflow-hidden sm:border-x-3 border-[var(--dungeon-panel-border)] scanlines">
-        <div className="absolute inset-0 pixel-grid-bg opacity-20" />
-        <CSSParticles type="sparkle" count={10} />
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="relative z-10 w-full"
-        >
-          <div className="flex justify-center mb-6"><PixelTrophy size={8} /></div>
-          <h1 className="text-3xl font-black mb-5 text-[var(--pixel-green)] pixel-text-shadow tracking-wide">◆ 黎明已至 ◆</h1>
-          <p className="text-[var(--dungeon-text-dim)] mb-10 max-w-xs mx-auto leading-relaxed text-[11px]">你成功穿越了永夜，带回了希望的火种。世界将记住你的名字。</p>
-          
-          <div className="pixel-panel p-5 w-full max-w-xs mb-8 mx-auto text-center">
-            <div className="text-[9px] text-[var(--dungeon-text-dim)] mb-2">◆ 最终金币评价 ◆</div>
-            <div className="text-4xl font-bold text-[var(--pixel-gold)] pixel-text-shadow">{game.souls}</div>
-          </div>
-
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full max-w-[220px] mx-auto py-3 pixel-btn pixel-btn-primary text-sm block"
-          >
-            ▶ 再续传奇
-          </button>
-        </motion.div>
-      </div>
-    );
+    return <GameContext.Provider value={contextValue}><VictoryScreen /></GameContext.Provider>;
   }
+
 
   return (
     <GameContext.Provider value={contextValue}>
