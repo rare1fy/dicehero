@@ -54,21 +54,5 @@ export const getHpBarClass = (hp: number, maxHp: number): string => {
 };
 
 // 像素风敌人边框 — 暗黑地牢风格
-export const getEnemyBorderClass = (enemyName: string): string => {
-  if (enemyName === '永夜主宰') return 'border-[var(--pixel-purple)] shadow-[0_0_16px_rgba(139,60,200,0.4)]';
-  if (enemyName === '虚空织梦者') return 'border-[var(--pixel-blue)] shadow-[0_0_12px_rgba(60,108,200,0.3)]';
-  if (enemyName.includes('混沌') || enemyName.includes('典狱长') || enemyName.includes('预言家') || enemyName.includes('钟表匠')) {
-    return 'border-[var(--pixel-red)] shadow-[0_0_10px_rgba(200,64,60,0.3)]';
-  }
-  return 'border-[var(--dungeon-panel-border)]';
-};
 
 // 像素风敌人背景 — 暗黑地牢风格
-export const getEnemyBgClass = (enemyName: string): string => {
-  if (enemyName === '永夜主宰') return 'bg-[#1a102e]';
-  if (enemyName === '虚空织梦者') return 'bg-[#101a2e]';
-  if (enemyName.includes('混沌') || enemyName.includes('典狱长') || enemyName.includes('预言家') || enemyName.includes('钟表匠')) {
-    return 'bg-[#2e1010]';
-  }
-  return 'bg-[var(--dungeon-panel)]';
-};
