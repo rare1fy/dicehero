@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
-import type { Augment } from '../types';
+import type { Augment } from '../types/game';
 import { PixelCoin } from './PixelIcons';
-import { getAugmentIcon } from '../utils/helpers';
+import { getAugmentIcon } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
 
 interface AugmentCardProps {

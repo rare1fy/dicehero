@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { StatusEffect } from '../types';
+import { StatusEffect } from '../types/game';
 import { STATUS_INFO } from '../data/statusInfo';
 
 interface StatusIconProps {

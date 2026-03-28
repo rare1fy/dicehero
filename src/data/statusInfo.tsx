@@ -1,6 +1,6 @@
 import React from 'react';
 import { PixelPoison, PixelFlame, PixelWind, PixelArrowUp, PixelArrowDown, PixelShield } from '../components/PixelIcons';
-import { StatusType } from '../types';
+import { StatusType } from '../types/game';
 
 export const STATUS_INFO: Record<StatusType, { icon: React.ReactNode; color: string; label: string; description: string }> = {
   poison: { icon: <PixelPoison size={2} />, color: 'text-purple-400', label: '中毒', description: '每回合结束时受到 X 点伤害，随后层数减 1。' },

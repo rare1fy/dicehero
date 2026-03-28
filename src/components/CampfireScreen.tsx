@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { Augment } from '../types';
+import type { Augment } from '../types/game';
 import { playSound } from '../utils/sound';
 import { CSSParticles } from './ParticleEffects';
 import { PixelCampfire, PixelHeart, PixelCoin, PixelZap } from './PixelIcons';
-import { getAugmentIcon } from '../utils/helpers';
+import { getAugmentIcon } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
 
 export const CampfireScreen: React.FC = () => {

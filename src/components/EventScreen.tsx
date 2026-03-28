@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { Augment } from '../types';
+import type { Augment } from '../types/game';
 import { AUGMENTS_POOL } from '../data/augments';
 import { HAND_TYPES } from '../data/handTypes';
 import { playSound } from '../utils/sound';
 import { CSSParticles } from './ParticleEffects';
 import { PixelQuestion, PixelHeart, PixelCoin, PixelSword, PixelSkull, PixelStar, PixelShield, PixelZap, PixelDice, PixelFlame, PixelMagic, PixelCrown, PixelArrowUp, PixelArrowDown, PixelPoison, PixelInfo, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
-import { getAugmentIcon } from '../utils/helpers';
+import { getAugmentIcon } from '../utils/uiHelpers';
 
 export const EventScreen: React.FC = () => {
   const { game, setGame, addToast, addLog, startBattle } = useGameContext();

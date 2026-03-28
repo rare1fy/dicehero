@@ -4,7 +4,7 @@ import {
   PixelDroplet, PixelHouse, PixelSquare, PixelStar, PixelTrophy, 
   PixelCrown, PixelWaves 
 } from '../components/PixelIcons';
-import { HandTypeDef } from '../types';
+import { HandTypeDef } from '../types/game';
 
 export const HAND_TYPES: HandTypeDef[] = [
   { id: 'high_card', name: '普通攻击', icon: <PixelZap size={2} />, base: 0, mult: 1, description: '任意单颗骰子。伤害 = 骰子点数。' },

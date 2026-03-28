@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { MapNode } from '../types';
+import type { MapNode } from '../types/game';
 import { getNodeX } from '../utils/mapGenerator';
 import { playSound } from '../utils/sound';
 import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelCoin, PixelHeart, PixelRefresh, PixelInfo } from './PixelIcons';

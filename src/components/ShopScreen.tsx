@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { AugmentCard } from './AugmentCard';
-import { getAugmentIcon } from '../utils/helpers';
+import { getAugmentIcon } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
 import { PixelCoin, PixelShopBag, PixelStar, PixelRefresh, PixelDice } from './PixelIcons';
 

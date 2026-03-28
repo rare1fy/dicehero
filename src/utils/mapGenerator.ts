@@ -1,4 +1,4 @@
-import { MapNode, NodeType } from '../types';
+import { MapNode, NodeType } from '../types/game';
 
 /**
  * 杀戮尖塔风格地图生成器

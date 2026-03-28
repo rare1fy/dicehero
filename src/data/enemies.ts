@@ -1,4 +1,4 @@
-import { MapNode, Enemy, GameState } from '../types';
+import { MapNode, Enemy, GameState } from '../types/game';
 
 export const getEnemyForNode = (node: MapNode, depth: number, hpMultiplier: number = 1.0): Enemy => {
   const hpScale = (1 + depth * 0.25) * hpMultiplier;

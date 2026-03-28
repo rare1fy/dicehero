@@ -15,17 +15,17 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, DiceColor, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult } from './types';
-import { COLORS } from './data/colors';
+import type { Die, DiceColor, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult } from './types/game';
+import { COLORS } from './data/diceColors';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
 import { playSound } from './utils/sound';
-import { checkHands, canFormValidHand } from './utils/hands';
+import { checkHands, canFormValidHand } from './utils/handEvaluator';
 import { generateMap, getNodeX } from './utils/mapGenerator';
 import { StatusIcon } from './components/StatusIcon';
-import { getAugmentIcon, getDiceColorClass, getHpBarClass } from './utils/helpers';
+import { getAugmentIcon, getDiceColorClass, getHpBarClass } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
 import { CSSParticles } from './components/ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './components/TutorialOverlay';
@@ -46,7 +46,7 @@ import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
 
-export default function App() {
+export default function DiceHeroGame() {
   const [game, setGame] = useState<GameState>({
     hp: 100,
     maxHp: 100,

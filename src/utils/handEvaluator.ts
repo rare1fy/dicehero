@@ -1,4 +1,4 @@
-import { Die, HandType, HandResult } from '../types';
+import { Die, HandType, HandResult } from '../types/game';
 
 export const checkHands = (dice: Die[]): HandResult => {
   if (dice.length === 0) return { bestHand: '普通攻击', allHands: [], activeHands: ['普通攻击'] };

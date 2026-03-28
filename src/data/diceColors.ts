@@ -1,4 +1,4 @@
-import { DiceColor } from '../types';
+import { DiceColor } from '../types/game';
 
 // 标准骰子颜色映射 (1-6)
 export const COLORS: Record<number, DiceColor> = {

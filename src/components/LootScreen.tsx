@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { Augment } from '../types';
+import type { Augment } from '../types/game';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
 import { AugmentCard } from './AugmentCard';
-import { getAugmentIcon } from '../utils/helpers';
+import { getAugmentIcon } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
 
 export const LootScreen: React.FC = () => {

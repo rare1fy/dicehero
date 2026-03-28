@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Die, Augment, MapNode, Enemy, GameState, LootItem } from '../types';
+import type { Die, Augment, MapNode, Enemy, GameState, LootItem } from '../types/game';
 
 interface SkillModule {
   id: string;

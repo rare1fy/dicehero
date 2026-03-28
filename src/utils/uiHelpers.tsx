@@ -3,7 +3,7 @@ import {
   PixelSword, PixelPair, PixelLayers, PixelFlame, PixelHouse, 
   PixelArrowUp, PixelDroplet, PixelHeart, PixelStar 
 } from '../components/PixelIcons';
-import { DiceColor } from '../types';
+import { DiceColor } from '../types/game';
 
 export const getAugmentIcon = (condition: string, size = 12) => {
   // size参数转换为像素块大小 (原来lucide-react的12px ≈ 像素块2)

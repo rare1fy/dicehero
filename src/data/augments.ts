@@ -1,4 +1,4 @@
-import { Augment } from '../types';
+import { Augment } from '../types/game';
 
 const getScale = (level: number) => 1 + (level - 1) * 0.5;
 
