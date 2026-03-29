@@ -8,7 +8,8 @@ export const checkHands = (dice: Die[]): HandResult => {
   const uniqueElements = new Set(elements);
 
   // 同元素: 所有选中骰子同一元素，且至少4颗
-  const isSameElement = uniqueElements.size === 1 && dice.length >= 4;
+  // All-normal is NOT same_element; only non-normal elements count
+  const isSameElement = uniqueElements.size === 1 && dice.length >= 4 && elements[0] !== 'normal';
 
   const counts: Record<number, number> = {};
   values.forEach(v => counts[v] = (counts[v] || 0) + 1);

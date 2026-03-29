@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
-import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
+import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS, getOnPlayDescription } from './PixelDiceShapes';
 import { ELEMENT_NAMES, ELEMENT_COLORS } from '../utils/uiHelpers';
 import { PixelDice } from './PixelIcons';
 
@@ -131,6 +131,11 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
                             <span style={{ color: ELEMENT_COLORS[def.element] }}> {ELEMENT_NAMES[def.element]}</span>
                           )}
                         </div>
+                        {def.onPlay && (
+                          <div className="text-[7px] text-[var(--pixel-orange-light)] leading-tight truncate">
+                            {getOnPlayDescription(def.onPlay)}
+                          </div>
+                        )}
                       </div>
 
                       {/* 数量分布 */}

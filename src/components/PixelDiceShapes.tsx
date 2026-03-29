@@ -2,10 +2,9 @@ import React from 'react';
 import type { DiceElement } from '../types/game';
 
 /**
- * PixelDiceShapes.tsx - 元素骰子独特外形
+ * PixelDiceShapes.tsx - Element dice unique shapes
  * 
- * 每种元素的骰子有独特的像素SVG外形标记，
- * 用于在骰子角落显示元素标识。
+ * Each element has a unique pixel SVG badge displayed on the dice.
  */
 
 interface ElementBadgeProps {
@@ -135,4 +134,32 @@ export const RARITY_TEXT_COLORS: Record<string, string> = {
   rare: 'var(--pixel-blue-light)',
   legendary: 'var(--pixel-gold-light)',
   curse: 'var(--pixel-red-light)',
+};
+
+
+/**
+ * Get human-readable onPlay effect description
+ */
+export const getOnPlayDescription = (onPlay?: {
+  statusToEnemy?: { type: string; value: number; duration?: number };
+  pierce?: number;
+  heal?: number;
+  bonusDamage?: number;
+  bonusMult?: number;
+}): string => {
+  if (!onPlay) return '';
+  const parts: string[] = [];
+  if (onPlay.statusToEnemy) {
+    const s = onPlay.statusToEnemy;
+    const statusNames: Record<string, string> = {
+      burn: '灼热', weak: '虚弱', poison: '中毒', vulnerable: '易伤',
+    };
+    const name = statusNames[s.type] || s.type;
+    parts.push(`${name} ${s.value}${s.duration ? `(${s.duration}回合)` : ''}`);
+  }
+  if (onPlay.pierce) parts.push(`穿透 +${onPlay.pierce}`);
+  if (onPlay.heal) parts.push(`回复 ${onPlay.heal}HP`);
+  if (onPlay.bonusDamage) parts.push(`伤害 +${onPlay.bonusDamage}`);
+  if (onPlay.bonusMult) parts.push(`伤害 x${onPlay.bonusMult}`);
+  return parts.join(', ');
 };

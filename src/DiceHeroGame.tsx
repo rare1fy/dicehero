@@ -302,7 +302,12 @@ export default function DiceHeroGame() {
     const count = game.drawCount;
     
     // 从骰子库抽取
-    const { drawn, newBag, newDiscard } = drawFromBag(game.diceBag, game.discardPile, count);
+    const { drawn, newBag, newDiscard, shuffled } = drawFromBag(game.diceBag, game.discardPile, count);
+    
+    // Shuffle notice
+    if (shuffled) {
+      addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+    }
     
     // 更新骰子库状态
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));

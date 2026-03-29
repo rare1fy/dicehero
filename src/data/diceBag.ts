@@ -28,14 +28,16 @@ export const drawFromBag = (
   diceBag: string[],
   discardPile: string[],
   drawCount: number
-): { drawn: Die[]; newBag: string[]; newDiscard: string[] } => {
+): { drawn: Die[]; newBag: string[]; newDiscard: string[]; shuffled: boolean } => {
   let bag = [...diceBag];
   let discard = [...discardPile];
+  let shuffled = false;
 
   // 如果骰子库不够抽，弃骰库洗牌放回
   if (bag.length < drawCount) {
     bag = [...bag, ...shuffle(discard)];
     discard = [];
+    shuffled = true;
   }
 
   // 抽取
@@ -56,7 +58,7 @@ export const drawFromBag = (
     };
   });
 
-  return { drawn, newBag: bag, newDiscard: discard };
+  return { drawn, newBag: bag, newDiscard: discard, shuffled };
 };
 
 /**

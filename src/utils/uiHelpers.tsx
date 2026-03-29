@@ -21,14 +21,14 @@ export const getAugmentIcon = (condition: string, size = 12) => {
 };
 
 // 元素→CSS样式映射
-const ELEMENT_STYLE_MAP: Record<DiceElement, { diceClass: string; glowClass: string }> = {
-  normal: { diceClass: 'pixel-dice-blue', glowClass: 'dice-glow-blue' },
-  fire: { diceClass: 'pixel-dice-red', glowClass: 'dice-glow-red' },
-  ice: { diceClass: 'pixel-dice-blue', glowClass: 'dice-glow-blue' },
-  thunder: { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-purple' },
-  poison: { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-purple' },
-  holy: { diceClass: 'pixel-dice-gold', glowClass: 'dice-glow-gold' },
-  shadow: { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-purple' },
+const ELEMENT_STYLE_MAP: Record<DiceElement, { diceClass: string; glowClass: string; effectClass: string; textureClass: string }> = {
+  normal:  { diceClass: 'pixel-dice-white',  glowClass: 'dice-glow-white',   effectClass: '',                     textureClass: '' },
+  fire:    { diceClass: 'pixel-dice-red',    glowClass: 'dice-glow-fire',    effectClass: 'dice-element-fire',    textureClass: 'dice-texture-fire' },
+  ice:     { diceClass: 'pixel-dice-blue',   glowClass: 'dice-glow-ice',     effectClass: 'dice-element-ice',     textureClass: 'dice-texture-ice' },
+  thunder: { diceClass: 'pixel-dice-gold',   glowClass: 'dice-glow-thunder', effectClass: 'dice-element-thunder', textureClass: 'dice-texture-thunder' },
+  poison:  { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-poison',  effectClass: 'dice-element-poison',  textureClass: 'dice-texture-poison' },
+  holy:    { diceClass: 'pixel-dice-gold',   glowClass: 'dice-glow-holy',    effectClass: 'dice-element-holy',    textureClass: 'dice-texture-holy' },
+  shadow:  { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-shadow',  effectClass: 'dice-element-shadow',  textureClass: 'dice-texture-shadow' },
 };
 
 // 8-Bit 像素风骰子样式 — 基于元素类型
@@ -40,8 +40,10 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
 
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
   const glow = selected && !invalid ? style.glowClass : '';
+  const effect = !rolling && !invalid ? style.effectClass : '';
+  const texture = !rolling && !invalid ? style.textureClass : '';
 
-  return base + selection + rollAnim + invalidStyle + style.diceClass + ' ' + glow;
+  return base + selection + rollAnim + invalidStyle + style.diceClass + ' ' + glow + ' ' + effect + ' ' + texture;
 };
 
 // 像素HP条颜色

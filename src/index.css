@@ -455,6 +455,269 @@
     0 3px 0 #4a3808;
 }
 
+.pixel-dice-white {
+  background-color: #2a2d35;
+  border-color: #8899aa;
+  color: #d0d8e0;
+  box-shadow: 
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    0 3px 0 #1a1d25;
+}
+
+/* === 元素骰子粒子光效 === */
+.dice-element-fire { position: relative; overflow: visible; }
+.dice-element-fire::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 2px;
+  background: radial-gradient(ellipse at bottom, rgba(224,120,48,0.25) 0%, transparent 70%);
+  animation: dice-fire-glow 1.5s steps(4) infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+.dice-element-fire::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 50%;
+  width: 6px; height: 8px;
+  transform: translateX(-50%);
+  background: linear-gradient(to top, rgba(224,120,48,0.6), rgba(255,107,53,0.3), transparent);
+  animation: dice-fire-particle 0.8s steps(3) infinite;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.dice-element-ice { position: relative; overflow: visible; }
+.dice-element-ice::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 2px;
+  background: radial-gradient(circle at center, rgba(48,168,208,0.2) 0%, transparent 70%);
+  animation: dice-ice-glow 2s steps(4) infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+.dice-element-ice::after {
+  content: '';
+  position: absolute;
+  top: -4px; right: -2px;
+  width: 6px; height: 6px;
+  background: radial-gradient(circle, rgba(144,224,255,0.6) 0%, transparent 70%);
+  animation: dice-ice-sparkle 1.2s steps(3) infinite;
+  pointer-events: none;
+}
+
+.dice-element-thunder { position: relative; overflow: visible; }
+.dice-element-thunder::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 2px;
+  background: radial-gradient(circle, rgba(255,224,64,0.15) 0%, transparent 60%);
+  animation: dice-thunder-flash 0.6s steps(2) infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+.dice-element-thunder::after {
+  content: '';
+  position: absolute;
+  top: -3px; left: 50%;
+  width: 2px; height: 6px;
+  transform: translateX(-50%);
+  background: rgba(255,224,64,0.5);
+  animation: dice-thunder-bolt 0.4s steps(2) infinite;
+  pointer-events: none;
+}
+
+.dice-element-poison { position: relative; overflow: visible; }
+.dice-element-poison::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 2px;
+  background: radial-gradient(ellipse at bottom, rgba(96,192,48,0.2) 0%, transparent 70%);
+  animation: dice-poison-bubble 2s steps(4) infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+.dice-element-poison::after {
+  content: '';
+  position: absolute;
+  bottom: -3px; right: 4px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: rgba(96,192,48,0.5);
+  animation: dice-poison-drip 1.5s steps(4) infinite;
+  pointer-events: none;
+}
+
+.dice-element-holy { position: relative; overflow: visible; }
+.dice-element-holy::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 2px;
+  background: radial-gradient(circle, rgba(212,160,48,0.25) 0%, transparent 65%);
+  animation: dice-holy-pulse 2s steps(4) infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+.dice-element-holy::after {
+  content: '';
+  position: absolute;
+  top: -3px; left: 50%;
+  width: 8px; height: 4px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(255,232,144,0.5) 0%, transparent 70%);
+  animation: dice-holy-halo 1.5s steps(3) infinite alternate;
+  pointer-events: none;
+}
+
+.dice-element-shadow { position: relative; overflow: visible; }
+.dice-element-shadow::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 2px;
+  background: radial-gradient(circle, rgba(144,96,192,0.2) 0%, transparent 60%);
+  animation: dice-shadow-pulse 1.8s steps(4) infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+.dice-element-shadow::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 50%;
+  width: 10px; height: 4px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(80,48,128,0.5) 0%, transparent 70%);
+  animation: dice-shadow-mist 2s steps(4) infinite;
+  pointer-events: none;
+}
+
+/* 元素骰子底纹 */
+.dice-texture-fire {
+  background-image: 
+    radial-gradient(1px 1px at 8px 12px, rgba(255,107,53,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 28px 38px, rgba(224,80,32,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40px 8px, rgba(255,107,53,0.2) 0%, transparent 100%),
+    radial-gradient(2px 1px at 18px 42px, rgba(224,80,32,0.15) 0%, transparent 100%);
+}
+.dice-texture-ice {
+  background-image: 
+    linear-gradient(135deg, rgba(144,224,255,0.08) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(144,224,255,0.08) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(80,184,224,0.06) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(80,184,224,0.06) 25%, transparent 25%);
+  background-size: 12px 12px;
+}
+.dice-texture-thunder {
+  background-image: 
+    linear-gradient(180deg, transparent 40%, rgba(255,224,64,0.06) 50%, transparent 60%),
+    linear-gradient(90deg, transparent 45%, rgba(240,192,32,0.08) 50%, transparent 55%);
+}
+.dice-texture-poison {
+  background-image: 
+    radial-gradient(2px 2px at 10px 14px, rgba(96,192,48,0.2) 0%, transparent 100%),
+    radial-gradient(3px 3px at 35px 35px, rgba(80,160,40,0.15) 0%, transparent 100%),
+    radial-gradient(2px 2px at 42px 10px, rgba(96,192,48,0.12) 0%, transparent 100%);
+}
+.dice-texture-holy {
+  background-image: 
+    radial-gradient(circle at center, rgba(255,232,144,0.1) 0%, transparent 50%),
+    linear-gradient(0deg, transparent 45%, rgba(212,160,48,0.06) 50%, transparent 55%),
+    linear-gradient(90deg, transparent 45%, rgba(212,160,48,0.06) 50%, transparent 55%);
+}
+.dice-texture-shadow {
+  background-image: 
+    radial-gradient(circle at 30% 30%, rgba(80,48,128,0.15) 0%, transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(160,96,208,0.1) 0%, transparent 40%);
+}
+
+/* 元素粒子动画关键帧 */
+@keyframes dice-fire-glow {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+@keyframes dice-fire-particle {
+  0% { transform: translateX(-50%) translateY(0); opacity: 0.6; }
+  50% { transform: translateX(-50%) translateY(-4px); opacity: 0.8; }
+  100% { transform: translateX(-50%) translateY(-8px); opacity: 0; }
+}
+@keyframes dice-ice-glow {
+  0% { opacity: 0.5; }
+  100% { opacity: 0.9; }
+}
+@keyframes dice-ice-sparkle {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(0.5); }
+}
+@keyframes dice-thunder-flash {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.9; }
+  100% { opacity: 0.3; }
+}
+@keyframes dice-thunder-bolt {
+  0% { height: 6px; opacity: 0.5; }
+  50% { height: 10px; opacity: 0.9; }
+  100% { height: 2px; opacity: 0; }
+}
+@keyframes dice-poison-bubble {
+  0% { opacity: 0.5; }
+  100% { opacity: 0.8; }
+}
+@keyframes dice-poison-drip {
+  0% { transform: translateY(0); opacity: 0.5; }
+  75% { transform: translateY(4px); opacity: 0.7; }
+  100% { transform: translateY(8px); opacity: 0; }
+}
+@keyframes dice-holy-pulse {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+@keyframes dice-holy-halo {
+  0% { opacity: 0.3; width: 8px; }
+  100% { opacity: 0.7; width: 12px; }
+}
+@keyframes dice-shadow-pulse {
+  0% { opacity: 0.4; }
+  100% { opacity: 0.8; }
+}
+@keyframes dice-shadow-mist {
+  0% { opacity: 0.3; width: 10px; }
+  50% { opacity: 0.6; width: 14px; }
+  100% { opacity: 0.3; width: 10px; }
+}
+
+/* === 洗牌提示动画 === */
+@keyframes dice-shuffle-notice {
+  0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+  15% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(0.9); }
+}
+.shuffle-notice {
+  animation: dice-shuffle-notice 1.5s steps(6) forwards;
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, rgba(60,108,200,0.9), rgba(48,80,160,0.95));
+  border: 3px solid var(--pixel-blue);
+  color: var(--pixel-blue-light);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  image-rendering: pixelated;
+  box-shadow: 0 0 20px rgba(60,108,200,0.4), inset -2px -2px 0 rgba(0,0,0,0.3);
+}
+
 .pixel-dice-selected {
   transform: translateY(-16px) !important;
   box-shadow: 
@@ -752,6 +1015,34 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 .dice-glow-gold {
   box-shadow: 0 0 10px var(--pixel-gold), 0 0 20px rgba(200,168,60,0.3);
+}
+
+.dice-glow-white {
+  box-shadow: 0 0 10px rgba(136,153,170,0.5), 0 0 20px rgba(136,153,170,0.2);
+}
+
+.dice-glow-fire {
+  box-shadow: 0 0 12px rgba(224,120,48,0.6), 0 0 24px rgba(224,120,48,0.3);
+}
+
+.dice-glow-ice {
+  box-shadow: 0 0 12px rgba(48,168,208,0.6), 0 0 24px rgba(48,168,208,0.3);
+}
+
+.dice-glow-thunder {
+  box-shadow: 0 0 12px rgba(255,224,64,0.6), 0 0 24px rgba(255,224,64,0.3);
+}
+
+.dice-glow-poison {
+  box-shadow: 0 0 12px rgba(96,192,48,0.6), 0 0 24px rgba(96,192,48,0.3);
+}
+
+.dice-glow-holy {
+  box-shadow: 0 0 12px rgba(212,160,48,0.6), 0 0 24px rgba(212,160,48,0.3);
+}
+
+.dice-glow-shadow {
+  box-shadow: 0 0 12px rgba(144,96,192,0.6), 0 0 24px rgba(144,96,192,0.3);
 }
 
 /* === HP条渐变（兼容旧API） === */
