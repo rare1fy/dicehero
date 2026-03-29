@@ -21,7 +21,7 @@ import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag } from './d
 import { DiceBagPanel } from './components/DiceBagPanel';
 import { ElementBadge } from './components/PixelDiceShapes';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
-import { getEnemyForNode } from './data/enemies';
+import { getEnemyForNode, getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
 import { playSound } from './utils/sound';
@@ -72,12 +72,16 @@ export default function DiceHeroGame() {
     map: generateMap(),
     phase: 'start',
     battleTurn: 0,
+    isEnemyTurn: false,
     logs: ['欢迎来到 DICE BATTLE。'],
     shopItems: [],
     statuses: [],
     lootItems: [],
     enemyHpMultiplier: 1.0,
-    pendingReplacementAugment: null
+    pendingReplacementAugment: null,
+    targetEnemyUid: null,
+    battleWaves: [],
+    currentWaveIndex: 0
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
@@ -103,17 +107,20 @@ export default function DiceHeroGame() {
 
   useEffect(() => {
     if (game.phase === 'reward' || game.phase === 'map') {
-      setEnemy(null);
+      setEnemies([]);
     }
   }, [game.phase]);
 
   const [dice, setDice] = useState<Die[]>([]);
-  const [enemy, setEnemy] = useState<Enemy | null>(null);
+  const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [rerollCount, setRerollCount] = useState(0);
+  const targetEnemyUid = game.targetEnemyUid;
+  const targetEnemy = enemies.find(e => e.uid === targetEnemyUid && e.hp > 0) || enemies.find(e => e.hp > 0) || null;
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
   const [showEnemyIntentInfo, setShowEnemyIntentInfo] = useState(false);
 
-  const [enemyEffect, setEnemyEffect] = useState<'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>(null);
+  const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
+  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
   const [screenShake, setScreenShake] = useState(false);
   const [hpGained, setHpGained] = useState(false);
@@ -221,8 +228,8 @@ export default function DiceHeroGame() {
 
   const startBattle = (node: MapNode) => {
     const newEnemy = getEnemyForNode(node, node.depth, game.enemyHpMultiplier);
-    setEnemy(newEnemy);
-    setEnemyEffect(null);
+    setEnemies([newEnemy]);
+    setEnemyEffects({});
     setPlayerEffect(null);
     // Boss出场音效
     if (node.type === 'boss') {
@@ -560,7 +567,7 @@ export default function DiceHeroGame() {
     const playerWeak = game.statuses.find(s => s.type === 'weak');
     if (playerWeak) modifiedDamage = Math.floor(modifiedDamage * 0.75);
     
-    const enemyVulnerable = enemy?.statuses.find(s => s.type === 'vulnerable');
+    const enemyVulnerable = targetEnemy?.statuses.find(s => s.type === 'vulnerable');
     if (enemyVulnerable) modifiedDamage = Math.floor(modifiedDamage * 1.5);
 
     return {
@@ -584,7 +591,7 @@ export default function DiceHeroGame() {
   const playHand = async () => {
     playSound('select');
     const selected = dice.filter(d => d.selected && !d.spent);
-    if (selected.length === 0 || !enemy || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0) return;
+    if (selected.length === 0 || enemies.length === 0 || !targetEnemy || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0) return;
 
     setGame(prev => ({ ...prev, playsLeft: prev.playsLeft - 1 }));
 
@@ -623,7 +630,7 @@ export default function DiceHeroGame() {
     playSound('hit');
     
     if (outcome.damage > 0) {
-      const absorbed = Math.min(enemy.armor, outcome.damage);
+      const absorbed = Math.min(targetEnemy.armor, outcome.damage);
       const hpDamage = Math.max(0, outcome.damage - absorbed);
       
       if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'enemy');
@@ -633,18 +640,19 @@ export default function DiceHeroGame() {
     await new Promise(r => setTimeout(r, 700));
 
     // 提前计算敌人是否会死亡
+    const targetUid = targetEnemy.uid;
     let preCalcRemainingDamage = outcome.damage;
-    let preCalcEnemyArmor = enemy.armor;
+    let preCalcEnemyArmor = targetEnemy.armor;
     if (preCalcEnemyArmor > 0) {
       const preAbsorbed = Math.min(preCalcEnemyArmor, preCalcRemainingDamage);
       preCalcEnemyArmor -= preAbsorbed;
       preCalcRemainingDamage -= preAbsorbed;
     }
-    const willDie = enemy.hp - preCalcRemainingDamage <= 0;
+    const willDie = targetEnemy.hp - preCalcRemainingDamage <= 0;
 
     // 如果敌人将死，先触发死亡动画再清除攻击效果，实现衔接
     if (willDie) {
-      setEnemyEffect('death');
+      setEnemyEffectForUid(targetUid, 'death');
       setPlayerEffect(null);
     } else {
       setPlayerEffect(null);
@@ -676,17 +684,17 @@ export default function DiceHeroGame() {
 
     // Apply to Enemy
     let remainingDamage = outcome.damage;
-    let enemyArmor = enemy.armor;
+    let enemyArmor = targetEnemy.armor;
     if (enemyArmor > 0) {
       const absorbed = Math.min(enemyArmor, remainingDamage);
       enemyArmor -= absorbed;
       remainingDamage -= absorbed;
     }
-    const finalEnemyHp = Math.max(0, enemy.hp - remainingDamage);
+    const finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
 
-    setEnemy(prev => {
-      if (!prev) return null;
-      let newStatuses = [...prev.statuses];
+    setEnemies(prev => prev.map(e => {
+      if (e.uid !== targetUid) return e;
+      let newStatuses = [...e.statuses];
       if (outcome.statusEffects) {
         outcome.statusEffects.forEach(s => {
           const existing = newStatuses.find(es => es.type === s.type);
@@ -697,8 +705,8 @@ export default function DiceHeroGame() {
           }
         });
       }
-      return { ...prev, hp: finalEnemyHp, armor: enemyArmor, statuses: newStatuses };
-    });
+      return { ...e, hp: finalEnemyHp, armor: enemyArmor, statuses: newStatuses };
+    }));
     setGame(prev => ({ 
       ...prev, 
       armor: prev.armor + outcome.armor,
@@ -729,20 +737,17 @@ export default function DiceHeroGame() {
 
   const endTurn = async () => {
     playSound('turn_end');
-    if (!enemy || game.isEnemyTurn || dice.some(d => d.playing)) return;
+    const aliveEnemies = enemies.filter(e => e.hp > 0);
+    if (aliveEnemies.length === 0 || game.isEnemyTurn || dice.some(d => d.playing)) return;
 
     setGame(prev => ({ ...prev, isEnemyTurn: true }));
 
-    // --- Helper: 递减带duration的状态效果 ---
+    // --- Helper: tick status durations ---
     const tickStatuses = (statuses: StatusEffect[]): StatusEffect[] => {
       return statuses
         .map(s => {
-          // poison和burn按value递减（已有逻辑处理），其他状态按duration递减
-          if (s.type === 'poison' || s.type === 'burn') return s; // 这些在各自的伤害逻辑中处理
-          if (s.duration !== undefined) {
-            return { ...s, duration: s.duration - 1 };
-          }
-          // 没有duration的状态效果，每回合value-1
+          if (s.type === 'poison' || s.type === 'burn') return s;
+          if (s.duration !== undefined) return { ...s, duration: s.duration - 1 };
           return { ...s, value: s.value - 1 };
         })
         .filter(s => {
@@ -752,8 +757,7 @@ export default function DiceHeroGame() {
         });
     };
 
-    // --- 1. Player Turn End ---
-    // 处理玩家中毒
+    // --- 1. Player Turn End: process player poison ---
     let currentPlayerHp = game.hp;
     setGame(prev => {
       let nextStatuses = [...prev.statuses];
@@ -761,7 +765,7 @@ export default function DiceHeroGame() {
       const poison = prev.statuses.find(s => s.type === 'poison');
       if (poison && poison.value > 0) {
         poisonDamage = poison.value;
-        addLog(`你因中毒受到了 ${poisonDamage} 点伤害。`);
+        addLog(`\u4f60\u56e0\u4e2d\u6bd2\u53d7\u5230\u4e86 ${poisonDamage} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${poisonDamage}`, 'text-purple-400', <PixelPoison size={2} />, 'player');
         nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
       }
@@ -770,141 +774,176 @@ export default function DiceHeroGame() {
     });
 
     await new Promise(r => setTimeout(r, 600));
-
-    // Check if player died from poison
     if (currentPlayerHp <= 0) { playSound('defeat'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
 
-    // --- 2. Enemy Turn Start: 处理敌人灼烧 ---
-    let currentEnemyHp = enemy.hp;
-    setEnemy(prev => {
-      if (!prev) return null;
-      const burn = prev.statuses.find(s => s.type === 'burn');
+    // --- 2. Process each enemy's burn damage ---
+    let enemyDeathsFromBurn: string[] = [];
+    setEnemies(prev => prev.map(e => {
+      if (e.hp <= 0) return e;
+      const burn = e.statuses.find(s => s.type === 'burn');
       if (burn && burn.value > 0) {
         const dmg = burn.value;
-        addLog(`${prev.name} 因灼烧受到了 ${dmg} 点伤害。`);
+        addLog(`${e.name} \u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${dmg} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${dmg}`, 'text-orange-500', <PixelFlame size={2} />, 'enemy');
         const nextBurnValue = Math.floor(burn.value / 2);
-        const nextStatuses = prev.statuses.map(s => s.type === 'burn' ? { ...s, value: nextBurnValue } : s).filter(s => s.value > 0);
-        currentEnemyHp = Math.max(0, prev.hp - dmg);
-        return { ...prev, hp: currentEnemyHp, statuses: nextStatuses, armor: 0 };
+        const nextStatuses = e.statuses.map(s => s.type === 'burn' ? { ...s, value: nextBurnValue } : s).filter(s => s.value > 0);
+        const newHp = Math.max(0, e.hp - dmg);
+        if (newHp <= 0) enemyDeathsFromBurn.push(e.uid);
+        return { ...e, hp: newHp, statuses: nextStatuses, armor: 0 };
       }
-      currentEnemyHp = prev.hp;
-      return { ...prev, armor: 0 };
-    });
+      return { ...e, armor: 0 };
+    }));
 
     await new Promise(r => setTimeout(r, 600));
 
-    // 敌人因灼烧死亡 → 立即结束战斗，不再执行后续攻击
-    if (currentEnemyHp <= 0) { handleVictory(); return; }
-
-    // --- 3. Enemy Action (只有敌人存活才执行) ---
-    const intent = enemy.intent;
-    if (intent.type === '攻击') {
-      setEnemyEffect('attack');
-      setPlayerEffect('flash');
-      setScreenShake(true);
-      setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 300);
-      playSound('enemy');
-      let damage = intent.value;
-      const enemyWeak = enemy.statuses.find(s => s.type === 'weak');
-      if (enemyWeak) damage = Math.floor(damage * 0.75);
-      const playerVulnerable = game.statuses.find(s => s.type === 'vulnerable');
-      if (playerVulnerable) damage = Math.floor(damage * 1.5);
-      
-      const playerArmor = game.armor;
-      const absorbed = Math.min(playerArmor, damage);
-      const remainingDamage = damage - absorbed;
-      currentPlayerHp = Math.max(0, game.hp - remainingDamage);
-
-      if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'player');
-      if (remainingDamage > 0) setTimeout(() => addFloatingText(`-${remainingDamage}`, 'text-red-500', <PixelHeart size={2} />, 'player'), absorbed > 0 ? 150 : 0);
-
-      setGame(prev => ({ ...prev, hp: Math.max(0, prev.hp - remainingDamage), armor: playerArmor - absorbed }));
-      
-      addLog(`${enemy.name} 使用 ${intent.description || '攻击'} 造成 ${damage} 伤害！`);
-      await new Promise(r => setTimeout(r, 600));
-      setEnemyEffect(null);
-    } else if (intent.type === '防御') {
-      setEnemyEffect('defend');
-      playSound('armor');
-      setEnemy(prev => prev ? { ...prev, armor: prev.armor + intent.value } : null);
-      addLog(`${enemy.name} 获得 ${intent.value} 护甲。`);
-      await new Promise(r => setTimeout(r, 600));
-      setEnemyEffect(null);
-    } else if (intent.type === '技能') {
-      setEnemyEffect('skill');
-      playSound('skill');
-      addLog(`${enemy.name} 使用了技能: ${intent.description || '未知技能'}`);
-      
-      const applyStatusToPlayer = (type: StatusType, val: number, duration?: number) => {
-        setGame(prev => {
-          const nextStatuses = [...prev.statuses];
-          const existing = nextStatuses.find(s => s.type === type);
-          if (existing) {
-            existing.value += val;
-            if (duration !== undefined) existing.duration = Math.max(existing.duration ?? 0, duration);
-          }
-          else nextStatuses.push({ type, value: val, duration });
-          return { ...prev, statuses: nextStatuses };
-        });
-      };
-
-      if (intent.description === '重构') {
-        setEnemy(prev => prev ? { ...prev, hp: Math.min(prev.maxHp, prev.hp + intent.value) } : null);
-        addFloatingText(`+${intent.value}`, 'text-emerald-500', <PixelHeart size={2} />, 'enemy');
-      } else if (intent.description === '虚弱') {
-        applyStatusToPlayer('weak', intent.value, 3);
-        addFloatingText(`虚弱 ${intent.value}`, 'text-zinc-400', <PixelArrowDown size={2} />, 'player');
-      } else if (intent.description === '剧毒') {
-        applyStatusToPlayer('poison', intent.value);
-        addFloatingText(`中毒 ${intent.value}`, 'text-purple-400', <PixelPoison size={2} />, 'player');
-      } else if (intent.description === '灼烧') {
-        applyStatusToPlayer('burn', intent.value);
-        addFloatingText(`灼烧 ${intent.value}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
-      } else if (intent.description === '力量') {
-        setEnemy(prev => {
-          if (!prev) return null;
-          const nextStatuses = [...prev.statuses];
-          const existing = nextStatuses.find(s => s.type === 'strength');
-          if (existing) existing.value += intent.value;
-          else nextStatuses.push({ type: 'strength', value: intent.value, duration: 3 });
-          return { ...prev, statuses: nextStatuses };
-        });
-        addFloatingText(`力量 ${intent.value}`, 'text-orange-400', <PixelArrowUp size={2} />, 'enemy');
-      } else if (intent.description === '易伤') {
-        applyStatusToPlayer('vulnerable', intent.value, 3);
-        addFloatingText(`易伤 ${intent.value}`, 'text-red-400', <PixelArrowUp size={2} />, 'player');
+    // Check if all enemies died from burn
+    const aliveAfterBurn = enemies.filter(e => e.hp > 0 && !enemyDeathsFromBurn.includes(e.uid));
+    if (aliveAfterBurn.length === 0 && enemyDeathsFromBurn.length > 0) {
+      // Check next wave
+      const nextWaveIdx = game.currentWaveIndex + 1;
+      if (nextWaveIdx < game.battleWaves.length) {
+        const nextWave = game.battleWaves[nextWaveIdx].enemies;
+        setEnemies(nextWave);
+        setEnemyEffects({});
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+        addToast(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
+        rollAllDice();
+        return;
       }
-      
-      await new Promise(r => setTimeout(r, 600));
-      setEnemyEffect(null);
+      handleVictory();
+      return;
     }
 
-    // Check if player died from attack
+    // --- 3. Each alive enemy takes action ---
+    for (const e of aliveEnemies) {
+      if (e.hp <= 0 || enemyDeathsFromBurn.includes(e.uid)) continue;
+      if (currentPlayerHp <= 0) break;
+
+      const intent = e.intent;
+      if (intent.type === '\u653b\u51fb') {
+        setEnemyEffectForUid(e.uid, 'attack');
+        setPlayerEffect('flash');
+        setScreenShake(true);
+        setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 300);
+        playSound('enemy');
+        let damage = intent.value;
+        const enemyWeak = e.statuses.find(s => s.type === 'weak');
+        if (enemyWeak) damage = Math.floor(damage * 0.75);
+        const playerVulnerable = game.statuses.find(s => s.type === 'vulnerable');
+        if (playerVulnerable) damage = Math.floor(damage * 1.5);
+        
+        const playerArmor = game.armor;
+        const absorbed = Math.min(playerArmor, damage);
+        const remainingDamage = damage - absorbed;
+        currentPlayerHp = Math.max(0, currentPlayerHp - remainingDamage);
+
+        if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'player');
+        if (remainingDamage > 0) setTimeout(() => addFloatingText(`-${remainingDamage}`, 'text-red-500', <PixelHeart size={2} />, 'player'), absorbed > 0 ? 150 : 0);
+
+        setGame(prev => ({ ...prev, hp: Math.max(0, prev.hp - remainingDamage), armor: Math.max(0, prev.armor - absorbed) }));
+        
+        addLog(`${e.name} \u4f7f\u7528 ${intent.description || '\u653b\u51fb'} \u9020\u6210 ${damage} \u4f24\u5bb3\uff01`);
+        await new Promise(r => setTimeout(r, 600));
+        setEnemyEffectForUid(e.uid, null);
+      } else if (intent.type === '\u9632\u5fa1') {
+        setEnemyEffectForUid(e.uid, 'defend');
+        playSound('armor');
+        setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + intent.value } : en));
+        addLog(`${e.name} \u83b7\u5f97 ${intent.value} \u62a4\u7532\u3002`);
+        await new Promise(r => setTimeout(r, 600));
+        setEnemyEffectForUid(e.uid, null);
+      } else if (intent.type === '\u6280\u80fd') {
+        setEnemyEffectForUid(e.uid, 'skill');
+        playSound('skill');
+        addLog(`${e.name} \u4f7f\u7528\u4e86\u6280\u80fd: ${intent.description || '\u672a\u77e5\u6280\u80fd'}`);
+        
+        const applyStatusToPlayer = (type: StatusType, val: number, duration?: number) => {
+          setGame(prev => {
+            const nextStatuses = [...prev.statuses];
+            const existing = nextStatuses.find(s => s.type === type);
+            if (existing) {
+              existing.value += val;
+              if (duration !== undefined) existing.duration = Math.max(existing.duration ?? 0, duration);
+            }
+            else nextStatuses.push({ type, value: val, duration });
+            return { ...prev, statuses: nextStatuses };
+          });
+        };
+
+        if (intent.description === '\u91cd\u6784') {
+          setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + intent.value) } : en));
+          addFloatingText(`+${intent.value}`, 'text-emerald-500', <PixelHeart size={2} />, 'enemy');
+        } else if (intent.description === '\u865a\u5f31') {
+          applyStatusToPlayer('weak', intent.value, 3);
+          addFloatingText(`\u865a\u5f31 ${intent.value}`, 'text-zinc-400', <PixelArrowDown size={2} />, 'player');
+        } else if (intent.description === '\u5267\u6bd2') {
+          applyStatusToPlayer('poison', intent.value);
+          addFloatingText(`\u4e2d\u6bd2 ${intent.value}`, 'text-purple-400', <PixelPoison size={2} />, 'player');
+        } else if (intent.description === '\u707c\u70e7') {
+          applyStatusToPlayer('burn', intent.value);
+          addFloatingText(`\u707c\u70e7 ${intent.value}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
+        } else if (intent.description === '\u529b\u91cf') {
+          setEnemies(prev => prev.map(en => {
+            if (en.uid !== e.uid) return en;
+            const nextStatuses = [...en.statuses];
+            const existing = nextStatuses.find(s => s.type === 'strength');
+            if (existing) existing.value += intent.value;
+            else nextStatuses.push({ type: 'strength', value: intent.value, duration: 3 });
+            return { ...en, statuses: nextStatuses };
+          }));
+          addFloatingText(`\u529b\u91cf ${intent.value}`, 'text-orange-400', <PixelArrowUp size={2} />, 'enemy');
+        } else if (intent.description === '\u6613\u4f24') {
+          applyStatusToPlayer('vulnerable', intent.value, 3);
+          addFloatingText(`\u6613\u4f24 ${intent.value}`, 'text-red-400', <PixelArrowUp size={2} />, 'player');
+        }
+        
+        await new Promise(r => setTimeout(r, 600));
+        setEnemyEffectForUid(e.uid, null);
+      }
+
+      if (currentPlayerHp <= 0) break;
+    }
+
+    // Check if player died
     if (currentPlayerHp <= 0) { playSound('defeat'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
 
-    // --- 4. Enemy Turn End: 处理敌人中毒 ---
-    setEnemy(prev => {
-      if (!prev) return null;
-      let nextStatuses = [...prev.statuses];
-      let poisonDamage = 0;
-      const poison = prev.statuses.find(s => s.type === 'poison');
+    // --- 4. Enemy Turn End: process each enemy's poison ---
+    setEnemies(prev => prev.map(e => {
+      if (e.hp <= 0) return e;
+      let nextStatuses = [...e.statuses];
+      const poison = nextStatuses.find(s => s.type === 'poison');
       if (poison && poison.value > 0) {
-        poisonDamage = poison.value;
-        addLog(`${prev.name} 因中毒受到了 ${poisonDamage} 点伤害。`);
-        addFloatingText(`-${poisonDamage}`, 'text-purple-400', <PixelPoison size={2} />, 'enemy');
+        addLog(`${e.name} \u56e0\u4e2d\u6bd2\u53d7\u5230\u4e86 ${poison.value} \u70b9\u4f24\u5bb3\u3002`);
+        addFloatingText(`-${poison.value}`, 'text-purple-400', <PixelPoison size={2} />, 'enemy');
         nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
+        const newHp = Math.max(0, e.hp - poison.value);
+        nextStatuses = tickStatuses(nextStatuses);
+        return { ...e, hp: newHp, statuses: nextStatuses };
       }
-      // 递减敌人其他状态效果的duration
       nextStatuses = tickStatuses(nextStatuses);
-      currentEnemyHp = Math.max(0, prev.hp - poisonDamage);
-      return { ...prev, hp: currentEnemyHp, statuses: nextStatuses };
-    });
+      return { ...e, statuses: nextStatuses };
+    }));
 
     await new Promise(r => setTimeout(r, 600));
 
-    // Check if enemy died from poison
-    if (currentEnemyHp <= 0) { handleVictory(); return; }
+    // Check if all enemies died from poison
+    // Note: we need to re-read enemies after the state update, but since this is async
+    // we'll check based on the computed values
+    const aliveAfterPoison = enemies.filter(e => e.hp > 0);
+    if (aliveAfterPoison.length === 0) {
+      const nextWaveIdx = game.currentWaveIndex + 1;
+      if (nextWaveIdx < game.battleWaves.length) {
+        const nextWave = game.battleWaves[nextWaveIdx].enemies;
+        setEnemies(nextWave);
+        setEnemyEffects({});
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+        addToast(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
+        rollAllDice();
+        return;
+      }
+      handleVictory();
+      return;
+    }
 
     // --- 5. Player Turn Start ---
     setGame(prev => {
@@ -914,21 +953,20 @@ export default function DiceHeroGame() {
       const burn = prev.statuses.find(s => s.type === 'burn');
       if (burn && burn.value > 0) {
         burnDamage = burn.value;
-        addLog(`你因灼烧受到了 ${burnDamage} 点伤害。`);
+        addLog(`\u4f60\u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${burnDamage} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${burnDamage}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
         const nextBurnValue = Math.floor(burn.value / 2);
         nextStatuses = nextStatuses.map(s => s.type === 'burn' ? { ...s, value: nextBurnValue } : s).filter(s => s.value > 0);
       }
-
-      // 递减玩家其他状态效果的duration
       nextStatuses = tickStatuses(nextStatuses);
-
-      // Update enemy intent for next turn
-      if (enemy.pattern) {
-        setEnemy(e => e ? { ...e, intent: enemy.pattern!(nextTurn, e, prev) } : null);
-      }
-
       currentPlayerHp = Math.max(0, prev.hp - burnDamage);
+
+      // Update all alive enemies' intents for next turn
+      setEnemies(prevEnemies => prevEnemies.map(e => {
+        if (e.hp <= 0 || !e.pattern) return e;
+        return { ...e, intent: e.pattern(nextTurn, e, prev) };
+      }));
+
       return { 
         ...prev, 
         battleTurn: nextTurn, 
@@ -940,7 +978,6 @@ export default function DiceHeroGame() {
 
     await new Promise(r => setTimeout(r, 100));
 
-    // Final player death check & reset turn state
     if (currentPlayerHp <= 0) { playSound('defeat'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
 
     setGame(prev => ({ 
@@ -965,8 +1002,8 @@ export default function DiceHeroGame() {
     if (
       game.phase === 'battle' && 
       !game.isEnemyTurn && 
-      enemy && 
-      enemy.hp > 0 && 
+      enemies.length > 0 && 
+      enemies.some(e => e.hp > 0) && 
       game.hp > 0 &&
       dice.length > 0 &&
       !dice.some(d => d.playing) &&
@@ -977,19 +1014,20 @@ export default function DiceHeroGame() {
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [game.phase, game.isEnemyTurn, enemy?.hp, game.hp, dice, game.playsLeft]);
+  }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft]);
 
   const handleVictory = () => {
-    if (!enemy) return;
+    if (enemies.length === 0) return;
+    const allWaveEnemies = game.battleWaves.flatMap(w => w.enemies);
     playSound('victory');
-    addLog(`击败了 ${enemy.name}！`);
+    addLog(`击败了 ${enemies[0]?.name || ""}！`);
     
     const loot: LootItem[] = [
-      { id: 'gold', type: 'gold', value: enemy.dropGold, collected: false }
+      { id: 'gold', type: 'gold', value: enemies.reduce((s,e) => s + e.dropGold, 0), collected: false }
     ];
 
     // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
-    if (enemy.rerollReward) {
+    if (enemies.find(e => e.rerollReward)?.rerollReward) {
       const eliteRewards = LOOT_CONFIG.eliteRewards;
       const selectedReward = eliteRewards[Math.floor(Math.random() * eliteRewards.length)];
       
@@ -1000,16 +1038,16 @@ export default function DiceHeroGame() {
       }
     }
 
-    if (enemy.dropAugment) {
+    if (allWaveEnemies.some(e => e.dropAugment)) {
       const options: Augment[] = [];
       const pool = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
       for (let i = 0; i < LOOT_CONFIG.augmentChoiceCount; i++) options.push(pool[i]);
       loot.push({ id: 'augment', type: 'augment', augmentOptions: options, collected: false });
     }
-    if (enemy.dropMaxPlays) {
-      loot.push({ id: 'maxPlays', type: 'maxPlays', value: enemy.dropMaxPlays, collected: false });
+    if (enemies.find(e => e.dropMaxPlays)?.dropMaxPlays) {
+      loot.push({ id: 'maxPlays', type: 'maxPlays', value: enemies.find(e => e.dropMaxPlays)?.dropMaxPlays, collected: false });
     }
-    if (enemy.dropDiceCount) {
+    if (enemies.find(e => e.dropDiceCount)?.dropDiceCount) {
       const lootDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
       const lootDice = lootDicePool[0];
       loot.push({ id: 'specialDice', type: 'specialDice', diceDefId: lootDice.id, collected: false });
@@ -1232,7 +1270,7 @@ export default function DiceHeroGame() {
   // --- GameContext Provider Value ---
   const contextValue = {
     game, setGame,
-    enemy, setEnemy,
+    enemies, setEnemies, targetEnemy,
     dice, setDice,
     showTutorial, setShowTutorial,
     showHandGuide, setShowHandGuide,
@@ -1402,7 +1440,7 @@ export default function DiceHeroGame() {
           </motion.div>
         )}
 
-        {game.phase === 'battle' && enemy && (
+        {game.phase === 'battle' && enemies.length > 0 && (
           <motion.div 
             animate={screenShake ? { x: [-10, 10, -10, 10, 0] } : {}}
             className="flex flex-col h-full relative"
@@ -1478,7 +1516,7 @@ export default function DiceHeroGame() {
 
             {/* 战斗闪光覆盖层 */}
             <AnimatePresence>
-              {(playerEffect === 'attack' || enemyEffect === 'attack') && (
+              {(playerEffect === 'attack' || Object.values(enemyEffects).includes('attack')) && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 0.12, 0.05, 0.08, 0] }}
@@ -1530,175 +1568,164 @@ export default function DiceHeroGame() {
                 ))}
               </AnimatePresence>
 
-              {/* 敌人主体 — 去框、放大、RPG风格头顶信息 */}
-              <motion.div 
-                key={enemy.name}
-                onClick={() => setShowEnemyIntentInfo(true)}
-                initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                animate={enemyEffect === 'death'
-                  ? { 
-                      x: [0, -4, 6, -3, 2, 0, 0, 0],
-                      scale: [1, 0.97, 1.03, 0.98, 1, 1.15, 1.3, 0], 
-                      opacity: [1, 1, 1, 1, 1, 0.9, 0.6, 0], 
-                      rotate: [0, -3, 4, -2, 0, 5, 12, -8], 
-                      filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1)', 'brightness(1.2)', 'brightness(1)', 'brightness(1.5)', 'brightness(2)', 'brightness(0)'],
-                      y: [0, 0, 0, 0, 0, -5, -15, 20]
-                    }
-                  : enemyEffect === 'attack' 
-                  ? { y: [0, -8, 40, 0], scale: [1, 1.08, 1.18, 1] } 
-                  : enemyEffect === 'defend' 
-                  ? { scale: [1, 1.1, 1] } 
-                  : enemyEffect === 'skill'
-                  ? { scale: [1, 1.3, 1], rotate: [0, 12, -12, 0] }
-                  : playerEffect === 'attack'
-                  ? { x: [0, -6, 8, -5, 3, 0], scale: [1, 0.96, 1.02, 0.98, 1], filter: ['brightness(1)', 'brightness(1.3) saturate(1.5)', 'brightness(1.1)', 'brightness(1.2) saturate(1.3)', 'brightness(1)'] }
-                  : { scale: 1, y: 0, opacity: 1 }
-                }
-                transition={{ 
-                  duration: enemyEffect === 'death' ? 1.2 : 0.4,
-                  ...(enemyEffect === 'death' ? { times: [0, 0.08, 0.16, 0.24, 0.32, 0.5, 0.75, 1], ease: 'easeInOut' } : {})
-                }}
-                className="relative cursor-pointer group flex flex-col items-center"
-              >
-                {/* ▲ 头顶信息区 — RPG风格 */}
-                <div className="enemy-overhead-info mb-2" style={{position:'relative', left:'auto', transform:'none'}}>
-                  {/* 意图指示器 — 纯图标+数值+光效 */}
-                  <div className={`flex items-center justify-center mb-1.5 intent-pulse ${
-                    enemy.intent.type === '攻击' ? 'intent-indicator-attack' : 
-                    enemy.intent.type === '防御' ? 'intent-indicator-defend' : 
-                    'intent-indicator-skill'
-                  }`}>
-                    {enemy.intent.type === '攻击' ? (
-                      <div className="flex items-center gap-1.5 font-bold text-lg">
-                        <PixelAttackIntent size={3} />
-                        <span className="font-mono">{getEffectiveIntentValue(enemy)}</span>
-                      </div>
-                    ) : enemy.intent.type === '防御' ? (
-                      <div className="flex items-center gap-1.5 font-bold text-lg">
-                        <PixelShield size={3} />
-                        <span className="font-mono">{enemy.intent.value}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 font-bold text-xs">
-                        <PixelMagic size={2} />
-                        <span>{enemy.intent.description}</span>
-                        {enemy.intent.value > 0 && <span className="text-[9px] opacity-80 font-mono">{enemy.intent.value}</span>}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 敌人名牌 */}
-                  <div className="enemy-nameplate text-center">
-                    <span className="font-bold text-[var(--dungeon-text-bright)] text-sm pixel-text-shadow tracking-wider">{enemy.name}</span>
-                  </div>
-
-                  {/* 血条 — 更宽更醒目 */}
-                  <div className="pixel-hp-bar h-4 w-52 relative mt-1.5">
+              {/* Multi-enemy horizontal display */}
+              <div className="flex items-end justify-center gap-3 flex-wrap">
+                {enemies.filter(e => e.hp > 0).map((enemy) => {
+                  const isTarget = enemy.uid === (targetEnemyUid || enemies.find(e => e.hp > 0)?.uid);
+                  const effect = enemyEffects[enemy.uid] || null;
+                  const currentNode = game.map.find(n => n.id === game.currentNodeId);
+                  const spriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
+                  
+                  return (
                     <motion.div 
-                      className={`h-full ${enemy.armor > 0 ? 'pixel-hp-fill-armor' : 'pixel-hp-fill-critical'}`}
-                      initial={{ width: '100%' }}
-                      animate={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[8px] font-mono font-bold text-white pixel-text-shadow">
-                        {enemy.hp}/{enemy.maxHp}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* 状态效果图标 */}
-                  <div className="flex flex-wrap gap-1 justify-center mt-1 min-h-[16px]">
-                    {enemy.armor > 0 && <StatusIcon status={{ type: 'armor', value: enemy.armor }} align="center" />}
-                    {enemy.statuses.map((s, i) => <StatusIcon key={i} status={s} align="center" />)}
-                  </div>
-                </div>
-
-                {/* ▼ 敌人像素精灵 — 去框直接展示，大号 */}
-                <div className="animate-enemy-breathe relative">
-                  {hasSpriteData(enemy.name) ? (
-                    <PixelSprite 
-                      name={enemy.name} 
-                      size={(() => {
-                        const currentNode = game.map.find(n => n.id === game.currentNodeId);
-                        return currentNode?.type === 'boss' ? 16 : currentNode?.type === 'elite' ? 13 : 10;
-                      })()}
-                    />
-                  ) : (
-                    <PixelSkull size={16} />
-                  )}
-                  
-                  {/* 状态光环效果 */}
-                  {enemy.statuses.some(s => s.type === 'burn') && (
-                    <div className="absolute inset-[-8px] animate-burn-edge pointer-events-none" style={{borderRadius:'50%'}} />
-                  )}
-                  {enemy.statuses.some(s => s.type === 'poison') && (
-                    <div className="absolute inset-[-8px] animate-poison-pulse pointer-events-none" style={{borderRadius:'50%'}} />
-                  )}
-                  
-                  {/* Boss/Elite 光环 */}
-                  {(() => {
-                    const currentNode = game.map.find(n => n.id === game.currentNodeId);
-                    if (currentNode?.type === 'boss') return (
-                      <div className="absolute inset-[-12px] pointer-events-none" style={{
-                        background: 'radial-gradient(circle, rgba(200,168,60,0.1) 0%, transparent 70%)',
-                        borderRadius: '50%'
-                      }} />
-                    );
-                    if (currentNode?.type === 'elite') return (
-                      <div className="absolute inset-[-10px] pointer-events-none" style={{
-                        background: 'radial-gradient(circle, rgba(139,60,200,0.08) 0%, transparent 70%)',
-                        borderRadius: '50%'
-                      }} />
-                    );
-                    return null;
-                  })()}
-                </div>
-                
-                {/* 敌人脚下阴影 — 更大更明显 */}
-                <div className="mt-1" style={{
-                  width: '140%',
-                  height: '24px',
-                  background: 'radial-gradient(ellipse, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 35%, transparent 65%)',
-                  borderRadius: '50%',
-                  marginLeft: '-20%',
-                  filter: 'blur(3px)'
-                }} />
-
-                {/* 攻击/技能特效覆盖 */}
-                <AnimatePresence>
-                  {enemyEffect === 'attack' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.5, y: 0 }}
-                      animate={{ opacity: 1, scale: 2.5, y: 120 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 drop-shadow-[0_0_20px_rgba(200,64,60,0.8)]"
+                      key={enemy.uid}
+                      onClick={() => setGame(prev => ({ ...prev, targetEnemyUid: enemy.uid }))}
+                      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                      animate={effect === 'death'
+                        ? { scale: [1, 0.97, 1.03, 0.98, 1, 1.15, 1.3, 0], opacity: [1, 1, 1, 1, 1, 0.9, 0.6, 0], y: [0, 0, 0, 0, 0, -5, -15, 20] }
+                        : effect === 'attack' 
+                        ? { y: [0, -8, 30, 0], scale: [1, 1.05, 1.12, 1] } 
+                        : effect === 'defend' 
+                        ? { scale: [1, 1.08, 1] } 
+                        : effect === 'skill'
+                        ? { scale: [1, 1.2, 1], rotate: [0, 8, -8, 0] }
+                        : playerEffect === 'attack' && isTarget
+                        ? { x: [0, -4, 6, -3, 0], scale: [1, 0.97, 1.01, 0.99, 1] }
+                        : { scale: 1, y: 0, opacity: 1 }
+                      }
+                      transition={{ duration: effect === 'death' ? 1.2 : 0.4 }}
+                      className={`relative cursor-pointer group flex flex-col items-center ${isTarget ? 'z-10' : 'z-5'}`}
                     >
-                      <PixelSword size={8} />
-                    </motion.div>
-                  )}
-                  {enemyEffect === 'skill' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.5, rotate: 0 }}
-                      animate={{ opacity: 1, scale: 3, rotate: 360 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 drop-shadow-[0_0_20px_rgba(139,60,200,0.8)]"
-                    >
-                      <PixelMagic size={8} />
-                    </motion.div>
-                  )}
-                  {/* 玩家攻击时的斩击特效 */}
-                  {playerEffect === 'attack' && (
-                    <motion.div
-                      initial={{ opacity: 1, scaleX: 0 }}
-                      animate={{ opacity: [1, 1, 0], scaleX: [0, 1.5, 2], rotate: -15 }}
-                      transition={{ duration: 0.35 }}
-                      className="absolute inset-[-20px] pointer-events-none z-30 slash-effect"
-                    />
-                  )}
-                </AnimatePresence>
-              </motion.div>
+                      {/* Target indicator arrow */}
+                      {isTarget && (
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20">
+                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: 1, repeat: Infinity }}>
+                            <svg width="10" height="8" viewBox="0 0 10 8" style={{imageRendering:'pixelated'}}>
+                              <polygon points="5,8 0,0 10,0" fill="var(--pixel-orange)" />
+                            </svg>
+                          </motion.div>
+                        </div>
+                      )}
 
-              {/* 第一人称双手 */}
+                      {/* Intent indicator */}
+                      <div className={`flex items-center justify-center mb-1 intent-pulse ${
+                        enemy.intent.type === '\u653b\u51fb' ? 'intent-indicator-attack' : 
+                        enemy.intent.type === '\u9632\u5fa1' ? 'intent-indicator-defend' : 
+                        'intent-indicator-skill'
+                      }`} style={{transform: 'scale(0.8)'}}>
+                        {enemy.intent.type === '\u653b\u51fb' ? (
+                          <div className="flex items-center gap-1 font-bold text-sm">
+                            <PixelAttackIntent size={2} />
+                            <span className="font-mono">{getEffectiveIntentValue(enemy)}</span>
+                          </div>
+                        ) : enemy.intent.type === '\u9632\u5fa1' ? (
+                          <div className="flex items-center gap-1 font-bold text-sm">
+                            <PixelShield size={2} />
+                            <span className="font-mono">{enemy.intent.value}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-0.5 font-bold text-[9px]">
+                            <PixelMagic size={2} />
+                            <span>{enemy.intent.description}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Enemy name */}
+                      <div className="text-center mb-0.5">
+                        <span className="font-bold text-[var(--dungeon-text-bright)] text-[10px] pixel-text-shadow">{enemy.name}</span>
+                      </div>
+
+                      {/* HP bar */}
+                      <div className="pixel-hp-bar h-2.5 w-20 relative mb-1">
+                        <motion.div 
+                          className={`h-full ${enemy.armor > 0 ? 'pixel-hp-fill-armor' : 'pixel-hp-fill-critical'}`}
+                          initial={{ width: '100%' }}
+                          animate={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[7px] font-mono font-bold text-white pixel-text-shadow">
+                            {enemy.hp}/{enemy.maxHp}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Status effects */}
+                      <div className="flex flex-wrap gap-0.5 justify-center mb-1 min-h-[12px]">
+                        {enemy.armor > 0 && <StatusIcon status={{ type: 'armor', value: enemy.armor }} align="center" />}
+                        {enemy.statuses.map((s, i) => <StatusIcon key={i} status={s} align="center" />)}
+                      </div>
+
+                      {/* Enemy sprite */}
+                      <div className="animate-enemy-breathe relative">
+                        {hasSpriteData(enemy.name) ? (
+                          <PixelSprite name={enemy.name} size={spriteSize} />
+                        ) : (
+                          <PixelSkull size={spriteSize} />
+                        )}
+                        
+                        {enemy.statuses.some(s => s.type === 'burn') && (
+                          <div className="absolute inset-[-6px] animate-burn-edge pointer-events-none" style={{borderRadius:'50%'}} />
+                        )}
+                        {enemy.statuses.some(s => s.type === 'poison') && (
+                          <div className="absolute inset-[-6px] animate-poison-pulse pointer-events-none" style={{borderRadius:'50%'}} />
+                        )}
+
+                        {isTarget && (
+                          <div className="absolute inset-[-4px] pointer-events-none" style={{
+                            border: '2px solid var(--pixel-orange)',
+                            borderRadius: '4px',
+                            boxShadow: '0 0 8px rgba(224,120,48,0.4)',
+                          }} />
+                        )}
+                      </div>
+                      
+                      {/* Shadow */}
+                      <div className="mt-0.5" style={{
+                        width: '120%',
+                        height: '12px',
+                        background: 'radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, transparent 65%)',
+                        borderRadius: '50%',
+                        marginLeft: '-10%',
+                        filter: 'blur(2px)'
+                      }} />
+
+                      {/* Attack/skill effects overlay */}
+                      <AnimatePresence>
+                        {effect === 'attack' && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.5, y: 0 }}
+                            animate={{ opacity: 1, scale: 2, y: 80 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+                          >
+                            <PixelSword size={5} />
+                          </motion.div>
+                        )}
+                        {playerEffect === 'attack' && isTarget && (
+                          <motion.div
+                            initial={{ opacity: 1, scaleX: 0 }}
+                            animate={{ opacity: [1, 1, 0], scaleX: [0, 1.2, 1.5], rotate: -15 }}
+                            transition={{ duration: 0.35 }}
+                            className="absolute inset-[-10px] pointer-events-none z-30 slash-effect"
+                          />
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Wave indicator */}
+              {game.battleWaves.length > 1 && (
+                <div className="absolute top-2 right-2 z-20 px-2 py-1 bg-[rgba(8,11,14,0.75)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                  <span className="text-[8px] text-[var(--dungeon-text-dim)] font-bold">\u6ce2\u6b21 </span>
+                  <span className="text-[9px] text-[var(--pixel-orange)] font-mono font-bold">{game.currentWaveIndex + 1}</span>
+                  <span className="text-[7px] text-[var(--dungeon-text-dim)]"> / {game.battleWaves.length}</span>
+                </div>
+              )}
+
+
               <div className="first-person-hands">
                 {/* 左手 — 持骰子 */}
                 <div className={`hand-left ${dice.some(d => d.rolling) ? 'hand-left-rolling' : handLeftThrow ? 'hand-left-throw' : ''}`}>
@@ -2252,7 +2279,7 @@ export default function DiceHeroGame() {
                             <span className="text-[var(--dungeon-text-dim)]">x0.75</span>
                           </div>
                         )}
-                        {enemy?.statuses.find(s => s.type === 'vulnerable') && (
+                        {targetEnemy?.statuses.find(s => s.type === 'vulnerable') && (
                           <div className="flex justify-between items-center text-[10px]">
                             <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
                               <PixelArrowUp size={1} /> 易伤修正
@@ -2325,7 +2352,7 @@ export default function DiceHeroGame() {
           </div>
         )}
 
-        {showEnemyIntentInfo && enemy && (
+        {showEnemyIntentInfo && targetEnemy && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0 }}
@@ -2341,35 +2368,35 @@ export default function DiceHeroGame() {
               className="relative w-full max-w-xs pixel-panel p-5"
             >
               <div className="text-[9px] tracking-[0.15em] text-[var(--pixel-red)] font-bold mb-2">◆ 敌人意图 ◆</div>
-              <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] mb-2 pixel-text-shadow">{enemy.intent.type}</h3>
+              <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] mb-2 pixel-text-shadow">{targetEnemy.intent.type}</h3>
               <div className="text-[var(--dungeon-text-dim)] text-[11px] mb-5 leading-relaxed">
-                {enemy.intent.type === '攻击' && (
+                {targetEnemy.intent.type === '攻击' && (
                   <div className="space-y-2">
                     <p>敌人准备发起一次强力攻击。</p>
                     <div className="flex items-center gap-2 text-[var(--pixel-red)] font-bold">
-                      <PixelSword size={2} /> 预计伤害: {enemy.intent.value} 点
+                      <PixelSword size={2} /> 预计伤害: {targetEnemy.intent.value} 点
                     </div>
                     <p className="text-[10px] text-[var(--dungeon-text-dim)]">提示: 使用护甲来抵挡伤害，或者在敌人出手前击败它。</p>
                   </div>
                 )}
-                {enemy.intent.type === '防御' && (
+                {targetEnemy.intent.type === '防御' && (
                   <div className="space-y-2">
                     <p>敌人正在加固防线，准备承受你的下一波攻击。</p>
                     <div className="flex items-center gap-2 text-[var(--pixel-blue)] font-bold">
-                      <PixelShield size={2} /> 预计护甲: {enemy.intent.value} 点
+                      <PixelShield size={2} /> 预计护甲: {targetEnemy.intent.value} 点
                     </div>
                     <p className="text-[10px] text-[var(--dungeon-text-dim)]">提示: 护甲会优先抵扣伤害。你可以尝试使用穿透伤害或等待护甲消失。</p>
                   </div>
                 )}
-                {enemy.intent.type === '特殊' && (
+                {targetEnemy.intent.type === '特殊' && (
                   <div className="space-y-2">
                     <p>敌人正在准备一个特殊的技能或状态效果。</p>
                     <div className="p-2.5 pixel-panel-dark text-[var(--dungeon-text)]">
-                      {enemy.intent.description}: {enemy.intent.value} 层
+                      {targetEnemy.intent.description}: {targetEnemy.intent.value} 层
                       <p className="text-[10px] text-[var(--dungeon-text-dim)] mt-1">
                         {(() => {
                           const map: Record<string, string> = { '剧毒': 'poison', '灼烧': 'burn', '虚弱': 'weak', '易伤': 'vulnerable' };
-                          const key = map[enemy.intent.description] || '';
+                          const key = map[targetEnemy.intent.description] || '';
                           return STATUS_INFO[key as keyof typeof STATUS_INFO]?.description || '';
                         })()}
                       </p>
@@ -2381,12 +2408,12 @@ export default function DiceHeroGame() {
               
               <div className="text-[9px] tracking-[0.15em] text-[var(--dungeon-text-dim)] font-bold mb-2">◆ 敌人状态 ◆</div>
               <div className="flex flex-wrap gap-2 mb-6">
-                {enemy.armor > 0 && (
+                {targetEnemy.armor > 0 && (
                   <div className="flex items-center gap-1 bg-[var(--pixel-blue-dark)] text-[var(--pixel-blue)] px-2 py-1 border border-[var(--pixel-blue)] text-[10px]" style={{borderRadius:'2px'}}>
-                    <PixelShield size={2} /> 护甲 {enemy.armor}
+                    <PixelShield size={2} /> 护甲 {targetEnemy.armor}
                   </div>
                 )}
-                {enemy.statuses.map((s, i) => {
+                {targetEnemy.statuses.map((s, i) => {
                   const info = STATUS_INFO[s.type];
                   return (
                     <div key={i} className={`flex items-center gap-1 bg-[var(--dungeon-bg)] px-2 py-1 border border-[var(--dungeon-panel-border)] text-[10px] ${info.color}`} style={{borderRadius:'2px'}}>
@@ -2394,7 +2421,7 @@ export default function DiceHeroGame() {
                     </div>
                   );
                 })}
-                {enemy.armor === 0 && enemy.statuses.length === 0 && (
+                {targetEnemy.armor === 0 && targetEnemy.statuses.length === 0 && (
                   <span className="text-[var(--dungeon-text-dim)] text-[10px]">无特殊状态</span>
                 )}
               </div>

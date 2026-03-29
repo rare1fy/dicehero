@@ -96,6 +96,7 @@ export interface MapNode {
 // ============================================================
 
 export interface Enemy {
+  uid: string;  // runtime unique id for multi-enemy targeting
   name: string;
   hp: number;
   maxHp: number;
@@ -139,6 +140,14 @@ export interface ShopItem {
 // 游戏主状态
 // ============================================================
 
+// ============================================================
+// Battle Wave (multi-enemy wave system)
+// ============================================================
+
+export interface BattleWave {
+  enemies: Enemy[];
+}
+
 export interface GameState {
   hp: number;
   maxHp: number;
@@ -164,6 +173,9 @@ export interface GameState {
   phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect';
   battleTurn: number;
   isEnemyTurn: boolean;
+  targetEnemyUid: string | null;  // selected attack target
+  battleWaves: BattleWave[];      // remaining waves
+  currentWaveIndex: number;       // current wave number
   logs: string[];
   shopItems: ShopItem[];
   statuses: StatusEffect[];

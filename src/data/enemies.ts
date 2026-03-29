@@ -1,4 +1,4 @@
-import { MapNode, Enemy, GameState } from '../types/game';
+import { MapNode, Enemy, GameState, BattleWave } from '../types/game';
 import { BATTLE_SCALING } from '../config';
 import { 
   NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES,
@@ -38,8 +38,11 @@ const buildPattern = (config: EnemyConfig, dmgScale: number) => {
 /**
  * 根据配置表生成运行时 Enemy 对象
  */
+let uidCounter = 0;
+
 const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Enemy => {
   return {
+    uid: `enemy_${++uidCounter}_${Date.now()}`,
     name: config.name,
     emoji: config.emoji,
     hp: Math.floor(config.baseHp * hpScale),
@@ -76,4 +79,52 @@ const getBossForDepth = (depth: number, hpScale: number, dmgScale: number): Enem
   // 中层Boss vs 最终Boss
   const config = depth < 12 ? BOSS_ENEMIES[0] : BOSS_ENEMIES[BOSS_ENEMIES.length - 1];
   return buildEnemy(config, hpScale, dmgScale);
+};
+
+
+/**
+ * Generate multi-wave enemies for a battle node.
+ * Normal: 1 wave of 1-3 enemies
+ * Elite: 1 wave of 1 elite (+ maybe 1 normal sidekick)
+ * Boss: 1-2 waves (wave 1: minions, wave 2: boss)
+ */
+export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: number = 1.0): BattleWave[] => {
+  const hpScale = (1 + depth * BATTLE_SCALING.hpPerDepth) * hpMultiplier;
+  const dmgScale = 1 + depth * BATTLE_SCALING.dmgPerDepth;
+
+  if (node.type === 'boss') {
+    // Boss fight: wave 1 = 2 normal minions, wave 2 = boss alone
+    const bossConfig = depth < 12 ? BOSS_ENEMIES[0] : BOSS_ENEMIES[BOSS_ENEMIES.length - 1];
+    const minion1 = NORMAL_ENEMIES[Math.floor(Math.random() * NORMAL_ENEMIES.length)];
+    const minion2 = NORMAL_ENEMIES[Math.floor(Math.random() * NORMAL_ENEMIES.length)];
+    return [
+      { enemies: [buildEnemy(minion1, hpScale * 0.6, dmgScale * 0.7), buildEnemy(minion2, hpScale * 0.6, dmgScale * 0.7)] },
+      { enemies: [buildEnemy(bossConfig, hpScale, dmgScale)] },
+    ];
+  }
+
+  if (node.type === 'elite') {
+    // Elite: 1 wave, elite + 1 weak sidekick
+    const eliteConfig = ELITE_ENEMIES[Math.floor(Math.random() * ELITE_ENEMIES.length)];
+    const sidekick = NORMAL_ENEMIES[Math.floor(Math.random() * NORMAL_ENEMIES.length)];
+    return [
+      { enemies: [buildEnemy(eliteConfig, hpScale, dmgScale), buildEnemy(sidekick, hpScale * 0.5, dmgScale * 0.6)] },
+    ];
+  }
+
+  // Normal: 1-2 waves, each with 1-3 enemies
+  const waveCount = depth >= 5 ? (Math.random() < 0.4 ? 2 : 1) : 1;
+  const waves: BattleWave[] = [];
+  for (let w = 0; w < waveCount; w++) {
+    const enemyCount = Math.min(3, 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor(depth / 3))));
+    const waveEnemies: Enemy[] = [];
+    for (let i = 0; i < enemyCount; i++) {
+      const config = NORMAL_ENEMIES[Math.floor(Math.random() * NORMAL_ENEMIES.length)];
+      // Later waves slightly weaker
+      const waveScale = w === 0 ? 1 : 0.8;
+      waveEnemies.push(buildEnemy(config, hpScale * waveScale, dmgScale * waveScale));
+    }
+    waves.push({ enemies: waveEnemies });
+  }
+  return waves;
 };
