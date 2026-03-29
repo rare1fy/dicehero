@@ -121,6 +121,7 @@ export default function DiceHeroGame() {
 
   const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
   const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
+
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
   const [screenShake, setScreenShake] = useState(false);
   const [hpGained, setHpGained] = useState(false);
@@ -998,7 +999,20 @@ export default function DiceHeroGame() {
     playSound('roll');
   };
 
+  
+  // Auto-switch target when current target dies
   useEffect(() => {
+    if (game.phase !== 'battle') return;
+    const alive = enemies.filter(e => e.hp > 0);
+    if (alive.length === 0) return;
+    const currentTarget = alive.find(e => e.uid === game.targetEnemyUid);
+    if (!currentTarget) {
+      // Current target is dead or not set, switch to first alive enemy
+      setGame(prev => ({ ...prev, targetEnemyUid: alive[0].uid }));
+    }
+  }, [enemies, game.phase, game.targetEnemyUid]);
+
+useEffect(() => {
     if (
       game.phase === 'battle' && 
       !game.isEnemyTurn && 
