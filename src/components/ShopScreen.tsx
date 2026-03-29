@@ -40,6 +40,14 @@ export const ShopScreen: React.FC = () => {
                 setGame(prev => ({ ...prev, souls: prev.souls - item.price, globalRerolls: prev.globalRerolls + 1, shopItems: prev.shopItems.filter(si => si.id !== item.id) }));
               } else if (item.type === 'dice') {
                 setGame(prev => ({ ...prev, souls: prev.souls - item.price, diceCount: Math.min(6, prev.diceCount + 1), shopItems: prev.shopItems.filter(si => si.id !== item.id) }));
+              } else if (item.type === 'specialDice' && item.diceDefId) {
+                const ddef = getDiceDef(item.diceDefId);
+                setGame(prev => ({
+                  ...prev,
+                  souls: prev.souls - item.price,
+                  ownedDice: [...prev.ownedDice, item.diceDefId],
+                  shopItems: prev.shopItems.filter(si => si.id !== item.id)
+                }));
               } else if (item.type === 'augment' && item.augment) {
                 setGame(prev => ({ 
                   ...prev, 
@@ -55,6 +63,9 @@ export const ShopScreen: React.FC = () => {
             <div className={`w-12 h-12 bg-[var(--dungeon-bg)] border-3 border-[var(--dungeon-panel-border)] flex items-center justify-center ${isDisabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--pixel-purple-light)] group-hover:border-[var(--pixel-purple)]'} transition-colors`} style={{borderRadius:'2px'}}>
               {item.type === 'reroll' && <PixelRefresh size={3} />}
               {item.type === 'dice' && <PixelDice size={3} />}
+              {item.type === 'specialDice' && item.diceDefId && (
+                <ElementBadge element={getDiceDef(item.diceDefId).element} size={24} />
+              )}
               {item.type === 'augment' && item.augment && getAugmentIcon(item.augment.condition, 24)}
             </div>
             <div className="flex-1">

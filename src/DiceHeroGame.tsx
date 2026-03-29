@@ -529,6 +529,25 @@ export default function DiceHeroGame() {
       }
     });
 
+    // --- Dice onPlay effects ---
+    selected.forEach(d => {
+      const def = getDiceDef(d.diceDefId);
+      if (!def.onPlay) return;
+      const op = def.onPlay;
+      if (op.bonusDamage) extraDamage += op.bonusDamage;
+      if (op.bonusMult) multiplier *= op.bonusMult;
+      if (op.heal) extraHeal += op.heal;
+      if (op.pierce) pierceDamage += op.pierce;
+      if (op.statusToEnemy) {
+        const existing = statusEffects.find(es => es.type === op.statusToEnemy!.type);
+        if (existing) {
+          existing.value += op.statusToEnemy.value;
+        } else {
+          statusEffects.push({ ...op.statusToEnemy });
+        }
+      }
+    });
+
     const totalDamage = Math.floor((baseDamage + extraDamage) * multiplier) + pierceDamage;
 
     // Apply status modifiers
