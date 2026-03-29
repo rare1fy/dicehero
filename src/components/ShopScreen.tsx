@@ -6,6 +6,8 @@ import { AugmentCard } from './AugmentCard';
 import { getAugmentIcon } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
 import { PixelCoin, PixelShopBag, PixelStar, PixelRefresh, PixelDice } from './PixelIcons';
+import { getDiceDef } from '../data/dice';
+import { ElementBadge, RARITY_COLORS, RARITY_LABELS } from './PixelDiceShapes';
 
 export const ShopScreen: React.FC = () => {
   const { game, setGame, pickReward } = useGameContext();
@@ -57,7 +59,7 @@ export const ShopScreen: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className={`text-[8px] font-bold ${isDisabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--pixel-purple)]'} tracking-[0.1em] mb-0.5 opacity-70`}>
-                {item.type === 'reroll' ? '基础服务' : item.type === 'dice' ? '基础服务' : '稀有模块'}
+                {item.type === 'reroll' ? '基础服务' : item.type === 'dice' ? '基础服务' : item.type === 'specialDice' ? '特殊骰子' : '稀有模块'}
               </div>
               <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none mb-0.5 pixel-text-shadow">
                 {item.label}

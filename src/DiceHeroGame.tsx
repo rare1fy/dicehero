@@ -16,8 +16,10 @@ import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
 import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef } from './data/dice';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './data/dice';
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag } from './data/diceBag';
+import { DiceBagPanel } from './components/DiceBagPanel';
+import { ElementBadge } from './components/PixelDiceShapes';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
@@ -232,7 +234,9 @@ export default function DiceHeroGame() {
       battleTurn: 1, 
       currentNodeId: node.id, 
       armor: 0, 
-      statuses: [], // 新战斗开始时清空所有状态效果
+      statuses: [],
+      diceBag: initDiceBag(prev.ownedDice),
+      discardPile: [], // 新战斗开始时清空所有状态效果
       freeRerollsLeft: prev.freeRerollsPerTurn,
       playsLeft: prev.maxPlays,
       isEnemyTurn: false 
@@ -258,8 +262,21 @@ export default function DiceHeroGame() {
             const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
       const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
+      // Random special dice for shop
+      const shopDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
+      const shopDice = shopDicePool[0];
+      const dicePrice = shopDice.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10;
+
       const shopItems: ShopItem[] = [
         ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: randPrice() })),
+        {
+          id: 'dice_' + shopDice.id,
+          type: 'specialDice' as const,
+          diceDefId: shopDice.id,
+          label: shopDice.name,
+          desc: shopDice.description + ' [' + shopDice.faces.join(',') + ']',
+          price: dicePrice
+        },
         ...augs.map(aug => ({
           id: aug.id,
           type: 'augment' as const,
@@ -664,8 +681,10 @@ export default function DiceHeroGame() {
       hp: Math.min(prev.maxHp, prev.hp + outcome.heal)
     }));
 
-    // Mark dice as spent
+    // Mark dice as spent & add to discard pile
+    const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
     setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
+    setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds] }));
 
     let logMsg = `打出 ${bestHand}，造成 ${outcome.damage} 伤害`;
     if (outcome.armor > 0) logMsg += `，获得 ${outcome.armor} 护甲`;
@@ -908,6 +927,12 @@ export default function DiceHeroGame() {
       freeRerollsLeft: prev.freeRerollsPerTurn
     }));
 
+    // Remaining hand dice -> discard pile
+    const remainingDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
+    if (remainingDefIds.length > 0) {
+      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...remainingDefIds] }));
+    }
+
     rollAllDice();
     playSound('roll');
   };
@@ -961,7 +986,9 @@ export default function DiceHeroGame() {
       loot.push({ id: 'maxPlays', type: 'maxPlays', value: enemy.dropMaxPlays, collected: false });
     }
     if (enemy.dropDiceCount) {
-      loot.push({ id: 'diceCount', type: 'diceCount', value: enemy.dropDiceCount, collected: false });
+      const lootDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
+      const lootDice = lootDicePool[0];
+      loot.push({ id: 'specialDice', type: 'specialDice', diceDefId: lootDice.id, collected: false });
     }
 
     setGame(prev => {
@@ -1009,6 +1036,10 @@ export default function DiceHeroGame() {
       } else if (item.type === 'maxPlays') {
         nextState.maxPlays += item.value || 0;
         addLog(`获得了 ${item.value} 次出牌机会。`);
+      } else if (item.type === 'specialDice' && item.diceDefId) {
+        nextState.ownedDice = [...nextState.ownedDice, item.diceDefId];
+        const ddef = getDiceDef(item.diceDefId);
+        addLog(`获得了特殊骰子: ${ddef.name}。`);
       } else if (item.type === 'diceCount') {
         const oldDice = nextState.drawCount;
         nextState.drawCount = Math.min(6, nextState.drawCount + (item.value || 0));
@@ -1022,7 +1053,10 @@ export default function DiceHeroGame() {
     });
     
     // Dice gained toast — outside setGame to avoid StrictMode double-fire
-    if (item.type === 'diceCount' && game.drawCount < 6) {
+    if (item.type === 'specialDice' && item.diceDefId) {
+      const ddef = getDiceDef(item.diceDefId);
+      addToast(`获得了特殊骰子: ${ddef.name}`);
+    } else if (item.type === 'diceCount' && game.drawCount < 6) {
       addToast("获得诅咒之力，敌人也都变强了");
       addLog("获得诅咒之力，敌人血量提升 25%。");
     }
@@ -1891,6 +1925,14 @@ export default function DiceHeroGame() {
               {/* 骰子操作面板 */}
               <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
 
+                {/* 骰子库指示器 */}
+                <div className="flex justify-between items-center mb-0.5 px-1">
+                  <DiceBagPanel ownedDice={game.ownedDice} diceBag={game.diceBag} discardPile={game.discardPile} />
+                  <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider">
+                    回合 {game.battleTurn}
+                  </div>
+                </div>
+
                 {/* 骰子行 */}
                 <div className="flex justify-center gap-2.5 mb-1.5 min-h-[60px] items-end relative">
                   {dice.map((die) => (
@@ -1923,6 +1965,11 @@ export default function DiceHeroGame() {
                         <span className="pixel-text-shadow font-black">
                           {die.rolling ? "?" : die.value}
                         </span>
+                        {!die.rolling && die.element !== 'normal' && (
+                          <div className="absolute top-0.5 right-0.5 pointer-events-none">
+                            <ElementBadge element={die.element} size={8} />
+                          </div>
+                        )}
                       </motion.button>
                     )
                   ))}
