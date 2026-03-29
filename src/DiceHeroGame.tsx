@@ -228,8 +228,9 @@ export default function DiceHeroGame() {
   };
 
   const startBattle = (node: MapNode) => {
-    const newEnemy = getEnemyForNode(node, node.depth, game.enemyHpMultiplier);
-    setEnemies([newEnemy]);
+    const waves = getEnemiesForNode(node, node.depth, game.enemyHpMultiplier);
+    const firstWave = waves[0]?.enemies || [];
+    setEnemies(firstWave);
     setEnemyEffects({});
     setPlayerEffect(null);
     // Boss出场音效
@@ -243,6 +244,9 @@ export default function DiceHeroGame() {
       currentNodeId: node.id, 
       armor: 0, 
       statuses: [],
+      battleWaves: waves,
+      currentWaveIndex: 0,
+      targetEnemyUid: firstWave[0]?.uid || null,
       diceBag: initDiceBag(prev.ownedDice),
       discardPile: [], // 新战斗开始时清空所有状态效果
       freeRerollsLeft: prev.freeRerollsPerTurn,
@@ -251,7 +255,7 @@ export default function DiceHeroGame() {
     }));
     rollAllDice();
     setRerollCount(0);
-    addLog(`遭遇 ${newEnemy.name}！`);
+    addLog(`遇到 ${firstWave.map(e => e.name).join('、')}！`);
   };
 
 
@@ -815,10 +819,25 @@ export default function DiceHeroGame() {
       return;
     }
 
-    // --- 3. Each alive enemy takes action ---
+    // --- 3. Each alive enemy takes action (distance check) ---
     for (const e of aliveEnemies) {
       if (e.hp <= 0 || enemyDeathsFromBurn.includes(e.uid)) continue;
       if (currentPlayerHp <= 0) break;
+
+      // If enemy is far away, approach instead of acting
+      if (e.distance > 0) {
+        setEnemies(prev => prev.map(en => 
+          en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
+        ));
+        setEnemyEffectForUid(e.uid, 'skill');
+        addLog(`${e.name} 向你逼近了一步！`);
+        if (e.distance === 1) {
+          addToast(`${e.name} 已进入攻击范围！`);
+        }
+        await new Promise(r => setTimeout(r, 500));
+        setEnemyEffectForUid(e.uid, null);
+        continue;
+      }
 
       const intent = e.intent;
       if (intent.type === '\u653b\u51fb') {
@@ -1582,19 +1601,30 @@ useEffect(() => {
                 ))}
               </AnimatePresence>
 
-              {/* Multi-enemy horizontal display */}
-              <div className="flex items-end justify-center gap-3 flex-wrap">
-                {enemies.filter(e => e.hp > 0).map((enemy) => {
+              {/* Multi-enemy horizontal display with depth */}
+              <div className="flex items-end justify-center gap-3 flex-wrap relative" style={{ minHeight: '180px' }}>
+                {enemies.filter(e => e.hp > 0)
+                  .sort((a, b) => b.distance - a.distance)
+                  .map((enemy) => {
                   const isTarget = enemy.uid === (targetEnemyUid || enemies.find(e => e.hp > 0)?.uid);
                   const effect = enemyEffects[enemy.uid] || null;
                   const currentNode = game.map.find(n => n.id === game.currentNodeId);
-                  const spriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
+                  const baseSpriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
+                  
+                  // Distance-based visual scaling
+                  const dist = enemy.distance || 0;
+                  const depthScale = dist >= 3 ? 0.55 : dist === 2 ? 0.72 : dist === 1 ? 0.88 : 1.0;
+                  const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 10;
+                  const depthOpacity = dist >= 3 ? 0.55 : dist === 2 ? 0.75 : dist === 1 ? 0.9 : 1.0;
+                  const depthBrightness = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
+                  const depthZ = dist >= 3 ? 1 : dist === 2 ? 3 : dist === 1 ? 5 : 7;
+                  const spriteSize = Math.max(4, Math.round(baseSpriteSize * depthScale));
                   
                   return (
                     <motion.div 
                       key={enemy.uid}
                       onClick={() => setGame(prev => ({ ...prev, targetEnemyUid: enemy.uid }))}
-                      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                      initial={{ scale: depthScale * 0.8, opacity: 0, y: depthY + 20 }}
                       animate={effect === 'death'
                         ? { scale: [1, 0.97, 1.03, 0.98, 1, 1.15, 1.3, 0], opacity: [1, 1, 1, 1, 1, 0.9, 0.6, 0], y: [0, 0, 0, 0, 0, -5, -15, 20] }
                         : effect === 'attack' 
@@ -1605,10 +1635,11 @@ useEffect(() => {
                         ? { scale: [1, 1.2, 1], rotate: [0, 8, -8, 0] }
                         : playerEffect === 'attack' && isTarget
                         ? { x: [0, -4, 6, -3, 0], scale: [1, 0.97, 1.01, 0.99, 1] }
-                        : { scale: 1, y: 0, opacity: 1 }
+                        : { scale: depthScale, y: depthY, opacity: depthOpacity }
                       }
                       transition={{ duration: effect === 'death' ? 1.2 : 0.4 }}
-                      className={`relative cursor-pointer group flex flex-col items-center ${isTarget ? 'z-10' : 'z-5'}`}
+                      className={`relative cursor-pointer group flex flex-col items-center`}
+                      style={{ zIndex: isTarget ? 10 : depthZ, filter: `brightness(${depthBrightness})` }}
                     >
                       {/* Target indicator arrow */}
                       {isTarget && (
@@ -1703,6 +1734,15 @@ useEffect(() => {
                         marginLeft: '-10%',
                         filter: 'blur(2px)'
                       }} />
+
+                      {/* Distance indicator */}
+                      {dist > 0 && (
+                        <div className="distance-indicator mt-0.5">
+                          {Array.from({ length: 3 }, (_, i) => (
+                            <div key={i} className={i < dist ? 'distance-dot' : 'distance-dot-empty'} />
+                          ))}
+                        </div>
+                      )}
 
                       {/* Attack/skill effects overlay */}
                       <AnimatePresence>

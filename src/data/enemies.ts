@@ -53,6 +53,7 @@ const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Ene
     dropAugment: config.drops.augment,
     rerollReward: config.drops.rerollReward,
     statuses: [],
+    distance: 0,
     pattern: buildPattern(config, dmgScale),
   };
 };
@@ -122,7 +123,9 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
       const config = NORMAL_ENEMIES[Math.floor(Math.random() * NORMAL_ENEMIES.length)];
       // Later waves slightly weaker
       const waveScale = w === 0 ? 1 : 0.8;
-      waveEnemies.push(buildEnemy(config, hpScale * waveScale, dmgScale * waveScale));
+      const enemy = buildEnemy(config, hpScale * waveScale, dmgScale * waveScale);
+      enemy.distance = depth === 0 ? 1 : 2;  // first fight: close, rest: 2 steps
+      waveEnemies.push(enemy);
     }
     waves.push({ enemies: waveEnemies });
   }
