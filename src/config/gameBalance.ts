@@ -17,8 +17,8 @@ export const PLAYER_INITIAL = {
   playsPerTurn: 1,
   souls: 0,
   augmentSlots: 4,
-  diceCount: 3,
-  maxDiceCount: 6,
+  drawCount: 4,
+  maxDrawCount: 6,
 } as const;
 
 // ============================================================

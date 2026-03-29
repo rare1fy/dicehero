@@ -15,8 +15,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, DiceColor, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult } from './types/game';
-import { COLORS } from './data/diceColors';
+import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult } from './types/game';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef } from './data/dice';
+import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag } from './data/diceBag';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
@@ -25,7 +26,7 @@ import { playSound } from './utils/sound';
 import { checkHands, canFormValidHand } from './utils/handEvaluator';
 import { generateMap, getNodeX } from './utils/mapGenerator';
 import { StatusIcon } from './components/StatusIcon';
-import { getAugmentIcon, getDiceColorClass, getHpBarClass } from './utils/uiHelpers';
+import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
 import { CSSParticles } from './components/ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './components/TutorialOverlay';
@@ -59,7 +60,10 @@ export default function DiceHeroGame() {
     maxPlays: PLAYER_INITIAL.playsPerTurn,
     souls: PLAYER_INITIAL.souls,
     slots: PLAYER_INITIAL.augmentSlots,
-    diceCount: PLAYER_INITIAL.diceCount,
+    ownedDice: [...INITIAL_DICE_BAG],
+    diceBag: initDiceBag(INITIAL_DICE_BAG),
+    discardPile: [],
+    drawCount: PLAYER_INITIAL.drawCount,
     handLevels: {},
     augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
     currentNodeId: null,
@@ -278,40 +282,32 @@ export default function DiceHeroGame() {
 
   const rollAllDice = async () => {
     playSound('roll');
-    const count = game.diceCount;
+    const count = game.drawCount;
     
-    // 直接生成最终结果，动画只是视觉效果
-    const finalValues = Array.from({ length: count }).map(() => {
-      const val = Math.floor(Math.random() * 6) + 1;
-      return { value: val, color: COLORS[val] };
-    });
+    // 从骰子库抽取
+    const { drawn, newBag, newDiscard } = drawFromBag(game.diceBag, game.discardPile, count);
+    
+    // 更新骰子库状态
+    setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
 
-    // 设置rolling状态
-    setDice(Array.from({ length: count }).map((_, i) => ({
-      id: i, value: Math.floor(Math.random() * 6) + 1, 
-      color: COLORS[Math.floor(Math.random() * 6) + 1] || '蓝色', 
-      selected: false, spent: false, rolling: true
-    })));
+    // 设置rolling状态（动画）
+    setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
 
     // 快速翻滚动画 — 8帧，递减速度
     const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
     for (let i = 0; i < frameTimes.length; i++) {
       await new Promise(resolve => setTimeout(resolve, frameTimes[i]));
-      setDice(prev => prev.map(d => ({
-        ...d,
-        value: Math.floor(Math.random() * 6) + 1,
-        color: COLORS[Math.floor(Math.random() * 6) + 1] || '蓝色'
-      })));
-      if (i === 3) playSound('reroll'); // 中间一次额外碰撞音
+      setDice(prev => prev.map(d => {
+        const def = getDiceDef(d.diceDefId);
+        return { ...d, value: rollDiceDef(def) };
+      }));
+      if (i === 3) playSound('reroll');
     }
 
-    // 落定 + 弹跳
-    const finalDice = finalValues.map((f, i) => ({
-      id: i, value: f.value, color: f.color, selected: false, spent: false, rolling: false
-    }));
-    setDice(finalDice);
+    // 落定 — 使用预先抽取的结果
+    setDice(drawn.map(d => ({ ...d, rolling: false })));
     playSound('dice_lock');
-    addLog(`[骰] ${finalDice.map(d => `${d.value}(${d.color[0]})`).join(' ')}`);
+    addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
 
   const rerollUnselected = async () => {
@@ -330,39 +326,34 @@ export default function DiceHeroGame() {
         return { ...prev, globalRerolls: prev.globalRerolls - 1 };
       }
     });
-    
-    // Set rolling state
-    setDice(prev => prev.map(d => (d.spent || d.selected) ? d : { ...d, rolling: true }));
 
-    // 快速翻滚动画 — 6帧递减
-    const frameTimes = [30, 40, 60, 80, 100, 130];
+    // 设置未选中骰子的rolling状态
+    setDice(prev => prev.map(d => d.selected || d.spent ? d : { ...d, rolling: true }));
+
+    // 快速翻滚动画
+    const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
     for (let i = 0; i < frameTimes.length; i++) {
       await new Promise(resolve => setTimeout(resolve, frameTimes[i]));
       setDice(prev => prev.map(d => {
-        if (d.spent || d.selected || !d.rolling) return d;
-        return { 
-          ...d, 
-          value: Math.floor(Math.random() * 6) + 1,
-          color: COLORS[Math.floor(Math.random() * 6) + 1] || '蓝色'
-        };
+        if (d.selected || d.spent) return d;
+        const def = getDiceDef(d.diceDefId);
+        return { ...d, value: rollDiceDef(def) };
       }));
     }
 
+    // 落定 — 使用骰子自身面值
     setDice(prev => {
-      const newDice = prev.map(d => {
-        if (d.spent || d.selected) return d;
-        const val = Math.floor(Math.random() * 6) + 1;
-        return { ...d, value: val, color: COLORS[val], rolling: false };
+      const rolled = prev.map(d => {
+        if (d.selected || d.spent) return d;
+        const def = getDiceDef(d.diceDefId);
+        const val = rollDiceDef(def);
+        return { ...d, value: val, rolling: false };
       });
-      const rolled = newDice.filter(d => !d.spent && !d.selected);
-      addLog(`重骰结果: ${rolled.map(d => `${d.value}(${d.color[0]})`).join(', ')}`);
-      return newDice;
+      addLog(`重骰结果: ${rolled.filter(d => !d.selected && !d.spent).map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(', ')}`);
+      return rolled;
     });
-    
-    if (game.currentNodeId === '8') { // Assuming '8' is the node ID for the furnace if it was hardcoded before
-      setEnemy(prev => prev ? { ...prev, armor: prev.armor + 5 } : null);
-      addLog("核心熔炉因重骰获得了 5 点护甲！");
-    }
+    playSound('dice_lock');
+    setRerollCount(prev => prev + 1);
   };
 
   const toggleSelect = (id: number) => {
@@ -428,7 +419,7 @@ export default function DiceHeroGame() {
         'n_of_a_kind': '三条',
         'full_house': '葫芦',
         'straight': '顺子',
-        'flush': '同花'
+        'same_element': '同元素'
       };
       
       const targetHand = conditionMap[aug.condition];
@@ -1019,9 +1010,9 @@ export default function DiceHeroGame() {
         nextState.maxPlays += item.value || 0;
         addLog(`获得了 ${item.value} 次出牌机会。`);
       } else if (item.type === 'diceCount') {
-        const oldDice = nextState.diceCount;
-        nextState.diceCount = Math.min(6, nextState.diceCount + (item.value || 0));
-        if (nextState.diceCount > oldDice) {
+        const oldDice = nextState.drawCount;
+        nextState.drawCount = Math.min(6, nextState.drawCount + (item.value || 0));
+        if (nextState.drawCount > oldDice) {
           nextState.enemyHpMultiplier += 0.25;
         }
         addLog(`获得了 ${item.value} 颗骰子。`);
@@ -1031,7 +1022,7 @@ export default function DiceHeroGame() {
     });
     
     // Dice gained toast — outside setGame to avoid StrictMode double-fire
-    if (item.type === 'diceCount' && game.diceCount < 6) {
+    if (item.type === 'diceCount' && game.drawCount < 6) {
       addToast("获得诅咒之力，敌人也都变强了");
       addLog("获得诅咒之力，敌人血量提升 25%。");
     }
@@ -1923,7 +1914,7 @@ export default function DiceHeroGame() {
                         } : { rotate: 0, scale: 1, y: 0, opacity: 1 }}
                         transition={die.rolling ? { repeat: Infinity, duration: 0.15, ease: 'linear' } : die.playing ? { duration: 0.4, ease: 'easeOut' } : die.selected ? { duration: 0.12, type: 'spring', stiffness: 500, damping: 25 } : { duration: 0.06, ease: 'easeOut' }}
                         onClick={() => !die.rolling && !game.isEnemyTurn && game.playsLeft > 0 && toggleSelect(die.id)}
-                        className={`${getDiceColorClass(die.color, die.selected, die.rolling, invalidDiceIds.has(die.id))} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
+                        className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id))} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
                           fontSize: '22px', width: '52px', height: '52px',
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.8) brightness(0.5)', opacity: 0.45 } : {})
@@ -2377,8 +2368,8 @@ export default function DiceHeroGame() {
                     selectedAugment.condition === 'n_of_a_kind' ? 'N条' :
                     selectedAugment.condition === 'full_house' ? '葫芦' :
                     selectedAugment.condition === 'straight' ? '顺子' :
-                    selectedAugment.condition === 'flush' ? '同花' :
-                    selectedAugment.condition === 'red_count' ? '红色' : selectedAugment.condition
+                    selectedAugment.condition === 'same_element' ? '同元素' :
+                    selectedAugment.condition === 'element_count' ? '元素计数' : selectedAugment.condition
                   }</div>
                   <div className="text-[var(--dungeon-text)] text-[11px] mb-5 relative z-10">{formatDescription(selectedAugment.description)}</div>
                   <button 

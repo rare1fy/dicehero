@@ -2,14 +2,14 @@ import { Die, HandType, HandResult } from '../types/game';
 
 export const checkHands = (dice: Die[]): HandResult => {
   if (dice.length === 0) return { bestHand: '普通攻击', allHands: [], activeHands: ['普通攻击'] };
-  
+
   const values = dice.map(d => d.value).sort((a, b) => a - b);
-  const colors = dice.map(d => d.color);
-  const uniqueColors = new Set(colors);
-  
-  // Flush: ALL selected dice must be the same color, and at least 4 dice
-  const isFlush = uniqueColors.size === 1 && dice.length >= 4;
-  
+  const elements = dice.map(d => d.element);
+  const uniqueElements = new Set(elements);
+
+  // 同元素: 所有选中骰子同一元素，且至少4颗
+  const isSameElement = uniqueElements.size === 1 && dice.length >= 4;
+
   const counts: Record<number, number> = {};
   values.forEach(v => counts[v] = (counts[v] || 0) + 1);
   const sortedCounts = Object.values(counts).sort((a, b) => b - a);
@@ -26,8 +26,8 @@ export const checkHands = (dice: Die[]): HandResult => {
   }
 
   const hands: Set<HandType> = new Set();
-  
-  // Basic hand detection for allHands
+
+  // 基础牌型检测
   if (maxCount === 6 && dice.length === 6) hands.add('六条');
   if (maxCount === 5 && dice.length === 5) hands.add('五条');
   if (maxCount === 4 && dice.length === 4) hands.add('四条');
@@ -36,11 +36,11 @@ export const checkHands = (dice: Die[]): HandResult => {
   if (isFullHouse && dice.length === 5) hands.add('葫芦');
   if (isTwoPair && dice.length === 4) hands.add('连对');
   if (isStraight) hands.add('顺子');
-  if (isFlush) hands.add('同花');
-  if (isStraight && isFlush) hands.add('同花顺');
-  if (isStraight && isFlush && values[0] === 1 && values[values.length-1] === 6) hands.add('皇家同花顺');
-  if (isFlush && isFullHouse) hands.add('同花葫芦');
-  
+  if (isSameElement) hands.add('同元素');
+  if (isStraight && isSameElement) hands.add('元素顺');
+  if (isStraight && isSameElement && values[0] === 1 && values[values.length - 1] === 6) hands.add('皇家元素顺');
+  if (isSameElement && isFullHouse) hands.add('元素葫芦');
+
   if (hands.size === 0) {
     if (dice.length === 1) {
       hands.add('普通攻击');
@@ -51,12 +51,11 @@ export const checkHands = (dice: Die[]): HandResult => {
 
   const allHands = Array.from(hands);
 
-  // Determine active hands for outcome calculation
+  // 确定生效牌型
   const activeHands: HandType[] = [];
   let hasBaseHand = false;
 
-  // Priority: highest value hand first
-  // N-of-a-kind / Full House / Two Pair / Pair are mutually exclusive base hands
+  // N条 / 葫芦 / 连对 / 对子 互斥，取最高
   if (maxCount === 6 && dice.length === 6) { activeHands.push('六条'); hasBaseHand = true; }
   else if (maxCount === 5 && dice.length === 5) { activeHands.push('五条'); hasBaseHand = true; }
   else if (maxCount === 4 && dice.length === 4) { activeHands.push('四条'); hasBaseHand = true; }
@@ -65,23 +64,23 @@ export const checkHands = (dice: Die[]): HandResult => {
   else if (isTwoPair && dice.length === 4) { activeHands.push('连对'); hasBaseHand = true; }
   else if (maxCount === 2 && dice.length === 2) { activeHands.push('对子'); hasBaseHand = true; }
 
-  // Straight can layer on top
+  // 顺子可叠加
   if (isStraight) { activeHands.push('顺子'); hasBaseHand = true; }
-  // Flush can layer on top
-  if (isFlush) { activeHands.push('同花'); hasBaseHand = true; }
+  // 同元素可叠加
+  if (isSameElement) { activeHands.push('同元素'); hasBaseHand = true; }
 
-  // Combo hands
-  if (isStraight && isFlush && values[0] === 1 && values[values.length-1] === 6) { activeHands.push('皇家同花顺'); }
-  else if (isStraight && isFlush) { activeHands.push('同花顺'); }
-  if (isFlush && isFullHouse) { activeHands.push('同花葫芦'); }
+  // 组合牌型
+  if (isStraight && isSameElement && values[0] === 1 && values[values.length - 1] === 6) { activeHands.push('皇家元素顺'); }
+  else if (isStraight && isSameElement) { activeHands.push('元素顺'); }
+  if (isSameElement && isFullHouse) { activeHands.push('元素葫芦'); }
 
   if (!hasBaseHand && dice.length === 1) {
     activeHands.push('普通攻击');
   }
 
-  // Sort by priority
+  // 按优先级排序
   const priority: HandType[] = [
-    '皇家同花顺', '同花葫芦', '同花顺', '六条', '五条', '四条', '葫芦', '同花', '顺子', '三条', '连对', '对子', '普通攻击'
+    '皇家元素顺', '元素葫芦', '元素顺', '六条', '五条', '四条', '葫芦', '同元素', '顺子', '三条', '连对', '对子', '普通攻击'
   ];
   activeHands.sort((a, b) => priority.indexOf(a) - priority.indexOf(b));
 
@@ -91,20 +90,15 @@ export const checkHands = (dice: Die[]): HandResult => {
 };
 
 export const canFormValidHand = (selected: Die[], candidate: Die, available: Die[]): boolean => {
-  // Check if adding the candidate to the selected dice can form any valid hand
-  // (possibly with more dice from available)
   const targetSet = [...selected, candidate];
-  
-  // Direct check: does the current set form a valid hand?
+
   const directCheck = checkHands(targetSet);
   if (directCheck.bestHand !== '无效牌型') return true;
 
-  // Recursive check: can we add more dice from available to form a valid hand?
-  // Limit recursion depth to prevent performance issues
   if (available.length === 0) return false;
 
   const checkSubsets = (index: number, currentSubset: Die[]): boolean => {
-    if (currentSubset.length > 4) return false; // Max 6 dice total
+    if (currentSubset.length > 4) return false;
     const testHand = [...targetSet, ...currentSubset];
     const result = checkHands(testHand);
     if (result.bestHand !== '无效牌型') return true;

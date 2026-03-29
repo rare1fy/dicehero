@@ -1,36 +1,85 @@
 import React from 'react';
 
-export type DiceColor = '红色' | '蓝色' | '紫色' | '金色';
+// ============================================================
+// 骰子元素与稀有度
+// ============================================================
+
+export type DiceElement = 'normal' | 'fire' | 'ice' | 'thunder' | 'poison' | 'holy' | 'shadow';
+export type DiceRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'curse';
+
+// ============================================================
+// 骰子定义 (模板)
+// ============================================================
+
+export interface DiceDef {
+  id: string;
+  name: string;
+  element: DiceElement;
+  faces: number[];
+  description: string;
+  rarity: DiceRarity;
+  onPlay?: {
+    bonusDamage?: number;
+    bonusMult?: number;
+    heal?: number;
+    pierce?: number;
+    statusToEnemy?: StatusEffect;
+    statusToSelf?: StatusEffect;
+    aoe?: boolean;
+  };
+}
+
+// ============================================================
+// 骰子实例 (运行时)
+// ============================================================
 
 export interface Die {
   id: number;
+  diceDefId: string;
   value: number;
-  color: DiceColor;
+  element: DiceElement;
   selected: boolean;
   spent: boolean;
   rolling?: boolean;
   playing?: boolean;
 }
 
-export type HandType = '普通攻击' | '对子' | '连对' | '三条' | '顺子' | '同花' | '葫芦' | '四条' | '五条' | '六条' | '同花顺' | '同花葫芦' | '皇家同花顺' | '无效牌型';
+// ============================================================
+// 牌型
+// ============================================================
+
+export type HandType = '普通攻击' | '对子' | '连对' | '三条' | '顺子' | '同元素' | '葫芦' | '四条' | '五条' | '六条' | '元素顺' | '元素葫芦' | '皇家元素顺' | '无效牌型';
+
+// ============================================================
+// 状态效果
+// ============================================================
 
 export type StatusType = 'poison' | 'burn' | 'dodge' | 'vulnerable' | 'strength' | 'weak' | 'armor';
 
 export interface StatusEffect {
   type: StatusType;
   value: number;
-  duration?: number; // 持续回合数，每回合结束-1，为0时移除。undefined表示按value递减（如毒、灼烧）
+  duration?: number;
 }
+
+// ============================================================
+// 增幅模块
+// ============================================================
 
 export interface Augment {
   id: string;
   name: string;
   level?: number;
-  condition: 'high_card' | 'pair' | 'two_pair' | 'n_of_a_kind' | 'full_house' | 'straight' | 'flush' | 'red_count';
+  condition: 'high_card' | 'pair' | 'two_pair' | 'n_of_a_kind' | 'full_house' | 'straight' | 'same_element' | 'element_count';
   conditionValue?: number;
+  conditionElement?: DiceElement;
   effect: (x: number, dice: Die[], level: number) => { damage?: number; armor?: number; heal?: number; multiplier?: number; pierce?: number; statusEffects?: StatusEffect[] };
   description: string;
 }
+
+// ============================================================
+// 地图
+// ============================================================
 
 export type NodeType = 'enemy' | 'elite' | 'boss' | 'shop' | 'event' | 'campfire';
 
@@ -41,6 +90,10 @@ export interface MapNode {
   connectedTo: string[];
   completed: boolean;
 }
+
+// ============================================================
+// 敌人
+// ============================================================
 
 export interface Enemy {
   name: string;
@@ -58,23 +111,33 @@ export interface Enemy {
   statuses: StatusEffect[];
 }
 
+// ============================================================
+// 战利品 & 商店
+// ============================================================
+
 export interface LootItem {
   id: string;
-  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount';
+  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice';
   value?: number;
   augment?: Augment;
   augmentOptions?: Augment[];
+  diceDefId?: string;
   collected: boolean;
 }
 
 export interface ShopItem {
   id: string;
-  type: 'augment' | 'reroll' | 'dice';
+  type: 'augment' | 'reroll' | 'dice' | 'specialDice';
   augment?: Augment;
+  diceDefId?: string;
   price: number;
   label: string;
   desc: string;
 }
+
+// ============================================================
+// 游戏主状态
+// ============================================================
 
 export interface GameState {
   hp: number;
@@ -87,7 +150,13 @@ export interface GameState {
   maxPlays: number;
   souls: number;
   slots: number;
-  diceCount: number;
+
+  // 骰子库系统
+  ownedDice: string[];       // 玩家拥有的所有骰子定义ID列表
+  diceBag: string[];          // 骰子库 (待抽取)
+  discardPile: string[];      // 弃骰库 (已使用)
+  drawCount: number;          // 每回合抽取数量
+
   handLevels: Record<string, number>;
   augments: (Augment | null)[];
   currentNodeId: string | null;
@@ -102,6 +171,10 @@ export interface GameState {
   enemyHpMultiplier: number;
   pendingReplacementAugment: Augment | null;
 }
+
+// ============================================================
+// 牌型相关
+// ============================================================
 
 export interface HandResult {
   bestHand: string;

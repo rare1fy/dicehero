@@ -12,7 +12,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     condition: 'pair',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (0.5 * getScale(level)) }),
-    description: '对子: 本次基础伤害 * 1.5'
+    description: '对子: 最终基础伤害 × 1.5'
   },
   {
     id: 'steam_piston',
@@ -31,13 +31,14 @@ export const AUGMENTS_POOL: Augment[] = [
     description: '连对: 额外追加 X 点伤害'
   },
   {
-    id: 'scarlet_thirst',
-    name: '猩红嗜血',
+    id: 'flame_thirst',
+    name: '烈焰嗜血',
     level: 1,
-    condition: 'red_count',
+    condition: 'element_count',
     conditionValue: 1,
-    effect: (_, dice, level) => ({ heal: Math.floor(dice.filter(d => d.color === '红色').length * 2 * getScale(level)) }),
-    description: '包含红色: 选中的红骰子每颗回复 2 HP'
+    conditionElement: 'fire',
+    effect: (_, dice, level) => ({ heal: Math.floor(dice.filter(d => d.element === 'fire').length * 2 * getScale(level)) }),
+    description: '包含火元素: 选中的火骰子每颗回复 2 HP'
   },
   {
     id: 'precise_deconstruction',
@@ -53,7 +54,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     condition: 'n_of_a_kind',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 2 * getScale(level)) }),
-    description: '多条: 造成 X * 2 的额外伤害'
+    description: '多条: 造成 X × 2 的额外伤害'
   },
   {
     id: 'full_house_blast',
@@ -61,31 +62,31 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     condition: 'full_house',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 2.5 * getScale(level)), armor: Math.floor(10 * getScale(level)) }),
-    description: '葫芦: 造成 X * 2.5 伤害并获得 10 护甲'
+    description: '葫芦: 造成 X × 2.5 伤害并获得 10 护甲'
   },
   {
-    id: 'flush_shield',
-    name: '同花力场',
+    id: 'element_shield',
+    name: '元素力场',
     level: 1,
-    condition: 'flush',
+    condition: 'same_element',
     effect: (x, _dice, level) => ({ armor: Math.floor(x * 1.5 * getScale(level)) }),
-    description: '同花: 额外获得 X * 1.5 点护甲'
+    description: '同元素: 额外获得 X × 1.5 点护甲'
   },
   {
-    id: 'chromatic_overload',
-    name: '色彩过载',
+    id: 'element_overload',
+    name: '元素过载',
     level: 1,
-    condition: 'flush',
+    condition: 'same_element',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (1.2 * getScale(level)) }),
-    description: '同花: 最终伤害 * 2.2'
+    description: '同元素: 最终伤害 × 2.2'
   },
   {
     id: 'venomous_dagger',
     name: '剧毒匕首',
     level: 1,
-    condition: 'flush',
+    condition: 'same_element',
     effect: (_x, _dice, level) => ({ statusEffects: [{ type: 'poison', value: Math.floor(3 * getScale(level)) }] }),
-    description: '同花: 额外附加 3 层中毒'
+    description: '同元素: 额外附加 3 层中毒'
   },
   {
     id: 'ignition_core',
@@ -103,14 +104,13 @@ export const AUGMENTS_POOL: Augment[] = [
     effect: (_x, _dice, level) => ({ statusEffects: [{ type: 'vulnerable', value: Math.floor(1 * getScale(level)) }] }),
     description: '顺子: 额外附加 1 层易伤'
   },
-  // === 新增增幅模块 ===
   {
     id: 'soul_harvest',
     name: '灵魂收割',
     level: 1,
     condition: 'n_of_a_kind',
     effect: (x, _dice, level) => ({ heal: Math.floor((x * 0.5) * getScale(level)) }),
-    description: '多条: 回复 X * 0.5 生命值'
+    description: '多条: 回复 X × 0.5 生命值'
   },
   {
     id: 'void_echo',
@@ -118,7 +118,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     condition: 'two_pair',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (0.8 * getScale(level)) }),
-    description: '连对: 本次基础伤害 * 1.8'
+    description: '连对: 最终基础伤害 × 1.8'
   },
   {
     id: 'frost_barrier',
@@ -134,7 +134,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     condition: 'straight',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 1.5 * getScale(level)), statusEffects: [{ type: 'burn', value: Math.floor(2 * getScale(level)) }] }),
-    description: '顺子: 额外造成 X * 1.5 伤害并附加 2 层灼烧'
+    description: '顺子: 额外造成 X × 1.5 伤害并附加 2 层灼烧'
   },
   {
     id: 'blood_pact',
@@ -142,29 +142,31 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     condition: 'high_card',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 2 * getScale(level)), heal: -Math.floor(3 * getScale(level)) }),
-    description: '普通攻击: 额外追加 X * 2 伤害，但损失 3 HP'
+    description: '普通攻击: 额外追加 X × 2 伤害，但损失 3 HP'
   },
   {
-    id: 'golden_touch',
-    name: '点金之手',
+    id: 'holy_touch',
+    name: '圣光之手',
     level: 1,
-    condition: 'flush',
+    condition: 'same_element',
+    conditionElement: 'holy',
     effect: (_x, dice, level) => {
-      const goldCount = dice.filter(d => d.color === '金色').length;
-      return { damage: Math.floor(goldCount * 5 * getScale(level)) };
+      const holyCount = dice.filter(d => d.element === 'holy').length;
+      return { heal: Math.floor(holyCount * 3 * getScale(level)) };
     },
-    description: '同花: 每颗金色骰子额外造成 5 点伤害'
+    description: '同元素(圣): 每颗圣光骰子额外回复 3 HP'
   },
   {
-    id: 'purple_haze',
-    name: '紫雾弥漫',
+    id: 'shadow_venom',
+    name: '暗影剧毒',
     level: 1,
-    condition: 'flush',
+    condition: 'same_element',
+    conditionElement: 'shadow',
     effect: (_x, dice, level) => {
-      const purpleCount = dice.filter(d => d.color === '紫色').length;
-      return { statusEffects: [{ type: 'poison', value: Math.floor(purpleCount * 2 * getScale(level)) }] };
+      const shadowCount = dice.filter(d => d.element === 'shadow').length;
+      return { statusEffects: [{ type: 'poison', value: Math.floor(shadowCount * 2 * getScale(level)) }] };
     },
-    description: '同花: 每颗紫色骰子附加 2 层中毒'
+    description: '同元素(暗): 每颗暗影骰子附加 2 层中毒'
   },
   {
     id: 'fortification',
@@ -202,12 +204,13 @@ export const INITIAL_AUGMENTS: Augment[] = [
     description: '顺子: 额外追加 8 点伤害'
   },
   {
-    id: 'scarlet_overload',
-    name: '猩红超载',
+    id: 'fire_overload',
+    name: '烈焰超载',
     level: 1,
-    condition: 'red_count',
+    condition: 'element_count',
     conditionValue: 3,
+    conditionElement: 'fire',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (1 * getScale(level)) }),
-    description: '包含红色>=3: 最终总伤害 * 2'
+    description: '包含火元素>=3: 最终总伤害 × 2'
   }
 ];
