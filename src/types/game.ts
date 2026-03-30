@@ -147,7 +147,7 @@ export interface LootItem {
 
 export interface ShopItem {
   id: string;
-  type: 'augment' | 'reroll' | 'dice' | 'specialDice';
+  type: 'augment' | 'reroll' | 'dice' | 'specialDice' | 'removeDice';
   augment?: Augment;
   diceDefId?: string;
   price: number;

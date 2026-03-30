@@ -43,6 +43,7 @@ export const SHOP_CONFIG = {
   fixedItems: [
     { id: 'reroll', type: 'reroll' as const, label: '全局重骰', desc: '增加 1 次全局重骰机会' },
     { id: 'dice', type: 'dice' as const, label: '额外骰子', desc: '增加 1 个骰子 (上限 6)' },
+    { id: 'removeDice', type: 'removeDice' as const, label: '骰子净化', desc: '移除一颗骰子，瘦身构筑' },
   ],
 } as const;
 
