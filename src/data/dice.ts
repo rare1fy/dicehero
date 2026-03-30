@@ -235,7 +235,8 @@ export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
 
 /** 初始骰子库 (骰子定义ID列表) — 8颗: 6普通 + 1铅 + 1火 */
 export const INITIAL_DICE_BAG: string[] = [
-  'standard', 'standard', 'standard', 'standard', 'standard', 'standard',
+  'standard', 'standard', 'standard', 'standard',
+  'standard', 'standard', 'standard', 'standard',
   'heavy',
   'fire',
 ];

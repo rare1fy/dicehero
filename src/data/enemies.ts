@@ -125,7 +125,11 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
       // Later waves slightly weaker
       const waveScale = w === 0 ? 1 : 0.8;
       const enemy = buildEnemy(config, hpScale * waveScale, dmgScale * waveScale);
-      enemy.distance = depth === 0 ? 1 : 2;  // first fight: close, rest: 2 steps
+      // Distance based on combat type: melee starts far, ranged stays put
+      if (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') {
+        enemy.distance = depth === 0 ? 1 : 2;
+      }
+      // Ranged enemies keep distance=0 (they don't need to approach)
       waveEnemies.push(enemy);
     }
     waves.push({ enemies: waveEnemies });

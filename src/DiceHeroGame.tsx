@@ -837,16 +837,21 @@ export default function DiceHeroGame() {
       return;
     }
 
-    // --- 3. Each alive enemy takes action (Peglin-style: melee approach, ranged attack) ---
-        const currentEnemies = [...enemies]; // snapshot for iteration
+        // --- 3. Each alive enemy takes action ---
+        // Rules:
+        // - warrior (melee): approach first, attack when distance=0, high damage
+        // - guardian (melee tank): approach first, taunt (force player to target), alternate attack/defend
+        // - ranger (ranged): attack from any distance, lower damage
+        // - caster (ranged): attack from any distance, may apply debuffs
+        // - priest (ranged support): never attacks, heals allies + buffs allies + debuffs player
+        const currentEnemies = [...enemies];
         for (const e of currentEnemies.filter(en => en.hp > 0)) {
           await new Promise(r => setTimeout(r, 350));
           
-          // Distance check: melee enemies must reach player first
           const isMelee = e.combatType === 'warrior' || e.combatType === 'guardian';
           
+          // Melee: must approach first
           if (isMelee && e.distance > 0) {
-            // Approach 1 step
             setEnemies(prev => prev.map(en =>
               en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
             ));
@@ -855,50 +860,104 @@ export default function DiceHeroGame() {
             } else {
               addLog(`${e.name} 正在逼近...(距离 ${e.distance - 1})`);
             }
-            continue; // Melee enemies don't attack while approaching
+            continue;
           }
           
-          // Ranged enemies or melee at distance 0: attack
-          // Shield type: alternates attack/defend
-          if (e.combatType === 'guardian' && game.battleTurn % 2 === 0) {
-            // Defend turn
-            const shieldVal = Math.floor(e.attackDmg * 1.5);
-            setEnemyEffectForUid(e.uid, 'defend');
-            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
-            addLog(`${e.name} 举盾防御，获得 ${shieldVal} 护甲。`);
+          // Guardian (tank): alternate attack/defend, taunt effect
+          if (e.combatType === 'guardian') {
+            if (game.battleTurn % 2 === 0) {
+              // Defend turn + taunt
+              const shieldVal = Math.floor(e.attackDmg * 1.5);
+              setEnemyEffectForUid(e.uid, 'defend');
+              setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
+              // Force player to target this guardian
+              setGame(prev => ({ ...prev, targetEnemyUid: e.uid }));
+              addLog(`${e.name} 举盾防御（+${shieldVal}护甲），并嘲讽你！`);
+              await new Promise(r => setTimeout(r, 300));
+              setEnemyEffectForUid(e.uid, null);
+              continue;
+            }
+            // Attack turn: fall through to normal attack below
+          }
+          
+          // Priest (support): never attacks, heals/buffs/debuffs
+          if (e.combatType === 'priest') {
+            setEnemyEffectForUid(e.uid, 'skill');
+            const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
+            
+            if (game.battleTurn % 3 === 0 && allies.length > 0) {
+              // Heal lowest HP ally
+              const lowestAlly = allies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
+              const healVal = Math.floor(e.attackDmg * 2.5);
+              setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
+              addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
+              addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
+            } else if (game.battleTurn % 3 === 1 && allies.length > 0) {
+              // Buff random ally with strength
+              const target = allies[Math.floor(Math.random() * allies.length)];
+              setEnemies(prev => prev.map(en => {
+                if (en.uid !== target.uid) return en;
+                const existing = en.statuses.find(s => s.type === 'strength');
+                if (existing) {
+                  return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 2 } : s) };
+                }
+                return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 2 }] };
+              }));
+              addLog(`${e.name} 为 ${target.name} 施加了力量增强！`);
+            } else {
+              // Debuff player with weak
+              const existing = game.statuses.find(s => s.type === 'weak');
+              if (!existing || existing.value < 3) {
+                setGame(prev => {
+                  const weakStatus = prev.statuses.find(s => s.type === 'weak');
+                  if (weakStatus) {
+                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 2 } : s) };
+                  }
+                  return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 2 }] };
+                });
+                addLog(`${e.name} 对你施加了虚弱！`);
+                addFloatingText('虚弱', 'text-purple-400', undefined, 'player');
+              } else {
+                // Already max debuff, heal self
+                const healVal = Math.floor(e.attackDmg * 1.5);
+                setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
+                addLog(`${e.name} 治疗自己 ${healVal} HP。`);
+              }
+            }
+            
             await new Promise(r => setTimeout(r, 300));
             setEnemyEffectForUid(e.uid, null);
             continue;
           }
           
-          // Healer type: heal lowest HP ally
-          if (e.combatType === 'priest' && game.battleTurn % 2 === 1) {
-            const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
-            if (allies.length > 0) {
-              const lowestAlly = allies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
-              const healVal = Math.floor(e.attackDmg * 2);
-              setEnemyEffectForUid(e.uid, 'skill');
-              setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-              addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
-              addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
-              await new Promise(r => setTimeout(r, 300));
-              setEnemyEffectForUid(e.uid, null);
-              continue;
-            }
-          }
-          
-          // Normal attack
+          // Ranged (ranger/caster): attack from any distance
+          // Warrior at distance 0: attack
+          // All others: normal attack
           setEnemyEffectForUid(e.uid, 'attack');
           setScreenShake(true);
           
           let damage = e.attackDmg;
-          // Apply strength/weak status
+          // Ranged enemies do less damage
+          if (e.combatType === 'ranger' || e.combatType === 'caster') {
+            damage = Math.floor(damage * 0.7);
+          }
           const str = e.statuses.find(s => s.type === 'strength');
           if (str) damage += str.value;
           const weak = e.statuses.find(s => s.type === 'weak');
           if (weak) damage = Math.max(1, Math.floor(damage * 0.75));
           
-          // Apply damage to player
+          // Caster: chance to apply debuff
+          if (e.combatType === 'caster' && Math.random() < 0.3) {
+            setGame(prev => {
+              const poisonStatus = prev.statuses.find(s => s.type === 'poison');
+              if (poisonStatus) {
+                return { ...prev, statuses: prev.statuses.map(s => s.type === 'poison' ? { ...s, value: s.value + 1 } : s) };
+              }
+              return { ...prev, statuses: [...prev.statuses, { type: 'poison' as any, value: 2 }] };
+            });
+            addLog(`${e.name} 的攻击附带了毒素！`);
+          }
+          
           setGame(prev => {
             let newArmor = prev.armor;
             let newHp = prev.hp;
@@ -922,6 +981,7 @@ export default function DiceHeroGame() {
           setEnemyEffectForUid(e.uid, null);
           setPlayerEffect(null);
         }
+
 
         // --- 4. Enemy Turn End: process each enemy's poison ---
     setEnemies(prev => prev.map(e => {
@@ -980,7 +1040,7 @@ export default function DiceHeroGame() {
       // Update all alive enemies' intents for next turn
       setEnemies(prevEnemies => prevEnemies.map(e => {
         if (e.hp <= 0 || !e.pattern) return e;
-        return { ...e, intent: e.pattern(nextTurn, e, prev) };
+        return e; // pattern no longer sets intent
       }));
 
       return { 
@@ -1004,18 +1064,24 @@ export default function DiceHeroGame() {
       freeRerollsLeft: prev.freeRerollsPerTurn
     }));
 
-    // Remaining hand dice -> discard pile
+    // Remaining hand dice -> discard pile, then draw new hand (atomic operation)
     const remainingDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
-    if (remainingDefIds.length > 0) {
-      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...remainingDefIds] }));
-    }
-
-    // 从最新bag抽取（确保discard已更新）
-    setTimeout(async () => {
+    
+    // Use setTimeout to ensure previous state updates are flushed
+    setTimeout(() => {
       setGame(prev => {
-        const { drawn, newBag, newDiscard, shuffled } = drawFromBag(prev.diceBag, prev.discardPile, prev.drawCount);
+        // Step 1: Add remaining dice to discard pile
+        let updatedDiscard = [...prev.discardPile, ...remainingDefIds];
+        let updatedBag = [...prev.diceBag];
+        
+        // Step 2: Draw new hand from bag
+        const { drawn, newBag, newDiscard, shuffled } = drawFromBag(updatedBag, updatedDiscard, prev.drawCount);
         if (shuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+        
+        // Step 3: Set new dice hand
         setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
+        
+        // Roll animation
         const doRoll = async () => {
           const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
           for (let f = 0; f < frameTimes.length; f++) {
@@ -1027,6 +1093,7 @@ export default function DiceHeroGame() {
           playSound('dice_lock');
         };
         doRoll();
+        
         return { ...prev, diceBag: newBag, discardPile: newDiscard };
       });
     }, 100);
@@ -1595,7 +1662,9 @@ useEffect(() => {
                   
                   // Distance-based visual scaling
                   const dist = enemy.distance || 0;
-                  const depthScale = dist >= 3 ? 0.55 : dist === 2 ? 0.72 : dist === 1 ? 0.88 : 1.0;
+                  // Don't scale enemies by distance (it confuses depth perception)
+                      // Instead use opacity to show distance
+                      const depthScale = 1.0;
                   const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 10;
                   const depthOpacity = dist >= 3 ? 0.55 : dist === 2 ? 0.75 : dist === 1 ? 0.9 : 1.0;
                   const depthBrightness = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
@@ -1895,14 +1964,14 @@ useEffect(() => {
                     initial={{ opacity: 0, y: 20, scale: 0.8 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                    className="flex flex-col items-center gap-1.5"
+                    className="flex flex-col items-center gap-0.5"
                   >
                     {/* 牌型名称 — 大号 + 强发光 */}
                     <motion.div 
                       animate={{ scale: [1, 1.06, 1], filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1)'] }}
                       transition={{ repeat: Infinity, duration: 1.8 }}
-                      className="px-5 py-2 bg-[rgba(10,10,15,0.92)] border-3 border-[var(--pixel-green)] text-[var(--pixel-green-light)] font-bold text-lg tracking-wider pixel-text-shadow"
-                      style={{ borderRadius: '2px', boxShadow: '0 0 16px rgba(60,200,100,0.4), 0 0 32px rgba(60,200,100,0.15), inset 0 0 12px rgba(60,200,100,0.1)' }}
+                      className="px-3 py-1 bg-[rgba(10,10,15,0.92)] border-2 border-[var(--pixel-green)] text-[var(--pixel-green-light)] font-bold text-sm tracking-wider pixel-text-shadow"
+                      style={{ borderRadius: '2px', boxShadow: '0 0 8px rgba(60,200,100,0.3), inset 0 0 6px rgba(60,200,100,0.08)' }}
                     >
                       ◆ {expectedOutcome.bestHand} ◆
                       {game.handLevels[expectedOutcome.bestHand] > 1 && (
@@ -1912,7 +1981,7 @@ useEffect(() => {
                     
                     {/* 效果预览行 — 更大更醒目，点击打开计算详情 */}
                     <div 
-                      className="flex items-center gap-3 px-4 py-1.5 bg-[rgba(10,10,15,0.88)] border-2 border-[var(--dungeon-panel-highlight)] pointer-events-auto cursor-pointer active:scale-95 transition-transform"
+                      className="flex items-center gap-2 px-2.5 py-0.5 bg-[rgba(10,10,15,0.88)] border border-[var(--dungeon-panel-highlight)] pointer-events-auto cursor-pointer active:scale-95 transition-transform"
                       onClick={() => setShowCalcModal(true)}
                       style={{ borderRadius: '2px', boxShadow: '0 0 8px rgba(0,0,0,0.5)' }}
                     >
@@ -1920,18 +1989,18 @@ useEffect(() => {
                         <motion.span 
                           animate={{ scale: [1, 1.2, 1], textShadow: ['0 0 4px rgba(200,64,60,0.5)', '0 0 12px rgba(200,64,60,0.8)', '0 0 4px rgba(200,64,60,0.5)'] }}
                           transition={{ repeat: Infinity, duration: 1 }}
-                          className="flex items-center gap-1 text-[var(--pixel-red-light)] text-lg font-black pixel-text-shadow"
+                          className="flex items-center gap-1 text-[var(--pixel-red-light)] text-sm font-black pixel-text-shadow"
                         >
                           <PixelZap size={2} />{expectedOutcome.damage}
                         </motion.span>
                       )}
                       {expectedOutcome.armor > 0 && (
-                        <span className="flex items-center gap-0.5 text-[var(--pixel-blue-light)] text-base font-bold pixel-text-shadow">
+                        <span className="flex items-center gap-0.5 text-[var(--pixel-blue-light)] text-xs font-bold pixel-text-shadow">
                           <PixelShield size={2} />+{expectedOutcome.armor}
                         </span>
                       )}
                       {expectedOutcome.heal > 0 && (
-                        <span className="flex items-center gap-0.5 text-[var(--pixel-green-light)] text-base font-bold pixel-text-shadow">
+                        <span className="flex items-center gap-0.5 text-[var(--pixel-green-light)] text-xs font-bold pixel-text-shadow">
                           <PixelHeart size={2} />+{expectedOutcome.heal}
                         </span>
                       )}

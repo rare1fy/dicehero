@@ -1257,25 +1257,40 @@ input[type="range"]::-webkit-slider-runnable-track {
   background-color: #080b0e;
 }
 
+/* 地板顶部渐变遮罩 — 消除黑墙感 */
+.battle-floor-perspective::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to bottom, rgba(8,11,14,0.95) 0%, rgba(8,11,14,0.5) 40%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* === 敌人轮廓高亮选中效果 === */
 .enemy-target-glow {
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(224,120,48,0.15) 0%, transparent 70%);
+  border-radius: 4px;
+  border: 2px solid rgba(224,120,48,0.8);
+  background: radial-gradient(ellipse, rgba(224,120,48,0.12) 0%, transparent 60%);
   box-shadow:
-    0 0 12px rgba(224,120,48,0.4),
-    0 0 24px rgba(224,120,48,0.2),
-    inset 0 0 8px rgba(224,120,48,0.15);
-  animation: target-glow-pulse 1.5s ease-in-out infinite alternate;
+    0 0 16px rgba(224,120,48,0.6),
+    0 0 32px rgba(224,120,48,0.3),
+    0 0 48px rgba(224,120,48,0.15),
+    inset 0 0 12px rgba(224,120,48,0.2);
+  animation: target-glow-pulse 1.2s ease-in-out infinite alternate;
 }
 
 @keyframes target-glow-pulse {
   0% { 
-    box-shadow: 0 0 12px rgba(224,120,48,0.4), 0 0 24px rgba(224,120,48,0.2);
-    opacity: 0.8;
+    box-shadow: 0 0 16px rgba(224,120,48,0.6), 0 0 32px rgba(224,120,48,0.3), 0 0 48px rgba(224,120,48,0.15), inset 0 0 12px rgba(224,120,48,0.2);
+    border-color: rgba(224,120,48,0.7);
   }
   100% { 
-    box-shadow: 0 0 16px rgba(224,120,48,0.6), 0 0 32px rgba(224,120,48,0.3);
-    opacity: 1;
+    box-shadow: 0 0 24px rgba(224,120,48,0.8), 0 0 40px rgba(224,120,48,0.4), 0 0 56px rgba(224,120,48,0.2), inset 0 0 16px rgba(224,120,48,0.3);
+    border-color: rgba(224,120,48,1.0);
   }
 }
 
@@ -1285,7 +1300,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   bottom: 0;
   left: -20%;
   right: -20%;
-  height: 55%;
+  height: 75%;
   background:
     /* 石板地砖 — 暖色调灰棕 */
     repeating-linear-gradient(
