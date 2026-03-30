@@ -1448,28 +1448,6 @@ useEffect(() => {
               </motion.div>
             </div>
 
-                {/* 选中骰子tips */}
-                {(() => {
-                  const selectedDice = dice.filter(d => d.selected && !d.spent);
-                  if (selectedDice.length === 0) return null;
-                  const lastSelected = selectedDice[selectedDice.length - 1];
-                  const def = getDiceDef(lastSelected.diceDefId);
-                  return (
-                    <div className="px-2 py-1 mx-1 mb-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
-                        <span className="text-[7px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
-                        {def.element !== 'normal' && (
-                          <span className="text-[7px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
-                        )}
-                      </div>
-                      {def.onPlay && (
-                        <div className="text-[7px] text-[var(--pixel-orange-light)] mt-0.5">{getOnPlayDescription(def.onPlay)}</div>
-                      )}
-                    </div>
-                  );
-                })()}
-
 
             {/* 分支路径视觉 — 从中心点发散到3个节点 */}
             <div className="relative z-10 flex justify-center py-2">
@@ -1733,9 +1711,21 @@ useEffect(() => {
                         <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{enemy.attackDmg}</span>
                       </div>
 
-                      {/* Enemy name */}
+                      {/* Enemy name + distance */}
                       <div className="text-center mb-0.5">
                         <span className="font-bold text-[var(--dungeon-text-bright)] text-[10px] pixel-text-shadow">{enemy.name}</span>
+                        {enemy.distance > 0 && (
+                          <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                            {Array.from({ length: 3 }).map((_, idx) => (
+                              <div key={idx} className="w-1.5 h-1.5" style={{
+                                background: idx < enemy.distance ? 'var(--pixel-orange)' : 'rgba(255,255,255,0.15)',
+                                borderRadius: '1px',
+                                boxShadow: idx < enemy.distance ? '0 0 3px rgba(224,120,48,0.5)' : 'none'
+                              }} />
+                            ))}
+                            <span className="text-[7px] text-[var(--pixel-orange-light)] font-mono ml-0.5">{'距'}{enemy.distance}</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* HP bar */}
@@ -2216,6 +2206,29 @@ useEffect(() => {
                     <div className="text-[var(--dungeon-text-dim)] text-[9px] font-bold py-4">所有骰子已使用</div>
                   )}
                 </div>
+
+
+                {/* 选中骰子tips */}
+                {(() => {
+                  const selectedDice = dice.filter(d => d.selected && !d.spent);
+                  if (selectedDice.length === 0) return null;
+                  const lastSelected = selectedDice[selectedDice.length - 1];
+                  const def = getDiceDef(lastSelected.diceDefId);
+                  return (
+                    <div className="px-2 py-1 mx-1 mb-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
+                        <span className="text-[7px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
+                        {def.element !== 'normal' && (
+                          <span className="text-[7px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
+                        )}
+                      </div>
+                      {def.onPlay && (
+                        <div className="text-[7px] text-[var(--pixel-orange-light)] mt-0.5">{getOnPlayDescription(def.onPlay)}</div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* 操作按钮行 */}
                 <div className="flex gap-1.5 items-center">

@@ -529,23 +529,35 @@
 .dice-element-fire::before {
   content: '';
   position: absolute;
-  inset: -3px;
-  border-radius: 2px;
-  background: radial-gradient(ellipse at bottom, rgba(224,120,48,0.25) 0%, transparent 70%);
-  animation: dice-fire-glow 1.5s steps(4) infinite alternate;
+  inset: -6px;
+  border-radius: 4px;
+  background: 
+    radial-gradient(ellipse at 50% 80%, rgba(255,80,20,0.4) 0%, rgba(224,120,48,0.2) 40%, transparent 70%),
+    radial-gradient(ellipse at 30% 60%, rgba(255,160,60,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 40%, rgba(255,60,10,0.1) 0%, transparent 50%);
+  animation: dice-fire-glow 0.8s steps(4) infinite alternate;
   pointer-events: none;
   z-index: -1;
+  filter: blur(1px);
 }
 .dice-element-fire::after {
   content: '';
   position: absolute;
-  bottom: -2px; left: 50%;
-  width: 6px; height: 8px;
+  bottom: -6px; left: 50%;
+  width: 16px; height: 22px;
   transform: translateX(-50%);
-  background: linear-gradient(to top, rgba(224,120,48,0.6), rgba(255,107,53,0.3), transparent);
-  animation: dice-fire-particle 0.8s steps(3) infinite;
+  background: 
+    radial-gradient(ellipse at 50% 100%, rgba(255,80,20,0.7) 0%, rgba(255,140,40,0.4) 30%, transparent 60%),
+    radial-gradient(ellipse at 30% 80%, rgba(255,160,60,0.5) 0%, transparent 40%),
+    radial-gradient(ellipse at 70% 70%, rgba(255,60,10,0.4) 0%, transparent 40%),
+    radial-gradient(1px 1px at 3px 4px, rgba(255,200,80,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 12px 8px, rgba(255,180,60,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 8px 2px, rgba(255,220,100,0.7) 0%, transparent 100%);
+  animation: dice-fire-particle 0.5s steps(4) infinite;
   pointer-events: none;
   image-rendering: pixelated;
+  filter: blur(0.3px);
+  z-index: 10;
 }
 
 .dice-element-ice { position: relative; overflow: visible; }
@@ -660,10 +672,12 @@
 /* 元素骰子底纹 */
 .dice-texture-fire {
   background-image: 
-    radial-gradient(1px 1px at 8px 12px, rgba(255,107,53,0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 28px 38px, rgba(224,80,32,0.25) 0%, transparent 100%),
-    radial-gradient(1px 1px at 40px 8px, rgba(255,107,53,0.2) 0%, transparent 100%),
-    radial-gradient(2px 1px at 18px 42px, rgba(224,80,32,0.15) 0%, transparent 100%);
+    linear-gradient(180deg, rgba(255,80,20,0.15) 0%, rgba(224,120,48,0.25) 50%, rgba(180,50,10,0.2) 100%),
+    radial-gradient(2px 2px at 8px 12px, rgba(255,140,40,0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 28px 38px, rgba(255,80,20,0.35) 0%, transparent 100%),
+    radial-gradient(2px 2px at 40px 8px, rgba(255,160,60,0.3) 0%, transparent 100%),
+    radial-gradient(3px 2px at 18px 42px, rgba(255,100,30,0.25) 0%, transparent 100%),
+    radial-gradient(2px 2px at 35px 20px, rgba(255,200,80,0.2) 0%, transparent 100%);
 }
 .dice-texture-ice {
   background-image: 
@@ -698,13 +712,16 @@
 
 /* 元素粒子动画关键帧 */
 @keyframes dice-fire-glow {
-  0% { opacity: 0.6; }
-  100% { opacity: 1; }
+  0% { opacity: 0.5; transform: scale(0.95); }
+  50% { opacity: 0.9; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1.05); }
 }
 @keyframes dice-fire-particle {
-  0% { transform: translateX(-50%) translateY(0); opacity: 0.6; }
-  50% { transform: translateX(-50%) translateY(-4px); opacity: 0.8; }
-  100% { transform: translateX(-50%) translateY(-8px); opacity: 0; }
+  0% { transform: translateX(-50%) translateY(0) scaleY(1); opacity: 0.8; }
+  25% { transform: translateX(-55%) translateY(-5px) scaleY(1.1); opacity: 1; }
+  50% { transform: translateX(-45%) translateY(-10px) scaleY(1.2); opacity: 0.9; }
+  75% { transform: translateX(-52%) translateY(-16px) scaleY(0.9); opacity: 0.5; }
+  100% { transform: translateX(-48%) translateY(-22px) scaleY(0.6); opacity: 0; }
 }
 @keyframes dice-ice-glow {
   0% { opacity: 0.5; }
