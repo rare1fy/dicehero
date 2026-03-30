@@ -45,7 +45,7 @@ export const ShopScreen: React.FC = () => {
                 setGame(prev => ({
                   ...prev,
                   souls: prev.souls - item.price,
-                  ownedDice: [...prev.ownedDice, item.diceDefId],
+                  ownedDice: [...prev.ownedDice, { defId: item.diceDefId!, level: 1 }],
                   shopItems: prev.shopItems.filter(si => si.id !== item.id)
                 }));
               } else if (item.type === 'augment' && item.augment) {

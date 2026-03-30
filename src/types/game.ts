@@ -33,6 +33,15 @@ export interface DiceDef {
 // 骰子实例 (运行时)
 // ============================================================
 
+// ============================================================
+// 拥有的骰子（带等级）
+// ============================================================
+
+export interface OwnedDie {
+  defId: string;    // 骰子定义ID
+  level: number;    // 当前等级 1-3
+}
+
 export interface Die {
   id: number;
   diceDefId: string;
@@ -128,7 +137,7 @@ export interface Enemy {
 
 export interface LootItem {
   id: string;
-  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice';
+  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice' | 'diceChoice';
   value?: number;
   augment?: Augment;
   augmentOptions?: Augment[];
@@ -171,7 +180,7 @@ export interface GameState {
   slots: number;
 
   // 骰子库系统
-  ownedDice: string[];       // 玩家拥有的所有骰子定义ID列表
+  ownedDice: OwnedDie[];       // 玩家拥有的所有骰子定义ID列表
   diceBag: string[];          // 骰子库 (待抽取)
   discardPile: string[];      // 弃骰库 (已使用)
   drawCount: number;          // 每回合抽取数量
@@ -180,7 +189,7 @@ export interface GameState {
   augments: (Augment | null)[];
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect';
+  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target

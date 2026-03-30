@@ -250,3 +250,52 @@ export const rollDiceDef = (def: DiceDef): number => {
 export const getDiceDef = (id: string): DiceDef => {
   return ALL_DICE[id] || ALL_DICE['standard'];
 };
+
+// ============================================================
+// 骰子升级体系
+// ============================================================
+
+/** 骰子升级：每面+N点 */
+export const getUpgradedFaces = (def: DiceDef, level: number): number[] => {
+  const bonus = Math.max(0, level - 1); // Lv1=+0, Lv2=+1, Lv3=+2
+  return def.faces.map(f => f + bonus);
+};
+
+/** 骰子升级：onPlay效果增强系数 */
+export const getDiceLevelScale = (level: number): number => {
+  return 1 + (level - 1) * 0.5; // Lv1=1.0, Lv2=1.5, Lv3=2.0
+};
+
+/** 骰子最大等级 */
+export const DICE_MAX_LEVEL = 3;
+
+// ============================================================
+// 骰子构筑奖励池
+// ============================================================
+
+/** 根据战斗类型获取骰子奖励池 */
+export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
+  switch (battleType) {
+    case 'enemy':
+      return [...DICE_BY_RARITY.common, ...DICE_BY_RARITY.uncommon];
+    case 'elite':
+      return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare];
+    case 'boss':
+      return [...DICE_BY_RARITY.rare, ...DICE_BY_RARITY.legendary];
+  }
+};
+
+/** 从池中随机抽取N个不重复骰子 */
+export const pickRandomDice = (pool: DiceDef[], count: number): DiceDef[] => {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const seen = new Set<string>();
+  const result: DiceDef[] = [];
+  for (const d of shuffled) {
+    if (!seen.has(d.id)) {
+      seen.add(d.id);
+      result.push(d);
+      if (result.length >= count) break;
+    }
+  }
+  return result;
+};

@@ -15,9 +15,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './data/dice';
-import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag } from './data/diceBag';
+import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult, OwnedDie } from './types/game';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL } from './data/dice';
+import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
 import { DiceBagPanel } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
@@ -41,6 +41,7 @@ import { ShopScreen } from './components/ShopScreen';
 import { CampfireScreen } from './components/CampfireScreen';
 import { EventScreen } from './components/EventScreen';
 import { LootScreen } from './components/LootScreen';
+import { DiceRewardScreen } from './components/DiceRewardScreen';
 import { GameOverScreen } from './components/GameOverScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 import { generateSkillModules } from './data/skillModules';
@@ -62,7 +63,7 @@ export default function DiceHeroGame() {
     maxPlays: PLAYER_INITIAL.playsPerTurn,
     souls: PLAYER_INITIAL.souls,
     slots: PLAYER_INITIAL.augmentSlots,
-    ownedDice: [...INITIAL_DICE_BAG],
+    ownedDice: INITIAL_DICE_BAG.map(id => ({ defId: id, level: 1 })),
     diceBag: initDiceBag(INITIAL_DICE_BAG),
     discardPile: [],
     drawCount: PLAYER_INITIAL.drawCount,
@@ -98,7 +99,7 @@ export default function DiceHeroGame() {
       } else {
         startBGM('battle');
       }
-    } else if (game.phase === 'map' || game.phase === 'shop' || game.phase === 'campfire' || game.phase === 'event') {
+    } else if (game.phase === 'map' || game.phase === 'shop' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward') {
       startBGM('explore');
     } else if (game.phase === 'start' || game.phase === 'gameover' || game.phase === 'victory') {
       stopBGM();
@@ -1177,7 +1178,7 @@ useEffect(() => {
       return { 
         ...prev, 
         map: newMap,
-        phase: 'loot',
+        phase: 'diceReward',
         lootItems: loot,
         isEnemyTurn: false
       };
@@ -1213,7 +1214,7 @@ useEffect(() => {
         nextState.maxPlays += item.value || 0;
         addLog(`获得了 ${item.value} 次出牌机会。`);
       } else if (item.type === 'specialDice' && item.diceDefId) {
-        nextState.ownedDice = [...nextState.ownedDice, item.diceDefId];
+        nextState.ownedDice = [...nextState.ownedDice, { defId: item.diceDefId!, level: 1 }];
         const ddef = getDiceDef(item.diceDefId);
         addLog(`获得了特殊骰子: ${ddef.name}。`);
       } else if (item.type === 'diceCount') {
@@ -1419,6 +1420,7 @@ useEffect(() => {
 
       <div className="flex-1 overflow-hidden relative">
         {game.phase === 'map' && <MapScreen />}
+        {game.phase === 'diceReward' && <DiceRewardScreen />}
         {game.phase === 'loot' && <LootScreen />}
         {game.phase === 'shop' && <ShopScreen />}
         {game.phase === 'campfire' && <CampfireScreen />}
@@ -2155,10 +2157,10 @@ useEffect(() => {
 
                 {/* 骰子库指示器 */}
                 <div className="flex justify-between items-center mb-0.5 px-1">
-                  <DiceBagPanel ownedDice={game.ownedDice} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
+                  <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
                   <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider">
                     回合 {game.battleTurn}
-                  <DiceBagPanel ownedDice={game.ownedDice} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
+                  <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                   </div>
                 </div>
 

@@ -5,7 +5,7 @@
  * 替代原来的 diceColors.ts。
  */
 
-import type { Die } from '../types/game';
+import type { Die, OwnedDie } from '../types/game';
 import { getDiceDef, rollDiceDef } from './dice';
 
 /** Fisher-Yates 洗牌 */
@@ -82,7 +82,16 @@ export const rerollUnselectedDice = (dice: Die[]): Die[] => {
 
 /**
  * 初始化骰子库 — 将拥有的骰子全部洗入骰子库
+ * 支持新版 OwnedDie[] 格式
  */
-export const initDiceBag = (ownedDice: string[]): string[] => {
-  return shuffle([...ownedDice]);
+export const initDiceBag = (ownedDice: OwnedDie[] | string[]): string[] => {
+  const ids = ownedDice.map(d => typeof d === 'string' ? d : d.defId);
+  return shuffle([...ids]);
+};
+
+/**
+ * 将 OwnedDie[] 转为 string[]
+ */
+export const ownedDiceToIds = (ownedDice: OwnedDie[]): string[] => {
+  return ownedDice.map(d => d.defId);
 };
