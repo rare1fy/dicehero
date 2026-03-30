@@ -144,6 +144,7 @@ export default function DiceHeroGame() {
   const [skillTriggerTexts, setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
   const [handLeftThrow, setHandLeftThrow] = useState(false);
   const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
+  const [showWaveDetail, setShowWaveDetail] = useState(false);
 
   // --- 战前技能模组选择 ---
   interface SkillModule {
@@ -1606,20 +1607,28 @@ useEffect(() => {
               <div className="battle-floor-perspective" />
               
               {/* 左上角关卡位置信息 */}
-              <div className="absolute top-2 left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
-                <div className="px-2 py-1 bg-[rgba(8,11,14,0.75)] border border-[var(--dungeon-panel-border)] backdrop-blur-sm" style={{borderRadius:'2px'}}>
-                  <span className="text-[8px] text-[var(--dungeon-text-dim)] font-bold">第 </span>
-                  <span className="text-[9px] text-[var(--pixel-cyan)] font-mono font-bold">{(game.map.find(n => n.id === game.currentNodeId)?.depth || 0) + 1}</span>
-                  <span className="text-[8px] text-[var(--dungeon-text-dim)]"> 层</span>
-                  <span className="text-[7px] text-[var(--dungeon-text-dim)] ml-1 opacity-60">/ 共{game.map.reduce((max, n) => Math.max(max, n.depth), 0) + 1}层</span>
-                </div>
-                {game.phase === 'battle' && (
-                  <div className="px-2 py-1 bg-[rgba(8,11,14,0.75)] border border-[var(--dungeon-panel-border)] backdrop-blur-sm" style={{borderRadius:'2px'}}>
-                    <span className="text-[8px] text-[var(--dungeon-text-dim)] font-bold">回合 </span>
-                    <span className="text-[9px] text-[var(--pixel-orange)] font-mono font-bold">{game.battleTurn}</span>
+              {/* 波次信息 - 点击查看详情 */}
+              {game.battleWaves.length > 0 && (
+                <div 
+                  className="absolute top-2 left-2 z-20 flex flex-col gap-1 cursor-pointer"
+                  onClick={() => setShowWaveDetail(true)}
+                >
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[rgba(8,11,14,0.8)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                    <span className="text-[8px] text-[var(--pixel-orange)] font-bold">第{game.currentWaveIndex + 1}波</span>
+                    <span className="text-[7px] text-[var(--dungeon-text-dim)]">/ {game.battleWaves.length}波</span>
                   </div>
-                )}
-              </div>
+                  {game.currentWaveIndex + 1 < game.battleWaves.length && (
+                    <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[rgba(8,11,14,0.65)] border border-[rgba(255,255,255,0.06)]" style={{borderRadius:'2px'}}>
+                      <span className="text-[6px] text-[var(--dungeon-text-dim)]">下波:</span>
+                      {game.battleWaves[game.currentWaveIndex + 1].enemies.slice(0, 3).map((ne, ni) => (
+                        <span key={ni} className="text-[7px]" title={ne.name}>
+                          {ne.combatType === 'warrior' ? '⚔️' : ne.combatType === 'guardian' ? '🛡️' : ne.combatType === 'ranger' ? '🏹' : ne.combatType === 'caster' ? '✨' : '❤️'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 敌人舞台光效 */}
               <div className="absolute inset-0 enemy-stage-glow pointer-events-none" />
@@ -1641,23 +1650,25 @@ useEffect(() => {
                 ))}
               </AnimatePresence>
 
-              {/* Multi-enemy horizontal display with depth */}
-              <div className="flex items-end justify-center gap-3 flex-wrap relative" style={{ minHeight: '180px' }}>
-                {enemies.filter(e => e.hp > 0)
-                  .sort((a, b) => b.distance - a.distance)
+                {/* Multi-enemy fixed-slot display (no reflow on death) */}
+                <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '4px' }}>
+                {[...enemies].sort((a, b) => b.distance - a.distance)
                   .map((enemy) => {
+                    if (enemy.hp <= 0) {
+                      return <div key={enemy.uid} style={{ minWidth: '60px', minHeight: '100px' }} />;
+                    }
                   const isTarget = enemy.uid === (targetEnemyUid || enemies.find(e => e.hp > 0)?.uid);
                   const effect = enemyEffects[enemy.uid] || null;
                   const currentNode = game.map.find(n => n.id === game.currentNodeId);
                   const baseSpriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
                   
-                  // Distance-based visual scaling
-                  const dist = enemy.distance || 0;
-                  // Don't scale enemies by distance (it confuses depth perception)
-                      // Instead use opacity to show distance
-                      const depthScale = 1.0;
+                // Distance-based visual scaling - USE SCALE for clear depth
+                const dist = enemy.distance || 0;
+                // Scale: distance 0 = 1.15 (big, in your face), 1 = 0.95, 2 = 0.75, 3 = 0.6
+                const depthScale = dist === 0 ? 1.15 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
                   const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 10;
-                  const depthOpacity = dist >= 3 ? 0.55 : dist === 2 ? 0.75 : dist === 1 ? 0.9 : 1.0;
+                  const depthOpacity = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
+                  const isAttackReady = dist === 0;
                   const depthBrightness = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
                   const depthZ = dist >= 3 ? 1 : dist === 2 ? 3 : dist === 1 ? 5 : 7;
                   const spriteSize = Math.max(4, Math.round(baseSpriteSize * depthScale));
@@ -1851,14 +1862,45 @@ useEffect(() => {
                 )}
               </AnimatePresence>
 
-              {/* Wave indicator */}
-              {game.battleWaves.length > 1 && (
-                <div className="absolute top-2 right-2 z-20 px-2 py-1 bg-[rgba(8,11,14,0.75)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                  <span className="text-[8px] text-[var(--dungeon-text-dim)] font-bold">\u6ce2\u6b21 </span>
-                  <span className="text-[9px] text-[var(--pixel-orange)] font-mono font-bold">{game.currentWaveIndex + 1}</span>
-                  <span className="text-[7px] text-[var(--dungeon-text-dim)]"> / {game.battleWaves.length}</span>
-                </div>
-              )}
+              {/* 波次详情弹窗 */}
+              <AnimatePresence>
+                {showWaveDetail && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-[60] flex items-center justify-center bg-[rgba(0,0,0,0.7)]"
+                    onClick={() => setShowWaveDetail(false)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.8, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.8, y: 20 }}
+                      className="bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] p-3 max-w-[280px] w-[90%]"
+                      style={{ borderRadius: '4px' }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-2 text-center pixel-text-shadow">波次详情</div>
+                      {game.battleWaves.map((wave, wi) => (
+                        <div key={wi} className={`mb-2 p-2 border ${wi === game.currentWaveIndex ? 'border-[var(--pixel-orange)] bg-[rgba(224,120,48,0.1)]' : 'border-[rgba(255,255,255,0.08)]'}`} style={{borderRadius:'3px'}}>
+                          <div className="text-[9px] font-bold mb-1" style={{ color: wi === game.currentWaveIndex ? 'var(--pixel-orange)' : 'var(--dungeon-text-dim)' }}>
+                            第{wi + 1}波 {wi === game.currentWaveIndex ? '(当前)' : wi < game.currentWaveIndex ? '(已清除)' : ''}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {wave.enemies.map((we, ei) => (
+                              <div key={ei} className="flex items-center gap-0.5 px-1 py-0.5 bg-[rgba(255,255,255,0.04)]" style={{borderRadius:'2px'}}>
+                                <span className="text-[8px] text-[var(--dungeon-text)]">{we.name}</span>
+                                <span className="text-[7px] text-[var(--dungeon-text-dim)]">HP{we.maxHp}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <button className="w-full mt-1 py-1 text-[9px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] transition-colors" onClick={() => setShowWaveDetail(false)}>关闭</button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="first-person-hands">
                 {/* 左手 — 持骰子 */}

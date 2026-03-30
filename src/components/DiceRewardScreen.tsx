@@ -5,7 +5,7 @@ import type { OwnedDie } from '../types/game';
 import { getDiceDef, pickRandomDice, getDiceRewardPool, DICE_MAX_LEVEL, getUpgradedFaces } from '../data/dice';
 import { ElementBadge, getOnPlayDescription, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { PixelDice, PixelStar, PixelArrowUp, PixelClose } from './PixelIcons';
-import { ELEMENT_NAMES, ELEMENT_COLORS } from '../utils/uiHelpers';
+import { ELEMENT_NAMES, ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
 
 type RewardTab = 'newDice' | 'upgrade' | 'remove';
@@ -103,7 +103,7 @@ export const DiceRewardScreen: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`relative flex flex-col items-center p-2.5 rounded border-2 transition-all min-w-[80px] ${
+        className={`relative flex flex-col items-center p-3 rounded border-2 transition-all min-w-[100px] ${
           isSelected
             ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
             : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
@@ -111,22 +111,27 @@ export const DiceRewardScreen: React.FC = () => {
         style={{ borderRadius: '4px' }}
       >
         {/* 稀有度标签 */}
-        <div className="text-[7px] font-bold tracking-wider mb-1" style={{ color: RARITY_TEXT_COLORS[def.rarity] || '#888' }}>
+        <div className="text-[8px] font-bold tracking-wider mb-1" style={{ color: RARITY_TEXT_COLORS[def.rarity] || '#888' }}>
           {RARITY_LABELS[def.rarity] || def.rarity}
         </div>
 
-        {/* 骰子图标 */}
-        <div className="w-10 h-10 flex items-center justify-center mb-1 relative">
-          <PixelDice size={32} color={elemColor} />
+        {/* 骰子 - 用真实游戏内样式渲染 */}
+        <div className="relative mb-1.5">
+          <div
+            className={`${getDiceElementClass(def.element, isSelected, false, false, defId)} relative flex items-center justify-center`}
+            style={{ width: '40px', height: '40px', fontSize: '18px', lineHeight: '40px' }}
+          >
+            {faces[0]}
+          </div>
           {def.element !== 'normal' && (
-            <div className="absolute -top-0.5 -right-0.5">
-              <ElementBadge element={def.element} size={12} />
+            <div className="absolute -top-1 -right-1 z-10">
+              <ElementBadge element={def.element} size={14} />
             </div>
           )}
         </div>
 
         {/* 名称 */}
-        <div className="text-[9px] font-bold text-[var(--dungeon-text-bright)] mb-0.5 text-center leading-tight">
+        <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-0.5 text-center leading-tight">
           {def.name}
         </div>
 
@@ -140,7 +145,7 @@ export const DiceRewardScreen: React.FC = () => {
         )}
 
         {/* 面值 */}
-        <div className="text-[7px] text-[var(--dungeon-text-dim)] mb-0.5">
+        <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-0.5">
           [{faces.join(',')}] 均值{avgVal}
         </div>
 
@@ -166,11 +171,11 @@ export const DiceRewardScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto">
+    <div className="flex flex-col items-center justify-center h-full bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto">
       <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
 
       {/* 标题 */}
-      <div className="text-center mb-4 mt-5 relative z-10">
+      <div className="text-center mb-3 mt-3 relative z-10">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -188,7 +193,7 @@ export const DiceRewardScreen: React.FC = () => {
       </div>
 
       {/* Tab 切换 */}
-      <div className="flex justify-center gap-1.5 mb-4 px-4 relative z-10">
+      <div className="flex justify-center gap-1.5 mb-3 px-4 relative z-10">
         {([
           { id: 'newDice' as RewardTab, label: '获取新骰子', icon: '🆕' },
           { id: 'upgrade' as RewardTab, label: '升级骰子', icon: '⬆️', disabled: upgradableDice.length === 0 },
@@ -213,7 +218,7 @@ export const DiceRewardScreen: React.FC = () => {
       </div>
 
       {/* 内容区 */}
-      <div className="flex-1 px-4 relative z-10">
+      <div className="px-4 relative z-10 max-w-md mx-auto w-full">
         <AnimatePresence mode="wait">
           {/* 获取新骰子 */}
           {activeTab === 'newDice' && (
@@ -293,7 +298,7 @@ export const DiceRewardScreen: React.FC = () => {
       </div>
 
       {/* 底部操作栏 */}
-      <div className="flex justify-center gap-3 p-4 relative z-10">
+      <div className="flex justify-center gap-3 p-3 mt-6 relative z-10">
         <button
           onClick={handleSkip}
           className="px-4 py-2 text-[9px] font-bold text-[var(--dungeon-text-dim)] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.1)] transition-all"
