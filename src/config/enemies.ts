@@ -61,7 +61,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 20, baseDmg: 4,
     category: 'normal',
     combatType: 'caster',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -79,7 +79,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 30, baseDmg: 3,
     category: 'normal',
     combatType: 'guardian',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -96,7 +96,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 25, baseDmg: 5,
     category: 'normal',
     combatType: 'caster',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -114,7 +114,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 15, baseDmg: 6,
     category: 'normal',
     combatType: 'warrior',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -131,7 +131,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 18, baseDmg: 3,
     category: 'normal',
     combatType: 'ranger',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -150,7 +150,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 35, baseDmg: 4,
     category: 'normal',
     combatType: 'guardian',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -168,7 +168,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 22, baseDmg: 2,
     category: 'normal',
     combatType: 'priest',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -186,7 +186,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 40, baseDmg: 6,
     category: 'normal',
     combatType: 'warrior',
-    drops: { gold: 20, augment: true },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [

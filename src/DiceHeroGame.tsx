@@ -1159,15 +1159,6 @@ useEffect(() => {
       for (let i = 0; i < LOOT_CONFIG.augmentChoiceCount; i++) options.push(pool[i]);
       loot.push({ id: 'augment', type: 'augment', augmentOptions: options, collected: false });
     }
-    if (enemies.find(e => e.dropMaxPlays)?.dropMaxPlays) {
-      loot.push({ id: 'maxPlays', type: 'maxPlays', value: enemies.find(e => e.dropMaxPlays)?.dropMaxPlays, collected: false });
-    }
-    if (enemies.find(e => e.dropDiceCount)?.dropDiceCount) {
-      const lootDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
-      const lootDice = lootDicePool[0];
-      loot.push({ id: 'specialDice', type: 'specialDice', diceDefId: lootDice.id, collected: false });
-    }
-
     setGame(prev => {
       const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
       
