@@ -96,7 +96,8 @@ export interface MapNode {
 // ============================================================
 
 /** 敌人战斗类型：决定攻击距离和视觉标识 */
-export type EnemyCombatType = 'sword' | 'shield' | 'bow' | 'magic' | 'healer';
+/** 敌人战斗类型（西幻风格） */
+export type EnemyCombatType = 'warrior' | 'guardian' | 'ranger' | 'caster' | 'priest';
 
 export interface Enemy {
   uid: string;  // runtime unique id for multi-enemy targeting
@@ -108,6 +109,8 @@ export interface Enemy {
   attackDmg: number;
   /** 战斗类型 */
   combatType: EnemyCombatType;
+  /** 敌人描述（用于弹窗） */
+  description?: string;
   dropGold: number;
   dropAugment: boolean;
   dropMaxPlays?: number;

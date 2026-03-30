@@ -19,7 +19,7 @@ import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, Map
 import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './data/dice';
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag } from './data/diceBag';
 import { DiceBagPanel } from './components/DiceBagPanel';
-import { ElementBadge } from './components/PixelDiceShapes';
+import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode, getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
@@ -28,7 +28,7 @@ import { playSound } from './utils/sound';
 import { checkHands, canFormValidHand } from './utils/handEvaluator';
 import { generateMap, getNodeX } from './utils/mapGenerator';
 import { StatusIcon } from './components/StatusIcon';
-import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES } from './utils/uiHelpers';
+import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES, ELEMENT_COLORS } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
 import { CSSParticles } from './components/ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './components/TutorialOverlay';
@@ -122,6 +122,7 @@ export default function DiceHeroGame() {
   const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
 
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
+  const [enemyInfoTarget, setEnemyInfoTarget] = useState<string | null>(null);
   const [screenShake, setScreenShake] = useState(false);
   const [hpGained, setHpGained] = useState(false);
   const [armorGained, setArmorGained] = useState(false);
@@ -226,7 +227,7 @@ export default function DiceHeroGame() {
     startBattle(node);
   };
 
-  const startBattle = (node: MapNode) => {
+  const startBattle = async (node: MapNode) => {
     const waves = getEnemiesForNode(node, node.depth, game.enemyHpMultiplier);
     const firstWave = waves[0]?.enemies || [];
     setEnemies(firstWave);
@@ -252,7 +253,27 @@ export default function DiceHeroGame() {
       playsLeft: prev.maxPlays,
       isEnemyTurn: false 
     }));
-    rollAllDice();
+    // 直接用新bag抽取（避免闭包旧值问题）
+    const freshBag = initDiceBag(game.ownedDice);
+    const freshCount = game.drawCount;
+    const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
+    if (fShuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+    setGame(prev => ({ ...prev, diceBag: fBag, discardPile: fDiscard }));
+    // 启动骰子roll动画
+    setDice(freshDrawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
+    const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
+    for (let f = 0; f < frameTimes.length; f++) {
+      await new Promise(resolve => setTimeout(resolve, frameTimes[f]));
+      setDice(prev => prev.map(d => {
+        const def = getDiceDef(d.diceDefId);
+        return { ...d, value: rollDiceDef(def) };
+      }));
+      if (f === 3) playSound('reroll');
+    }
+    setDice(freshDrawn.map(d => ({ ...d, rolling: false })));
+    playSound('dice_lock');
+    addLog(`[骰] ${freshDrawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
+
     setRerollCount(0);
     addLog(`遇到 ${firstWave.map(e => e.name).join('、')}！`);
   };
@@ -720,7 +741,6 @@ export default function DiceHeroGame() {
     const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
     setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
     setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds] }));
-
     let logMsg = `打出 ${bestHand}，造成 ${outcome.damage} 伤害`;
     if (outcome.armor > 0) logMsg += `，获得 ${outcome.armor} 护甲`;
     if (outcome.heal > 0) logMsg += `，回复 ${outcome.heal} 生命`;
@@ -823,7 +843,7 @@ export default function DiceHeroGame() {
           await new Promise(r => setTimeout(r, 350));
           
           // Distance check: melee enemies must reach player first
-          const isMelee = e.combatType === 'sword' || e.combatType === 'shield';
+          const isMelee = e.combatType === 'warrior' || e.combatType === 'guardian';
           
           if (isMelee && e.distance > 0) {
             // Approach 1 step
@@ -840,7 +860,7 @@ export default function DiceHeroGame() {
           
           // Ranged enemies or melee at distance 0: attack
           // Shield type: alternates attack/defend
-          if (e.combatType === 'shield' && game.battleTurn % 2 === 0) {
+          if (e.combatType === 'guardian' && game.battleTurn % 2 === 0) {
             // Defend turn
             const shieldVal = Math.floor(e.attackDmg * 1.5);
             setEnemyEffectForUid(e.uid, 'defend');
@@ -852,7 +872,7 @@ export default function DiceHeroGame() {
           }
           
           // Healer type: heal lowest HP ally
-          if (e.combatType === 'healer' && game.battleTurn % 2 === 1) {
+          if (e.combatType === 'priest' && game.battleTurn % 2 === 1) {
             const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
             if (allies.length > 0) {
               const lowestAlly = allies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
@@ -990,7 +1010,26 @@ export default function DiceHeroGame() {
       setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...remainingDefIds] }));
     }
 
-    rollAllDice();
+    // 从最新bag抽取（确保discard已更新）
+    setTimeout(async () => {
+      setGame(prev => {
+        const { drawn, newBag, newDiscard, shuffled } = drawFromBag(prev.diceBag, prev.discardPile, prev.drawCount);
+        if (shuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+        setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
+        const doRoll = async () => {
+          const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
+          for (let f = 0; f < frameTimes.length; f++) {
+            await new Promise(r => setTimeout(r, frameTimes[f]));
+            setDice(pd => pd.map(d => d.rolling ? { ...d, value: rollDiceDef(getDiceDef(d.diceDefId)) } : d));
+            if (f === 3) playSound('reroll');
+          }
+          setDice(pd => pd.map(d => ({ ...d, rolling: false })));
+          playSound('dice_lock');
+        };
+        doRoll();
+        return { ...prev, diceBag: newBag, discardPile: newDiscard };
+      });
+    }, 100);
     playSound('roll');
   };
 
@@ -1251,6 +1290,15 @@ useEffect(() => {
     }
   };
 
+  
+  const COMBAT_TYPE_DESC: Record<string, { name: string; icon: string; color: string; desc: string }> = {
+    warrior: { name: '战士', icon: '⚔️', color: 'var(--pixel-red)', desc: '近战类型，需要接近后才能攻击。每回合逼近1步，到达后每回合普通攻击。' },
+    guardian: { name: '守护者', icon: '🛡️', color: 'var(--pixel-blue)', desc: '重装近战类型，需要接近后才能攻击。交替攻击和举盾防御，获得额外护甲。' },
+    ranger: { name: '游侠', icon: '🏹', color: 'var(--pixel-green)', desc: '远程类型，从远处就能发动攻击。伤害稳定但较低，持续输出。' },
+    caster: { name: '施法者', icon: '✨', color: 'var(--pixel-purple)', desc: '远程魔法类型，从远处就能发动攻击。会释放强力法术，可能附带特殊效果。' },
+    priest: { name: '牧师', icon: '💖', color: 'var(--pixel-gold)', desc: '治疗类型，交替攻击和治疗友方。优先治疗血量最低的友方。' },
+  };
+
   const getEffectiveAttackDmg = (e: Enemy) => {
     let val = e.attackDmg;
     const weak = e.statuses.find(s => s.type === 'weak');
@@ -1332,6 +1380,29 @@ useEffect(() => {
                 <p className="text-[9px] text-[var(--dungeon-text-dim)]">选择一个模组获得增幅，但需付出代价</p>
               </motion.div>
             </div>
+
+                {/* 选中骰子tips */}
+                {(() => {
+                  const selectedDice = dice.filter(d => d.selected && !d.spent);
+                  if (selectedDice.length === 0) return null;
+                  const lastSelected = selectedDice[selectedDice.length - 1];
+                  const def = getDiceDef(lastSelected.diceDefId);
+                  return (
+                    <div className="px-2 py-1 mx-1 mb-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
+                        <span className="text-[7px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
+                        {def.element !== 'normal' && (
+                          <span className="text-[7px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
+                        )}
+                      </div>
+                      {def.onPlay && (
+                        <div className="text-[7px] text-[var(--pixel-orange-light)] mt-0.5">{getOnPlayDescription(def.onPlay)}</div>
+                      )}
+                    </div>
+                  );
+                })()}
+
 
             {/* 分支路径视觉 — 从中心点发散到3个节点 */}
             <div className="relative z-10 flex justify-center py-2">
@@ -1442,7 +1513,7 @@ useEffect(() => {
                 ============================================ */}
 
             {/* 地牢环境背景层 */}
-            <div className="absolute inset-0 battle-dungeon-env dungeon-stone-wall" />
+            <div className="absolute inset-0 battle-open-bg" />
             <div className="absolute inset-0 battle-vignette z-[1]" />
             <div className="absolute inset-0 dungeon-stain pointer-events-none z-[1]" />
             
@@ -1450,12 +1521,7 @@ useEffect(() => {
             <CSSParticles type="ember" count={6} className="opacity-20 z-[2]" />
             <CSSParticles type="float" count={3} className="opacity-15 z-[2]" />
 
-            {/* 蜘蛛网装饰 */}
-            <div className="absolute top-0 left-0 w-10 h-10 dungeon-cobweb-left z-[2] pointer-events-none" />
-            <div className="absolute top-0 right-0 w-10 h-10 dungeon-cobweb-right z-[2] pointer-events-none" />
-
             {/* 地面裂缝 */}
-            <div className="absolute bottom-[42%] left-0 right-0 h-4 dungeon-crack z-[2] pointer-events-none opacity-40" />
 
             {/* 环境雾气层 */}
             <div className="absolute inset-0 z-[2] pointer-events-none">
@@ -1568,32 +1634,33 @@ useEffect(() => {
                         </div>
                       )}
 
-                      {/* Combat type indicator (Peglin-style) */}
-                      <div className="flex items-center justify-center mb-1 px-1.5 py-0.5"
+                      {/* Combat type indicator — click to show enemy info */}
+                      <div className="flex items-center justify-center mb-1 px-1.5 py-0.5 cursor-pointer hover:brightness-125 transition-all"
+                        onClick={(e) => { e.stopPropagation(); setEnemyInfoTarget(enemy.uid); }}
                         style={{
                           background: 'rgba(8,11,14,0.85)',
                           border: '2px solid ' + (
-                            enemy.combatType === 'sword' ? 'var(--pixel-red)' :
-                            enemy.combatType === 'shield' ? 'var(--pixel-blue)' :
-                            enemy.combatType === 'bow' ? 'var(--pixel-green)' :
-                            enemy.combatType === 'magic' ? 'var(--pixel-purple)' :
+                            enemy.combatType === 'warrior' ? 'var(--pixel-red)' :
+                            enemy.combatType === 'guardian' ? 'var(--pixel-blue)' :
+                            enemy.combatType === 'ranger' ? 'var(--pixel-green)' :
+                            enemy.combatType === 'caster' ? 'var(--pixel-purple)' :
                             'var(--pixel-gold)'
                           ),
                           borderRadius: '2px',
                           fontSize: '8px',
                           fontWeight: 'bold',
-                          color: enemy.combatType === 'sword' ? 'var(--pixel-red-light)' :
-                            enemy.combatType === 'shield' ? 'var(--pixel-blue-light)' :
-                            enemy.combatType === 'bow' ? 'var(--pixel-green-light)' :
-                            enemy.combatType === 'magic' ? 'var(--pixel-purple-light)' :
+                          color: enemy.combatType === 'warrior' ? 'var(--pixel-red-light)' :
+                            enemy.combatType === 'guardian' ? 'var(--pixel-blue-light)' :
+                            enemy.combatType === 'ranger' ? 'var(--pixel-green-light)' :
+                            enemy.combatType === 'caster' ? 'var(--pixel-purple-light)' :
                             'var(--pixel-gold-light)',
                         }}
                       >
-                        {enemy.combatType === 'sword' && <><PixelSword size={2} /><span className="ml-0.5">刀</span></>}
-                        {enemy.combatType === 'shield' && <><PixelShield size={2} /><span className="ml-0.5">盾</span></>}
-                        {enemy.combatType === 'bow' && <><PixelAttackIntent size={2} /><span className="ml-0.5">弓</span></>}
-                        {enemy.combatType === 'magic' && <><PixelMagic size={2} /><span className="ml-0.5">法</span></>}
-                        {enemy.combatType === 'healer' && <><PixelHeart size={2} /><span className="ml-0.5">牧</span></>}
+                        {enemy.combatType === 'warrior' && <><PixelSword size={2} /><span className="ml-0.5">战</span></>}
+                        {enemy.combatType === 'guardian' && <><PixelShield size={2} /><span className="ml-0.5">盾</span></>}
+                        {enemy.combatType === 'ranger' && <><PixelAttackIntent size={2} /><span className="ml-0.5">弓</span></>}
+                        {enemy.combatType === 'caster' && <><PixelMagic size={2} /><span className="ml-0.5">术</span></>}
+                        {enemy.combatType === 'priest' && <><PixelHeart size={2} /><span className="ml-0.5">牧</span></>}
                         <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{enemy.attackDmg}</span>
                       </div>
 
@@ -1945,6 +2012,86 @@ useEffect(() => {
               </div>
 
               {/* 骰子操作面板 */}
+
+              {/* 敌人信息弹窗 */}
+              <AnimatePresence>
+                {enemyInfoTarget && (() => {
+                  const infoEnemy = enemies.find(e => e.uid === enemyInfoTarget);
+                  if (!infoEnemy) return null;
+                  const typeInfo = COMBAT_TYPE_DESC[infoEnemy.combatType] || COMBAT_TYPE_DESC.warrior;
+                  const isMelee = infoEnemy.combatType === 'warrior' || infoEnemy.combatType === 'guardian';
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70"
+                      onClick={() => setEnemyInfoTarget(null)}
+                    >
+                      <motion.div
+                        initial={{ scale: 0.85, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.85, y: 20 }}
+                        onClick={e => e.stopPropagation()}
+                        className="w-[85vw] max-w-sm pixel-panel p-3 bg-[var(--dungeon-bg)]"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{infoEnemy.emoji}</span>
+                            <div>
+                              <div className="text-sm font-black text-[var(--dungeon-text-bright)] pixel-text-shadow">{infoEnemy.name}</div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-xs" style={{ color: typeInfo.color }}>{typeInfo.icon} {typeInfo.name}</span>
+                                <span className="text-[8px] text-[var(--dungeon-text-dim)]">|</span>
+                                <span className="text-[9px] font-mono text-[var(--pixel-red-light)]">{infoEnemy.attackDmg} ATK</span>
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={() => setEnemyInfoTarget(null)} className="text-[var(--dungeon-text-dim)] hover:text-white text-sm font-bold">✕</button>
+                        </div>
+                        
+                        <div className="text-[9px] text-[var(--dungeon-text)] leading-relaxed mb-2 px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>
+                          {typeInfo.desc}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-1.5 mb-2">
+                          <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">生命</div>
+                            <div className="text-[10px] font-mono font-bold text-[var(--pixel-red-light)]">{infoEnemy.hp}/{infoEnemy.maxHp}</div>
+                          </div>
+                          <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">护甲</div>
+                            <div className="text-[10px] font-mono font-bold text-[var(--pixel-blue-light)]">{infoEnemy.armor}</div>
+                          </div>
+                          <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">距离</div>
+                            <div className="text-[10px] font-mono font-bold" style={{ color: isMelee && infoEnemy.distance > 0 ? 'var(--pixel-orange)' : 'var(--pixel-green-light)' }}>
+                              {infoEnemy.distance === 0 ? '近身' : `距离 ${infoEnemy.distance}`}
+                            </div>
+                          </div>
+                          <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">行动</div>
+                            <div className="text-[10px] font-mono font-bold text-[var(--dungeon-text)]">
+                              {isMelee && infoEnemy.distance > 0 ? '逼近中' : '攻击'}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {infoEnemy.statuses.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {infoEnemy.statuses.map((s, idx) => (
+                              <span key={idx} className="text-[8px] px-1 py-0.5 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)]" style={{borderRadius:'2px'}}>
+                                {s.type} {s.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
+
               <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
 
                 {/* 骰子库指示器 */}

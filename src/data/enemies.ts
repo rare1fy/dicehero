@@ -49,7 +49,7 @@ const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Ene
     maxHp: Math.floor(config.baseHp * hpScale),
     armor: 0,
     attackDmg: Math.floor(config.baseDmg * dmgScale),
-    combatType: config.combatType || 'sword',
+    combatType: config.combatType || 'warrior',
     dropGold: config.drops.gold,
     dropAugment: config.drops.augment,
     rerollReward: config.drops.rerollReward,
