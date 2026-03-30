@@ -121,7 +121,7 @@ export const DiceRewardScreen: React.FC = () => {
             className={`${getDiceElementClass(def.element, isSelected, false, false, defId)} relative flex items-center justify-center`}
             style={{ width: '40px', height: '40px', fontSize: '18px', lineHeight: '40px' }}
           >
-            {faces[0]}
+            {'?'}
           </div>
           {def.element !== 'normal' && (
             <div className="absolute -top-1 -right-1 z-10">

@@ -116,7 +116,11 @@ export default function DiceHeroGame() {
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [rerollCount, setRerollCount] = useState(0);
   const targetEnemyUid = game.targetEnemyUid;
-  const targetEnemy = enemies.find(e => e.uid === targetEnemyUid && e.hp > 0) || enemies.find(e => e.hp > 0) || null;
+  const targetEnemy = (() => {
+    const aliveGuardian = enemies.find(e => e.hp > 0 && e.combatType === 'guardian');
+    if (aliveGuardian) return aliveGuardian; // Guardian taunt: always target guardian first
+    return enemies.find(e => e.uid === targetEnemyUid && e.hp > 0) || enemies.find(e => e.hp > 0) || null;
+  })();
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
 
   const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
@@ -284,14 +288,8 @@ export default function DiceHeroGame() {
   const startNode = (node: MapNode) => {
     playSound('select');
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
-      // 只在起点（depth===0）时进入技能模组选择界面
-      if (node.depth === 0) {
-        setPendingBattleNode(node);
-        setSkillModuleOptions(generateSkillModules());
-        setGame(prev => ({ ...prev, phase: 'skillSelect', currentNodeId: node.id }));
-      } else {
-        startBattle(node);
-      }
+      // 第一场战斗(depth===0)直接进入战斗，战后让玩家选骠子
+      startBattle(node);
     } else if (node.type === 'shop') {
             const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
@@ -1621,9 +1619,9 @@ useEffect(() => {
                     <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[rgba(8,11,14,0.65)] border border-[rgba(255,255,255,0.06)]" style={{borderRadius:'2px'}}>
                       <span className="text-[6px] text-[var(--dungeon-text-dim)]">下波:</span>
                       {game.battleWaves[game.currentWaveIndex + 1].enemies.slice(0, 3).map((ne, ni) => (
-                        <span key={ni} className="text-[7px]" title={ne.name}>
-                          {ne.combatType === 'warrior' ? '⚔️' : ne.combatType === 'guardian' ? '🛡️' : ne.combatType === 'ranger' ? '🏹' : ne.combatType === 'caster' ? '✨' : '❤️'}
-                        </span>
+                        <div key={ni} className="inline-flex items-center" title={ne.name} style={{ transform: 'scale(0.5)', transformOrigin: 'center', margin: '-2px' }}>
+                          {hasSpriteData(ne.name) ? <PixelSprite name={ne.name} size={2} /> : <PixelSkull size={2} />}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1665,9 +1663,9 @@ useEffect(() => {
                 // Distance-based visual scaling - USE SCALE for clear depth
                 const dist = enemy.distance || 0;
                 // Scale: distance 0 = 1.15 (big, in your face), 1 = 0.95, 2 = 0.75, 3 = 0.6
-                const depthScale = dist === 0 ? 1.15 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
-                  const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 10;
-                  const depthOpacity = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
+                const depthScale = dist === 0 ? 1.35 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
+                  const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 25;
+                  const depthOpacity = 1.0; // No opacity reduction - use brightness for depth
                   const isAttackReady = dist === 0;
                   const depthBrightness = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
                   const depthZ = dist >= 3 ? 1 : dist === 2 ? 3 : dist === 1 ? 5 : 7;
@@ -1676,7 +1674,15 @@ useEffect(() => {
                   return (
                     <motion.div 
                       key={enemy.uid}
-                      onClick={() => setGame(prev => ({ ...prev, targetEnemyUid: enemy.uid }))}
+                      onClick={() => {
+                        // Guardian taunt: if any guardian is alive, can only target guardians (or this IS a guardian)
+                        const aliveGuardian = enemies.find(e => e.hp > 0 && e.combatType === 'guardian' && e.uid !== enemy.uid);
+                        if (aliveGuardian && enemy.combatType !== 'guardian') {
+                          addToast('盾卫强制嘲讽！必须先击败盾卫');
+                          return;
+                        }
+                        setGame(prev => ({ ...prev, targetEnemyUid: enemy.uid }));
+                      }}
                       initial={{ scale: depthScale * 0.8, opacity: 0, y: depthY + 20 }}
                       animate={effect === 'death'
                         ? { scale: [1, 0.97, 1.03, 0.98, 1, 1.15, 1.3, 0], opacity: [1, 1, 1, 1, 1, 0.9, 0.6, 0], y: [0, 0, 0, 0, 0, -5, -15, 20] }
@@ -2267,7 +2273,7 @@ useEffect(() => {
                         className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id), die.diceDefId)} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
                           fontSize: '22px', width: '52px', height: '52px',
-                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.8) brightness(0.5)', opacity: 0.45 } : {})
+                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.8) brightness(0.5)', opacity: 0.45 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(1) brightness(0.4)', opacity: 0.35, pointerEvents: 'none' as const } : {})
                         }}
                       >
                         <span className="pixel-text-shadow font-black">
