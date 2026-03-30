@@ -373,14 +373,6 @@ export default function DiceHeroGame() {
       setTimeout(() => setRerollFlash(false), 500);
     }
 
-    setGame(prev => {
-      if (prev.freeRerollsLeft > 0) {
-        return { ...prev, freeRerollsLeft: prev.freeRerollsLeft - 1 };
-      } else {
-        return { ...prev, globalRerolls: prev.globalRerolls - 1 };
-      }
-    });
-
     // 设置未选中骰子的rolling状态
     setDice(prev => prev.map(d => d.selected || d.spent ? d : { ...d, rolling: true }));
 
@@ -395,17 +387,46 @@ export default function DiceHeroGame() {
       }));
     }
 
-    // 落定 — 使用骰子自身面值
-    setDice(prev => {
-      const rolled = prev.map(d => {
-        if (d.selected || d.spent) return d;
-        const def = getDiceDef(d.diceDefId);
-        const val = rollDiceDef(def);
-        return { ...d, value: val, rolling: false };
+    // 落定：将未选中骰子弃置，从骰子库抽新的替换
+    const unselectedDice = dice.filter(d => !d.selected && !d.spent);
+    const unselectedDefIds = unselectedDice.map(d => d.diceDefId);
+    const unselectedIds = new Set(unselectedDice.map(d => d.id));
+
+    setGame(prev => {
+      // 将未选中骰子的defId放进弃骰库
+      const newDiscard = [...prev.discardPile, ...unselectedDefIds];
+      // 从骰子库抽取等量新骰子
+      const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, unselectedDefIds.length);
+      if (shuffled) {
+        addToast('⚓ 弃骰库洗回骰子库', 'info');
+      }
+
+      // 同步更新手中骰子：用新抽的替换未选中的
+      let drawIdx = 0;
+      const newDice = dice.map(d => {
+        if (!unselectedIds.has(d.id)) return d;
+        if (drawIdx < drawn.length) {
+          const newDie = drawn[drawIdx];
+          drawIdx++;
+          return { ...newDie, id: d.id, rolling: false };
+        }
+        return { ...d, rolling: false };
       });
-      addLog(`重骰结果: ${rolled.filter(d => !d.selected && !d.spent).map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(', ')}`);
-      return rolled;
+      // 通过闭包更新dice状态
+      setTimeout(() => {
+        setDice(newDice);
+        addLog(`重掷结果: ${newDice.filter(nd => unselectedIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
+      }, 0);
+
+      return {
+        ...prev,
+        diceBag: newBag,
+        discardPile: finalDiscard,
+        freeRerollsLeft: prev.freeRerollsLeft > 0 ? prev.freeRerollsLeft - 1 : prev.freeRerollsLeft,
+        globalRerolls: prev.freeRerollsLeft > 0 ? prev.globalRerolls : prev.globalRerolls - 1,
+      };
     });
+
     playSound('dice_lock');
     setRerollCount(prev => prev + 1);
   };

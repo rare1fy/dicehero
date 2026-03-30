@@ -26,7 +26,7 @@ const heavy: DiceDef = {
   element: 'normal',
   faces: [3, 3, 4, 4, 5, 5],
   description: '点数偏高，无极端值',
-  rarity: 'common',
+  rarity: 'uncommon',
 };
 
 const light: DiceDef = {
@@ -217,8 +217,8 @@ const cracked: DiceDef = {
 
 /** 所有骰子定义的字典 */
 export const ALL_DICE: Record<string, DiceDef> = {
-  standard, heavy, light,
-  fire, ice, thunder, poison, holy, shadow,
+  standard, light,
+  heavy, fire, ice, thunder, poison, holy, shadow,
   stone, blade, inferno, blizzard, amplify,
   phoenix, void: voidDice, chaos,
   cursed, cracked,
@@ -226,8 +226,8 @@ export const ALL_DICE: Record<string, DiceDef> = {
 
 /** 按稀有度分组 */
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
-  common: [standard, heavy, light],
-  uncommon: [fire, ice, thunder, poison, holy, shadow],
+  common: [standard, light],
+  uncommon: [heavy, fire, ice, thunder, poison, holy, shadow],
   rare: [stone, blade, inferno, blizzard, amplify],
   legendary: [phoenix, voidDice, chaos],
   curse: [cursed, cracked],
@@ -277,7 +277,7 @@ export const DICE_MAX_LEVEL = 3;
 export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
   switch (battleType) {
     case 'enemy':
-      return [...DICE_BY_RARITY.common, ...DICE_BY_RARITY.uncommon];
+      return [...DICE_BY_RARITY.uncommon];
     case 'elite':
       return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare];
     case 'boss':
