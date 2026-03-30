@@ -2294,7 +2294,7 @@ useEffect(() => {
                         className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id), die.diceDefId)} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
                           fontSize: '22px', width: '52px', height: '52px',
-                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.8) brightness(0.5)', opacity: 0.45 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(1) brightness(0.4)', opacity: 0.35, pointerEvents: 'none' as const } : {})
+                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.6) brightness(0.65)', opacity: 0.55, pointerEvents: 'none' as const } : {})
                         }}
                       >
                         <span className="pixel-text-shadow font-black">
