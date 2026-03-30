@@ -23,7 +23,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 export const EventScreen: React.FC = () => {
-  const { game, setGame, addToast, addLog, startBattle } = useGameContext();
+  const { game, setGame, addToast, addLog, startBattle, pickReward } = useGameContext();
 
   const [event, setEvent] = useState<{title: string, desc: string, icon: React.ReactNode, options: {label: string, sub: string, action: () => void, color: string}[]}>();
 
@@ -125,6 +125,21 @@ export const EventScreen: React.FC = () => {
             return;
           }
         }
+        return;
+      }
+      case 'grantAugment': {
+        // Grant random augment + HP cost
+        if (action.value) {
+          setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp + action.value!) }));
+        }
+        // Pick a random augment
+        const pool = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
+        const aug = pool[0];
+        if (aug) {
+          pickReward(aug);
+        }
+        setGame(prev => ({ ...prev, phase: 'map' }));
+        if (resolvedLog) addLog(resolvedLog);
         return;
       }
       case 'noop': {

@@ -21,6 +21,7 @@ export interface EventOptionConfig {
       | 'modifyFreeRerollsPerTurn'
       | 'modifyMaxPlays'
       | 'randomOutcome'
+      | 'grantAugment'
       | 'noop';
     value?: number;
     /** 随机结果配置（仅 randomOutcome 类型使用） */
@@ -240,4 +241,31 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+,
+  {
+    id: 'ancient_forge',
+    title: '古代锻造炉',
+    desc: '你发现了一座古代锻造炉，炉火仍在燃烧。炉旁有一个神秘的符文和一堆金币。',
+    iconId: 'flame' as const,
+    options: [
+      {
+        label: '触碰符文',
+        sub: '获得随机增幅模块，但损失 10 HP',
+        color: 'var(--pixel-purple)',
+        action: { type: 'grantAugment' as const, value: -10, toast: '符文融入体内，获得增幅模块', toastType: 'buff' as const, log: '触碰符文获得了增幅模块，但损失了 10 HP。' },
+      },
+      {
+        label: '拿走金币',
+        sub: '+30 金币',
+        color: 'var(--pixel-gold)',
+        action: { type: 'modifySouls' as const, value: 30, toast: '+30 金币', toastType: 'gold' as const, log: '拿走了炉旁的 30 金币。' },
+      },
+      {
+        label: '离开',
+        sub: '不想冒险',
+        color: 'var(--dungeon-text-dim)',
+        action: { type: 'noop' as const, log: '你谨慎地离开了锻造炉。' },
+      },
+    ],
+  }
 ];
