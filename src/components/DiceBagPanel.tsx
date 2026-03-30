@@ -9,18 +9,19 @@ interface DiceBagPanelProps {
   ownedDice: string[];
   diceBag: string[];
   discardPile: string[];
+  position?: 'left' | 'right';
 }
 
 /**
  * DiceBagPanel - 骰子库/弃骰库信息面板
  * 
- * 战斗界面左上角显示骰子库和弃骰库数量，
+ * position='left': 显示骰子库（待抽）数量
+ * position='right': 显示弃骰库（已用）数量
  * 点击可展开查看详细骰子列表。
  */
-export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, discardPile }) => {
+export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, discardPile, position = 'left' }) => {
   const [expanded, setExpanded] = useState(false);
 
-  // 统计骰子数量
   const countDice = (ids: string[]) => {
     const counts: Record<string, number> = {};
     ids.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
@@ -30,21 +31,34 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
   const bagCounts = countDice(diceBag);
   const discardCounts = countDice(discardPile);
   const ownedCounts = countDice(ownedDice);
+  const isLeft = position === 'left';
 
   return (
     <>
       {/* 紧凑指示器 */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 px-1.5 py-0.5 bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] hover:border-[var(--pixel-blue)] transition-colors"
+          className={`flex items-center gap-1 px-1.5 py-0.5 bg-[var(--dungeon-panel-bg)] border-2 transition-colors ${
+            isLeft
+              ? 'border-[var(--pixel-blue)] hover:border-[var(--pixel-blue-light)]'
+              : 'border-[var(--pixel-red)] hover:border-[var(--pixel-red-light)]'
+          }`}
           style={{ borderRadius: '2px' }}
-          title="点击查看骰子库详情"
+          title={isLeft ? '骰子库（点击查看详情）' : '弃牌库（点击查看详情）'}
         >
-          <PixelDice size={2} />
-          <span className="text-[9px] font-mono font-bold text-[var(--pixel-blue-light)]">{diceBag.length}</span>
-          <span className="text-[8px] text-[var(--dungeon-text-dim)]">/</span>
-          <span className="text-[9px] font-mono font-bold text-[var(--pixel-red-light)]">{discardPile.length}</span>
+          {isLeft ? (
+            <>
+              <PixelDice size={2} />
+              <span className="text-[9px] font-mono font-bold text-[var(--pixel-blue-light)]">{diceBag.length}</span>
+              <span className="text-[7px] text-[var(--dungeon-text-dim)]">库</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[9px] font-mono font-bold text-[var(--pixel-red-light)]">{discardPile.length}</span>
+              <span className="text-[7px] text-[var(--dungeon-text-dim)]">弃</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -108,7 +122,6 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
                       className="flex items-center gap-2 px-2 py-1.5 bg-[var(--dungeon-panel-bg)] border-2 transition-colors"
                       style={{ borderColor: RARITY_COLORS[def.rarity], borderRadius: '2px' }}
                     >
-                      {/* 元素标记 */}
                       <div className="w-5 h-5 flex items-center justify-center">
                         {def.element !== 'normal' ? (
                           <ElementBadge element={def.element} size={14} />
@@ -116,8 +129,6 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
                           <PixelDice size={2} />
                         )}
                       </div>
-
-                      {/* 骰子信息 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
@@ -137,8 +148,6 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
                           </div>
                         )}
                       </div>
-
-                      {/* 数量分布 */}
                       <div className="flex items-center gap-1 text-[8px] font-mono font-bold shrink-0">
                         <span className="text-[var(--pixel-blue-light)]" title="待抽">{inBag}</span>
                         <span className="text-[var(--dungeon-text-dim)]">/</span>

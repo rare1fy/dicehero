@@ -465,6 +465,65 @@
     0 3px 0 #1a1d25;
 }
 
+/* === 增强骰子立体感 === */
+.pixel-dice {
+  position: relative;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.pixel-dice:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+}
+.pixel-dice::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 10%;
+  width: 80%;
+  height: 4px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 普通骰子微妙的内光 */
+.pixel-dice-white {
+  box-shadow: 
+    inset 2px 2px 0 rgba(255,255,255,0.15),
+    inset -2px -2px 0 rgba(0,0,0,0.25),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
+/* 特殊骰子增强边框发光 */
+.pixel-dice-red {
+  box-shadow: 
+    inset 2px 2px 0 rgba(255,180,120,0.2),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    0 0 8px rgba(224,120,48,0.3),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+}
+.pixel-dice-blue {
+  box-shadow: 
+    inset 2px 2px 0 rgba(180,220,255,0.2),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    0 0 8px rgba(80,184,224,0.3),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+}
+.pixel-dice-gold {
+  box-shadow: 
+    inset 2px 2px 0 rgba(255,240,180,0.2),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    0 0 8px rgba(212,160,48,0.3),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+}
+.pixel-dice-purple {
+  box-shadow: 
+    inset 2px 2px 0 rgba(200,160,255,0.2),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    0 0 8px rgba(160,96,208,0.3),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
 /* === 元素骰子粒子光效 === */
 .dice-element-fire { position: relative; overflow: visible; }
 .dice-element-fire::before {
@@ -1182,6 +1241,42 @@ input[type="range"]::-webkit-slider-runnable-track {
     /* 中央微弱光照 */
     radial-gradient(ellipse at 50% 35%, rgba(100,80,50,0.03) 0%, transparent 40%);
   background-color: #0c0a08;
+}
+
+/* === 开阔暗色空间背景（Peglin风格） === */
+.battle-open-bg {
+  background:
+    /* 深空渐变 */
+    radial-gradient(ellipse at 50% 30%, rgba(20,15,35,1) 0%, rgba(8,11,14,1) 60%),
+    /* 微弱星尘 */
+    radial-gradient(1px 1px at 15% 20%, rgba(180,160,220,0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 15%, rgba(160,140,200,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 40%, rgba(140,120,180,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 35%, rgba(120,100,160,0.10) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 55%, rgba(100,80,140,0.06) 0%, transparent 100%);
+  background-color: #080b0e;
+}
+
+/* === 敌人轮廓高亮选中效果 === */
+.enemy-target-glow {
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(224,120,48,0.15) 0%, transparent 70%);
+  box-shadow:
+    0 0 12px rgba(224,120,48,0.4),
+    0 0 24px rgba(224,120,48,0.2),
+    inset 0 0 8px rgba(224,120,48,0.15);
+  animation: target-glow-pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes target-glow-pulse {
+  0% { 
+    box-shadow: 0 0 12px rgba(224,120,48,0.4), 0 0 24px rgba(224,120,48,0.2);
+    opacity: 0.8;
+  }
+  100% { 
+    box-shadow: 0 0 16px rgba(224,120,48,0.6), 0 0 32px rgba(224,120,48,0.3);
+    opacity: 1;
+  }
 }
 
 /* === 透视地板 — 石板+泥土道路 === */

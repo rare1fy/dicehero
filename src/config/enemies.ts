@@ -40,6 +40,8 @@ export interface EnemyConfig {
   phases: PhaseConfig[];
   /** 敌人类型 */
   category: 'normal' | 'elite' | 'boss';
+  /** 战斗类型 */
+  combatType: 'sword' | 'shield' | 'bow' | 'magic' | 'healer';
   /** 掉落配置 */
   drops: {
     gold: number;
@@ -58,6 +60,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '👻',
     baseHp: 20, baseDmg: 4,
     category: 'normal',
+    combatType: 'magic',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -75,6 +78,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '🪲',
     baseHp: 30, baseDmg: 3,
     category: 'normal',
+    combatType: 'shield',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -91,6 +95,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '🦀',
     baseHp: 25, baseDmg: 5,
     category: 'normal',
+    combatType: 'magic',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -108,6 +113,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '👤',
     baseHp: 15, baseDmg: 6,
     category: 'normal',
+    combatType: 'sword',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -124,6 +130,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '🕷',
     baseHp: 18, baseDmg: 3,
     category: 'normal',
+    combatType: 'bow',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -142,6 +149,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '👁️',
     baseHp: 35, baseDmg: 4,
     category: 'normal',
+    combatType: 'shield',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -159,6 +167,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '🪸',
     baseHp: 22, baseDmg: 2,
     category: 'normal',
+    combatType: 'healer',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -176,6 +185,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     emoji: '🤖',
     baseHp: 40, baseDmg: 6,
     category: 'normal',
+    combatType: 'sword',
     drops: { gold: 20, augment: true },
     phases: [
       {
@@ -199,6 +209,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     emoji: '🌌',
     baseHp: 80, baseDmg: 7,
     category: 'elite',
+    combatType: 'magic',
     drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
@@ -222,6 +233,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     emoji: '⚔️',
     baseHp: 100, baseDmg: 5,
     category: 'elite',
+    combatType: 'shield',
     drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
@@ -240,6 +252,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     emoji: '🔮',
     baseHp: 90, baseDmg: 6,
     category: 'elite',
+    combatType: 'magic',
     drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
@@ -266,6 +279,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     emoji: '⏰',
     baseHp: 70, baseDmg: 9,
     category: 'elite',
+    combatType: 'sword',
     drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
@@ -290,6 +304,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     emoji: '🌙️',
     baseHp: 150, baseDmg: 8,
     category: 'boss',
+    combatType: 'magic',
     drops: { gold: 80, augment: true, rerollReward: 3 },
     phases: [
       {
@@ -317,6 +332,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     emoji: '👿',
     baseHp: 200, baseDmg: 10,
     category: 'boss',
+    combatType: 'magic',
     drops: { gold: 0, augment: false },
     phases: [
       {

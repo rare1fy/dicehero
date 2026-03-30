@@ -117,7 +117,6 @@ export default function DiceHeroGame() {
   const targetEnemyUid = game.targetEnemyUid;
   const targetEnemy = enemies.find(e => e.uid === targetEnemyUid && e.hp > 0) || enemies.find(e => e.hp > 0) || null;
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
-  const [showEnemyIntentInfo, setShowEnemyIntentInfo] = useState(false);
 
   const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
   const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
@@ -257,7 +256,6 @@ export default function DiceHeroGame() {
     setRerollCount(0);
     addLog(`遇到 ${firstWave.map(e => e.name).join('、')}！`);
   };
-
 
   const startNode = (node: MapNode) => {
     playSound('select');
@@ -819,115 +817,93 @@ export default function DiceHeroGame() {
       return;
     }
 
-    // --- 3. Each alive enemy takes action (distance check) ---
-    for (const e of aliveEnemies) {
-      if (e.hp <= 0 || enemyDeathsFromBurn.includes(e.uid)) continue;
-      if (currentPlayerHp <= 0) break;
-
-      // If enemy is far away, approach instead of acting
-      if (e.distance > 0) {
-        setEnemies(prev => prev.map(en => 
-          en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
-        ));
-        setEnemyEffectForUid(e.uid, 'skill');
-        addLog(`${e.name} 向你逼近了一步！`);
-        if (e.distance === 1) {
-          addToast(`${e.name} 已进入攻击范围！`);
-        }
-        await new Promise(r => setTimeout(r, 500));
-        setEnemyEffectForUid(e.uid, null);
-        continue;
-      }
-
-      const intent = e.intent;
-      if (intent.type === '\u653b\u51fb') {
-        setEnemyEffectForUid(e.uid, 'attack');
-        setPlayerEffect('flash');
-        setScreenShake(true);
-        setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 300);
-        playSound('enemy');
-        let damage = intent.value;
-        const enemyWeak = e.statuses.find(s => s.type === 'weak');
-        if (enemyWeak) damage = Math.floor(damage * 0.75);
-        const playerVulnerable = game.statuses.find(s => s.type === 'vulnerable');
-        if (playerVulnerable) damage = Math.floor(damage * 1.5);
-        
-        const playerArmor = game.armor;
-        const absorbed = Math.min(playerArmor, damage);
-        const remainingDamage = damage - absorbed;
-        currentPlayerHp = Math.max(0, currentPlayerHp - remainingDamage);
-
-        if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'player');
-        if (remainingDamage > 0) setTimeout(() => addFloatingText(`-${remainingDamage}`, 'text-red-500', <PixelHeart size={2} />, 'player'), absorbed > 0 ? 150 : 0);
-
-        setGame(prev => ({ ...prev, hp: Math.max(0, prev.hp - remainingDamage), armor: Math.max(0, prev.armor - absorbed) }));
-        
-        addLog(`${e.name} \u4f7f\u7528 ${intent.description || '\u653b\u51fb'} \u9020\u6210 ${damage} \u4f24\u5bb3\uff01`);
-        await new Promise(r => setTimeout(r, 600));
-        setEnemyEffectForUid(e.uid, null);
-      } else if (intent.type === '\u9632\u5fa1') {
-        setEnemyEffectForUid(e.uid, 'defend');
-        playSound('armor');
-        setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + intent.value } : en));
-        addLog(`${e.name} \u83b7\u5f97 ${intent.value} \u62a4\u7532\u3002`);
-        await new Promise(r => setTimeout(r, 600));
-        setEnemyEffectForUid(e.uid, null);
-      } else if (intent.type === '\u6280\u80fd') {
-        setEnemyEffectForUid(e.uid, 'skill');
-        playSound('skill');
-        addLog(`${e.name} \u4f7f\u7528\u4e86\u6280\u80fd: ${intent.description || '\u672a\u77e5\u6280\u80fd'}`);
-        
-        const applyStatusToPlayer = (type: StatusType, val: number, duration?: number) => {
-          setGame(prev => {
-            const nextStatuses = [...prev.statuses];
-            const existing = nextStatuses.find(s => s.type === type);
-            if (existing) {
-              existing.value += val;
-              if (duration !== undefined) existing.duration = Math.max(existing.duration ?? 0, duration);
+    // --- 3. Each alive enemy takes action (Peglin-style: melee approach, ranged attack) ---
+        const currentEnemies = [...enemies]; // snapshot for iteration
+        for (const e of currentEnemies.filter(en => en.hp > 0)) {
+          await new Promise(r => setTimeout(r, 350));
+          
+          // Distance check: melee enemies must reach player first
+          const isMelee = e.combatType === 'sword' || e.combatType === 'shield';
+          
+          if (isMelee && e.distance > 0) {
+            // Approach 1 step
+            setEnemies(prev => prev.map(en =>
+              en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
+            ));
+            if (e.distance === 1) {
+              addLog(`${e.name} 逼近到近身位置！`);
+            } else {
+              addLog(`${e.name} 正在逼近...(距离 ${e.distance - 1})`);
             }
-            else nextStatuses.push({ type, value: val, duration });
-            return { ...prev, statuses: nextStatuses };
+            continue; // Melee enemies don't attack while approaching
+          }
+          
+          // Ranged enemies or melee at distance 0: attack
+          // Shield type: alternates attack/defend
+          if (e.combatType === 'shield' && game.battleTurn % 2 === 0) {
+            // Defend turn
+            const shieldVal = Math.floor(e.attackDmg * 1.5);
+            setEnemyEffectForUid(e.uid, 'defend');
+            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
+            addLog(`${e.name} 举盾防御，获得 ${shieldVal} 护甲。`);
+            await new Promise(r => setTimeout(r, 300));
+            setEnemyEffectForUid(e.uid, null);
+            continue;
+          }
+          
+          // Healer type: heal lowest HP ally
+          if (e.combatType === 'healer' && game.battleTurn % 2 === 1) {
+            const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
+            if (allies.length > 0) {
+              const lowestAlly = allies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
+              const healVal = Math.floor(e.attackDmg * 2);
+              setEnemyEffectForUid(e.uid, 'skill');
+              setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
+              addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
+              addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
+              await new Promise(r => setTimeout(r, 300));
+              setEnemyEffectForUid(e.uid, null);
+              continue;
+            }
+          }
+          
+          // Normal attack
+          setEnemyEffectForUid(e.uid, 'attack');
+          setScreenShake(true);
+          
+          let damage = e.attackDmg;
+          // Apply strength/weak status
+          const str = e.statuses.find(s => s.type === 'strength');
+          if (str) damage += str.value;
+          const weak = e.statuses.find(s => s.type === 'weak');
+          if (weak) damage = Math.max(1, Math.floor(damage * 0.75));
+          
+          // Apply damage to player
+          setGame(prev => {
+            let newArmor = prev.armor;
+            let newHp = prev.hp;
+            let absorbed = 0;
+            if (newArmor > 0) {
+              absorbed = Math.min(newArmor, damage);
+              newArmor -= absorbed;
+            }
+            const hpDmg = damage - absorbed;
+            if (hpDmg > 0) newHp = Math.max(0, newHp - hpDmg);
+            return { ...prev, hp: newHp, armor: newArmor };
           });
-        };
-
-        if (intent.description === '\u91cd\u6784') {
-          setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + intent.value) } : en));
-          addFloatingText(`+${intent.value}`, 'text-emerald-500', <PixelHeart size={2} />, 'enemy');
-        } else if (intent.description === '\u865a\u5f31') {
-          applyStatusToPlayer('weak', intent.value, 3);
-          addFloatingText(`\u865a\u5f31 ${intent.value}`, 'text-zinc-400', <PixelArrowDown size={2} />, 'player');
-        } else if (intent.description === '\u5267\u6bd2') {
-          applyStatusToPlayer('poison', intent.value);
-          addFloatingText(`\u4e2d\u6bd2 ${intent.value}`, 'text-purple-400', <PixelPoison size={2} />, 'player');
-        } else if (intent.description === '\u707c\u70e7') {
-          applyStatusToPlayer('burn', intent.value);
-          addFloatingText(`\u707c\u70e7 ${intent.value}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
-        } else if (intent.description === '\u529b\u91cf') {
-          setEnemies(prev => prev.map(en => {
-            if (en.uid !== e.uid) return en;
-            const nextStatuses = [...en.statuses];
-            const existing = nextStatuses.find(s => s.type === 'strength');
-            if (existing) existing.value += intent.value;
-            else nextStatuses.push({ type: 'strength', value: intent.value, duration: 3 });
-            return { ...en, statuses: nextStatuses };
-          }));
-          addFloatingText(`\u529b\u91cf ${intent.value}`, 'text-orange-400', <PixelArrowUp size={2} />, 'enemy');
-        } else if (intent.description === '\u6613\u4f24') {
-          applyStatusToPlayer('vulnerable', intent.value, 3);
-          addFloatingText(`\u6613\u4f24 ${intent.value}`, 'text-red-400', <PixelArrowUp size={2} />, 'player');
+          
+          addFloatingText(`-${damage}`, 'text-red-500', undefined, 'player');
+          setPlayerEffect('flash');
+          addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
+          playSound('enemy');
+          
+          await new Promise(r => setTimeout(r, 300));
+          setScreenShake(false);
+          setEnemyEffectForUid(e.uid, null);
+          setPlayerEffect(null);
         }
-        
-        await new Promise(r => setTimeout(r, 600));
-        setEnemyEffectForUid(e.uid, null);
-      }
 
-      if (currentPlayerHp <= 0) break;
-    }
-
-    // Check if player died
-    if (currentPlayerHp <= 0) { playSound('defeat'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
-
-    // --- 4. Enemy Turn End: process each enemy's poison ---
+        // --- 4. Enemy Turn End: process each enemy's poison ---
     setEnemies(prev => prev.map(e => {
       if (e.hp <= 0) return e;
       let nextStatuses = [...e.statuses];
@@ -1018,7 +994,6 @@ export default function DiceHeroGame() {
     playSound('roll');
   };
 
-  
   // Auto-switch target when current target dies
   useEffect(() => {
     if (game.phase !== 'battle') return;
@@ -1276,29 +1251,16 @@ useEffect(() => {
     }
   };
 
-
-
-
-  const getEffectiveIntentValue = (e: Enemy) => {
-    let val = e.intent.value;
-    if (e.intent.type === '攻击') {
-      const weak = e.statuses.find(s => s.type === 'weak');
-      if (weak) val = Math.floor(val * 0.75);
-      const playerVuln = game.statuses.find(s => s.type === 'vulnerable');
-      if (playerVuln) val = Math.floor(val * 1.5);
-      const strength = e.statuses.find(s => s.type === 'strength');
-      if (strength) val += strength.value;
-    }
+  const getEffectiveAttackDmg = (e: Enemy) => {
+    let val = e.attackDmg;
+    const weak = e.statuses.find(s => s.type === 'weak');
+    if (weak) val = Math.floor(val * 0.75);
+    const playerVuln = game.statuses.find(s => s.type === 'vulnerable');
+    if (playerVuln) val = Math.floor(val * 1.5);
+    const strength = e.statuses.find(s => s.type === 'strength');
+    if (strength) val += strength.value;
     return val;
   };
-
-
-
-
-
-
-
-
 
   // --- GameContext Provider Value ---
   const contextValue = {
@@ -1320,7 +1282,6 @@ useEffect(() => {
     handleSelectSkillModule, handleSkipSkillModule,
   };
 
-
   if (game.phase === 'start') {
     return <GameContext.Provider value={contextValue}><StartScreen /></GameContext.Provider>;
   }
@@ -1329,11 +1290,9 @@ useEffect(() => {
     return <GameContext.Provider value={contextValue}><GameOverScreen /></GameContext.Provider>;
   }
 
-
   if (game.phase === 'victory') {
     return <GameContext.Provider value={contextValue}><VictoryScreen /></GameContext.Provider>;
   }
-
 
   return (
     <GameContext.Provider value={contextValue}>
@@ -1490,53 +1449,10 @@ useEffect(() => {
             {/* 环境粒子 — 飘散的灰尘/余烬 */}
             <CSSParticles type="ember" count={6} className="opacity-20 z-[2]" />
             <CSSParticles type="float" count={3} className="opacity-15 z-[2]" />
-            
-            {/* 左右火把光效 — 增强 */}
-            <div className="absolute left-2 top-[18%] w-3 h-5 z-[2]">
-              <div className="w-3 h-3 bg-[var(--pixel-orange)] torch-glow-left" style={{borderRadius:'1px'}} />
-              <div className="w-2 h-1.5 bg-[#e8d068] mx-auto -mt-1 opacity-80" style={{borderRadius:'1px'}} />
-              <div className="w-3 h-4 bg-[var(--pixel-orange-dark)] mt-0.5" style={{borderRadius:'0'}} />
-              <div className="w-1 h-6 bg-[#3a3a4e] mx-auto" />
-            </div>
-            <div className="absolute right-2 top-[18%] w-3 h-5 z-[2]">
-              <div className="w-3 h-3 bg-[var(--pixel-orange)] torch-glow-right" style={{borderRadius:'1px'}} />
-              <div className="w-2 h-1.5 bg-[#e8d068] mx-auto -mt-1 opacity-80" style={{borderRadius:'1px'}} />
-              <div className="w-3 h-4 bg-[var(--pixel-orange-dark)] mt-0.5" style={{borderRadius:'0'}} />
-              <div className="w-1 h-6 bg-[#3a3a4e] mx-auto" />
-            </div>
 
             {/* 蜘蛛网装饰 */}
             <div className="absolute top-0 left-0 w-10 h-10 dungeon-cobweb-left z-[2] pointer-events-none" />
             <div className="absolute top-0 right-0 w-10 h-10 dungeon-cobweb-right z-[2] pointer-events-none" />
-
-            {/* 锁链装饰 — 左右两侧 */}
-            <div className="absolute left-4 top-[8%] z-[2] pointer-events-none dungeon-chain">
-              <svg width="8" height="60" viewBox="0 0 8 60" style={{imageRendering:'pixelated'}}>
-                <rect x="2" y="0" width="4" height="8" rx="1" fill="none" stroke="#4a4a5e" strokeWidth="2"/>
-                <rect x="1" y="10" width="6" height="8" rx="1" fill="none" stroke="#3a3a4e" strokeWidth="2"/>
-                <rect x="2" y="20" width="4" height="8" rx="1" fill="none" stroke="#4a4a5e" strokeWidth="2"/>
-                <rect x="1" y="30" width="6" height="8" rx="1" fill="none" stroke="#3a3a4e" strokeWidth="2"/>
-                <rect x="2" y="40" width="4" height="8" rx="1" fill="none" stroke="#4a4a5e" strokeWidth="2"/>
-                <rect x="1" y="50" width="6" height="8" rx="1" fill="none" stroke="#3a3a4e" strokeWidth="2"/>
-              </svg>
-            </div>
-            <div className="absolute right-4 top-[10%] z-[2] pointer-events-none dungeon-chain" style={{animationDelay:'1s'}}>
-              <svg width="8" height="50" viewBox="0 0 8 50" style={{imageRendering:'pixelated'}}>
-                <rect x="2" y="0" width="4" height="8" rx="1" fill="none" stroke="#4a4a5e" strokeWidth="2"/>
-                <rect x="1" y="10" width="6" height="8" rx="1" fill="none" stroke="#3a3a4e" strokeWidth="2"/>
-                <rect x="2" y="20" width="4" height="8" rx="1" fill="none" stroke="#4a4a5e" strokeWidth="2"/>
-                <rect x="1" y="30" width="6" height="8" rx="1" fill="none" stroke="#3a3a4e" strokeWidth="2"/>
-                <rect x="2" y="40" width="4" height="8" rx="1" fill="none" stroke="#4a4a5e" strokeWidth="2"/>
-              </svg>
-            </div>
-
-            {/* 滴水效果 */}
-            <div className="absolute left-8 top-[5%] z-[2] pointer-events-none">
-              <div className="w-1 h-1 bg-[#3c6cc8] opacity-40 dungeon-drip" style={{borderRadius:'50%'}} />
-            </div>
-            <div className="absolute right-12 top-[3%] z-[2] pointer-events-none">
-              <div className="w-1 h-1 bg-[#3c6cc8] opacity-30 dungeon-drip" style={{borderRadius:'50%', animationDelay:'1.5s'}} />
-            </div>
 
             {/* 地面裂缝 */}
             <div className="absolute bottom-[42%] left-0 right-0 h-4 dungeon-crack z-[2] pointer-events-none opacity-40" />
@@ -1652,28 +1568,33 @@ useEffect(() => {
                         </div>
                       )}
 
-                      {/* Intent indicator */}
-                      <div className={`flex items-center justify-center mb-1 intent-pulse ${
-                        enemy.intent.type === '\u653b\u51fb' ? 'intent-indicator-attack' : 
-                        enemy.intent.type === '\u9632\u5fa1' ? 'intent-indicator-defend' : 
-                        'intent-indicator-skill'
-                      }`} style={{transform: 'scale(0.8)'}}>
-                        {enemy.intent.type === '\u653b\u51fb' ? (
-                          <div className="flex items-center gap-1 font-bold text-sm">
-                            <PixelAttackIntent size={2} />
-                            <span className="font-mono">{getEffectiveIntentValue(enemy)}</span>
-                          </div>
-                        ) : enemy.intent.type === '\u9632\u5fa1' ? (
-                          <div className="flex items-center gap-1 font-bold text-sm">
-                            <PixelShield size={2} />
-                            <span className="font-mono">{enemy.intent.value}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-0.5 font-bold text-[9px]">
-                            <PixelMagic size={2} />
-                            <span>{enemy.intent.description}</span>
-                          </div>
-                        )}
+                      {/* Combat type indicator (Peglin-style) */}
+                      <div className="flex items-center justify-center mb-1 px-1.5 py-0.5"
+                        style={{
+                          background: 'rgba(8,11,14,0.85)',
+                          border: '2px solid ' + (
+                            enemy.combatType === 'sword' ? 'var(--pixel-red)' :
+                            enemy.combatType === 'shield' ? 'var(--pixel-blue)' :
+                            enemy.combatType === 'bow' ? 'var(--pixel-green)' :
+                            enemy.combatType === 'magic' ? 'var(--pixel-purple)' :
+                            'var(--pixel-gold)'
+                          ),
+                          borderRadius: '2px',
+                          fontSize: '8px',
+                          fontWeight: 'bold',
+                          color: enemy.combatType === 'sword' ? 'var(--pixel-red-light)' :
+                            enemy.combatType === 'shield' ? 'var(--pixel-blue-light)' :
+                            enemy.combatType === 'bow' ? 'var(--pixel-green-light)' :
+                            enemy.combatType === 'magic' ? 'var(--pixel-purple-light)' :
+                            'var(--pixel-gold-light)',
+                        }}
+                      >
+                        {enemy.combatType === 'sword' && <><PixelSword size={2} /><span className="ml-0.5">刀</span></>}
+                        {enemy.combatType === 'shield' && <><PixelShield size={2} /><span className="ml-0.5">盾</span></>}
+                        {enemy.combatType === 'bow' && <><PixelAttackIntent size={2} /><span className="ml-0.5">弓</span></>}
+                        {enemy.combatType === 'magic' && <><PixelMagic size={2} /><span className="ml-0.5">法</span></>}
+                        {enemy.combatType === 'healer' && <><PixelHeart size={2} /><span className="ml-0.5">牧</span></>}
+                        <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{enemy.attackDmg}</span>
                       </div>
 
                       {/* Enemy name */}
@@ -1717,11 +1638,8 @@ useEffect(() => {
                         )}
 
                         {isTarget && (
-                          <div className="absolute inset-[-4px] pointer-events-none" style={{
-                            border: '2px solid var(--pixel-orange)',
-                            borderRadius: '4px',
-                            boxShadow: '0 0 8px rgba(224,120,48,0.4)',
-                          }} />
+                          <div className="absolute inset-[-6px] pointer-events-none enemy-target-glow" />
+
                         )}
                       </div>
                       
@@ -1778,7 +1696,6 @@ useEffect(() => {
                   <span className="text-[7px] text-[var(--dungeon-text-dim)]"> / {game.battleWaves.length}</span>
                 </div>
               )}
-
 
               <div className="first-person-hands">
                 {/* 左手 — 持骰子 */}
@@ -2032,9 +1949,10 @@ useEffect(() => {
 
                 {/* 骰子库指示器 */}
                 <div className="flex justify-between items-center mb-0.5 px-1">
-                  <DiceBagPanel ownedDice={game.ownedDice} diceBag={game.diceBag} discardPile={game.discardPile} />
+                  <DiceBagPanel ownedDice={game.ownedDice} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
                   <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider">
                     回合 {game.battleTurn}
+                  <DiceBagPanel ownedDice={game.ownedDice} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                   </div>
                 </div>
 
@@ -2406,89 +2324,7 @@ useEffect(() => {
           </div>
         )}
 
-        {showEnemyIntentInfo && targetEnemy && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowEnemyIntentInfo(false)}
-              className="absolute inset-0 bg-black/85"
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-xs pixel-panel p-5"
-            >
-              <div className="text-[9px] tracking-[0.15em] text-[var(--pixel-red)] font-bold mb-2">◆ 敌人意图 ◆</div>
-              <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] mb-2 pixel-text-shadow">{targetEnemy.intent.type}</h3>
-              <div className="text-[var(--dungeon-text-dim)] text-[11px] mb-5 leading-relaxed">
-                {targetEnemy.intent.type === '攻击' && (
-                  <div className="space-y-2">
-                    <p>敌人准备发起一次强力攻击。</p>
-                    <div className="flex items-center gap-2 text-[var(--pixel-red)] font-bold">
-                      <PixelSword size={2} /> 预计伤害: {targetEnemy.intent.value} 点
-                    </div>
-                    <p className="text-[10px] text-[var(--dungeon-text-dim)]">提示: 使用护甲来抵挡伤害，或者在敌人出手前击败它。</p>
-                  </div>
-                )}
-                {targetEnemy.intent.type === '防御' && (
-                  <div className="space-y-2">
-                    <p>敌人正在加固防线，准备承受你的下一波攻击。</p>
-                    <div className="flex items-center gap-2 text-[var(--pixel-blue)] font-bold">
-                      <PixelShield size={2} /> 预计护甲: {targetEnemy.intent.value} 点
-                    </div>
-                    <p className="text-[10px] text-[var(--dungeon-text-dim)]">提示: 护甲会优先抵扣伤害。你可以尝试使用穿透伤害或等待护甲消失。</p>
-                  </div>
-                )}
-                {targetEnemy.intent.type === '特殊' && (
-                  <div className="space-y-2">
-                    <p>敌人正在准备一个特殊的技能或状态效果。</p>
-                    <div className="p-2.5 pixel-panel-dark text-[var(--dungeon-text)]">
-                      {targetEnemy.intent.description}: {targetEnemy.intent.value} 层
-                      <p className="text-[10px] text-[var(--dungeon-text-dim)] mt-1">
-                        {(() => {
-                          const map: Record<string, string> = { '剧毒': 'poison', '灼烧': 'burn', '虚弱': 'weak', '易伤': 'vulnerable' };
-                          const key = map[targetEnemy.intent.description] || '';
-                          return STATUS_INFO[key as keyof typeof STATUS_INFO]?.description || '';
-                        })()}
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-[var(--dungeon-text-dim)]">提示: 特殊技能可能会施加负面状态，请留意你的状态栏。</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="text-[9px] tracking-[0.15em] text-[var(--dungeon-text-dim)] font-bold mb-2">◆ 敌人状态 ◆</div>
-              <div className="flex flex-wrap gap-2 mb-6">
-                {targetEnemy.armor > 0 && (
-                  <div className="flex items-center gap-1 bg-[var(--pixel-blue-dark)] text-[var(--pixel-blue)] px-2 py-1 border border-[var(--pixel-blue)] text-[10px]" style={{borderRadius:'2px'}}>
-                    <PixelShield size={2} /> 护甲 {targetEnemy.armor}
-                  </div>
-                )}
-                {targetEnemy.statuses.map((s, i) => {
-                  const info = STATUS_INFO[s.type];
-                  return (
-                    <div key={i} className={`flex items-center gap-1 bg-[var(--dungeon-bg)] px-2 py-1 border border-[var(--dungeon-panel-border)] text-[10px] ${info.color}`} style={{borderRadius:'2px'}}>
-                      {info.icon} {info.label} {s.value > 0 ? s.value : ''}
-                    </div>
-                  );
-                })}
-                {targetEnemy.armor === 0 && targetEnemy.statuses.length === 0 && (
-                  <span className="text-[var(--dungeon-text-dim)] text-[10px]">无特殊状态</span>
-                )}
-              </div>
-
-              <button 
-                onClick={() => setShowEnemyIntentInfo(false)}
-                className="w-full py-3 pixel-btn pixel-btn-ghost text-xs font-bold"
-              >
-                了解
-              </button>
-            </motion.div>
-          </div>
-        )}
+        {/* Enemy info modal removed - no more intent system */}
       </AnimatePresence>
 
       {/* Augment Detail Modal */}
