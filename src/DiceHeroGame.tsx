@@ -143,6 +143,7 @@ export default function DiceHeroGame() {
   const [campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
   const [skillTriggerTexts, setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
   const [handLeftThrow, setHandLeftThrow] = useState(false);
+  const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
 
   // --- 战前技能模组选择 ---
   interface SkillModule {
@@ -753,8 +754,25 @@ export default function DiceHeroGame() {
     addLog(logMsg);
 
     if (finalEnemyHp <= 0) {
-      // 死亡动画已在受击结束时提前触发（衔接更自然），这里等待动画播完
       await new Promise(r => setTimeout(r, 1200));
+      // Check if other enemies still alive
+      const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== (game.targetEnemyUid || ''));
+      if (remainingAlive.length > 0) {
+        setGame(prev => ({ ...prev, targetEnemyUid: remainingAlive[0].uid }));
+        addLog(`\u5f53\u524d\u76ee\u6807\u88ab\u51fb\u8d25\uff01\u8fd8\u6709 ${remainingAlive.length} \u4e2a\u654c\u4eba\u5b58\u6d3b\u3002`);
+        return;
+      }
+      const nextWaveIdx = game.currentWaveIndex + 1;
+      if (nextWaveIdx < game.battleWaves.length) {
+        const nextWave = game.battleWaves[nextWaveIdx].enemies;
+        setEnemies(nextWave);
+        setEnemyEffects({});
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+        setWaveAnnouncement(nextWaveIdx + 1);
+        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
+        rollAllDice();
+        return;
+      }
       handleVictory();
     }
   };
@@ -830,7 +848,8 @@ export default function DiceHeroGame() {
         setEnemies(nextWave);
         setEnemyEffects({});
         setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
-        addToast(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
+        setWaveAnnouncement(nextWaveIdx + 1);
+        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
         return;
       }
@@ -1014,7 +1033,8 @@ export default function DiceHeroGame() {
         setEnemies(nextWave);
         setEnemyEffects({});
         setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
-        addToast(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
+        setWaveAnnouncement(nextWaveIdx + 1);
+        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
         return;
       }
@@ -1762,14 +1782,15 @@ useEffect(() => {
                         )}
                       </div>
                       
-                      {/* Shadow */}
-                      <div className="mt-0.5" style={{
-                        width: '120%',
-                        height: '12px',
-                        background: 'radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, transparent 65%)',
+                      {/* Shadow on floor */}
+                      <div className="mt-1" style={{
+                        width: '150%',
+                        height: '18px',
+                        background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 45%, transparent 70%)',
                         borderRadius: '50%',
-                        marginLeft: '-10%',
-                        filter: 'blur(2px)'
+                        marginLeft: '-25%',
+                        filter: 'blur(3px)',
+                        transform: 'scaleY(0.6)',
                       }} />
 
                       {/* Distance indicator */}
@@ -1806,6 +1827,29 @@ useEffect(() => {
                   );
                 })}
               </div>
+
+              {/* Wave announcement overlay */}
+              <AnimatePresence>
+                {waveAnnouncement !== null && (
+                  <motion.div
+                    key={`wave-${waveAnnouncement}`}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: [0, 1, 1, 1, 0], scale: [0.5, 1.2, 1, 1, 0.8], y: [0, 0, 0, 0, -30] }}
+                    transition={{ duration: 2.5, times: [0, 0.15, 0.3, 0.75, 1] }}
+                    onAnimationComplete={() => setWaveAnnouncement(null)}
+                    className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+                  >
+                    <div className="text-center">
+                      <div className="text-3xl font-black pixel-text-shadow" style={{ color: 'var(--pixel-orange)', letterSpacing: '4px' }}>
+                        {'\u7b2c'} {waveAnnouncement} {'\u6ce2'}
+                      </div>
+                      <div className="text-sm font-bold mt-1 pixel-text-shadow" style={{ color: 'var(--pixel-orange-light)' }}>
+                        {'\u654c\u4eba\u6765\u88ad\uff01'}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Wave indicator */}
               {game.battleWaves.length > 1 && (
@@ -2178,7 +2222,7 @@ useEffect(() => {
                         } : { rotate: 0, scale: 1, y: 0, opacity: 1 }}
                         transition={die.rolling ? { repeat: Infinity, duration: 0.15, ease: 'linear' } : die.playing ? { duration: 0.4, ease: 'easeOut' } : die.selected ? { duration: 0.12, type: 'spring', stiffness: 500, damping: 25 } : { duration: 0.06, ease: 'easeOut' }}
                         onClick={() => !die.rolling && !game.isEnemyTurn && game.playsLeft > 0 && toggleSelect(die.id)}
-                        className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id))} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
+                        className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id), die.diceDefId)} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
                           fontSize: '22px', width: '52px', height: '52px',
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.8) brightness(0.5)', opacity: 0.45 } : {})
@@ -2201,27 +2245,29 @@ useEffect(() => {
                 </div>
 
 
-                {/* 选中骰子tips */}
-                {(() => {
-                  const selectedDice = dice.filter(d => d.selected && !d.spent);
-                  if (selectedDice.length === 0) return null;
-                  const lastSelected = selectedDice[selectedDice.length - 1];
-                  const def = getDiceDef(lastSelected.diceDefId);
-                  return (
-                    <div className="px-2 py-1 mx-1 mb-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
-                        <span className="text-[7px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
-                        {def.element !== 'normal' && (
-                          <span className="text-[7px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
-                        )}
+{/* 选中骰子tips - 固定高度占位，避免布局跳动 */}
+                <div className="relative h-[22px] mx-1 mb-0.5">
+                  {(() => {
+                    const selectedDice = dice.filter(d => d.selected && !d.spent);
+                    if (selectedDice.length === 0) return null;
+                    const lastSelected = selectedDice[selectedDice.length - 1];
+                    const def = getDiceDef(lastSelected.diceDefId);
+                    return (
+                      <div className="absolute inset-0 px-2 py-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)] overflow-hidden" style={{borderRadius:'2px'}}>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
+                          <span className="text-[7px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
+                          {def.element !== 'normal' && (
+                            <span className="text-[7px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
+                          )}
+                          {def.onPlay && (
+                            <span className="text-[7px] text-[var(--pixel-orange-light)] ml-1">{getOnPlayDescription(def.onPlay)}</span>
+                          )}
+                        </div>
                       </div>
-                      {def.onPlay && (
-                        <div className="text-[7px] text-[var(--pixel-orange-light)] mt-0.5">{getOnPlayDescription(def.onPlay)}</div>
-                      )}
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
+                </div>
 
                 {/* 操作按钮行 */}
                 <div className="flex gap-1.5 items-center">

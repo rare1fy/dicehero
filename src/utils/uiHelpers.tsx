@@ -32,11 +32,17 @@ const ELEMENT_STYLE_MAP: Record<DiceElement, { diceClass: string; glowClass: str
 };
 
 // 8-Bit 像素风骰子样式 — 基于元素类型
-export const getDiceElementClass = (element: DiceElement, selected: boolean, rolling?: boolean, invalid?: boolean) => {
+export const getDiceElementClass = (element: DiceElement, selected: boolean, rolling?: boolean, invalid?: boolean, diceDefId?: string) => {
   const base = 'pixel-dice ';
   const selection = selected ? 'pixel-dice-selected ' : '';
   const rollAnim = rolling ? 'animate-pulse opacity-70 ' : '';
   const invalidStyle = invalid ? 'pixel-dice-invalid ' : '';
+
+  // Heavy dice (lead) - distinct gray metallic look
+  if (diceDefId === 'heavy') {
+    const heavyGlow = selected && !invalid ? 'dice-glow-heavy' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-heavy ' + heavyGlow;
+  }
 
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
   const glow = selected && !invalid ? style.glowClass : '';
