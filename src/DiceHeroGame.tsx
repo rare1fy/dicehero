@@ -1599,16 +1599,52 @@ useEffect(() => {
             <div className="absolute inset-0 battle-vignette z-[1]" />
             <div className="absolute inset-0 dungeon-stain pointer-events-none z-[1]" />
             
-            {/* 环境粒子 — 飘散的灰尘/余烬 */}
-            <CSSParticles type="ember" count={6} className="opacity-20 z-[2]" />
-            <CSSParticles type="float" count={3} className="opacity-15 z-[2]" />
+            {/* 远处拱门/石柱轮廓 */}
+            <div className="battle-archway" />
+            
+            {/* 左右火把光源 */}
+            <div className="battle-torch-left battle-torch-flame" />
+            <div className="battle-torch-right battle-torch-flame" style={{ animationDelay: '0.3s' }} />
+            
+            {/* 像素火把SVG — 左侧 */}
+            <div className="absolute left-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75 }}>
+              <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
+                <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
+                <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
+                <rect x="6" y="14" width="6" height="4" fill="#c87c3c" />
+                <rect x="5" y="10" width="8" height="6" fill="#e8a030" />
+                <rect x="6" y="6" width="6" height="6" fill="#f0c848" />
+                <rect x="7" y="3" width="4" height="5" fill="#fff4c0" />
+                <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
+              </svg>
+            </div>
+            {/* 像素火把SVG — 右侧 */}
+            <div className="absolute right-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75, animationDelay: '0.4s' }}>
+              <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
+                <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
+                <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
+                <rect x="6" y="14" width="6" height="4" fill="#c87c3c" />
+                <rect x="5" y="10" width="8" height="6" fill="#e8a030" />
+                <rect x="6" y="6" width="6" height="6" fill="#f0c848" />
+                <rect x="7" y="3" width="4" height="5" fill="#fff4c0" />
+                <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
+              </svg>
+            </div>
 
-            {/* 地面裂缝 */}
+            {/* 环境粒子 — 飘散的灰尘/余烬 */}
+            <CSSParticles type="ember" count={8} className="opacity-25 z-[2]" />
+            <CSSParticles type="sparkle" count={4} className="opacity-15 z-[2]" />
+            <CSSParticles type="float" count={4} className="opacity-15 z-[2]" />
+
+            {/* 地面低雾 */}
+            <div className="battle-ground-fog" />
 
             {/* 环境雾气层 */}
             <div className="absolute inset-0 z-[2] pointer-events-none">
-              <div className="absolute bottom-[40%] left-0 right-0 h-[30%] animate-fog-drift" 
-                style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(120,90,50,0.05) 0%, transparent 70%)' }} />
+              <div className="absolute bottom-[35%] left-0 right-0 h-[35%] animate-fog-drift" 
+                style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(120,90,50,0.08) 0%, transparent 65%)' }} />
+              <div className="absolute bottom-[20%] left-0 right-0 h-[20%] animate-fog-drift"
+                style={{ background: 'radial-gradient(ellipse at 30% 60%, rgba(100,80,55,0.06) 0%, transparent 60%)', animationDelay: '3s' }} />
             </div>
 
             {/* 战斗闪光覆盖层 */}
