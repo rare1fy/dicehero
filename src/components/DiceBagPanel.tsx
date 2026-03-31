@@ -55,6 +55,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
             </>
           ) : (
             <>
+              <svg width="10" height="10" viewBox="0 0 10 10" style={{ imageRendering: 'pixelated' }}><rect x="1" y="1" width="8" height="8" rx="1" fill="var(--pixel-red-dark)" stroke="var(--pixel-red-light)" strokeWidth="1" /><circle cx="3.5" cy="3.5" r="1" fill="var(--pixel-red-light)" /><circle cx="6.5" cy="6.5" r="1" fill="var(--pixel-red-light)" /></svg>
               <span className="text-[9px] font-mono font-bold text-[var(--pixel-red-light)]">{discardPile.length}</span>
               <span className="text-[7px] text-[var(--dungeon-text-dim)]">弃</span>
             </>

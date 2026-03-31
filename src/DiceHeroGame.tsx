@@ -113,6 +113,8 @@ export default function DiceHeroGame() {
   }, [game.phase]);
 
   const [dice, setDice] = useState<Die[]>([]);
+  const [diceDrawAnim, setDiceDrawAnim] = useState(false); // 抽骰子入场动画
+  const [diceDiscardAnim, setDiceDiscardAnim] = useState(false); // 弃骰子退场动画
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [rerollCount, setRerollCount] = useState(0);
   const targetEnemyUid = game.targetEnemyUid;
@@ -1119,7 +1121,9 @@ export default function DiceHeroGame() {
         const { drawn, newBag, newDiscard, shuffled } = drawFromBag(updatedBag, updatedDiscard, prev.drawCount);
         if (shuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
         
-        // Step 3: Set new dice hand
+        // Step 3: Set new dice hand with draw animation
+        setDiceDrawAnim(true);
+        setTimeout(() => setDiceDrawAnim(false), 400);
         setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
         
         // Roll animation
@@ -1932,11 +1936,12 @@ useEffect(() => {
               <div className="first-person-hands">
                 {/* 左手 — 持骰子 */}
                 <div className={`hand-left ${dice.some(d => d.rolling) ? 'hand-left-rolling' : handLeftThrow ? 'hand-left-throw' : ''}`}>
-                  <svg width="90" height="110" viewBox="0 0 90 110" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.7))', transform: 'scaleX(-1)' }}>
+                  <svg width="130" height="160" viewBox="0 0 90 110" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))', transform: 'scaleX(-1)' }}>
                     <defs>
                       <linearGradient id="diceGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2e2e48" />
-                        <stop offset="100%" stopColor="#18182a" />
+                        <stop offset="0%" stopColor="#e8eef4" />
+                        <stop offset="50%" stopColor="#c8d0d8" />
+                        <stop offset="100%" stopColor="#a0aab4" />
                       </linearGradient>
                     </defs>
                     {/* 手臂 — 从下方伸出 */}
@@ -1957,24 +1962,26 @@ useEffect(() => {
                     <rect x="46" y="42" width="9" height="10" rx="1" fill="#b8906a" stroke="#7a5a3e" strokeWidth="1.5" />
                     <rect x="57" y="40" width="8" height="12" rx="1" fill="#a88060" stroke="#7a5a3e" strokeWidth="1.5" />
                     {/* 骰子阴影 */}
-                    <rect x="22" y="10" width="44" height="44" rx="3" fill="rgba(0,0,0,0.4)" />
+                    <rect x="22" y="10" width="44" height="44" rx="3" fill="rgba(0,0,0,0.25)" />
                     {/* 骰子主体 */}
-                    <rect x="18" y="6" width="44" height="44" rx="3" fill="url(#diceGrad)" stroke="#d4a030" strokeWidth="3" />
+                    <rect x="18" y="6" width="44" height="44" rx="3" fill="url(#diceGrad)" stroke="#8899aa" strokeWidth="3" />
                     {/* 骰子顶部高光 */}
-                    <rect x="20" y="8" width="40" height="3" rx="1" fill="rgba(240,200,80,0.12)" />
+                    <rect x="20" y="8" width="40" height="4" rx="1" fill="rgba(255,255,255,0.35)" />
+                    {/* 骰子侧面暗部 */}
+                    <rect x="18" y="38" width="44" height="12" rx="2" fill="rgba(0,0,0,0.08)" />
                     {/* 骰子面 — 5点梅花型 */}
-                    <circle cx="30" cy="18" r="3" fill="#f0c850" />
-                    <circle cx="50" cy="18" r="3" fill="#f0c850" />
-                    <circle cx="40" cy="28" r="3" fill="#f0c850" />
-                    <circle cx="30" cy="38" r="3" fill="#d4a030" />
-                    <circle cx="50" cy="38" r="3" fill="#d4a030" />
+                    <circle cx="30" cy="18" r="3.5" fill="#3a4050" />
+                    <circle cx="50" cy="18" r="3.5" fill="#3a4050" />
+                    <circle cx="40" cy="28" r="3.5" fill="#3a4050" />
+                    <circle cx="30" cy="38" r="3.5" fill="#3a4050" />
+                    <circle cx="50" cy="38" r="3.5" fill="#3a4050" />
                     {/* 骰子外发光 */}
-                    <rect x="16" y="4" width="48" height="48" rx="4" fill="none" stroke="#f0c850" strokeWidth="1" opacity="0.2" />
+                    <rect x="20" y="8" width="40" height="40" rx="2" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
                   </svg>
                 </div>
                 {/* 右手 — 持附魔匕首 */}
                 <div className={`hand-right ${playerEffect === 'attack' ? 'hand-right-attacking' : ''}`}>
-                  <svg width="100" height="130" viewBox="0 0 100 130" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.7))', transform: 'scaleX(-1)' }}>
+                  <svg width="140" height="180" viewBox="0 0 100 130" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))', transform: 'scaleX(-1)' }}>
                     <defs>
                       <linearGradient id="bladeGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#e8e8f0" />
@@ -2274,8 +2281,14 @@ useEffect(() => {
                     !die.spent && (
                       <motion.button
                         key={die.id}
-                        initial={false}
-                        animate={die.rolling ? { 
+                        initial={diceDrawAnim ? { y: -120, x: -60, opacity: 0, scale: 0.3, rotate: -180 } : false}
+                        animate={diceDiscardAnim && !die.spent ? {
+                          y: -100,
+                          x: 80,
+                          opacity: 0,
+                          scale: 0.3,
+                          rotate: 180
+                        } : die.rolling ? { 
                           rotate: [0, 90, 180, 270, 360],
                           scale: [1, 1.15, 1, 1.15, 1],
                           y: [0, -10, 0, -8, 0]
@@ -2289,7 +2302,7 @@ useEffect(() => {
                           scale: 1.12,
                           rotate: 0
                         } : { rotate: 0, scale: 1, y: 0, opacity: 1 }}
-                        transition={die.rolling ? { repeat: Infinity, duration: 0.15, ease: 'linear' } : die.playing ? { duration: 0.4, ease: 'easeOut' } : die.selected ? { duration: 0.12, type: 'spring', stiffness: 500, damping: 25 } : { duration: 0.06, ease: 'easeOut' }}
+                        transition={diceDiscardAnim && !die.spent ? { duration: 0.25, ease: 'easeIn' } : die.rolling ? { repeat: Infinity, duration: 0.15, ease: 'linear' } : die.playing ? { duration: 0.4, ease: 'easeOut' } : die.selected ? { duration: 0.12, type: 'spring', stiffness: 500, damping: 25 } : { duration: 0.06, ease: 'easeOut' }}
                         onClick={() => !die.rolling && !game.isEnemyTurn && game.playsLeft > 0 && toggleSelect(die.id)}
                         className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id), die.diceDefId)} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 

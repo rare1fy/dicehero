@@ -1494,7 +1494,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   bottom: -10px;
   left: 0;
   right: 0;
-  height: 180px;
+  height: 220px;
   pointer-events: none;
   z-index: 4;
 }
@@ -1502,8 +1502,8 @@ input[type="range"]::-webkit-slider-runnable-track {
 /* 左手 — 持骰子 */
 .hand-left {
   position: absolute;
-  left: -20px;
-  bottom: -20px;
+  left: -30px;
+  bottom: -30px;
   transform: rotate(15deg) scale(1);
   transform-origin: bottom left;
   z-index: 5;
@@ -1551,8 +1551,8 @@ input[type="range"]::-webkit-slider-runnable-track {
 /* 右手 — 持剑 */
 .hand-right {
   position: absolute;
-  right: -20px;
-  bottom: -20px;
+  right: -30px;
+  bottom: -30px;
   transform: rotate(-15deg) scale(1);
   transform-origin: bottom right;
   z-index: 5;
