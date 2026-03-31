@@ -134,6 +134,24 @@ export default function DiceHeroGame() {
   const [hpGained, setHpGained] = useState(false);
   const [armorGained, setArmorGained] = useState(false);
   const [rerollFlash, setRerollFlash] = useState(false);
+
+  // === 结算演出状态 ===
+  const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'effects' | 'damage'>(null);
+  const [settlementData, setSettlementData] = useState<{
+    bestHand: string;
+    selectedDice: Die[];
+    diceScores: number[];
+    baseValue: number;
+    mult: number;
+    currentBase: number;
+    currentMult: number;
+    triggeredEffects: { name: string; detail: string; icon?: string; type: 'damage' | 'mult' | 'status' | 'heal' | 'armor' }[];
+    currentEffectIdx: number;
+    finalDamage: number;
+    finalArmor: number;
+    finalHeal: number;
+    statusEffects: any[];
+  } | null>(null);
   const [toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
   const toastIdRef = useRef(0);
 
@@ -590,20 +608,25 @@ export default function DiceHeroGame() {
     });
 
     // --- Dice onPlay effects ---
+    // 同元素牌型时，骰子效果翻倍（同元素大奖励核心机制）
+    const isSameElementHand = activeHands.some((h: string) => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h));
+    const elementBonus = isSameElementHand ? 2.0 : 1.0; // 同元素时效果×2
+    
     selected.forEach(d => {
       const def = getDiceDef(d.diceDefId);
       if (!def.onPlay) return;
       const op = def.onPlay;
-      if (op.bonusDamage) extraDamage += op.bonusDamage;
-      if (op.bonusMult) multiplier *= op.bonusMult;
-      if (op.heal) extraHeal += op.heal;
-      if (op.pierce) pierceDamage += op.pierce;
+      if (op.bonusDamage) extraDamage += Math.floor(op.bonusDamage * elementBonus);
+      if (op.bonusMult) multiplier *= (1 + (op.bonusMult - 1) * elementBonus);
+      if (op.heal) extraHeal += Math.floor(op.heal * elementBonus);
+      if (op.pierce) pierceDamage += Math.floor(op.pierce * elementBonus);
       if (op.statusToEnemy) {
+        const boostedValue = Math.floor(op.statusToEnemy.value * elementBonus);
         const existing = statusEffects.find(es => es.type === op.statusToEnemy!.type);
         if (existing) {
-          existing.value += op.statusToEnemy.value;
+          existing.value += boostedValue;
         } else {
-          statusEffects.push({ ...op.statusToEnemy });
+          statusEffects.push({ ...op.statusToEnemy, value: boostedValue });
         }
       }
     });
@@ -648,65 +671,131 @@ export default function DiceHeroGame() {
 
     const { bestHand } = currentHands;
 
-    // 0. Dice Playing Animation + Left hand throw
+    // Mark dice as playing
     setDice(prev => prev.map(d => d.selected ? { ...d, playing: true } : d));
     setHandLeftThrow(true);
     setTimeout(() => setHandLeftThrow(false), 500);
-    await new Promise(r => setTimeout(r, 250));
 
-    // 0.5 Skill/Augment trigger floating texts in battle area
-    if (outcome.triggeredAugments.length > 0) {
-      playSound('augment_activate');
-      const newTriggerTexts = outcome.triggeredAugments.map((aug, idx) => ({
-        id: `skill-${Date.now()}-${idx}`,
-        name: `${aug.name}`,
-        icon: <PixelZap size={2} />,
-        color: 'text-[var(--pixel-green-light)]',
-        x: (idx - (outcome.triggeredAugments.length - 1) / 2) * 80,
-        delay: idx * 150
-      }));
-      setSkillTriggerTexts(prev => [...prev, ...newTriggerTexts]);
-      setTimeout(() => {
-        setSkillTriggerTexts(prev => prev.filter(t => !newTriggerTexts.some(n => n.id === t.id)));
-      }, 2000);
+    // ========================================
+    // Phase 1: 牌型展示 (0.6s)
+    // ========================================
+    setSettlementPhase('hand');
+    setSettlementData({
+      bestHand: outcome.bestHand,
+      selectedDice: selected,
+      diceScores: selected.map(d => d.value),
+      baseValue: outcome.baseHandValue,
+      mult: outcome.handMultiplier,
+      currentBase: outcome.baseHandValue,
+      currentMult: outcome.handMultiplier,
+      triggeredEffects: [],
+      currentEffectIdx: -1,
+      finalDamage: outcome.damage,
+      finalArmor: outcome.armor,
+      finalHeal: outcome.heal,
+      statusEffects: outcome.statusEffects,
+    });
+    playSound('augment_activate');
+    await new Promise(r => setTimeout(r, 600));
+
+    // ========================================
+    // Phase 2: 逐颗骰子计分 (每颗0.3s)
+    // ========================================
+    setSettlementPhase('dice');
+    let runningBase = outcome.baseHandValue;
+    for (let i = 0; i < selected.length; i++) {
+      runningBase += selected[i].value;
+      const currentRunning = runningBase;
+      setSettlementData(prev => prev ? { ...prev, currentBase: currentRunning, currentEffectIdx: i } : prev);
+      playSound('select');
+      await new Promise(r => setTimeout(r, 300));
     }
+    await new Promise(r => setTimeout(r, 200));
 
-    // 1. Player Attack Animation — 增强表现力
-    setPlayerEffect('attack');
+    // ========================================
+    // Phase 3: 特殊效果触发 (每个0.4s)
+    // ========================================
+    setSettlementPhase('effects');
+    
+    // 收集所有触发效果
+    const allEffects: { name: string; detail: string; type: 'damage' | 'mult' | 'status' | 'heal' | 'armor' }[] = [];
+    
+    // 骰子onPlay效果
+    selected.forEach(d => {
+      const def = getDiceDef(d.diceDefId);
+      if (!def.onPlay) return;
+      const op = def.onPlay;
+      if (op.bonusDamage) allEffects.push({ name: def.name, detail: `伤害+${op.bonusDamage}`, type: 'damage' });
+      if (op.bonusMult) allEffects.push({ name: def.name, detail: `倍率×${op.bonusMult}`, type: 'mult' });
+      if (op.heal) allEffects.push({ name: def.name, detail: `回复${op.heal}HP`, type: 'heal' });
+      if (op.pierce) allEffects.push({ name: def.name, detail: `穿透+${op.pierce}`, type: 'damage' });
+      if (op.statusToEnemy) {
+        const info = STATUS_INFO[op.statusToEnemy.type];
+        allEffects.push({ name: def.name, detail: `${info.label}+${op.statusToEnemy.value}`, type: 'status' });
+      }
+    });
+    
+    // 增幅模块效果
+    outcome.triggeredAugments.forEach(aug => {
+      allEffects.push({ name: aug.name, detail: aug.details, type: 'damage' });
+    });
+    
+    // 逐个展示效果
+    for (let i = 0; i < allEffects.length; i++) {
+      setSettlementData(prev => prev ? {
+        ...prev,
+        triggeredEffects: allEffects.slice(0, i + 1),
+        currentEffectIdx: i,
+      } : prev);
+      playSound('augment_activate');
+      await new Promise(r => setTimeout(r, 400));
+    }
+    if (allEffects.length > 0) await new Promise(r => setTimeout(r, 200));
+
+    // ========================================
+    // Phase 4: 最终伤害飞出 (0.8s)
+    // ========================================
+    setSettlementPhase('damage');
+    playSound('hit');
     setScreenShake(true);
     setTimeout(() => setScreenShake(false), 300);
-    playSound('hit');
+    
+    await new Promise(r => setTimeout(r, 800));
+
+    // ========================================
+    // 清理结算演出，应用实际效果
+    // ========================================
+    setSettlementPhase(null);
+    setSettlementData(null);
+
+    // --- Apply damage to enemy (with AOE support) ---
+    const targetUid = targetEnemy.uid;
+    const selectedDefs = selected.map(d => getDiceDef(d.diceDefId));
+    const hasAoe = selectedDefs.some(def => def.onPlay?.aoe);
+    // 同元素牌型的状态效果AOE（对所有敌人施加状态）
+    const isElementalAoe = currentHands.activeHands.some(h => ['元素顺', '元素葫芦', '皇家元素顺'].includes(h));
     
     if (outcome.damage > 0) {
-      const absorbed = Math.min(targetEnemy.armor, outcome.damage);
-      const hpDamage = Math.max(0, outcome.damage - absorbed);
-      
-      if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'enemy');
-      if (hpDamage > 0) setTimeout(() => addFloatingText(`-${hpDamage}`, 'text-red-500', <PixelHeart size={2} />, 'enemy'), absorbed > 0 ? 150 : 0);
+      if (hasAoe) {
+        // AOE: 对所有存活敌人造成伤害
+        const aliveEnemies = enemies.filter(e => e.hp > 0);
+        aliveEnemies.forEach((e, idx) => {
+          setTimeout(() => {
+            const absorbed = Math.min(e.armor, outcome.damage);
+            const hpDamage = Math.max(0, outcome.damage - absorbed);
+            if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'enemy');
+            if (hpDamage > 0) addFloatingText(`-${hpDamage}`, 'text-red-500', <PixelHeart size={2} />, 'enemy');
+          }, idx * 150);
+        });
+      } else {
+        const absorbed = Math.min(targetEnemy.armor, outcome.damage);
+        const hpDamage = Math.max(0, outcome.damage - absorbed);
+        if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', <PixelShield size={2} />, 'enemy');
+        if (hpDamage > 0) setTimeout(() => addFloatingText(`-${hpDamage}`, 'text-red-500', <PixelHeart size={2} />, 'enemy'), absorbed > 0 ? 150 : 0);
+      }
     }
 
-    await new Promise(r => setTimeout(r, 700));
-
-    // 提前计算敌人是否会死亡
-    const targetUid = targetEnemy.uid;
-    let preCalcRemainingDamage = outcome.damage;
-    let preCalcEnemyArmor = targetEnemy.armor;
-    if (preCalcEnemyArmor > 0) {
-      const preAbsorbed = Math.min(preCalcEnemyArmor, preCalcRemainingDamage);
-      preCalcEnemyArmor -= preAbsorbed;
-      preCalcRemainingDamage -= preAbsorbed;
-    }
-    const willDie = targetEnemy.hp - preCalcRemainingDamage <= 0;
-
-    // 如果敌人将死，先触发死亡动画再清除攻击效果，实现衔接
-    if (willDie) {
-      setEnemyEffectForUid(targetUid, 'death');
-      setPlayerEffect(null);
-    } else {
-      setPlayerEffect(null);
-    }
-
-    // 2. Apply results
+    // Apply to player
     if (outcome.armor > 0) {
       setArmorGained(true);
       playSound('armor');
@@ -720,8 +809,12 @@ export default function DiceHeroGame() {
       setTimeout(() => setHpGained(false), 500);
     }
     
-    // Feedback for status effects
+    // Status effects on enemies
     if (outcome.statusEffects && outcome.statusEffects.length > 0) {
+      if (isElementalAoe) {
+        // 高阶同元素牌型：状态效果AOE全体敌人
+        addFloatingText('💥 元素爆发!', 'text-[var(--pixel-gold)]', undefined, 'enemy');
+      }
       outcome.statusEffects.forEach((s, idx) => {
         setTimeout(() => {
           const info = STATUS_INFO[s.type];
@@ -730,31 +823,74 @@ export default function DiceHeroGame() {
       });
     }
 
-    // Apply to Enemy
-    let remainingDamage = outcome.damage;
-    let enemyArmor = targetEnemy.armor;
-    if (enemyArmor > 0) {
-      const absorbed = Math.min(enemyArmor, remainingDamage);
-      enemyArmor -= absorbed;
-      remainingDamage -= absorbed;
-    }
-    const finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
-
-    setEnemies(prev => prev.map(e => {
-      if (e.uid !== targetUid) return e;
-      let newStatuses = [...e.statuses];
-      if (outcome.statusEffects) {
-        outcome.statusEffects.forEach(s => {
-          const existing = newStatuses.find(es => es.type === s.type);
-          if (existing) {
-            existing.value += s.value;
-          } else {
-            newStatuses.push({ ...s });
-          }
-        });
+    // Calculate and apply damage to enemies
+    if (hasAoe) {
+      // AOE: damage all alive enemies
+      setEnemies(prev => prev.map(e => {
+        if (e.hp <= 0) return e;
+        let dmg = outcome.damage;
+        let arm = e.armor;
+        if (arm > 0) {
+          const absorbed = Math.min(arm, dmg);
+          arm -= absorbed;
+          dmg -= absorbed;
+        }
+        const newHp = Math.max(0, e.hp - dmg);
+        let newStatuses = [...e.statuses];
+        // AOE状态效果也施加给所有敌人
+        if (outcome.statusEffects) {
+          outcome.statusEffects.forEach(s => {
+            const existing = newStatuses.find(es => es.type === s.type);
+            if (existing) { existing.value += s.value; }
+            else { newStatuses.push({ ...s }); }
+          });
+        }
+        if (newHp <= 0) setEnemyEffectForUid(e.uid, 'death');
+        return { ...e, hp: newHp, armor: arm, statuses: newStatuses };
+      }));
+    } else {
+      // Single target
+      let remainingDamage = outcome.damage;
+      let enemyArmor = targetEnemy.armor;
+      if (enemyArmor > 0) {
+        const absorbed = Math.min(enemyArmor, remainingDamage);
+        enemyArmor -= absorbed;
+        remainingDamage -= absorbed;
       }
-      return { ...e, hp: finalEnemyHp, armor: enemyArmor, statuses: newStatuses };
-    }));
+      const finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
+      if (finalEnemyHp <= 0) setEnemyEffectForUid(targetUid, 'death');
+      
+      setEnemies(prev => prev.map(e => {
+        if (e.uid !== targetUid) return e;
+        let newStatuses = [...e.statuses];
+        if (outcome.statusEffects) {
+          outcome.statusEffects.forEach(s => {
+            const existing = newStatuses.find(es => es.type === s.type);
+            if (existing) { existing.value += s.value; }
+            else { newStatuses.push({ ...s }); }
+          });
+        }
+        // 高阶同元素：状态也施加给其他敌人
+        return { ...e, hp: finalEnemyHp, armor: enemyArmor, statuses: newStatuses };
+      }));
+      
+      // 高阶同元素牌型：状态效果AOE施加给非目标敌人
+      if (isElementalAoe && outcome.statusEffects && outcome.statusEffects.length > 0) {
+        setEnemies(prev => prev.map(e => {
+          if (e.uid === targetUid || e.hp <= 0) return e;
+          let newStatuses = [...e.statuses];
+          outcome.statusEffects.forEach(s => {
+            const existing = newStatuses.find(es => es.type === s.type);
+            if (existing) { existing.value += Math.floor(s.value * 0.5); }
+            else { newStatuses.push({ ...s, value: Math.floor(s.value * 0.5) }); }
+          });
+          return { ...e, statuses: newStatuses };
+        }));
+      }
+    }
+    
+    setPlayerEffect('attack');
+    setTimeout(() => setPlayerEffect(null), 500);
     setGame(prev => ({ 
       ...prev, 
       armor: prev.armor + outcome.armor,
@@ -765,6 +901,7 @@ export default function DiceHeroGame() {
     const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
     setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
     setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds] }));
+
     let logMsg = `打出 ${bestHand}，造成 ${outcome.damage} 伤害`;
     if (outcome.armor > 0) logMsg += `，获得 ${outcome.armor} 护甲`;
     if (outcome.heal > 0) logMsg += `，回复 ${outcome.heal} 生命`;
@@ -775,28 +912,51 @@ export default function DiceHeroGame() {
     logMsg += `。`;
     addLog(logMsg);
 
-    if (finalEnemyHp <= 0) {
-      await new Promise(r => setTimeout(r, 1200));
-      // Check if other enemies still alive
-      const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== (game.targetEnemyUid || ''));
-      if (remainingAlive.length > 0) {
-        setGame(prev => ({ ...prev, targetEnemyUid: remainingAlive[0].uid }));
-        addLog(`\u5f53\u524d\u76ee\u6807\u88ab\u51fb\u8d25\uff01\u8fd8\u6709 ${remainingAlive.length} \u4e2a\u654c\u4eba\u5b58\u6d3b\u3002`);
-        return;
+    // Check for enemy deaths (works for both AOE and single target)
+    const checkEnemyDeaths = async () => {
+      await new Promise(r => setTimeout(r, 500));
+      // Re-read enemies after state update
+      const aliveAfterAttack = enemies.filter(e => e.hp > 0);
+      
+      // For single target, check if target died
+      if (!hasAoe) {
+        const targetStillAlive = aliveAfterAttack.find(e => e.uid === targetUid);
+        if (!targetStillAlive || targetEnemy.hp - outcome.damage <= 0) {
+          await new Promise(r => setTimeout(r, 700));
+          const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== targetUid);
+          if (remainingAlive.length > 0) {
+            setGame(prev => ({ ...prev, targetEnemyUid: remainingAlive[0].uid }));
+            addLog(`当前目标被击败！还有 ${remainingAlive.length} 个敌人存活。`);
+            return;
+          }
+        } else {
+          return; // Target alive, no wave check needed
+        }
       }
-      const nextWaveIdx = game.currentWaveIndex + 1;
-      if (nextWaveIdx < game.battleWaves.length) {
-        const nextWave = game.battleWaves[nextWaveIdx].enemies;
-        setEnemies(nextWave);
-        setEnemyEffects({});
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
-        setWaveAnnouncement(nextWaveIdx + 1);
-        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
-        rollAllDice();
-        return;
+      
+      // Check if all enemies in current wave are dead
+      const anyAlive = enemies.some(e => {
+        const dmg = hasAoe ? outcome.damage : (e.uid === targetUid ? outcome.damage : 0);
+        return e.hp - dmg > 0;
+      });
+      
+      if (!anyAlive) {
+        await new Promise(r => setTimeout(r, 700));
+        const nextWaveIdx = game.currentWaveIndex + 1;
+        if (nextWaveIdx < game.battleWaves.length) {
+          const nextWave = game.battleWaves[nextWaveIdx].enemies;
+          setEnemies(nextWave);
+          setEnemyEffects({});
+          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+          setWaveAnnouncement(nextWaveIdx + 1);
+          addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
+          rollAllDice();
+          return;
+        }
+        handleVictory();
       }
-      handleVictory();
-    }
+    };
+    checkEnemyDeaths();
   };
 
   const endTurn = async () => {
@@ -1107,24 +1267,49 @@ export default function DiceHeroGame() {
       freeRerollsLeft: prev.freeRerollsPerTurn
     }));
 
-    // Remaining hand dice -> discard pile, then draw new hand (atomic operation)
-    const remainingDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
+    // === 留手牌机制 ===
+    // 未使用的骰子留在手中，下回合只补抽到 drawCount 上限
+    const remainingDice = dice.filter(d => !d.spent);
+    const remainingCount = remainingDice.length;
     
     // Use setTimeout to ensure previous state updates are flushed
     setTimeout(() => {
       setGame(prev => {
-        // Step 1: Add remaining dice to discard pile
-        let updatedDiscard = [...prev.discardPile, ...remainingDefIds];
-        let updatedBag = [...prev.diceBag];
+        const needDraw = Math.max(0, prev.drawCount - remainingCount);
         
-        // Step 2: Draw new hand from bag
-        const { drawn, newBag, newDiscard, shuffled } = drawFromBag(updatedBag, updatedDiscard, prev.drawCount);
-        if (shuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+        let finalBag = [...prev.diceBag];
+        let finalDiscard = [...prev.discardPile];
+        let drawnDice: Die[] = [];
+        let wasShuffled = false;
         
-        // Step 3: Set new dice hand with draw animation
+        if (needDraw > 0) {
+          const result = drawFromBag(finalBag, finalDiscard, needDraw);
+          drawnDice = result.drawn;
+          finalBag = result.newBag;
+          finalDiscard = result.newDiscard;
+          wasShuffled = result.shuffled;
+        }
+        
+        if (wasShuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+        
+        // 合并留手骰子 + 新抽骰子
+        const keptDice = remainingDice.map((d, idx) => ({
+          ...d,
+          id: idx,
+          selected: false,
+          rolling: true,
+          value: Math.floor(Math.random() * 6) + 1,
+        }));
+        const freshDice = drawnDice.map((d, idx) => ({
+          ...d,
+          id: remainingCount + idx,
+          rolling: true,
+          value: Math.floor(Math.random() * 6) + 1,
+        }));
+        
         setDiceDrawAnim(true);
         setTimeout(() => setDiceDrawAnim(false), 400);
-        setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
+        setDice([...keptDice, ...freshDice]);
         
         // Roll animation
         const doRoll = async () => {
@@ -1139,7 +1324,7 @@ export default function DiceHeroGame() {
         };
         doRoll();
         
-        return { ...prev, diceBag: newBag, discardPile: newDiscard };
+        return { ...prev, diceBag: finalBag, discardPile: finalDiscard };
       });
     }, 100);
     playSound('roll');
@@ -2098,6 +2283,83 @@ useEffect(() => {
 
               {/* ▼ 战斗区域中央牌型+效果预览 — 大号醒目 */}
               <AnimatePresence>
+
+                {/* === 结算演出覆盖层 === */}
+                {settlementPhase && settlementData && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none" style={{background: 'rgba(0,0,0,0.6)'}}>
+                    <div className="flex flex-col items-center gap-3 animate-fade-in">
+                      {/* 牌型名称 */}
+                      <div className="text-2xl font-bold text-[var(--pixel-gold)] pixel-text-shadow animate-bounce-in"
+                        style={{textShadow: '0 0 20px rgba(212,160,48,0.8), 0 2px 4px rgba(0,0,0,0.8)'}}>
+                        ★ {settlementData.bestHand} ★
+                      </div>
+                      
+                      {/* 骰子展示区 */}
+                      <div className="flex gap-2 mt-2">
+                        {settlementData.selectedDice.map((d, i) => (
+                          <div key={d.id}
+                            className={`w-10 h-10 flex items-center justify-center border-2 font-bold text-lg transition-all duration-300 ${
+                              settlementPhase === 'dice' && settlementData.currentEffectIdx >= i
+                                ? 'border-[var(--pixel-gold)] bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] scale-110'
+                                : 'border-[var(--dungeon-panel-border)] bg-[var(--dungeon-panel)] text-[var(--dungeon-text)]'
+                            }`}
+                            style={{
+                              borderRadius: '4px',
+                              boxShadow: settlementPhase === 'dice' && settlementData.currentEffectIdx >= i
+                                ? '0 0 12px rgba(212,160,48,0.6)' : 'none',
+                              animationDelay: `${i * 100}ms`,
+                            }}>
+                            {d.value}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* 计分条 */}
+                      <div className="flex items-center gap-3 mt-2 px-4 py-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius: '4px'}}>
+                        <span className="text-[var(--pixel-blue)] font-bold text-lg font-mono transition-all duration-200">
+                          {settlementData.currentBase}
+                        </span>
+                        <span className="text-[var(--dungeon-text-dim)]">×</span>
+                        <span className="text-[var(--pixel-red)] font-bold text-lg font-mono transition-all duration-200">
+                          {settlementData.currentMult.toFixed(1)}
+                        </span>
+                      </div>
+                      
+                      {/* 触发效果列表 */}
+                      {settlementPhase === 'effects' && settlementData.triggeredEffects.length > 0 && (
+                        <div className="flex flex-col items-center gap-1 mt-1">
+                          {settlementData.triggeredEffects.map((eff, i) => (
+                            <div key={i} className="text-xs px-2 py-1 bg-[var(--pixel-green-dark)] border border-[var(--pixel-green)] text-[var(--pixel-green-light)] animate-fade-in"
+                              style={{borderRadius: '2px', animationDelay: `${i * 100}ms`}}>
+                              ⚡ {eff.name}: {eff.detail}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* 最终伤害 */}
+                      {settlementPhase === 'damage' && (
+                        <div className="mt-2 animate-bounce-in">
+                          <span className="text-4xl font-bold text-[var(--pixel-red)] pixel-text-shadow"
+                            style={{textShadow: '0 0 30px rgba(255,60,60,0.8), 0 0 60px rgba(255,60,60,0.4)'}}>
+                            {settlementData.finalDamage}
+                          </span>
+                          {settlementData.finalArmor > 0 && (
+                            <span className="ml-3 text-2xl font-bold text-[var(--pixel-blue)]">
+                              +{settlementData.finalArmor}🛡
+                            </span>
+                          )}
+                          {settlementData.finalHeal > 0 && (
+                            <span className="ml-3 text-2xl font-bold text-emerald-400">
+                              +{settlementData.finalHeal}❤
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {expectedOutcome && !game.isEnemyTurn && (
                   <div className="absolute z-[12] bottom-4 left-0 right-0 flex justify-center pointer-events-none">
                   <motion.div
@@ -2459,9 +2721,18 @@ useEffect(() => {
                         回合结束中...
                       </motion.button>
                     ) : (
-                      <div className="flex-1 py-2.5 bg-[var(--dungeon-bg)] border-3 border-dashed border-[var(--dungeon-panel-border)] flex items-center justify-center text-[var(--dungeon-text-dim)] font-bold text-[9px]" style={{borderRadius:'2px'}}>
-                        选择骰子以组成牌型
-                      </div>
+                      <motion.button
+                        key="endTurn"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        onClick={() => endTurn()}
+                        disabled={game.isEnemyTurn || dice.some(d => d.playing)}
+                        className="flex-1 py-2.5 bg-[var(--pixel-gold-dark)] border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[10px] tracking-[0.05em] battle-action-btn"
+                        style={{borderRadius:'2px', boxShadow: '0 0 8px rgba(200,168,60,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                      >
+                        ⏭ 结束回合
+                      </motion.button>
                     )}
                   </AnimatePresence>
                 </div>
