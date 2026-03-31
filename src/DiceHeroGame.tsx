@@ -1673,6 +1673,7 @@ useEffect(() => {
                   onClick={() => setShowWaveDetail(true)}
                 >
                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[rgba(8,11,14,0.8)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                      <PixelSkull size={1} className="inline-block mr-0.5" style={{ verticalAlign: 'middle' }} />
                     <span className="text-[8px] text-[var(--pixel-orange)] font-bold">第{game.currentWaveIndex + 1}波</span>
                     <span className="text-[7px] text-[var(--dungeon-text-dim)]">/ {game.battleWaves.length}波</span>
                   </div>
@@ -1728,7 +1729,7 @@ useEffect(() => {
                   const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 25;
                   const depthOpacity = 1.0; // No opacity reduction - use brightness for depth
                   const isAttackReady = dist === 0;
-                  const depthBrightness = dist >= 3 ? 0.5 : dist === 2 ? 0.7 : dist === 1 ? 0.85 : 1.0;
+                    const depthBrightness = dist >= 3 ? 0.82 : dist === 2 ? 0.9 : dist === 1 ? 0.95 : 1.0;
                   const depthZ = dist >= 3 ? 1 : dist === 2 ? 3 : dist === 1 ? 5 : 7;
                   const spriteSize = Math.max(4, Math.round(baseSpriteSize * depthScale));
                   
