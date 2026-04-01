@@ -1,11 +1,13 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { PixelCoin, PixelRefresh, PixelPlay } from './PixelIcons';
+import { PixelCoin, PixelRefresh, PixelPlay, PixelSword } from './PixelIcons';
+import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
 
 export const GlobalTopBar: React.FC = () => {
   const { game, setShowTutorial, setShowHandGuide, rerollFlash } = useGameContext();
+  const [showStats, setShowStats] = useState(false);
 
   return (
     <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0">
@@ -17,6 +19,19 @@ export const GlobalTopBar: React.FC = () => {
             金币 — 用于商店购买
           </div>
         </div>
+
+        {/* Total Damage */}
+        <div className="w-[2px] h-4 bg-[var(--dungeon-panel-border)]" />
+        <button
+          onClick={() => setShowStats(true)}
+          className="flex items-center gap-1 text-[var(--pixel-red)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-pointer hover:border-[var(--pixel-red)] transition-colors"
+          style={{borderRadius:'2px'}}
+        >
+          <PixelSword size={2} /> <span className="font-bold">{game.stats.totalDamageDealt}</span>
+          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-[var(--dungeon-panel)] border-2 border-[var(--pixel-red)] px-2 py-1 text-[8px] text-[var(--pixel-red-light)] whitespace-nowrap z-50 pixel-text-shadow" style={{borderRadius:'2px'}}>
+            总伤害 — 点击查看详细统计
+          </div>
+        </button>
 
         
         
@@ -43,6 +58,9 @@ export const GlobalTopBar: React.FC = () => {
       <div className="flex items-center gap-1.5">
         <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} />
       </div>
+      <AnimatePresence>
+        {showStats && <StatsModal onClose={() => setShowStats(false)} />}
+      </AnimatePresence>
     </div>
   );
 };

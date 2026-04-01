@@ -15,7 +15,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult, OwnedDie } from './types/game';
+import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult, OwnedDie, RunStats } from './types/game';
+import { INITIAL_STATS } from './types/game';
 import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL } from './data/dice';
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
 import { DiceBagPanel } from './components/DiceBagPanel';
@@ -79,6 +80,7 @@ export default function DiceHeroGame() {
     statuses: [],
     lootItems: [],
     enemyHpMultiplier: 1.0,
+    stats: { ...INITIAL_STATS },
     pendingReplacementAugment: null,
     targetEnemyUid: null,
     battleWaves: [],
@@ -299,6 +301,7 @@ export default function DiceHeroGame() {
         return { ...d, value: rollDiceDef(def) };
       }));
       if (f === 3) playSound('reroll');
+    setGame(prev => ({ ...prev, stats: { ...prev.stats, totalRerolls: prev.stats.totalRerolls + 1 } }));
     }
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     playSound('dice_lock');
@@ -731,6 +734,28 @@ export default function DiceHeroGame() {
     setTimeout(() => setHandLeftThrow(false), 500);
 
     // ========================================
+    // --- 统计更新 ---
+    setGame(prev => {
+      const newStats = { ...prev.stats };
+      newStats.totalPlays += 1;
+      newStats.totalDamageDealt += outcome.damage;
+      if (outcome.damage > newStats.maxSingleHit) newStats.maxSingleHit = outcome.damage;
+      newStats.totalHealing += (outcome.heal || 0);
+      newStats.totalArmorGained += (outcome.armor || 0);
+      // 牌型统计
+      newStats.handTypeCounts[bestHand] = (newStats.handTypeCounts[bestHand] || 0) + 1;
+      // 最强牌型（用 handMultiplier 比较）
+      if (!newStats.bestHandPlayed || outcome.handMultiplier > (prev.stats.handTypeCounts[newStats.bestHandPlayed] || 0)) {
+        newStats.bestHandPlayed = bestHand;
+      }
+      // 骰子使用统计
+      selected.forEach(d => {
+        const defId = d.diceDefId;
+        newStats.diceUsageCounts[defId] = (newStats.diceUsageCounts[defId] || 0) + 1;
+      });
+      return { ...prev, stats: newStats };
+    });
+
     // Phase 1: 牌型展示 (0.6s)
     // ========================================
     setSettlementPhase('hand');
@@ -1476,6 +1501,18 @@ useEffect(() => {
   }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft]);
 
   const handleVictory = () => {
+    // 战斗胜利统计
+    const currentNode = game.map.find(n => n.id === game.currentNodeId);
+    const nodeType = currentNode?.type || 'enemy';
+    const killedCount = enemies.filter(e => e.hp <= 0).length;
+    setGame(prev => {
+      const s = { ...prev.stats };
+      s.battlesWon += 1;
+      s.enemiesKilled += killedCount;
+      if (nodeType === 'elite') s.elitesWon += 1;
+      if (nodeType === 'boss') s.bossesWon += 1;
+      return { ...prev, stats: s };
+    });
     if (enemies.length === 0) return;
     const allWaveEnemies = game.battleWaves.flatMap(w => w.enemies);
     playSound('victory');

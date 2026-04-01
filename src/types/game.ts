@@ -168,6 +168,49 @@ export interface BattleWave {
   enemies: Enemy[];
 }
 
+
+// ============================================================
+// 本局统计数据
+// ============================================================
+
+export interface RunStats {
+  totalDamageDealt: number;       // 累计造成伤害
+  maxSingleHit: number;           // 单次最高伤害
+  totalPlays: number;             // 总出牌次数
+  totalRerolls: number;           // 总重掷次数
+  totalDamageTaken: number;       // 累计受到伤害
+  totalHealing: number;           // 累计回复量
+  totalArmorGained: number;       // 累计获得护甲
+  battlesWon: number;             // 已完成战斗场数
+  elitesWon: number;              // 精英战胜利
+  bossesWon: number;              // Boss战胜利
+  enemiesKilled: number;          // 总击杀敌人数
+  handTypeCounts: Record<string, number>;  // 每种牌型出牌次数
+  bestHandPlayed: string;         // 打出过的最强牌型
+  diceUsageCounts: Record<string, number>; // 每种骰子被选中出牌次数
+  goldEarned: number;             // 累计获得金币
+  goldSpent: number;              // 累计花费金币
+}
+
+export const INITIAL_STATS: RunStats = {
+  totalDamageDealt: 0,
+  maxSingleHit: 0,
+  totalPlays: 0,
+  totalRerolls: 0,
+  totalDamageTaken: 0,
+  totalHealing: 0,
+  totalArmorGained: 0,
+  battlesWon: 0,
+  elitesWon: 0,
+  bossesWon: 0,
+  enemiesKilled: 0,
+  handTypeCounts: {},
+  bestHandPlayed: '',
+  diceUsageCounts: {},
+  goldEarned: 0,
+  goldSpent: 0,
+};
+
 export interface GameState {
   hp: number;
   maxHp: number;
@@ -201,6 +244,7 @@ export interface GameState {
   statuses: StatusEffect[];
   lootItems: LootItem[];
   enemyHpMultiplier: number;
+  stats: RunStats;
   pendingReplacementAugment: Augment | null;
 }
 
