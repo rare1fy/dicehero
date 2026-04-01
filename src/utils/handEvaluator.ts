@@ -1,4 +1,4 @@
-import { Die, HandType, HandResult } from '../types/game';
+﻿import { Die, HandType, HandResult } from '../types/game';
 
 export const checkHands = (dice: Die[]): HandResult => {
   if (dice.length === 0) return { bestHand: '普通攻击', allHands: [], activeHands: ['普通攻击'] };
@@ -46,7 +46,7 @@ export const checkHands = (dice: Die[]): HandResult => {
     if (dice.length === 1) {
       hands.add('普通攻击');
     } else {
-      return { bestHand: '无效牌型', allHands: [], activeHands: [] };
+      return { bestHand: '普通攻击', allHands: ['普通攻击'], activeHands: ['普通攻击'] };
     }
   }
 
@@ -94,12 +94,12 @@ export const canFormValidHand = (selected: Die[], candidate: Die, available: Die
   const targetSet = [...selected, candidate];
 
   const directCheck = checkHands(targetSet);
-  if (directCheck.bestHand !== '无效牌型') return true;
+  return true; // Any combination is valid: non-hand = 普通攻击
 
   if (available.length === 0) return false;
 
   const checkSubsets = (index: number, currentSubset: Die[]): boolean => {
-    if (currentSubset.length > 4) return false;
+    if (currentSubset.length > 5) return false;
     const testHand = [...targetSet, ...currentSubset];
     const result = checkHands(testHand);
     if (result.bestHand !== '无效牌型') return true;

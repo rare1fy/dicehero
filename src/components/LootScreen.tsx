@@ -34,7 +34,7 @@ export const LootScreen: React.FC = () => {
         switch (type) {
           case 'augment': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-blue-light)]', label: '新模块', borderColor: 'var(--pixel-blue)' };
           case 'gold': return { icon: <PixelCoin size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '金币', borderColor: 'var(--pixel-gold)' };
-          case 'reroll': return { icon: <PixelRefresh size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '重骰机会', borderColor: 'var(--pixel-purple)' };
+          case 'reroll': return { icon: <PixelRefresh size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '重掷强化', borderColor: 'var(--pixel-purple)' };
           case 'maxPlays': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-red-light)]', label: '出牌次数', borderColor: 'var(--pixel-red)' };
           case 'diceCount': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-orange-light)]', label: '骰子数量', borderColor: 'var(--pixel-orange)' };
           case 'specialDice': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-green-light)]', label: '特殊骰子', borderColor: 'var(--pixel-green)' };
@@ -72,7 +72,7 @@ export const LootScreen: React.FC = () => {
                item.type === 'maxPlays' ? `+${item.value} 出牌次数` :
                item.type === 'specialDice' && item.diceDefId ? getDiceDef(item.diceDefId).name :
                item.type === 'diceCount' ? `+${item.value} 骰子` :
-               `+${item.value} 全局重骰机会`}
+               `+${item.value} 每回合重掷次数`}
             </div>
             <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
               {item.type === 'augment' ? '点击从中选择一个模块' : `点击拾取该奖励`}

@@ -42,7 +42,7 @@ export const ShopScreen: React.FC = () => {
             onClick={() => {
               playSound('shop_buy');
               if (item.type === 'reroll') {
-                setGame(prev => ({ ...prev, souls: prev.souls - item.price, globalRerolls: prev.globalRerolls + 1, shopItems: prev.shopItems.filter(si => si.id !== item.id) }));
+                setGame(prev => ({ ...prev, souls: prev.souls - item.price, freeRerollsPerTurn: prev.freeRerollsPerTurn + 1, shopItems: prev.shopItems.filter(si => si.id !== item.id) }));
               } else if (item.type === 'dice') {
                 setGame(prev => ({ ...prev, souls: prev.souls - item.price, diceCount: Math.min(6, prev.diceCount + 1), shopItems: prev.shopItems.filter(si => si.id !== item.id) }));
               } else if (item.type === 'specialDice' && item.diceDefId) {

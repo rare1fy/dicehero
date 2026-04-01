@@ -38,13 +38,13 @@ export const MapScreen: React.FC = () => {
   }, [currentNode]);
 
   const maxDepth = Math.max(...game.map.map(n => n.depth));
-  const layerHeight = 120;
-  const svgHeight = (maxDepth + 1) * layerHeight + 80;
-  const svgWidth = 380;
+  const layerHeight = 140;
+  const svgHeight = (maxDepth + 1) * layerHeight + 100;
+  const svgWidth = 520;
 
   const getNodePos = (node: MapNode) => {
-    const x = getNodeX(node, game.map) / 100 * (svgWidth - 80) + 40;
-    const y = (maxDepth - node.depth) * layerHeight + 55;
+    const x = getNodeX(node, game.map) / 100 * (svgWidth - 100) + 50;
+    const y = (maxDepth - node.depth) * layerHeight + 65;
     return { x, y };
   };
 
@@ -78,7 +78,7 @@ export const MapScreen: React.FC = () => {
       <div 
         ref={scrollRef} 
         className="flex-1 overflow-auto scrollbar-hide relative z-10 pt-24 pb-40"
-        style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
+        style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'auto' }}
         onMouseDown={(e) => {
           const el = scrollRef.current;
           if (!el) return;
@@ -101,7 +101,7 @@ export const MapScreen: React.FC = () => {
           document.addEventListener('mouseup', onUp);
         }}
       >
-        <div className="relative mx-auto" style={{ width: svgWidth, minHeight: svgHeight }}>
+        <div className="relative" style={{ width: svgWidth, minHeight: svgHeight, margin: '0 auto', minWidth: 'fit-content' }}>
           <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: svgHeight }} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
             <defs>
               <filter id="pathGlow">

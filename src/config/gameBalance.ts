@@ -13,7 +13,7 @@ export const PLAYER_INITIAL = {
   maxHp: 100,
   armor: 0,
   freeRerollsPerTurn: 1,
-  globalRerolls: 5,
+  globalRerolls: 0,
   playsPerTurn: 1,
   souls: 0,
   augmentSlots: 4,
@@ -41,7 +41,7 @@ export const SHOP_CONFIG = {
   priceRange: [20, 80] as [number, number],
   /** 固定商品列表 */
   fixedItems: [
-    { id: 'reroll', type: 'reroll' as const, label: '全局重骰', desc: '增加 1 次全局重骰机会' },
+    { id: 'reroll', type: 'reroll' as const, label: '重掷强化', desc: '永久增加每回合 +1 次重掷' },
     { id: 'dice', type: 'dice' as const, label: '额外骰子', desc: '增加 1 个骰子 (上限 6)' },
     { id: 'removeDice', type: 'removeDice' as const, label: '骰子净化', desc: '移除一颗骰子，瘦身构筑' },
   ],
@@ -74,7 +74,7 @@ export const LOOT_CONFIG = {
   /** 精英奖励池 */
   eliteRewards: [
     { type: 'diceCount' as const, value: 1, label: '+1 骰子' },
-    { type: 'reroll' as const, value: 2, label: '+2 全局重骰' },
+    { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合重骰' },
     { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合免费重骰' },
   ],
 } as const;
@@ -120,8 +120,8 @@ export const SKILL_SELECT_CONFIG = {
   costPool: [
     { type: 'maxHp' as const, value: 8, label: '最大生命 -8' },
     { type: 'maxHp' as const, value: 12, label: '最大生命 -12' },
-    { type: 'reroll' as const, value: 1, label: '全局重骰 -1' },
-    { type: 'reroll' as const, value: 2, label: '全局重骰 -2' },
+    { type: 'reroll' as const, value: 1, label: '重掷机会 -1' },
+    { type: 'reroll' as const, value: 2, label: '重掷机会 -2' },
     { type: 'hp' as const, value: 10, label: '当前生命 -10' },
     { type: 'hp' as const, value: 15, label: '当前生命 -15' },
   ],

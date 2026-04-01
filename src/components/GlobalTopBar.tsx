@@ -18,17 +18,7 @@ export const GlobalTopBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Global Rerolls */}
-        <motion.div 
-          animate={rerollFlash ? { scale: [1, 1.08, 1] } : {}}
-          className="flex items-center gap-1 text-[var(--pixel-orange)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-help"
-          style={{borderRadius:'2px'}}
-        >
-          <PixelRefresh size={2} /> <span className="font-bold">{game.globalRerolls}</span>
-          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-[var(--dungeon-panel)] border-2 border-[var(--pixel-orange)] px-2 py-1 text-[8px] text-[var(--pixel-orange-light)] whitespace-nowrap z-50 pixel-text-shadow" style={{borderRadius:'2px'}}>
-            全局重骰 — 战斗中消耗以重掷骰子
-          </div>
-        </motion.div>
+        
         
         {/* Battle-specific: Plays & Free Rerolls */}
         {game.phase === 'battle' && (
@@ -43,7 +33,7 @@ export const GlobalTopBar: React.FC = () => {
             <div className="flex items-center gap-1 text-[var(--pixel-green)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-help" style={{borderRadius:'2px'}}>
               <PixelRefresh size={2} /> <span className="font-bold">{game.freeRerollsLeft}</span>
               <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-[var(--dungeon-panel)] border-2 border-[var(--pixel-green)] px-2 py-1 text-[8px] text-[var(--pixel-green-light)] whitespace-nowrap z-50 pixel-text-shadow" style={{borderRadius:'2px'}}>
-                免费重骰 — 本回合剩余免费重骰
+                重掷机会 — 本回合剩余重掷次数
               </div>
             </div>
           </>

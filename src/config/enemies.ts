@@ -302,7 +302,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'dream_weaver',
     name: '虚空织梦者',
     emoji: '🌙️',
-    baseHp: 150, baseDmg: 8,
+    baseHp: 120, baseDmg: 8,
     category: 'boss',
     combatType: 'caster',
     drops: { gold: 80, augment: true, rerollReward: 3 },

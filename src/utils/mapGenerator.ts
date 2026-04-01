@@ -126,39 +126,38 @@ export const generateMap = (): MapNode[] => {
     });
   }
 
-  // 路径感知修正 — 防止连续相同类型非战斗节点
-  for (let l = 2; l < layers; l++) {
-    const currentLayer = nodes.filter(n => n.depth === l);
+  // 路径感知修正 — 禁止连续出现同类型非战斗节点
+  // 规则：任何非战斗节点（campfire/shop/event）不能与父节点同类型
+  // 同时也不允许连续两个非战斗节点（即使类型不同）
+  const nonCombatTypes: NodeType[] = ['campfire', 'shop', 'event'];
+  const fixedLayerIds = Object.keys(MAP_CONFIG.fixedLayers).map(Number);
+  
+  for (let l = 1; l < layers; l++) {
+    if (fixedLayerIds.includes(l)) continue;
     
+    const currentLayer = nodes.filter(n => n.depth === l);
     currentLayer.forEach(node => {
-      const fixedLayerIds = Object.keys(MAP_CONFIG.fixedLayers).map(Number);
       if (fixedLayerIds.includes(l)) return;
       
       const parentNodes = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
+      if (parentNodes.length === 0) return;
       
-      for (const parent of parentNodes) {
-        if (parent.type === node.type && node.type !== 'enemy') {
+      // 规则1：不允许与任何父节点同类型（非战斗节点）
+      if (nonCombatTypes.includes(node.type)) {
+        const hasSameTypeParent = parentNodes.some(p => p.type === node.type);
+        if (hasSameTypeParent) {
+          // 换成战斗或其他类型
           node.type = getRandomNodeTypeExcluding(node.type);
-          break;
         }
       }
-    });
-  }
-
-  // 确保路径多样性 — 避免连续2个篝火
-  for (let l = 1; l < layers; l++) {
-    const fixedIds = Object.keys(MAP_CONFIG.fixedLayers).map(Number);
-    if (fixedIds.includes(l)) continue;
-    
-    const currentLayer = nodes.filter(n => n.depth === l);
-    currentLayer.forEach(node => {
-      if (node.type !== 'campfire') return;
       
-      const parentNodes = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
-      const allParentsCampfire = parentNodes.length > 0 && parentNodes.every(p => p.type === 'campfire');
-      
-      if (allParentsCampfire) {
-        node.type = getRandomNodeTypeExcluding('campfire');
+      // 规则2：如果所有父节点都是非战斗节点，当前节点强制变成战斗类
+      if (nonCombatTypes.includes(node.type)) {
+        const allParentsNonCombat = parentNodes.every(p => nonCombatTypes.includes(p.type));
+        if (allParentsNonCombat) {
+          const combatTypes: NodeType[] = ['enemy', 'elite'];
+          node.type = combatTypes[Math.floor(Math.random() * combatTypes.length)];
+        }
       }
     });
   }
