@@ -8,6 +8,9 @@
 import type { Die, OwnedDie } from '../types/game';
 import { getDiceDef, rollDiceDef } from './dice';
 
+/** Global unique die ID counter */
+let nextDieId = 1;
+
 /** Fisher-Yates 洗牌 */
 export const shuffle = <T>(arr: T[]): T[] => {
   const result = [...arr];
@@ -48,7 +51,7 @@ export const drawFromBag = (
     const def = getDiceDef(defId);
     const value = rollDiceDef(def);
     return {
-      id: index,
+      id: nextDieId++,
       diceDefId: defId,
       value,
       element: def.element,

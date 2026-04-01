@@ -840,9 +840,9 @@
 }
 
 .pixel-dice-invalid {
-  opacity: 0.55 !important;
-  filter: grayscale(0.6) brightness(0.65) !important;
-  pointer-events: none;
+  opacity: 0.65;
+  filter: grayscale(0.35) brightness(0.75);
+  cursor: pointer;
 }
 
 /* === 像素骰子点数 (用方块表示) === */

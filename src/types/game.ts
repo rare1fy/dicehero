@@ -51,6 +51,7 @@ export interface Die {
   spent: boolean;
   rolling?: boolean;
   playing?: boolean;
+  kept?: boolean;
 }
 
 // ============================================================

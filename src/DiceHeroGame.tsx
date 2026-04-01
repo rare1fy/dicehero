@@ -113,6 +113,8 @@ export default function DiceHeroGame() {
   }, [game.phase]);
 
   const [dice, setDice] = useState<Die[]>([]);
+  const gameRef = useRef(game);
+  gameRef.current = game;
   const [diceDrawAnim, setDiceDrawAnim] = useState(false); // 抽骰子入场动画
   const [diceDiscardAnim, setDiceDiscardAnim] = useState(false); // 弃骰子退场动画
   const [enemies, setEnemies] = useState<Enemy[]>([]);
@@ -297,7 +299,7 @@ export default function DiceHeroGame() {
       }));
       if (f === 3) playSound('reroll');
     }
-    setDice(freshDrawn.map(d => ({ ...d, rolling: false })));
+    setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     playSound('dice_lock');
     addLog(`[骰] ${freshDrawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
 
@@ -379,7 +381,7 @@ export default function DiceHeroGame() {
     }
 
     // 落定 — 使用预先抽取的结果
-    setDice(drawn.map(d => ({ ...d, rolling: false })));
+    setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     playSound('dice_lock');
     addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
@@ -1274,58 +1276,60 @@ export default function DiceHeroGame() {
     
     // Use setTimeout to ensure previous state updates are flushed
     setTimeout(() => {
-      setGame(prev => {
-        const needDraw = Math.max(0, prev.drawCount - remainingCount);
-        
-        let finalBag = [...prev.diceBag];
-        let finalDiscard = [...prev.discardPile];
-        let drawnDice: Die[] = [];
-        let wasShuffled = false;
-        
-        if (needDraw > 0) {
-          const result = drawFromBag(finalBag, finalDiscard, needDraw);
-          drawnDice = result.drawn;
-          finalBag = result.newBag;
-          finalDiscard = result.newDiscard;
-          wasShuffled = result.shuffled;
+      // Read latest game state from ref (avoids stale closure)
+      const g = gameRef.current;
+      const needDraw = Math.max(0, g.drawCount - remainingCount);
+      
+      let finalBag = [...g.diceBag];
+      let finalDiscard = [...g.discardPile];
+      let drawnDice: Die[] = [];
+      let wasShuffled = false;
+      
+      if (needDraw > 0) {
+        const result = drawFromBag(finalBag, finalDiscard, needDraw);
+        drawnDice = result.drawn;
+        finalBag = result.newBag;
+        finalDiscard = result.newDiscard;
+        wasShuffled = result.shuffled;
+      }
+      
+      if (wasShuffled) addToast('\u2728 \u5f03\u9ab0\u5e93\u5df2\u6d17\u56de\u9ab0\u5b50\u5e93!', 'buff');
+      
+      // Merge kept dice + fresh dice
+      const keptDice: Die[] = remainingDice.map((d) => ({
+        ...d,
+        selected: false,
+        kept: true,
+      }));
+      // drawnDice already have unique ids from drawFromBag
+      const freshDice: Die[] = drawnDice.map((d) => ({
+        ...d,
+        rolling: true,
+        kept: false,
+        value: Math.floor(Math.random() * 6) + 1,
+      }));
+      
+      // Update game state (pure, no side effects)
+      setGame(prev => ({ ...prev, diceBag: finalBag, discardPile: finalDiscard }));
+      
+      // Side effects: animations and dice update
+      setDiceDrawAnim(true);
+      setTimeout(() => setDiceDrawAnim(false), 400);
+      setDice([...keptDice, ...freshDice]);
+      
+      // Roll animation for fresh dice only
+      const doRoll = async () => {
+        const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
+        for (let f = 0; f < frameTimes.length; f++) {
+          await new Promise(r => setTimeout(r, frameTimes[f]));
+          setDice(pd => pd.map(d => d.rolling ? { ...d, value: rollDiceDef(getDiceDef(d.diceDefId)) } : d));
+          if (f === 3) playSound('reroll');
         }
-        
-        if (wasShuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
-        
-        // 合并留手骰子 + 新抽骰子
-        const keptDice = remainingDice.map((d, idx) => ({
-          ...d,
-          id: idx,
-          selected: false,
-          rolling: true,
-          value: Math.floor(Math.random() * 6) + 1,
-        }));
-        const freshDice = drawnDice.map((d, idx) => ({
-          ...d,
-          id: remainingCount + idx,
-          rolling: true,
-          value: Math.floor(Math.random() * 6) + 1,
-        }));
-        
-        setDiceDrawAnim(true);
-        setTimeout(() => setDiceDrawAnim(false), 400);
-        setDice([...keptDice, ...freshDice]);
-        
-        // Roll animation
-        const doRoll = async () => {
-          const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
-          for (let f = 0; f < frameTimes.length; f++) {
-            await new Promise(r => setTimeout(r, frameTimes[f]));
-            setDice(pd => pd.map(d => d.rolling ? { ...d, value: rollDiceDef(getDiceDef(d.diceDefId)) } : d));
-            if (f === 3) playSound('reroll');
-          }
-          setDice(pd => pd.map(d => ({ ...d, rolling: false })));
-          playSound('dice_lock');
-        };
-        doRoll();
-        
-        return { ...prev, diceBag: finalBag, discardPile: finalDiscard };
-      });
+        setDice(pd => pd.map(d => ({ ...d, rolling: false, kept: false })));
+        playSound('dice_lock');
+        // Debug: check final dice state
+      };
+      doRoll();
     }, 100);
     playSound('roll');
   };
@@ -2576,11 +2580,10 @@ useEffect(() => {
 
                 {/* 骰子行 */}
                 <div className="flex justify-center gap-2.5 mb-1.5 min-h-[60px] items-end relative">
-                  {dice.map((die) => (
-                    !die.spent && (
+                  {dice.filter(d => !d.spent).map((die) => (
                       <motion.button
-                        key={die.id}
-                        initial={diceDrawAnim ? { y: -120, x: -60, opacity: 0, scale: 0.3, rotate: -180 } : false}
+                        key={`die-${die.id}`}
+                        initial={false}
                         animate={diceDiscardAnim && !die.spent ? {
                           y: -100,
                           x: 80,
@@ -2590,7 +2593,8 @@ useEffect(() => {
                         } : die.rolling ? { 
                           rotate: [0, 90, 180, 270, 360],
                           scale: [1, 1.15, 1, 1.15, 1],
-                          y: [0, -10, 0, -8, 0]
+                          y: [0, -10, 0, -8, 0],
+                          opacity: 1
                         } : die.playing ? {
                           y: -180,
                           opacity: 0,
@@ -2606,7 +2610,7 @@ useEffect(() => {
                         className={`${getDiceElementClass(die.element, die.selected, die.rolling, invalidDiceIds.has(die.id), die.diceDefId)} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
                           fontSize: '22px', width: '52px', height: '52px',
-                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.6) brightness(0.65)', opacity: 0.55, pointerEvents: 'none' as const } : {})
+                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
                         <span className="pixel-text-shadow font-black">
@@ -2618,7 +2622,6 @@ useEffect(() => {
                           </div>
                         )}
                       </motion.button>
-                    )
                   ))}
                   {dice.every(d => d.spent) && (
                     <div className="text-[var(--dungeon-text-dim)] text-[9px] font-bold py-4">所有骰子已使用</div>
