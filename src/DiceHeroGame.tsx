@@ -138,6 +138,7 @@ export default function DiceHeroGame() {
   const [rerollFlash, setRerollFlash] = useState(false);
 
   // === 结算演出状态 ===
+  const [showDamageOverlay, setShowDamageOverlay] = useState<{damage: number, armor: number, heal: number} | null>(null);
   const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'effects' | 'damage'>(null);
   const [settlementData, setSettlementData] = useState<{
     bestHand: string;
@@ -554,8 +555,8 @@ export default function DiceHeroGame() {
 
       switch (handName) {
         case '普通攻击': break;
-        case '对子': baseArmor += 5; break;
-        case '连对': baseArmor += 10; break;
+        case '对子': break;
+        case '连对': break;
         case '三条': statusEffects.push({ type: 'burn', value: 2 }); break;
         case '顺子': statusEffects.push({ type: 'weak', value: 2 }); break;
         case '同花': statusEffects.push({ type: 'poison', value: 2 }); break;
@@ -661,6 +662,20 @@ export default function DiceHeroGame() {
     };
   }, [dice, activeAugments, currentHands]);
 
+  // AOE state for enemy highlighting
+  const isAoeActive = useMemo(() => {
+    const selected = dice.filter(d => d.selected && !d.spent);
+    if (selected.length === 0 || !expectedOutcome) return false;
+    const hasDiceAoe = selected.some(d => {
+      const def = getDiceDef(d.diceDefId);
+      return def.onPlay?.aoe;
+    });
+    if (hasDiceAoe) return true;
+    const { activeHands } = currentHands;
+    if (activeHands.some(h => h.includes('元素') || h.includes('皇家'))) return true;
+    return false;
+  }, [dice, expectedOutcome, currentHands]);
+
   const playHand = async () => {
     playSound('select');
     const selected = dice.filter(d => d.selected && !d.spent);
@@ -758,6 +773,8 @@ export default function DiceHeroGame() {
     // Phase 4: 最终伤害飞出 (0.8s)
     // ========================================
     setSettlementPhase('damage');
+          setShowDamageOverlay({ damage: outcome.damage, armor: outcome.armor, heal: outcome.heal || 0 });
+          setTimeout(() => setShowDamageOverlay(null), 1800);
     playSound('hit');
     setScreenShake(true);
     setTimeout(() => setScreenShake(false), 300);
@@ -1906,7 +1923,7 @@ useEffect(() => {
                     if (enemy.hp <= 0) {
                       return <div key={enemy.uid} style={{ minWidth: '60px', minHeight: '100px' }} />;
                     }
-                  const isTarget = enemy.uid === (targetEnemyUid || enemies.find(e => e.hp > 0)?.uid);
+                  const isTarget = isAoeActive ? (enemy.hp > 0) : (enemy.uid === (targetEnemyUid || enemies.find(e => e.hp > 0)?.uid));
                   const effect = enemyEffects[enemy.uid] || null;
                   const currentNode = game.map.find(n => n.id === game.currentNodeId);
                   const baseSpriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
@@ -2343,21 +2360,10 @@ useEffect(() => {
                       
                       {/* 最终伤害 */}
                       {settlementPhase === 'damage' && (
-                        <div className="mt-2 animate-bounce-in">
-                          <span className="text-4xl font-bold text-[var(--pixel-red)] pixel-text-shadow"
-                            style={{textShadow: '0 0 30px rgba(255,60,60,0.8), 0 0 60px rgba(255,60,60,0.4)'}}>
-                            {settlementData.finalDamage}
+                        <div className="mt-2">
+                          <span className="text-lg font-bold text-[var(--dungeon-text-dim)]">
+                            {settlementData.finalDamage > 0 ? 'DAMAGE' : 'EFFECT'}
                           </span>
-                          {settlementData.finalArmor > 0 && (
-                            <span className="ml-3 text-2xl font-bold text-[var(--pixel-blue)]">
-                              +{settlementData.finalArmor}🛡
-                            </span>
-                          )}
-                          {settlementData.finalHeal > 0 && (
-                            <span className="ml-3 text-2xl font-bold text-emerald-400">
-                              +{settlementData.finalHeal}❤
-                            </span>
-                          )}
                         </div>
                       )}
                     </div>
@@ -2456,6 +2462,106 @@ useEffect(() => {
                   </motion.div>
                 ))}
               </AnimatePresence>
+
+              {/* Fullscreen Damage Overlay */}
+              <AnimatePresence>
+                {showDamageOverlay && (
+                  <motion.div
+                    key="damage-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
+                    style={{ background: 'radial-gradient(circle, rgba(255,40,40,0.15) 0%, transparent 70%)' }}
+                  >
+                    {/* Explosion rings */}
+                    <motion.div
+                      initial={{ scale: 0.3, opacity: 0.8 }}
+                      animate={{ scale: 3, opacity: 0 }}
+                      transition={{ duration: 1.2, ease: 'easeOut' }}
+                      className="absolute w-32 h-32 rounded-full"
+                      style={{ border: '3px solid rgba(255,80,40,0.6)', boxShadow: '0 0 40px rgba(255,80,40,0.4)' }}
+                    />
+                    <motion.div
+                      initial={{ scale: 0.2, opacity: 0.6 }}
+                      animate={{ scale: 2.5, opacity: 0 }}
+                      transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
+                      className="absolute w-24 h-24 rounded-full"
+                      style={{ border: '2px solid rgba(255,200,60,0.5)', boxShadow: '0 0 30px rgba(255,200,60,0.3)' }}
+                    />
+                    {/* Screen flash */}
+                    <motion.div
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0"
+                      style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%)' }}
+                    />
+                    {/* Main damage number */}
+                    <motion.div
+                      initial={{ scale: 0.1, opacity: 0 }}
+                      animate={{ scale: [0.1, 1.4, 1.0], opacity: [0, 1, 1] }}
+                      transition={{ duration: 0.5, times: [0, 0.6, 1], ease: 'easeOut' }}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      {showDamageOverlay.damage > 0 && (
+                        <motion.div
+                          animate={{ scale: [1, 1.05, 1], textShadow: ['0 0 30px rgba(255,60,60,0.8)', '0 0 60px rgba(255,60,60,1)', '0 0 30px rgba(255,60,60,0.8)'] }}
+                          transition={{ repeat: 2, duration: 0.4 }}
+                          className="text-6xl font-black text-[var(--pixel-red)] pixel-text-shadow"
+                          style={{ textShadow: '0 0 40px rgba(255,60,60,0.9), 0 0 80px rgba(255,60,60,0.5), 0 4px 0 rgba(0,0,0,0.5)', letterSpacing: '2px' }}
+                        >
+                          {showDamageOverlay.damage}
+                        </motion.div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        {showDamageOverlay.armor > 0 && (
+                          <motion.span
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-2xl font-bold text-[var(--pixel-blue)] pixel-text-shadow"
+                          >
+                            +{showDamageOverlay.armor} 🛡
+                          </motion.span>
+                        )}
+                        {showDamageOverlay.heal > 0 && (
+                          <motion.span
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-2xl font-bold text-emerald-400 pixel-text-shadow"
+                          >
+                            +{showDamageOverlay.heal} ❤
+                          </motion.span>
+                        )}
+                      </div>
+                    </motion.div>
+                    {/* Particle burst */}
+                    {[...Array(12)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                        animate={{
+                          x: Math.cos(i * 30 * Math.PI / 180) * (80 + Math.random() * 60),
+                          y: Math.sin(i * 30 * Math.PI / 180) * (80 + Math.random() * 60),
+                          opacity: 0,
+                          scale: 0.3,
+                        }}
+                        transition={{ duration: 0.8 + Math.random() * 0.4, ease: 'easeOut', delay: 0.05 }}
+                        className="absolute w-2 h-2"
+                        style={{
+                          background: i % 3 === 0 ? 'var(--pixel-red)' : i % 3 === 1 ? 'var(--pixel-orange)' : 'var(--pixel-gold)',
+                          borderRadius: '1px',
+                          boxShadow: '0 0 6px currentColor',
+                        }}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
 
               {/* 玩家状态行：HP + 状态图标 */}
               <div className="px-3 py-1.5">

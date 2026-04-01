@@ -26,7 +26,7 @@ export const PLAYER_INITIAL = {
 // ============================================================
 export const BATTLE_SCALING = {
   /** 敌人HP随深度增长系数: hp * (1 + depth * hpPerDepth) */
-  hpPerDepth: 0.25,
+  hpPerDepth: 0.20,
   /** 敌人伤害随深度增长系数: dmg * (1 + depth * dmgPerDepth) */
   dmgPerDepth: 0.12,
 } as const;
@@ -52,9 +52,9 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 18,
+  restHeal: 20,
   /** 模块强化费用系数: cost = level * costPerLevel */
-  upgradeCostPerLevel: 40,
+  upgradeCostPerLevel: 30,
   /** 模块最大等级 */
   maxAugmentLevel: 5,
 } as const;

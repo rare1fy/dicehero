@@ -103,7 +103,7 @@ export const DiceRewardScreen: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`relative flex flex-col items-center p-3 rounded border-2 transition-all min-w-[100px] ${
+        className={`relative flex flex-col items-center p-2 rounded border-2 transition-all min-w-[80px] max-w-[100px] flex-1 ${
           isSelected
             ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
             : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
@@ -227,7 +227,7 @@ export const DiceRewardScreen: React.FC = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex justify-center gap-3 flex-wrap"
+              className="flex justify-center gap-2 px-1"
             >
               {diceOptions.map(def => renderDiceCard(
                 def.id, 1, selectedNewDice === def.id,
