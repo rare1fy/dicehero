@@ -25,7 +25,7 @@ export const CampfireScreen: React.FC = () => {
         <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
         <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
           <PixelDice size={3} />
-          <h2 className="text-lg font-black pixel-text-shadow tracking-wide">★ 强化骰子 ★</h2>
+          <h2 className="text-lg font-black pixel-text-shadow tracking-wide">◆ 强化骰子 ◆</h2>
         </div>
         <p className="text-[var(--dungeon-text-dim)] mb-5 text-[9px] text-center relative z-10">
           消耗金币强化骰子，每面点数+1，效果增强50%。最高 Lv.{DICE_MAX_LEVEL}。
@@ -91,7 +91,7 @@ export const CampfireScreen: React.FC = () => {
                         animate={{ scale: 1 }}
                         className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-gold)] rounded-full flex items-center justify-center"
                       >
-                        <span className="text-[8px] text-black font-black">✓</span>
+                        <span className="text-[8px] text-black font-black">●</span>
                       </motion.div>
                     )}
                   </motion.button>
@@ -145,7 +145,7 @@ export const CampfireScreen: React.FC = () => {
                       };
                     });
                     addLog(`${def.name} 已强化至 Lv.${target.level + 1}！`);
-                    addToast(`⬆️ ${def.name} 升级到 Lv.${target.level + 1}!`, 'buff');
+                    addToast(`▲ ${def.name} 升级到 Lv.${target.level + 1}!`, 'buff');
                   }}
                   className="w-full py-2 mt-2 pixel-btn pixel-btn-primary text-[10px] disabled:opacity-30"
                 >
@@ -171,7 +171,7 @@ export const CampfireScreen: React.FC = () => {
       <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
       <div className="relative z-10 flex flex-col items-center">
         <PixelCampfire size={4} />
-        <h2 className="text-lg font-black mb-2 pixel-text-shadow tracking-wide mt-1">★ 篑火营地 ★</h2>
+        <h2 className="text-lg font-black mb-2 pixel-text-shadow tracking-wide mt-1">◆ 篑火营地 ◆</h2>
         <p className="text-[var(--dungeon-text-dim)] mb-8 text-[9px]">在永夜中短暂的温暖。</p>
         
         <div className="space-y-3 w-full max-w-xs">

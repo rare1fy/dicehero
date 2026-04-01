@@ -54,7 +54,7 @@ const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Ene
     dropAugment: config.drops.augment,
     rerollReward: config.drops.rerollReward,
     statuses: [],
-    distance: (config.combatType === 'ranger' || config.combatType === 'caster' || config.combatType === 'priest') ? 3 : 0,
+    distance: (config.combatType === 'warrior' || config.combatType === 'guardian') ? 2 : 3,
     pattern: buildPattern(config, dmgScale),
   };
 };

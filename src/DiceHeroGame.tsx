@@ -276,7 +276,7 @@ export default function DiceHeroGame() {
       statuses: [],
       battleWaves: waves,
       currentWaveIndex: 0,
-      targetEnemyUid: firstWave[0]?.uid || null,
+      targetEnemyUid: (firstWave.find(e => e.combatType === 'guardian') || firstWave[0])?.uid || null,
       diceBag: initDiceBag(prev.ownedDice),
       discardPile: [], // 新战斗开始时清空所有状态效果
       freeRerollsLeft: prev.freeRerollsPerTurn,
@@ -944,7 +944,7 @@ export default function DiceHeroGame() {
           await new Promise(r => setTimeout(r, 700));
           const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== targetUid);
           if (remainingAlive.length > 0) {
-            setGame(prev => ({ ...prev, targetEnemyUid: remainingAlive[0].uid }));
+            setGame(prev => ({ ...prev, targetEnemyUid: (remainingAlive.find(e => e.combatType === 'guardian') || remainingAlive[0]).uid }));
             addLog(`当前目标被击败！还有 ${remainingAlive.length} 个敌人存活。`);
             return;
           }
@@ -966,7 +966,7 @@ export default function DiceHeroGame() {
           const nextWave = game.battleWaves[nextWaveIdx].enemies;
           setEnemies(nextWave);
           setEnemyEffects({});
-          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false }));
           setWaveAnnouncement(nextWaveIdx + 1);
           addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
           rollAllDice();
@@ -1048,7 +1048,7 @@ export default function DiceHeroGame() {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         setEnemies(nextWave);
         setEnemyEffects({});
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false }));
         setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
@@ -1151,24 +1151,34 @@ export default function DiceHeroGame() {
             continue;
           }
           
-          // Ranged (ranger/caster): attack from any distance
-          // Warrior at distance 0: attack
-          // All others: normal attack
+          // Combat type differentiation:
+          // - warrior: high melee damage, 20% bonus at close range
+          // - ranger: multi-hit (2 weaker hits), chance to apply burn
+          // - caster: single hit + guaranteed debuff
+          // - others: normal attack
           setEnemyEffectForUid(e.uid, 'attack');
           setScreenShake(true);
           
           let damage = e.attackDmg;
-          // Ranged enemies do less damage
-          if (e.combatType === 'ranger' || e.combatType === 'caster') {
-            damage = Math.floor(damage * 0.7);
+          // Warrior: melee powerhouse - 20% bonus damage at close range
+          if (e.combatType === 'warrior') {
+            damage = Math.floor(damage * 1.2);
+          }
+          // Ranger: slightly less per hit but attacks twice (handled below)
+          if (e.combatType === 'ranger') {
+            damage = Math.floor(damage * 0.55);
+          }
+          // Caster: moderate damage but always applies a debuff
+          if (e.combatType === 'caster') {
+            damage = Math.floor(damage * 0.8);
           }
           const str = e.statuses.find(s => s.type === 'strength');
           if (str) damage += str.value;
           const weak = e.statuses.find(s => s.type === 'weak');
           if (weak) damage = Math.max(1, Math.floor(damage * 0.75));
           
-          // Caster: chance to apply debuff
-          if (e.combatType === 'caster' && Math.random() < 0.3) {
+          // Caster: guaranteed debuff on every attack
+          if (e.combatType === 'caster') {
             setGame(prev => {
               const poisonStatus = prev.statuses.find(s => s.type === 'poison');
               if (poisonStatus) {
@@ -1196,6 +1206,28 @@ export default function DiceHeroGame() {
           setPlayerEffect('flash');
           addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
           playSound('enemy');
+          
+          // Ranger: second hit after short delay
+          if (e.combatType === 'ranger') {
+            await new Promise(r => setTimeout(r, 250));
+            const secondHit = Math.floor(e.attackDmg * 0.55);
+            setGame(prev => {
+              let newArmor = prev.armor;
+              let newHp = prev.hp;
+              if (newArmor > 0) {
+                const abs = Math.min(newArmor, secondHit);
+                newArmor -= abs;
+                const hpD = secondHit - abs;
+                if (hpD > 0) newHp = Math.max(0, newHp - hpD);
+              } else {
+                newHp = Math.max(0, newHp - secondHit);
+              }
+              return { ...prev, hp: newHp, armor: newArmor };
+            });
+            addFloatingText(`-${secondHit}`, 'text-orange-400', undefined, 'player');
+            addLog(`${e.name} 追击造成 ${secondHit} 伤害！`);
+            playSound('enemy');
+          }
           
           await new Promise(r => setTimeout(r, 300));
           setScreenShake(false);
@@ -1233,7 +1265,7 @@ export default function DiceHeroGame() {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         setEnemies(nextWave);
         setEnemyEffects({});
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: nextWave[0]?.uid || null, isEnemyTurn: false }));
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false }));
         setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
@@ -1359,7 +1391,7 @@ export default function DiceHeroGame() {
     const currentTarget = alive.find(e => e.uid === game.targetEnemyUid);
     if (!currentTarget) {
       // Current target is dead or not set, switch to first alive enemy
-      setGame(prev => ({ ...prev, targetEnemyUid: alive[0].uid }));
+      setGame(prev => ({ ...prev, targetEnemyUid: (alive.find(e => e.combatType === 'guardian') || alive[0]).uid }));
     }
   }, [enemies, game.phase, game.targetEnemyUid]);
 
@@ -2312,7 +2344,7 @@ useEffect(() => {
                       {/* 牌型名称 */}
                       <div className="text-2xl font-bold text-[var(--pixel-gold)] pixel-text-shadow animate-bounce-in"
                         style={{textShadow: '0 0 20px rgba(212,160,48,0.8), 0 2px 4px rgba(0,0,0,0.8)'}}>
-                        ★ {settlementData.bestHand} ★
+                        ◆ {settlementData.bestHand} ◆
                       </div>
                       
                       {/* 骰子展示区 */}
@@ -2352,7 +2384,7 @@ useEffect(() => {
                           {settlementData.triggeredEffects.map((eff, i) => (
                             <div key={i} className="text-xs px-2 py-1 bg-[var(--pixel-green-dark)] border border-[var(--pixel-green)] text-[var(--pixel-green-light)] animate-fade-in"
                               style={{borderRadius: '2px', animationDelay: `${i * 100}ms`}}>
-                              ⚡ {eff.name}: {eff.detail}
+                              ◆ {eff.name}: {eff.detail}
                             </div>
                           ))}
                         </div>
@@ -2523,7 +2555,7 @@ useEffect(() => {
                             transition={{ delay: 0.3 }}
                             className="text-2xl font-bold text-[var(--pixel-blue)] pixel-text-shadow"
                           >
-                            +{showDamageOverlay.armor} 🛡
+                            +{showDamageOverlay.armor} 护甲
                           </motion.span>
                         )}
                         {showDamageOverlay.heal > 0 && (
@@ -2533,7 +2565,7 @@ useEffect(() => {
                             transition={{ delay: 0.3 }}
                             className="text-2xl font-bold text-emerald-400 pixel-text-shadow"
                           >
-                            +{showDamageOverlay.heal} ❤
+                            +{showDamageOverlay.heal} 治疗
                           </motion.span>
                         )}
                       </div>

@@ -26,9 +26,9 @@ export const PLAYER_INITIAL = {
 // ============================================================
 export const BATTLE_SCALING = {
   /** 敌人HP随深度增长系数: hp * (1 + depth * hpPerDepth) */
-  hpPerDepth: 0.20,
+  hpPerDepth: 0.15,
   /** 敌人伤害随深度增长系数: dmg * (1 + depth * dmgPerDepth) */
-  dmgPerDepth: 0.12,
+  dmgPerDepth: 0.10,
 } as const;
 
 // ============================================================
@@ -52,7 +52,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 20,
+  restHeal: 25,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 30,
   /** 模块最大等级 */
@@ -64,7 +64,7 @@ export const CAMPFIRE_CONFIG = {
 // ============================================================
 export const LOOT_CONFIG = {
   /** 普通怪掉落金币 */
-  normalDropGold: 20,
+  normalDropGold: 25,
   /** 精英怪掉落金币 */
   eliteDropGold: 50,
   /** Boss掉落金币 */
@@ -102,10 +102,10 @@ export const MAP_CONFIG = {
   randomLayerNodeRange: [2, 4] as [number, number],
   /** 节点类型权重（随机层） */
   nodeTypeWeights: [
-    { type: 'elite' as const, cumWeight: 0.12 },
+    { type: 'elite' as const, cumWeight: 0.10 },
     { type: 'campfire' as const, cumWeight: 0.24 },
     { type: 'shop' as const, cumWeight: 0.38 },
-    { type: 'event' as const, cumWeight: 0.56 },
+    { type: 'event' as const, cumWeight: 0.58 },
     // 剩余概率 = enemy
   ],
 } as const;
