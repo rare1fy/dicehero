@@ -434,7 +434,7 @@ export default function DiceHeroGame() {
       // 从骰子库抽取等量新骰子
       const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, unselectedDefIds.length);
       if (shuffled) {
-        addToast('⚓ 弃骰库洗回骰子库', 'info');
+        addToast(' 弃骰库洗回骰子库', 'info');
       }
 
       // 同步更新手中骰子：用新抽的替换未选中的
@@ -493,7 +493,7 @@ export default function DiceHeroGame() {
       if (!isCurrentlySelected && newSelected.length > 1 && hasSpecial) {
         const handResult = checkHands(newSelected);
         if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
-          setTimeout(() => addToast('⚠️ 多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
+          setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
         }
       }
       return next;
@@ -911,7 +911,7 @@ export default function DiceHeroGame() {
     if (outcome.statusEffects && outcome.statusEffects.length > 0) {
       if (isElementalAoe) {
         // 高阶同元素牌型：状态效果AOE全体敌人
-        addFloatingText('💥 元素爆发!', 'text-[var(--pixel-gold)]', undefined, 'enemy');
+        addFloatingText('元素爆发!', 'text-[var(--pixel-gold)]', undefined, 'enemy');
       }
       outcome.statusEffects.forEach((s, idx) => {
         setTimeout(() => {
@@ -1737,11 +1737,11 @@ useEffect(() => {
 
   
   const COMBAT_TYPE_DESC: Record<string, { name: string; icon: string; color: string; desc: string }> = {
-    warrior: { name: '战士', icon: '⚔️', color: 'var(--pixel-red)', desc: '近战类型，需要接近后才能攻击。每回合逼近1步，到达后每回合普通攻击。' },
-    guardian: { name: '守护者', icon: '🛡️', color: 'var(--pixel-blue)', desc: '重装近战类型，需要接近后才能攻击。交替攻击和举盾防御，获得额外护甲。' },
-    ranger: { name: '游侠', icon: '🏹', color: 'var(--pixel-green)', desc: '远程类型，从远处就能发动攻击。伤害稳定但较低，持续输出。' },
-    caster: { name: '施法者', icon: '✨', color: 'var(--pixel-purple)', desc: '远程魔法类型，从远处就能发动攻击。会释放强力法术，可能附带特殊效果。' },
-    priest: { name: '牧师', icon: '💖', color: 'var(--pixel-gold)', desc: '治疗类型，交替攻击和治疗友方。优先治疗血量最低的友方。' },
+    warrior: { name: '战士', icon: '', color: 'var(--pixel-red)', desc: '近战类型，需要接近后才能攻击。每回合逼近1步，到达后每回合普通攻击。' },
+    guardian: { name: '守护者', icon: '', color: 'var(--pixel-blue)', desc: '重装近战类型，需要接近后才能攻击。交替攻击和举盾防御，获得额外护甲。' },
+    ranger: { name: '游侠', icon: '', color: 'var(--pixel-green)', desc: '远程类型，从远处就能发动攻击。伤害稳定但较低，持续输出。' },
+    caster: { name: '施法者', icon: '', color: 'var(--pixel-purple)', desc: '远程魔法类型，从远处就能发动攻击。会释放强力法术，可能附带特殊效果。' },
+    priest: { name: '牧师', icon: '', color: 'var(--pixel-gold)', desc: '治疗类型，交替攻击和治疗友方。优先治疗血量最低的友方。' },
   };
 
   const getEffectiveAttackDmg = (e: Enemy) => {
@@ -2502,7 +2502,7 @@ useEffect(() => {
                         ◆ {settlementData.bestHand} ◆
                       {settlementData.isSameElement && (
                         <div className="text-sm font-bold text-[var(--pixel-cyan)] mt-1 animate-pulse" style={{textShadow: '0 0 15px rgba(48,216,208,0.9), 0 0 30px rgba(48,216,208,0.5)'}}>
-                          ✨ 元素共鸣 ×2 ✨
+                          元素共鸣 ×2
                         </div>
                       )}
                       </div>
@@ -2824,7 +2824,7 @@ useEffect(() => {
                               </div>
                             </div>
                           </div>
-                          <button onClick={() => setEnemyInfoTarget(null)} className="text-[var(--dungeon-text-dim)] hover:text-white text-sm font-bold">✕</button>
+                          <button onClick={() => setEnemyInfoTarget(null)} className="text-[var(--dungeon-text-dim)] hover:text-white text-sm font-bold"></button>
                         </div>
                         
                         <div className="text-[9px] text-[var(--dungeon-text)] leading-relaxed mb-2 px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>
@@ -2955,7 +2955,7 @@ useEffect(() => {
                             <span className="text-[7px] text-[var(--pixel-orange-light)] ml-1">{getOnPlayDescription(def.onPlay)}</span>
                           )}
                       {showAsNormal && (
-                        <span className="text-[7px] text-[var(--pixel-orange)] ml-1">⚠ 效果已禁用</span>
+                        <span className="text-[7px] text-[var(--pixel-orange)] ml-1">效果已禁用</span>
                       )}
                         </div>
                       </div>

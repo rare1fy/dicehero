@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef } from '../data/dice';
-import { PixelSword, PixelHeart, PixelShield, PixelSkull, PixelCoin, PixelDice, PixelRefresh, PixelTrophy, PixelClose } from './PixelIcons';
+import { PixelSword, PixelHeart, PixelShield, PixelSkull, PixelCoin, PixelDice, PixelRefresh, PixelTrophy, PixelClose, PixelStar, PixelCampfire } from './PixelIcons';
 
 interface StatsModalProps {
   onClose: () => void;
@@ -44,9 +44,9 @@ export const StatsModal: React.FC<StatsModalProps> = ({ onClose }) => {
     </div>
   );
 
-  const SectionTitle = ({ title }: { title: string }) => (
-    <div className="text-[8px] font-bold text-[var(--dungeon-text-dim)] uppercase tracking-widest mt-3 mb-1 border-b border-[rgba(255,255,255,0.1)] pb-0.5">
-      {title}
+  const SectionTitle = ({ title, icon }: { title: string; icon?: React.ReactNode }) => (
+    <div className="text-[8px] font-bold text-[var(--dungeon-text-dim)] uppercase tracking-widest mt-3 mb-1 border-b border-[rgba(255,255,255,0.1)] pb-0.5 flex items-center gap-1">
+      {icon} {title}
     </div>
   );
 
@@ -90,11 +90,11 @@ export const StatsModal: React.FC<StatsModalProps> = ({ onClose }) => {
           </div>
         </div>
 
-        <SectionTitle title="⚔ 伤害总览" />
+        <SectionTitle title="伤害总览" icon={<PixelSword size={1.5} />} />
         <StatRow label="单次最高伤害" value={s.maxSingleHit} color="var(--pixel-red)" icon={<PixelSword size={1.5} />} />
         <StatRow label="场均伤害" value={avgDamage} color="var(--pixel-orange)" icon={<PixelSword size={1.5} />} />
 
-        <SectionTitle title="🎲 出牌统计" />
+        <SectionTitle title="出牌统计" icon={<PixelDice size={1.5} />} />
         <StatRow label="总出牌次数" value={s.totalPlays} color="var(--pixel-blue)" icon={<PixelDice size={1.5} />} />
         <StatRow label="最常用牌型" value={topHand ? topHand[0] + ' (' + topHand[1] + '次)' : '-'} color="var(--pixel-cyan)" />
         <StatRow label="最强牌型" value={bestHand} color="var(--pixel-gold)" icon={<PixelTrophy size={1.5} />} />
@@ -102,29 +102,31 @@ export const StatsModal: React.FC<StatsModalProps> = ({ onClose }) => {
 
         {topDice.length > 0 && (
           <>
-            <SectionTitle title="🎯 骰子使用 TOP3" />
+            <SectionTitle title="骰子使用 TOP3" icon={<PixelStar size={1.5} />} />
             {topDice.map((d, i) => (
+              <div key={d.name}>
               <StatRow
-                label={(i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉') + ' ' + d.name}
+                label={(i === 0 ? 'No.1 ' : i === 1 ? 'No.2 ' : 'No.3 ') + d.name}
                 value={d.count + '次'}
                 color={i === 0 ? 'var(--pixel-gold)' : i === 1 ? 'var(--pixel-cyan)' : 'var(--dungeon-text-bright)'}
               />
+              </div>
             ))}
           </>
         )}
 
-        <SectionTitle title="💀 战斗统计" />
+        <SectionTitle title="战斗统计" icon={<PixelSkull size={1.5} />} />
         <StatRow label="已完成战斗" value={s.battlesWon} color="var(--pixel-orange)" icon={<PixelSkull size={1.5} />} />
         <StatRow label="击杀敌人" value={s.enemiesKilled} color="var(--pixel-red)" />
         <StatRow label="精英战胜利" value={s.elitesWon} color="var(--pixel-purple)" />
         <StatRow label="Boss战胜利" value={s.bossesWon} color="var(--pixel-gold)" />
 
-        <SectionTitle title="❤ 生存统计" />
+        <SectionTitle title="生存统计" icon={<PixelHeart size={1.5} />} />
         <StatRow label="累计受到伤害" value={s.totalDamageTaken} color="var(--pixel-red)" icon={<PixelHeart size={1.5} />} />
         <StatRow label="累计回复量" value={s.totalHealing} color="var(--pixel-green)" icon={<PixelHeart size={1.5} />} />
         <StatRow label="累计获得护甲" value={s.totalArmorGained} color="var(--pixel-blue)" icon={<PixelShield size={1.5} />} />
 
-        <SectionTitle title="💰 经济统计" />
+        <SectionTitle title="经济统计" icon={<PixelCoin size={1.5} />} />
         <StatRow label="累计获得金币" value={s.goldEarned} color="var(--pixel-gold)" icon={<PixelCoin size={1.5} />} />
         <StatRow label="累计花费金币" value={s.goldSpent} color="var(--pixel-gold)" icon={<PixelCoin size={1.5} />} />
 

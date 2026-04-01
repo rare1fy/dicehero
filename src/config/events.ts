@@ -175,9 +175,9 @@ export const EVENTS_POOL: EventConfig[] = [
         action: {
           type: 'randomOutcome',
           outcomes: [
-            { weight: 0.4, actions: [{ type: 'modifySouls', value: 50 }], toast: '🎉 幸运！+50 金币', toastType: 'gold', log: '🎉 命运之轮转出了 50 金币！' },
-            { weight: 0.3, actions: [{ type: 'modifyGlobalRerolls', value: 2 }], toast: '🎉 幸运！+2 全局重骰', toastType: 'buff', log: '🎉 命运之轮赐予了 2 次全局重骰！' },
-            { weight: 0.3, actions: [{ type: 'modifyHp', value: -15 }], toast: '🎉 厄运降临！-15 HP', toastType: 'damage', log: '🎉 命运之轮带来了厄运，损失 15 HP！' },
+            { weight: 0.4, actions: [{ type: 'modifySouls', value: 50 }], toast: '幸运！+50 金币', toastType: 'gold', log: '命运之轮转出了 50 金币！' },
+            { weight: 0.3, actions: [{ type: 'modifyGlobalRerolls', value: 2 }], toast: '幸运！+2 全局重骰', toastType: 'buff', log: '命运之轮赐予了 2 次全局重骰！' },
+            { weight: 0.3, actions: [{ type: 'modifyHp', value: -15 }], toast: '厄运降临！-15 HP', toastType: 'damage', log: '命运之轮带来了厄运，损失 15 HP！' },
           ],
         },
       },

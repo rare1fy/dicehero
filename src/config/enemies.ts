@@ -57,7 +57,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'void_wanderer',
     name: '虚空巡游者',
-    emoji: '👻',
+    emoji: '',
     baseHp: 18, baseDmg: 5,
     category: 'normal',
     combatType: 'caster',
@@ -75,7 +75,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'rotten_beetle',
     name: '腐化甲虫',
-    emoji: '🪲',
+    emoji: '',
     baseHp: 38, baseDmg: 3,
     category: 'normal',
     combatType: 'guardian',
@@ -92,7 +92,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'scarlet_sprite',
     name: '猛红异灵',
-    emoji: '🦀',
+    emoji: '',
     baseHp: 20, baseDmg: 6,
     category: 'normal',
     combatType: 'caster',
@@ -110,7 +110,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'forgotten_shadow',
     name: '遗忘之影',
-    emoji: '👤',
+    emoji: '',
     baseHp: 14, baseDmg: 8,
     category: 'normal',
     combatType: 'warrior',
@@ -127,7 +127,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'dark_spider_swarm',
     name: '暗蝼蛛群',
-    emoji: '🕷',
+    emoji: '',
     baseHp: 20, baseDmg: 5,
     category: 'normal',
     combatType: 'ranger',
@@ -146,7 +146,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'cracked_watcher',
     name: '裂骸守望者',
-    emoji: '👁️',
+    emoji: '',
     baseHp: 42, baseDmg: 4,
     category: 'normal',
     combatType: 'guardian',
@@ -164,7 +164,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'soul_jellyfish',
     name: '噤魂水母',
-    emoji: '🪸',
+    emoji: '',
     baseHp: 18, baseDmg: 3,
     category: 'normal',
     combatType: 'priest',
@@ -182,7 +182,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
   {
     id: 'iron_puppet',
     name: '铁锤傀儿',
-    emoji: '🤖',
+    emoji: '',
     baseHp: 30, baseDmg: 8,
     category: 'normal',
     combatType: 'warrior',
@@ -206,7 +206,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'chaos_aggregate',
     name: '混沌聚合体',
-    emoji: '🌌',
+    emoji: '',
     baseHp: 70, baseDmg: 8,
     category: 'elite',
     combatType: 'caster',
@@ -230,7 +230,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'void_warden',
     name: '虚空典英长',
-    emoji: '⚔️',
+    emoji: '',
     baseHp: 110, baseDmg: 4,
     category: 'elite',
     combatType: 'guardian',
@@ -249,7 +249,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'abyss_prophet',
     name: '深渊预言家',
-    emoji: '🔮',
+    emoji: '',
     baseHp: 75, baseDmg: 7,
     category: 'elite',
     combatType: 'caster',
@@ -276,7 +276,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'eternal_clocksmith',
     name: '永恒钟表匠',
-    emoji: '⏰',
+    emoji: '',
     baseHp: 60, baseDmg: 11,
     category: 'elite',
     combatType: 'warrior',
@@ -301,7 +301,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'dream_weaver',
     name: '虚空织梦者',
-    emoji: '🌙️',
+    emoji: '',
     baseHp: 120, baseDmg: 8,
     category: 'boss',
     combatType: 'caster',
@@ -329,7 +329,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'eternal_lord',
     name: '永夜主宰',
-    emoji: '👿',
+    emoji: '',
     baseHp: 200, baseDmg: 10,
     category: 'boss',
     combatType: 'caster',

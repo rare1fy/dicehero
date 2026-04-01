@@ -92,7 +92,7 @@ export const CampfireScreen: React.FC = () => {
                         animate={{ scale: 1 }}
                         className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] rounded-full flex items-center justify-center"
                       >
-                        <span className="text-[8px] text-white font-black">✖</span>
+                        <span className="text-[8px] text-white font-black"></span>
                       </motion.div>
                     )}
                   </motion.button>
@@ -115,7 +115,7 @@ export const CampfireScreen: React.FC = () => {
                 style={{ borderColor: 'var(--pixel-red)' }}
               >
                 <div className="text-center text-xs font-bold text-[var(--pixel-red)] mb-2 pixel-text-shadow">
-                  ✖ 确认移除: {def.name}
+                   确认移除: {def.name}
                 </div>
                 {onPlayDesc && (
                   <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mb-2">
@@ -123,7 +123,7 @@ export const CampfireScreen: React.FC = () => {
                   </div>
                 )}
                 <div className="text-[8px] text-[var(--pixel-red-light)] text-center mb-2">
-                  ⚠ 此操作不可撤销！
+                   此操作不可撤销！
                 </div>
                 <button
                   onClick={() => {
@@ -139,7 +139,7 @@ export const CampfireScreen: React.FC = () => {
                       };
                     });
                     addLog(`移除了骰子: ${removedName}`);
-                    addToast(`✖ 已移除 ${removedName}`, 'damage');
+                    addToast(` 已移除 ${removedName}`, 'damage');
                   }}
                   className="w-full py-2 mt-1 pixel-btn text-[10px] font-bold"
                   style={{ background: 'rgba(224,60,60,0.3)', borderColor: 'var(--pixel-red)', color: 'var(--pixel-red-light)' }}

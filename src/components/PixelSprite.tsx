@@ -15,7 +15,7 @@ interface PixelSpriteProps {
 // 像素精灵数据：每个精灵用 [row][col] = color 的方式定义
 // 使用暗黑地牢色调
 const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: number }> = {
-  // 👻 虚空巡游者 — 幽灵形态
+  //  虚空巡游者 — 幽灵形态
   '虚空巡游者': {
     width: 10, height: 10,
     pixels: [
@@ -31,7 +31,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '#6a4e9e', '', '#6a4e9e', '', '#6a4e9e', '', ''],
     ]
   },
-  // 🪲 腐化甲虫 — 暗绿甲壳
+  //  腐化甲虫 — 暗绿甲壳
   '腐化甲虫': {
     width: 10, height: 10,
     pixels: [
@@ -47,7 +47,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['#1a1a0e', '', '', '', '#1a1a0e', '#1a1a0e', '', '', '', '#1a1a0e'],
     ]
   },
-  // 🩸 猩红异灵 — 血色恶魔
+  //  猩红异灵 — 血色恶魔
   '猩红异灵': {
     width: 10, height: 10,
     pixels: [
@@ -63,7 +63,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '#8b1a14', '', '#8b1a14', '#8b1a14', '', '#8b1a14', '', ''],
     ]
   },
-  // 🌑 遗忘之影 — 暗影实体
+  //  遗忘之影 — 暗影实体
   '遗忘之影': {
     width: 10, height: 10,
     pixels: [
@@ -79,7 +79,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '#1a1a2e', '', '', '', '', '#1a1a2e', '', ''],
     ]
   },
-  // 🌀 混沌聚合体 — 旋涡能量体
+  //  混沌聚合体 — 旋涡能量体
   '混沌聚合体': {
     width: 12, height: 12,
     pixels: [
@@ -97,7 +97,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '', '#5a1a8b', '#8b3cc8', '#8b3cc8', '#5a1a8b', '', '', '', ''],
     ]
   },
-  // ⛓️ 虚空典狱长 — 锁链守卫
+  //  虚空典狱长 — 锁链守卫
   '虚空典狱长': {
     width: 12, height: 12,
     pixels: [
@@ -115,7 +115,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '#3a3a4e', '#2a2a3e', '', '', '', '', '#2a2a3e', '#3a3a4e', '', ''],
     ]
   },
-  // 🕸️ 虚空织梦者 — Boss
+  //  虚空织梦者 — Boss
   '虚空织梦者': {
     width: 14, height: 14,
     pixels: [
@@ -135,7 +135,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '', '#1a3c8b', '', '', '', '', '#1a3c8b', '', '', '', ''],
     ]
   },
-  // 👑 永夜主宰 — 最终Boss
+  //  永夜主宰 — 最终Boss
   '永夜主宰': {
     width: 14, height: 14,
     pixels: [
@@ -155,7 +155,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '#5a1a8b', '', '', '', '', '', '', '#5a1a8b', '', '', ''],
     ]
   },
-  // 🦋 暗蚀蛾群
+  //  暗蚀蛾群
   '暗蚀蛾群': {
     width: 10, height: 8,
     pixels: [
@@ -169,7 +169,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '', '', '', '', '', '', ''],
     ]
   },
-  // 👁️ 裂隙守望者
+  //  裂隙守望者
   '裂隙守望者': {
     width: 10, height: 10,
     pixels: [
@@ -185,7 +185,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '', '#2a2a3e', '#2a2a3e', '', '', '', ''],
     ]
   },
-  // 🪼 噬魂水母
+  //  噬魂水母
   '噬魂水母': {
     width: 10, height: 10,
     pixels: [
@@ -201,7 +201,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['#3c6cc8', '', '', '', '#3c6cc8', '#3c6cc8', '', '', '', '#3c6cc8'],
     ]
   },
-  // 🤖 铁锈傀儡
+  //  铁锈傀儡
   '铁锈傀儡': {
     width: 10, height: 12,
     pixels: [
@@ -219,7 +219,7 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '#3a3a4e', '#3a3a4e', '', '', '', '', '#3a3a4e', '#3a3a4e', ''],
     ]
   },
-  // 🔮 深渊预言家
+  //  深渊预言家
   '深渊预言家': {
     width: 12, height: 12,
     pixels: [

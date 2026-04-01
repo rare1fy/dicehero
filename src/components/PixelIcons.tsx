@@ -35,7 +35,7 @@ const IconBase: React.FC<{ pixels: string[][]; ps: number; className?: string; s
 
 // ===== 地图节点图标 =====
 
-// ⚔️ 剑 — 战斗节点（8x8）
+//  剑 — 战斗节点（8x8）
 export const PixelSword: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '', '', '', '', '#e8e8f0', '#c8c8d0'],
@@ -50,7 +50,7 @@ export const PixelSword: React.FC<PixelIconProps> = ({ size = 2, className, styl
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 💀 骷髅 — 精英节点（7x7）
+//  骷髅 — 精英节点（7x7）
 export const PixelSkull: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '#c8c8d0', '#c8c8d0', '#c8c8d0', '#c8c8d0', '#c8c8d0', ''],
@@ -64,7 +64,7 @@ export const PixelSkull: React.FC<PixelIconProps> = ({ size = 2, className, styl
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 👑 王冠 — Boss节点（7x6）
+//  王冠 — Boss节点（7x6）
 export const PixelCrown: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '#e8d068', '', '#e8d068', '', '#e8d068', ''],
@@ -77,7 +77,7 @@ export const PixelCrown: React.FC<PixelIconProps> = ({ size = 2, className, styl
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 🛒 商店袋 — 商店节点（7x7）
+//  商店袋 — 商店节点（7x7）
 export const PixelShopBag: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '#3cc864', '#3cc864', '#3cc864', '', ''],
@@ -91,7 +91,7 @@ export const PixelShopBag: React.FC<PixelIconProps> = ({ size = 2, className, st
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// ❓ 问号 — 事件节点（7x7）
+//  问号 — 事件节点（7x7）
 export const PixelQuestion: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '#3c6cc8', '#3c6cc8', '#3c6cc8', '#3c6cc8', '#3c6cc8', ''],
@@ -105,7 +105,7 @@ export const PixelQuestion: React.FC<PixelIconProps> = ({ size = 2, className, s
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 🔥 篝火 — 休息节点（7x7）
+//  篝火 — 休息节点（7x7）
 export const PixelCampfire: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '', '#e8d068', '', '', ''],
@@ -547,7 +547,7 @@ export const PixelDiceWeighted: React.FC<PixelIconProps> = ({ size = 2, classNam
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 🔊 音量（6x6）
+//  音量（6x6）
 export const PixelVolume: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '#5a9e5a', '', '', ''],
@@ -560,7 +560,7 @@ export const PixelVolume: React.FC<PixelIconProps> = ({ size = 2, className, sty
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 🔇 静音（6x6）
+//  静音（6x6）
 export const PixelMute: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '#c74040', '', '', ''],
@@ -573,7 +573,7 @@ export const PixelMute: React.FC<PixelIconProps> = ({ size = 2, className, style
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 🎵 音乐（5x6）
+//  音乐（5x6）
 export const PixelMusic: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '#4a8ec7', '#6ac0ff', '#6ac0ff'],

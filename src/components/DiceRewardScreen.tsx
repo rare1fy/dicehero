@@ -66,7 +66,7 @@ export const DiceRewardScreen: React.FC = () => {
         return { ...prev, ownedDice: newOwned };
       });
       addLog(`升级骰子: ${def.name} → Lv.${newLevel}`);
-      addToast(`⬆️ ${def.name} 升级到 Lv.${newLevel}!`, 'buff');
+      addToast(`${def.name} 升级到 Lv.${newLevel}!`, 'buff');
     } else if (activeTab === 'remove' && selectedRemoveDice !== null) {
       const target = game.ownedDice[selectedRemoveDice];
       const def = getDiceDef(target.defId);
@@ -195,8 +195,8 @@ export const DiceRewardScreen: React.FC = () => {
       {/* Tab 切换 */}
       <div className="flex justify-center gap-1.5 mb-3 px-4 relative z-10">
         {([
-          { id: 'newDice' as RewardTab, label: '获取新骰子', icon: '🆕' },
-          { id: 'upgrade' as RewardTab, label: '升级骰子', icon: '⬆️', disabled: upgradableDice.length === 0 },
+          { id: 'newDice' as RewardTab, label: '获取新骰子', icon: '' },
+          { id: 'upgrade' as RewardTab, label: '升级骰子', icon: '', disabled: upgradableDice.length === 0 },
           { id: 'remove' as RewardTab, label: '移除骰子', icon: '◇', disabled: removableDice.length === 0 },
         ] as const).map(tab => (
           <button

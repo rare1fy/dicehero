@@ -88,7 +88,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
                   onClick={() => setExpanded(false)}
                   className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] text-xs font-bold"
                 >
-                  ✕
+                  
                 </button>
               </div>
 
