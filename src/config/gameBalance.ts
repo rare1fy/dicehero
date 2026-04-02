@@ -27,21 +27,21 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.55, dmgMult: 0.50 },  // 层0: 新手保护
-  { hpMult: 0.70, dmgMult: 0.65 },  // 层1: 简单
-  { hpMult: 0.85, dmgMult: 0.80 },  // 层2: 略有挑战
-  { hpMult: 1.10, dmgMult: 0.95 },  // 层3: 精英挑战（里程碑）
-  { hpMult: 1.20, dmgMult: 1.00 },  // 层4: 获得增长后新挑战
-  { hpMult: 1.40, dmgMult: 1.10 },  // 层5: 高挑战
+  { hpMult: 0.50, dmgMult: 0.45 },  // 层0: 新手保护
+  { hpMult: 0.65, dmgMult: 0.60 },  // 层1: 简单
+  { hpMult: 0.80, dmgMult: 0.75 },  // 层2: 略有挑战
+  { hpMult: 1.05, dmgMult: 0.90 },  // 层3: 精英挑战（里程碑）
+  { hpMult: 1.15, dmgMult: 0.95 },  // 层4: 获得增长后新挑战
+  { hpMult: 1.35, dmgMult: 1.05 },  // 层5: 高挑战
   { hpMult: 1.00, dmgMult: 1.00 },  // 层6: 营地（无战斗）
-  { hpMult: 1.80, dmgMult: 1.25 },  // 层7: 中期Boss
-  { hpMult: 1.10, dmgMult: 0.90 },  // 层8: Boss后喘息
-  { hpMult: 1.35, dmgMult: 1.10 },  // 层9: 回升
-  { hpMult: 1.60, dmgMult: 1.25 },  // 层10: 挑战
-  { hpMult: 1.85, dmgMult: 1.35 },  // 层11: 高挑战
-  { hpMult: 2.10, dmgMult: 1.45 },  // 层12: 极限
+  { hpMult: 1.70, dmgMult: 1.20 },  // 层7: 中期Boss
+  { hpMult: 1.00, dmgMult: 0.85 },  // 层8: Boss后喘息
+  { hpMult: 1.40, dmgMult: 1.10 },  // 层9: 回升
+  { hpMult: 1.65, dmgMult: 1.25 },  // 层10: 挑战
+  { hpMult: 1.90, dmgMult: 1.40 },  // 层11: 高挑战
+  { hpMult: 2.20, dmgMult: 1.50 },  // 层12: 极限
   { hpMult: 1.00, dmgMult: 1.00 },  // 层13: 营地（无战斗）
-  { hpMult: 2.80, dmgMult: 1.55 },  // 层14: 终极Boss
+  { hpMult: 2.80, dmgMult: 1.60 },  // 层14: 终极Boss
 ];
 
 /** 获取指定层级的缩放系数 */
@@ -78,7 +78,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 25,
+  restHeal: 30,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 30,
   /** 模块最大等级 */
@@ -90,11 +90,11 @@ export const CAMPFIRE_CONFIG = {
 // ============================================================
 export const LOOT_CONFIG = {
   /** 普通怪掉落金币 */
-  normalDropGold: 25,
+  normalDropGold: 30,
   /** 精英怪掉落金币 */
-  eliteDropGold: 50,
+  eliteDropGold: 60,
   /** Boss掉落金币 */
-  bossDropGold: 80,
+  bossDropGold: 100,
   /** 增幅选择数量 */
   augmentChoiceCount: 3,
   /** 精英奖励池 */
