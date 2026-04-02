@@ -3108,11 +3108,6 @@ useEffect(() => {
 
             {/* ===== 弹窗和模态框保持不变 ===== */}
 
-            {/* Dice Guide Modal */}
-            <AnimatePresence>
-              {showDiceGuide && (
-                <motion.div
-                  initial={{ opacity: 0 }}
             {/* Hand Types Guide Modal */}
             <AnimatePresence>
               {showHandGuide && (
@@ -3218,6 +3213,9 @@ useEffect(() => {
                 </motion.div>
               )}
             </AnimatePresence>
+
+
+            
 
             {/* Calculation Modal */}
             <AnimatePresence>
