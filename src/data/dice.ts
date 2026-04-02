@@ -48,9 +48,9 @@ const ice: DiceDef = {
   name: '冰霜骰子',
   element: 'ice',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时减速敌人1回合',
+  description: '出牌时冰冻敌人1回合',
   rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'slow', value: 1, duration: 1 } },
+  onPlay: { statusToEnemy: { type: 'freeze', value: 1, duration: 1 } },
 };
 
 const thunder: DiceDef = {
@@ -121,7 +121,7 @@ const joker: DiceDef = {
   id: 'joker',
   name: '小丑骰子',
   element: 'normal',
-  faces: [1, 1, 1, 1, 1, 1],
+  faces: [1, 2, 3, 4, 5, 6],
   description: '每回合六面变为同一随机点数，天然凑对子/三条',
   rarity: 'rare',
   // 小丑效果在DiceHeroGame中特殊处理：每回合随机1个点数，六面全为该点数

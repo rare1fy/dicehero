@@ -58,10 +58,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'void_wanderer',
     name: '虚空巡游者',
     emoji: '',
-    baseHp: 19, baseDmg: 3,
+    baseHp: 24, baseDmg: 3,
     category: 'normal',
     combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -79,7 +79,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     baseHp: 36, baseDmg: 3,
     category: 'normal',
     combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -93,10 +93,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'scarlet_sprite',
     name: '猛红异灵',
     emoji: '',
-    baseHp: 20, baseDmg: 3,
+    baseHp: 24, baseDmg: 3,
     category: 'normal',
     combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -111,10 +111,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'forgotten_shadow',
     name: '遗忘之影',
     emoji: '',
-    baseHp: 15, baseDmg: 8,
+    baseHp: 25, baseDmg: 7,
     category: 'normal',
     combatType: 'warrior',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -128,10 +128,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'dark_spider_swarm',
     name: '暗蝼蛛群',
     emoji: '',
-    baseHp: 19, baseDmg: 3,
+    baseHp: 24, baseDmg: 3,
     category: 'normal',
     combatType: 'ranger',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -147,10 +147,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'cracked_watcher',
     name: '裂骸守望者',
     emoji: '',
-    baseHp: 40, baseDmg: 4,
+    baseHp: 32, baseDmg: 4,
     category: 'normal',
     combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -165,10 +165,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'soul_jellyfish',
     name: '噤魂水母',
     emoji: '',
-    baseHp: 17, baseDmg: 2,
+    baseHp: 22, baseDmg: 2,
     category: 'normal',
     combatType: 'priest',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -183,10 +183,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'iron_puppet',
     name: '铁锤傀儿',
     emoji: '',
-    baseHp: 30, baseDmg: 8,
+    baseHp: 28, baseDmg: 7,
     category: 'normal',
     combatType: 'warrior',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 10, augment: false },
     phases: [
       {
         actions: [
@@ -210,7 +210,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     baseHp: 95, baseDmg: 9,
     category: 'elite',
     combatType: 'caster',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 30, augment: true, rerollReward: 2 },
     phases: [
       {
         hpThreshold: 0.4,
@@ -234,7 +234,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     baseHp: 110, baseDmg: 5,
     category: 'elite',
     combatType: 'guardian',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 30, augment: true, rerollReward: 2 },
     phases: [
       {
         actions: [
@@ -253,7 +253,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     baseHp: 82, baseDmg: 8,
     category: 'elite',
     combatType: 'caster',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 30, augment: true, rerollReward: 2 },
     phases: [
       {
         hpThreshold: 0.3,
@@ -280,7 +280,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     baseHp: 68, baseDmg: 10,
     category: 'elite',
     combatType: 'warrior',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 30, augment: true, rerollReward: 2 },
     phases: [
       {
         actions: [
@@ -305,7 +305,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     baseHp: 160, baseDmg: 10,
     category: 'boss',
     combatType: 'caster',
-    drops: { gold: 80, augment: true, rerollReward: 3 },
+    drops: { gold: 50, augment: true },
     phases: [
       {
         hpThreshold: 0.4,

@@ -16,6 +16,7 @@ export const ShopScreen: React.FC = () => {
   const [removeDicePrice, setRemoveDicePrice] = useState(0);
   const [removeDiceItemId, setRemoveDiceItemId] = useState('');
 
+
   return (
   <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
     <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
@@ -57,7 +58,7 @@ export const ShopScreen: React.FC = () => {
                 setRemoveDiceMode(true);
                 setRemoveDicePrice(item.price);
                 setRemoveDiceItemId(item.id);
-                return; // Don't buy yet, show selection
+                return;
               } else if (item.type === 'augment' && item.augment) {
                 setGame(prev => ({ 
                   ...prev, 
@@ -81,7 +82,7 @@ export const ShopScreen: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className={`text-[8px] font-bold ${isDisabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--pixel-purple)]'} tracking-[0.1em] mb-0.5 opacity-70`}>
-                {item.type === 'reroll' ? '基础服务' : item.type === 'specialDice' ? '特殊骰子' : item.type === 'removeDice' ? '构筑服务' : '稀有模块'}
+                {item.type === 'reroll' ? '基础服务' : item.type === 'specialDice' ? '特殊骰子' : '稀有模块'}
               </div>
               <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none mb-0.5 pixel-text-shadow">
                 {item.label}
@@ -98,7 +99,8 @@ export const ShopScreen: React.FC = () => {
       })}
 
       
-      {/* 骰子移除选择 */}
+      
+
       {removeDiceMode && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}

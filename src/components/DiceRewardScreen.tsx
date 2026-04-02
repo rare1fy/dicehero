@@ -1,20 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { OwnedDie } from '../types/game';
-import { getDiceDef, pickRandomDice, getDiceRewardPool, DICE_MAX_LEVEL, getUpgradedFaces } from '../data/dice';
+import { getDiceDef, pickRandomDice, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
 import { ElementBadge, getOnPlayDescription, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
-import { PixelDice, PixelStar, PixelArrowUp, PixelClose } from './PixelIcons';
+import { PixelDice, PixelStar } from './PixelIcons';
 import { ELEMENT_NAMES, ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
 
-type RewardTab = 'newDice' | 'upgrade';
+type RewardTab = 'newDice';
 
 export const DiceRewardScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
   const [activeTab, setActiveTab] = useState<RewardTab>('newDice');
   const [selectedNewDice, setSelectedNewDice] = useState<string | null>(null);
-  const [selectedUpgradeDice, setSelectedUpgradeDice] = useState<number | null>(null);
+  
     const [confirmed, setConfirmed] = useState(false);
 
   // 根据战斗类型决定奖励池
@@ -29,18 +28,8 @@ export const DiceRewardScreen: React.FC = () => {
     return pickRandomDice(pool, 3);
   }, [battleType]);
 
-  // 可升级的骰子（等级 < MAX）
-  const upgradableDice = useMemo(() => {
-    return game.ownedDice
-      .map((d, i) => ({ ...d, index: i }))
-      .filter(d => d.level < DICE_MAX_LEVEL);
-  }, [game.ownedDice]);
 
   // 可移除的骰子（至少保留4颗）
-  const removableDice = useMemo(() => {
-    if (game.ownedDice.length <= 4) return [];
-    return game.ownedDice.map((d, i) => ({ ...d, index: i }));
-  }, [game.ownedDice]);
 
   const handleConfirm = () => {
     if (confirmed) return;
@@ -55,17 +44,6 @@ export const DiceRewardScreen: React.FC = () => {
       }));
       addLog(`获得新骰子: ${def.name}`);
       addToast(`◆ 获得 ${def.name}!`, 'buff');
-    } else if (activeTab === 'upgrade' && selectedUpgradeDice !== null) {
-      const target = game.ownedDice[selectedUpgradeDice];
-      const def = getDiceDef(target.defId);
-      const newLevel = target.level + 1;
-      setGame(prev => {
-        const newOwned = [...prev.ownedDice];
-        newOwned[selectedUpgradeDice] = { ...newOwned[selectedUpgradeDice], level: newLevel };
-        return { ...prev, ownedDice: newOwned };
-      });
-      addLog(`升级骰子: ${def.name} → Lv.${newLevel}`);
-      addToast(`${def.name} 升级到 Lv.${newLevel}!`, 'buff');
     }
 
     // 延迟后跳转到 loot 阶段
@@ -186,12 +164,10 @@ export const DiceRewardScreen: React.FC = () => {
       <div className="flex justify-center gap-1.5 mb-3 px-4 relative z-10">
         {([
           { id: 'newDice' as RewardTab, label: '获取新骰子', icon: '' },
-          { id: 'upgrade' as RewardTab, label: '升级骰子', icon: '', disabled: upgradableDice.length === 0 },
-          { id: 'remove' as RewardTab, label: '移除骰子', icon: '◇', disabled: removableDice.length === 0 },
         ] as const).map(tab => (
           <button
             key={tab.id}
-            onClick={() => { if (!('disabled' in tab && tab.disabled)) { setActiveTab(tab.id); setSelectedNewDice(null); setSelectedUpgradeDice(null); } }}
+            onClick={() => { if (!('disabled' in tab && tab.disabled)) { setActiveTab(tab.id); setSelectedNewDice(null); } }}
             disabled={'disabled' in tab && tab.disabled}
             className={`px-3 py-1.5 text-[9px] font-bold rounded transition-all ${
               activeTab === tab.id
@@ -227,46 +203,7 @@ export const DiceRewardScreen: React.FC = () => {
             </motion.div>
           )}
 
-          {/* 升级骰子 */}
-          {activeTab === 'upgrade' && (
-            <motion.div
-              key="upgrade"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <div className="text-center text-[8px] text-[var(--dungeon-text-dim)] mb-2">
-                升级后每面点数+1，效果增强50%
-              </div>
-              <div className="flex justify-center gap-2.5 flex-wrap">
-                {upgradableDice.map(d => {
-                  const def = getDiceDef(d.defId);
-                  const nextFaces = getUpgradedFaces(def, d.level + 1);
-                  return (
-                    <div key={d.index} className="relative">
-                      {renderDiceCard(
-                        d.defId, d.level, selectedUpgradeDice === d.index,
-                        () => setSelectedUpgradeDice(selectedUpgradeDice === d.index ? null : d.index)
-                      )}
-                      {/* 升级预览 */}
-                      {selectedUpgradeDice === d.index && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="absolute -bottom-5 left-0 right-0 text-center text-[7px] text-[var(--pixel-green)]"
-                        >
-                          → Lv.{d.level + 1} [{nextFaces.join(',')}]
-                        </motion.div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* 移除骰子 */}
-
+          
         </AnimatePresence>
       </div>
 
@@ -281,9 +218,9 @@ export const DiceRewardScreen: React.FC = () => {
         </button>
         <button
           onClick={handleConfirm}
-          disabled={confirmed || (activeTab === 'newDice' && !selectedNewDice) || (activeTab === 'upgrade' && selectedUpgradeDice === null)}
+          disabled={confirmed || !selectedNewDice}
           className={`px-6 py-2 text-[9px] font-bold transition-all ${
-            confirmed || (activeTab === 'newDice' && !selectedNewDice) || (activeTab === 'upgrade' && selectedUpgradeDice === null)
+            confirmed || !selectedNewDice
               ? 'bg-[rgba(255,255,255,0.05)] text-[var(--dungeon-text-dim)] border border-[rgba(255,255,255,0.05)] cursor-not-allowed'
               : 'bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] border border-[var(--pixel-gold)] hover:bg-[var(--pixel-gold)] hover:text-black'
           }`}

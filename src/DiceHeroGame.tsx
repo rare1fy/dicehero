@@ -313,6 +313,22 @@ export default function DiceHeroGame() {
     setGame(prev => ({ ...prev, stats: { ...prev.stats, totalRerolls: prev.stats.totalRerolls + 1 } }));
     }
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
+    // 小丑骰子：每回合所有面变为同一随机点数
+    setDice(prev => prev.map(d => {
+      if (d.diceDefId === 'joker') {
+        const jokerValue = Math.floor(Math.random() * 6) + 1;
+        return { ...d, value: jokerValue };
+      }
+      return d;
+    }));
+    // 小丑骰子：每回合所有面变为同一随机点数
+    setDice(prev => prev.map(d => {
+      if (d.diceDefId === 'joker') {
+        const jokerValue = Math.floor(Math.random() * 6) + 1;
+        return { ...d, value: jokerValue };
+      }
+      return d;
+    }));
     playSound('dice_lock');
     // Auto-sort dice by value ascending after roll
     await new Promise(r => setTimeout(r, 200));
@@ -723,7 +739,7 @@ export default function DiceHeroGame() {
       return def.onPlay?.aoe;
     });
     if (hasDiceAoe) return true;
-      if (currentHands.activeHands.includes('顺子')) return true;
+      if (currentHands.activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h))) return true;
     const { activeHands } = currentHands;
     if (activeHands.some(h => h.includes('元素') || h.includes('皇家'))) return true;
     return false;
@@ -882,7 +898,7 @@ export default function DiceHeroGame() {
     // --- Apply damage to enemy (with AOE support) ---
     const targetUid = targetEnemy.uid;
     const selectedDefs = selected.map(d => getDiceDef(d.diceDefId));
-    const hasAoe = selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.includes('顺子');
+    const hasAoe = selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h));
     // 同元素牌型的状态效果AOE（对所有敌人施加状态）
     const isElementalAoe = currentHands.activeHands.some(h => ['元素顺', '元素葫芦', '皇家元素顺'].includes(h));
     
@@ -2657,7 +2673,7 @@ useEffect(() => {
                                 ? '0 0 16px rgba(212,160,48,0.7), 0 0 4px rgba(212,160,48,0.4)' : 'none',
                               animationDelay: `${i * 100}ms`,
                             }}>
-                            <span className={`${(d.element === 'normal' || d.diceDefId === 'standard' || d.diceDefId === 'heavy' || d.diceDefId === 'blade') ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>{d.value}</span>
+                            <span className={`${d.element === 'normal' ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>{d.value}</span>
                             {d.element !== 'normal' && (
                               <div className="absolute top-0.5 right-0.5 pointer-events-none">
                                 <ElementBadge element={d.element} size={7} />
@@ -3055,7 +3071,7 @@ useEffect(() => {
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
-                        <span className={`${(die.element === 'normal' && (!die.diceDefId || die.diceDefId === 'standard' || die.diceDefId === 'heavy' || die.diceDefId === 'blade')) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
+                        <span className={`${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
                           {die.rolling ? "?" : die.value}
                         </span>
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (

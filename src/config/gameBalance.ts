@@ -27,26 +27,26 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.45, dmgMult: 0.45 },  // depth 0: easy intro
-  { hpMult: 0.55, dmgMult: 0.55 },  // depth 1: warming up
-  { hpMult: 0.70, dmgMult: 0.70 },  // depth 2: getting serious
-  { hpMult: 0.90, dmgMult: 0.85 },  // depth 3: elite encounter
-  { hpMult: 1.00, dmgMult: 0.90 },  // depth 4: post-elite normal
-  { hpMult: 1.15, dmgMult: 1.00 },  // depth 5: mid-game peak
-  { hpMult: 0.90, dmgMult: 0.90 },  // depth 6: campfire breather
-  { hpMult: 1.50, dmgMult: 1.10 },  // depth 7: mid-boss
-  { hpMult: 0.90, dmgMult: 0.80 },  // depth 8: post-boss recovery
-  { hpMult: 1.25, dmgMult: 1.00 },  // depth 9: ramp up
-  { hpMult: 1.45, dmgMult: 1.15 },  // depth 10: harder
-  { hpMult: 1.65, dmgMult: 1.30 },  // depth 11: peak normal
-  { hpMult: 1.95, dmgMult: 1.40 },  // depth 12: pre-boss elite
-  { hpMult: 0.90, dmgMult: 0.90 },  // depth 13: campfire breather
-  { hpMult: 2.40, dmgMult: 1.50 },  // depth 14: final boss
+  { hpMult: 0.90, dmgMult: 0.80 },  // depth 0: easy intro
+  { hpMult: 1.00, dmgMult: 0.85 },  // depth 1: warming up
+  { hpMult: 1.15, dmgMult: 0.95 },  // depth 2: getting serious
+  { hpMult: 1.30, dmgMult: 1.05 },  // depth 3: elite encounter
+  { hpMult: 1.40, dmgMult: 1.10 },  // depth 4: post-elite normal
+  { hpMult: 1.55, dmgMult: 1.20 },  // depth 5: mid-game peak
+  { hpMult: 1.25, dmgMult: 1.05 },  // depth 6: campfire breather
+  { hpMult: 2.00, dmgMult: 1.30 },  // depth 7: mid-boss
+  { hpMult: 1.35, dmgMult: 1.00 },  // depth 8: post-boss recovery
+  { hpMult: 1.70, dmgMult: 1.20 },  // depth 9: ramp up
+  { hpMult: 2.00, dmgMult: 1.35 },  // depth 10: harder
+  { hpMult: 2.30, dmgMult: 1.50 },  // depth 11: peak normal
+  { hpMult: 2.55, dmgMult: 1.60 },  // depth 12: pre-boss elite
+  { hpMult: 1.45, dmgMult: 1.10 },  // depth 13: campfire breather
+  { hpMult: 3.20, dmgMult: 1.75 },  // depth 14: final boss
 ];
 
 /** 获取指定层级的缩放系数 */
 export const getDepthScaling = (depth: number): { hpMult: number; dmgMult: number } => {
-  if (depth < 0) return { hpMult: 0.55, dmgMult: 0.50 };
+  if (depth < 0) return { hpMult: 0.90, dmgMult: 0.80 };
   if (depth >= DEPTH_SCALING.length) return DEPTH_SCALING[DEPTH_SCALING.length - 1];
   return DEPTH_SCALING[depth];
 };
@@ -77,7 +77,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 25,
+  restHeal: 30,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 30,
   /** 模块最大等级 */
@@ -169,10 +169,10 @@ export const CHAPTER_CONFIG = {
   /** 每章的敌人数值倍率 (HP和伤害) */
   chapterScaling: [
     { hpMult: 1.0, dmgMult: 1.0 },   // 第1章: 基准
-    { hpMult: 1.25, dmgMult: 1.15 },  // 第2章: +35% HP, +20% DMG
-    { hpMult: 1.55, dmgMult: 1.35 },  // 第3章: +75% HP, +45% DMG
-    { hpMult: 1.90, dmgMult: 1.55 },  // 第4章: +120% HP, +70% DMG
-    { hpMult: 2.30, dmgMult: 1.80 },  // 第5章: +180% HP, +100% DMG
+    { hpMult: 1.30, dmgMult: 1.18 },  // 第2章: +35% HP, +20% DMG
+    { hpMult: 1.65, dmgMult: 1.40 },  // 第3章: +75% HP, +45% DMG
+    { hpMult: 2.05, dmgMult: 1.65 },  // 第4章: +120% HP, +70% DMG
+    { hpMult: 2.50, dmgMult: 1.90 },  // 第5章: +180% HP, +100% DMG
   ],
   /** 每章过渡时回复的HP比例 */
   chapterHealPercent: 0.5,
