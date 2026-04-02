@@ -187,8 +187,8 @@ export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
 
 /** 初始骰子库: 5普通 + 3灌铅，纯普通起步 */
 export const INITIAL_DICE_BAG: string[] = [
-  'standard', 'standard', 'standard', 'standard', 'standard',
-  'heavy', 'heavy',
+  'standard', 'standard', 'standard', 'standard',
+  'heavy',
   'blade',
 ];
 

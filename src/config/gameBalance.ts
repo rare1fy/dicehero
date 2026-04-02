@@ -27,21 +27,21 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.55, dmgMult: 0.50 },  // depth 0: easy intro
-  { hpMult: 0.70, dmgMult: 0.65 },  // depth 1: warming up
-  { hpMult: 0.90, dmgMult: 0.80 },  // depth 2: getting serious
-  { hpMult: 1.15, dmgMult: 0.95 },  // depth 3: elite encounter
-  { hpMult: 1.25, dmgMult: 1.00 },  // depth 4: post-elite normal
-  { hpMult: 1.45, dmgMult: 1.10 },  // depth 5: mid-game peak
-  { hpMult: 1.10, dmgMult: 1.05 },  // depth 6: campfire breather
-  { hpMult: 1.85, dmgMult: 1.25 },  // depth 7: mid-boss
-  { hpMult: 1.10, dmgMult: 0.90 },  // depth 8: post-boss recovery
-  { hpMult: 1.55, dmgMult: 1.15 },  // depth 9: ramp up
-  { hpMult: 1.80, dmgMult: 1.30 },  // depth 10: harder
-  { hpMult: 2.05, dmgMult: 1.45 },  // depth 11: peak normal
-  { hpMult: 2.40, dmgMult: 1.55 },  // depth 12: pre-boss elite
-  { hpMult: 1.10, dmgMult: 1.05 },  // depth 13: campfire breather
-  { hpMult: 3.00, dmgMult: 1.70 },  // depth 14: final boss
+  { hpMult: 0.45, dmgMult: 0.45 },  // depth 0: easy intro
+  { hpMult: 0.55, dmgMult: 0.55 },  // depth 1: warming up
+  { hpMult: 0.70, dmgMult: 0.70 },  // depth 2: getting serious
+  { hpMult: 0.90, dmgMult: 0.85 },  // depth 3: elite encounter
+  { hpMult: 1.00, dmgMult: 0.90 },  // depth 4: post-elite normal
+  { hpMult: 1.15, dmgMult: 1.00 },  // depth 5: mid-game peak
+  { hpMult: 0.90, dmgMult: 0.90 },  // depth 6: campfire breather
+  { hpMult: 1.50, dmgMult: 1.10 },  // depth 7: mid-boss
+  { hpMult: 0.90, dmgMult: 0.80 },  // depth 8: post-boss recovery
+  { hpMult: 1.25, dmgMult: 1.00 },  // depth 9: ramp up
+  { hpMult: 1.45, dmgMult: 1.15 },  // depth 10: harder
+  { hpMult: 1.65, dmgMult: 1.30 },  // depth 11: peak normal
+  { hpMult: 1.95, dmgMult: 1.40 },  // depth 12: pre-boss elite
+  { hpMult: 0.90, dmgMult: 0.90 },  // depth 13: campfire breather
+  { hpMult: 2.40, dmgMult: 1.50 },  // depth 14: final boss
 ];
 
 /** 获取指定层级的缩放系数 */
@@ -68,7 +68,6 @@ export const SHOP_CONFIG = {
   /** 固定商品列表 */
   fixedItems: [
     { id: 'reroll', type: 'reroll' as const, label: '重掷强化', desc: '永久增加每回合 +1 次重掷' },
-    { id: 'dice', type: 'dice' as const, label: '额外骰子', desc: '增加 1 个骰子 (上限 6)' },
     { id: 'removeDice', type: 'removeDice' as const, label: '骰子净化', desc: '移除一颗骰子，瘦身构筑' },
   ],
 } as const;
@@ -78,7 +77,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 30,
+  restHeal: 25,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 30,
   /** 模块最大等级 */
@@ -99,7 +98,6 @@ export const LOOT_CONFIG = {
   augmentChoiceCount: 3,
   /** 精英奖励池 */
   eliteRewards: [
-    { type: 'diceCount' as const, value: 1, label: '+1 骰子' },
     { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合重骰' },
     { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合免费重骰' },
   ],
@@ -147,7 +145,6 @@ export const SKILL_SELECT_CONFIG = {
   costPool: [
     { type: 'maxHp' as const, value: 8, label: '最大生命 -8' },
     { type: 'maxHp' as const, value: 12, label: '最大生命 -12' },
-    { type: 'addNormalDice' as const, value: 1, label: '骰子库 普通骰子+1' },
     { type: 'hp' as const, value: 10, label: '当前生命 -10' },
     { type: 'hp' as const, value: 15, label: '当前生命 -15' },
   ],
@@ -172,10 +169,10 @@ export const CHAPTER_CONFIG = {
   /** 每章的敌人数值倍率 (HP和伤害) */
   chapterScaling: [
     { hpMult: 1.0, dmgMult: 1.0 },   // 第1章: 基准
-    { hpMult: 1.35, dmgMult: 1.20 },  // 第2章: +35% HP, +20% DMG
-    { hpMult: 1.75, dmgMult: 1.45 },  // 第3章: +75% HP, +45% DMG
-    { hpMult: 2.20, dmgMult: 1.70 },  // 第4章: +120% HP, +70% DMG
-    { hpMult: 2.80, dmgMult: 2.00 },  // 第5章: +180% HP, +100% DMG
+    { hpMult: 1.25, dmgMult: 1.15 },  // 第2章: +35% HP, +20% DMG
+    { hpMult: 1.55, dmgMult: 1.35 },  // 第3章: +75% HP, +45% DMG
+    { hpMult: 1.90, dmgMult: 1.55 },  // 第4章: +120% HP, +70% DMG
+    { hpMult: 2.30, dmgMult: 1.80 },  // 第5章: +180% HP, +100% DMG
   ],
   /** 每章过渡时回复的HP比例 */
   chapterHealPercent: 0.5,

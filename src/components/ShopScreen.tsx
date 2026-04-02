@@ -28,9 +28,8 @@ export const ShopScreen: React.FC = () => {
     <div className="grid grid-cols-1 gap-3 w-full max-w-sm pb-10 relative z-10">
       {game.shopItems.map((item, i) => {
         const canAfford = game.souls >= item.price;
-        const isDiceLimit = item.type === 'dice' && game.diceCount >= 6;
         const isRemoveLimit = item.type === 'removeDice' && game.ownedDice.length <= 4;
-        const isDisabled = !canAfford || isDiceLimit || isRemoveLimit;
+        const isDisabled = !canAfford || isRemoveLimit;
 
         return (
           <motion.button 
@@ -82,17 +81,17 @@ export const ShopScreen: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className={`text-[8px] font-bold ${isDisabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--pixel-purple)]'} tracking-[0.1em] mb-0.5 opacity-70`}>
-                {item.type === 'reroll' ? '基础服务' : item.type === 'dice' ? '基础服务' : item.type === 'specialDice' ? '特殊骰子' : item.type === 'removeDice' ? '构筑服务' : '稀有模块'}
+                {item.type === 'reroll' ? '基础服务' : item.type === 'specialDice' ? '特殊骰子' : item.type === 'removeDice' ? '构筑服务' : '稀有模块'}
               </div>
               <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none mb-0.5 pixel-text-shadow">
                 {item.label}
               </div>
               <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
-                {isDiceLimit ? <span className="text-[var(--pixel-red)]">已达携带上限 (6)</span> : formatDescription(item.desc)}
+                {formatDescription(item.desc)}
               </div>
             </div>
             <div className={`flex items-center gap-1 font-mono font-bold ${isDisabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--pixel-gold)]'} text-xs`}>
-              {isDiceLimit ? '--' : item.price} <PixelCoin size={2} />
+              {item.price} <PixelCoin size={2} />
             </div>
           </motion.button>
         );
