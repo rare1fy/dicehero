@@ -140,11 +140,11 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
   }
 
   // Normal: 1-2 waves, each with 1-3 enemies
-  const multiWaveChance = depth >= 9 ? 0.65 : depth >= 5 ? 0.5 : depth >= 2 ? 0.4 : 0.15;
+  const multiWaveChance = depth >= 9 ? 0.65 : depth >= 5 ? 0.5 : depth >= 3 ? 0.35 : 0;
   const waveCount = Math.random() < multiWaveChance ? 2 : 1;
   const waves: BattleWave[] = [];
   for (let w = 0; w < waveCount; w++) {
-    const enemyCount = depth === 0 ? 2 : depth <= 2 ? Math.min(3, 2 + Math.floor(Math.random() * 2)) : Math.min(3, 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor((depth + 2) / 3))));
+    const enemyCount = depth === 0 ? 1 : depth <= 2 ? (Math.random() < 0.5 ? 1 : 2) : Math.min(3, 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor((depth + 2) / 3))));
     const waveEnemies: Enemy[] = [];
     for (let i = 0; i < enemyCount; i++) {
       const pool = getAvailableEnemies(depth);

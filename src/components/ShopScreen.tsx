@@ -1,419 +1,270 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
-import { PixelCoin, PixelStar, PixelHeart, PixelDice, PixelShield } from './PixelIcons';
+import { PixelCoin, PixelStar, PixelDice } from './PixelIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
 import { AUGMENTS_POOL } from '../data/augments';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
-import { ChestReward, ChestTier, Augment } from '../types/game';
+import { ChestReward, Augment } from '../types/game';
 
-// ============================================================
-// Chest Configuration
-// ============================================================
-const CHEST_TIERS: Record<ChestTier, { cost: number; label: string; color: string; glow: string; emoji: string }> = {
-  bronze: { cost: 15, label: '\u9752\u94DC\u5B9D\u7BB1', color: '#cd7f32', glow: 'rgba(205,127,50,0.4)', emoji: '\u{1F4E6}' },
-  silver: { cost: 35, label: '\u767D\u94F6\u5B9D\u7BB1', color: '#c0c0c0', glow: 'rgba(192,192,192,0.5)', emoji: '\u{1F381}' },
-  gold:   { cost: 60, label: '\u9EC4\u91D1\u5B9D\u7BB1', color: '#ffd700', glow: 'rgba(255,215,0,0.6)', emoji: '\u{1F451}' },
+const CHEST_COST = 25;
+const UPGRADE_COSTS = [0, 80, 150];
+
+const REWARD_TABLE = {
+  dice:      { weight: 40, label: '骰子' },
+  augment:   { weight: 30, label: '增幅模块' },
+  reroll:    { weight: 20, label: '重投机会' },
+  drawCount: { weight: 10, label: '手牌上限+1' },
 };
 
-const UPGRADE_COSTS = [0, 80, 150]; // cost to reach level 2, 3
+function getAdjustedWeights(shopLevel: number) {
+  const bonus = (shopLevel - 1) * 5;
+  return {
+    dice:      REWARD_TABLE.dice.weight,
+    augment:   REWARD_TABLE.augment.weight + bonus,
+    reroll:    REWARD_TABLE.reroll.weight - bonus * 0.5,
+    drawCount: REWARD_TABLE.drawCount.weight + bonus * 0.5,
+  };
+}
 
-// Reward generation based on chest tier and shop level
-function generateReward(tier: ChestTier, shopLevel: number): ChestReward {
-  const roll = Math.random();
-  const tierBonus = tier === 'gold' ? 0.15 : tier === 'silver' ? 0.07 : 0;
-  const levelBonus = (shopLevel - 1) * 0.05;
-  const luckBoost = tierBonus + levelBonus;
-  
-  // Adjusted probabilities with luck boost
-  const legendaryChance = 0.03 + luckBoost * 0.5;
-  const rareChance = 0.12 + luckBoost;
-  const uncommonChance = 0.35 + luckBoost * 0.5;
-  
-  if (roll < legendaryChance) {
-    // LEGENDARY rewards
-    const legendaryOptions: ChestReward[] = [
-      { type: 'maxPlays', value: 1, label: '+1 \u51FA\u724C\u6B21\u6570', desc: '\u6C38\u4E45\u589E\u52A0\u6BCF\u56DE\u5408\u51FA\u724C\u6B21\u6570', rarity: 'legendary' },
-      { type: 'maxHp', value: 15, label: '+15 \u6700\u5927HP', desc: '\u6C38\u4E45\u589E\u52A0\u6700\u5927\u751F\u547D\u503C', rarity: 'legendary' },
-    ];
-    return legendaryOptions[Math.floor(Math.random() * legendaryOptions.length)];
+function generateReward(shopLevel: number): ChestReward {
+  const weights = getAdjustedWeights(shopLevel);
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let roll = Math.random() * total;
+  let rewardType: keyof typeof REWARD_TABLE = 'dice';
+  for (const [key, w] of Object.entries(weights)) {
+    roll -= w;
+    if (roll <= 0) { rewardType = key as keyof typeof REWARD_TABLE; break; }
   }
-  
-  if (roll < legendaryChance + rareChance) {
-    // RARE rewards
-    const rarePool = DICE_BY_RARITY.rare || [];
-    const uncommonPool = DICE_BY_RARITY.uncommon || [];
-    const dicePool = [...rarePool, ...uncommonPool];
-    const augPool = AUGMENTS_POOL.filter(a => a.category === 'endgame' || a.category === 'normal_attack' || a.category === 'self_harm');
-    
-    const rareOptions: ChestReward[] = [];
-    
-    if (dicePool.length > 0) {
-      const pick = dicePool[Math.floor(Math.random() * dicePool.length)];
-      rareOptions.push({ type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity: 'rare' });
+  switch (rewardType) {
+    case 'dice': {
+      const pools = shopLevel >= 3
+        ? [...(DICE_BY_RARITY.rare || []), ...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.common || [])]
+        : shopLevel >= 2
+          ? [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.common || [])]
+          : [...(DICE_BY_RARITY.common || []), ...(DICE_BY_RARITY.uncommon || []).slice(0, 2)];
+      if (pools.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
+      const pick = pools[Math.floor(Math.random() * pools.length)];
+      const rarity = (DICE_BY_RARITY.rare || []).includes(pick) ? 'rare' as const
+        : (DICE_BY_RARITY.uncommon || []).includes(pick) ? 'uncommon' as const : 'common' as const;
+      return { type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity };
     }
-    if (augPool.length > 0) {
-      const pick = augPool[Math.floor(Math.random() * augPool.length)];
-      rareOptions.push({ type: 'augment', augment: { ...pick }, label: pick.name, desc: pick.description, rarity: 'rare' });
+    case 'augment': {
+      const pool = AUGMENTS_POOL.filter(a => a.category !== undefined);
+      if (pool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      const rarity = (pick.category === 'endgame' || pick.category === 'self_harm') ? 'rare' as const : 'uncommon' as const;
+      return { type: 'augment', augment: { ...pick }, label: pick.name, desc: pick.description, rarity };
     }
-    rareOptions.push({ type: 'maxHp', value: 8, label: '+8 \u6700\u5927HP', desc: '\u6C38\u4E45\u589E\u52A0\u6700\u5927\u751F\u547D\u503C', rarity: 'rare' });
-    
-    return rareOptions[Math.floor(Math.random() * rareOptions.length)];
+    case 'reroll':
+      return { type: 'reroll', value: 1, label: '+1 重投', desc: '永久增加每回合免费重投次数', rarity: 'uncommon' };
+    case 'drawCount':
+      return { type: 'maxPlays', value: 1, label: '手牌+1', desc: '每回合多抽1颗骰子（敌人也会变强）', rarity: 'rare' };
   }
-  
-  if (roll < legendaryChance + rareChance + uncommonChance) {
-    // UNCOMMON rewards
-    const commonDice = DICE_BY_RARITY.common || [];
-    const uncommonOptions: ChestReward[] = [
-      { type: 'heal', value: 20 + Math.floor(Math.random() * 15), label: '\u6CBB\u7597\u836F\u6C34', desc: '\u7ACB\u5373\u56DE\u590D\u751F\u547D\u503C', rarity: 'uncommon' },
-      { type: 'reroll', value: 1, label: '+1 \u91CD\u63B7', desc: '\u6C38\u4E45\u589E\u52A0\u6BCF\u56DE\u5408\u91CD\u63B7\u6B21\u6570', rarity: 'uncommon' },
-      { type: 'removeDice', label: '\u9AB0\u5B50\u51C0\u5316', desc: '\u79FB\u9664\u4E00\u9897\u9AB0\u5B50\uFF0C\u7626\u8EAB\u6784\u7B51', rarity: 'uncommon' },
-    ];
-    if (commonDice.length > 0) {
-      const pick = commonDice[Math.floor(Math.random() * commonDice.length)];
-      uncommonOptions.push({ type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity: 'uncommon' });
-    }
-    // Transition augments
-    const transAugs = AUGMENTS_POOL.filter(a => a.category === 'transition' || a.category === 'economy');
-    if (transAugs.length > 0) {
-      const pick = transAugs[Math.floor(Math.random() * transAugs.length)];
-      uncommonOptions.push({ type: 'augment', augment: { ...pick }, label: pick.name, desc: pick.description, rarity: 'uncommon' });
-    }
-    return uncommonOptions[Math.floor(Math.random() * uncommonOptions.length)];
-  }
-  
-  // COMMON rewards
-  const goldAmount = tier === 'gold' ? 30 + Math.floor(Math.random() * 20) : tier === 'silver' ? 15 + Math.floor(Math.random() * 15) : 8 + Math.floor(Math.random() * 10);
-  const commonOptions: ChestReward[] = [
-    { type: 'gold', value: goldAmount, label: `+${goldAmount} \u91D1\u5E01`, desc: '\u83B7\u5F97\u91D1\u5E01', rarity: 'common' },
-    { type: 'heal', value: 10 + Math.floor(Math.random() * 10), label: '\u5C0F\u578B\u6CBB\u7597', desc: '\u56DE\u590D\u5C11\u91CF\u751F\u547D\u503C', rarity: 'common' },
-  ];
-  return commonOptions[Math.floor(Math.random() * commonOptions.length)];
 }
 
 const RARITY_COLORS: Record<string, string> = {
-  common: '#9ca3af',
-  uncommon: '#34d399',
-  rare: '#60a5fa',
-  legendary: '#f59e0b',
+  common: '#9ca3af', uncommon: '#34d399', rare: '#60a5fa', legendary: '#f59e0b',
 };
-
 const RARITY_LABELS: Record<string, string> = {
-  common: '\u666E\u901A',
-  uncommon: '\u7A00\u6709',
-  rare: '\u53F2\u8BD7',
-  legendary: '\u4F20\u8BF4',
+  common: '普通', uncommon: '稀有', rare: '史诗', legendary: '传说',
 };
 
-// ============================================================
-// Treasure Chest Pixel Art SVG
-// ============================================================
-const PixelChest: React.FC<{ tier: ChestTier; size?: number; isOpen?: boolean }> = ({ tier, size = 4, isOpen = false }) => {
+const PixelChest: React.FC<{ size?: number; isOpen?: boolean }> = ({ size = 4, isOpen = false }) => {
   const px = size;
-  const colors = {
-    bronze: { body: '#8B5E3C', lid: '#cd7f32', lock: '#ffd700', highlight: '#e8a860' },
-    silver: { body: '#708090', lid: '#c0c0c0', lock: '#e8e8e8', highlight: '#dde4ec' },
-    gold: { body: '#b8860b', lid: '#ffd700', lock: '#fff8dc', highlight: '#fff3a0' },
-  }[tier];
-  
   return (
     <svg width={px * 10} height={px * 8} viewBox="0 0 10 8" shapeRendering="crispEdges">
-      {/* Body */}
-      <rect x="1" y={isOpen ? "4" : "3"} width="8" height="4" fill={colors.body} />
-      <rect x="2" y={isOpen ? "4" : "3"} width="6" height="1" fill={colors.highlight} opacity="0.3" />
-      {/* Lid */}
-      <rect x="0" y={isOpen ? "0" : "1"} width="10" height={isOpen ? "3" : "2"} fill={colors.lid} />
-      <rect x="1" y={isOpen ? "0" : "1"} width="8" height="1" fill={colors.highlight} opacity="0.4" />
-      {/* Lock */}
-      <rect x="4" y={isOpen ? "5" : "3"} width="2" height="2" fill={colors.lock} />
-      <rect x="4" y={isOpen ? "5" : "3"} width="2" height="1" fill={colors.highlight} opacity="0.5" />
-      {/* Glow when open */}
-      {isOpen && (
-        <>
-          <rect x="2" y="3" width="6" height="1" fill={colors.highlight} opacity="0.8" />
-          <rect x="3" y="2" width="4" height="1" fill="#fff" opacity="0.6" />
-        </>
-      )}
+      <rect x="1" y={isOpen ? '4' : '3'} width="8" height="4" fill="#8B6914" />
+      <rect x="2" y={isOpen ? '4' : '3'} width="6" height="1" fill="#ffe680" opacity="0.25" />
+      <rect x="0" y={isOpen ? '0' : '1'} width="10" height={isOpen ? '3' : '2'} fill="#d4a030" />
+      <rect x="1" y={isOpen ? '0' : '1'} width="8" height="1" fill="#ffe680" opacity="0.35" />
+      <rect x="4" y={isOpen ? '5' : '3'} width="2" height="2" fill="#ffd700" />
+      {isOpen && (<><rect x="2" y="3" width="6" height="1" fill="#ffe680" opacity="0.8" /><rect x="3" y="2" width="4" height="1" fill="#fff" opacity="0.5" /></>)}
     </svg>
   );
 };
 
-// ============================================================
-// Main Shop Screen Component
-// ============================================================
 export const ShopScreen: React.FC = () => {
   const { game, setGame, pickReward, addToast, addLog } = useGameContext();
-  const [openingChest, setOpeningChest] = useState<ChestTier | null>(null);
+  const [openingChest, setOpeningChest] = useState(false);
   const [reward, setReward] = useState<ChestReward | null>(null);
   const [showReward, setShowReward] = useState(false);
+  const [showOdds, setShowOdds] = useState(false);
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
-  const [removeDiceMode, setRemoveDiceMode] = useState(false);
-  
+
   const shopLevel = game.shopLevel || 1;
-  
-  const openChest = useCallback(async (tier: ChestTier) => {
-    const cost = Math.floor(CHEST_TIERS[tier].cost * (shopLevel >= 2 ? 0.9 : 1));
-    if (game.souls < cost) {
-      addToast('\u91D1\u5E01\u4E0D\u8DB3\uFF01');
-      return;
-    }
-    
-    // Deduct gold
+  const cost = Math.floor(CHEST_COST * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
+  const canAfford = game.souls >= cost;
+
+  const openChest = useCallback(async () => {
+    if (!canAfford) { addToast('金币不足！'); return; }
     setGame(prev => ({ ...prev, souls: prev.souls - cost, stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + cost } }));
     playSound('shop_buy');
-    
-    // Start opening animation
-    setOpeningChest(tier);
+    setOpeningChest(true);
     setShowReward(false);
-    
-    // Generate particles
-    const newParticles = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      x: 50 + (Math.random() - 0.5) * 60,
-      y: 40 + (Math.random() - 0.5) * 40,
-      color: CHEST_TIERS[tier].color,
-      delay: Math.random() * 0.5,
-    }));
-    setParticles(newParticles);
-    
-    // Wait for animation
-    await new Promise(r => setTimeout(r, 1200));
-    
-    // Generate reward
-    const newReward = generateReward(tier, shopLevel);
+    setParticles(Array.from({ length: 16 }, (_, i) => ({
+      id: i, x: 50 + (Math.random() - 0.5) * 50, y: 40 + (Math.random() - 0.5) * 30,
+      color: '#d4a030', delay: Math.random() * 0.4,
+    })));
+    await new Promise(r => setTimeout(r, 1000));
+    const newReward = generateReward(shopLevel);
     setReward(newReward);
     setShowReward(true);
-    playSound(newReward.rarity === 'legendary' ? 'levelup' : newReward.rarity === 'rare' ? 'augment_activate' : 'coin');
-    
-  }, [game.souls, shopLevel, setGame, addToast]);
-  
+    playSound(newReward.rarity === 'rare' ? 'augment_activate' : 'coin');
+  }, [canAfford, cost, shopLevel, setGame, addToast]);
+
   const collectReward = useCallback(() => {
     if (!reward) return;
-    
     switch (reward.type) {
-      case 'gold':
-        setGame(prev => ({ ...prev, souls: prev.souls + (reward.value || 0), stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + (reward.value || 0) } }));
-        addLog(`\u5F00\u7BB1\u83B7\u5F97 ${reward.value} \u91D1\u5E01`);
-        break;
-      case 'heal':
-        setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + (reward.value || 0)) }));
-        addLog(`\u5F00\u7BB1\u83B7\u5F97\u6CBB\u7597 ${reward.value} HP`);
-        break;
       case 'dice':
         if (reward.diceDefId) {
           setGame(prev => ({ ...prev, ownedDice: [...prev.ownedDice, { defId: reward.diceDefId!, level: 1 }] }));
-          addLog(`\u5F00\u7BB1\u83B7\u5F97\u9AB0\u5B50: ${reward.label}`);
+          addLog('开箱获得骰子: ' + reward.label);
         }
         break;
       case 'augment':
-        if (reward.augment) {
-          pickReward(reward.augment);
-          addLog(`\u5F00\u7BB1\u83B7\u5F97\u6A21\u5757: ${reward.label}`);
-        }
-        break;
-      case 'maxHp':
-        setGame(prev => ({ ...prev, maxHp: prev.maxHp + (reward.value || 0), hp: prev.hp + (reward.value || 0) }));
-        addLog(`\u5F00\u7BB1\u83B7\u5F97 +${reward.value} \u6700\u5927HP`);
-        break;
-      case 'maxPlays':
-        setGame(prev => ({ ...prev, maxPlays: prev.maxPlays + 1 }));
-        addLog('\u5F00\u7BB1\u83B7\u5F97 +1 \u51FA\u724C\u6B21\u6570');
+        if (reward.augment) { pickReward(reward.augment); addLog('开箱获得模块: ' + reward.label); }
         break;
       case 'reroll':
         setGame(prev => ({ ...prev, freeRerollsPerTurn: prev.freeRerollsPerTurn + 1 }));
-        addLog('\u5F00\u7BB1\u83B7\u5F97 +1 \u91CD\u63B7');
+        addLog('开箱获得 +1 重投');
         break;
-      case 'removeDice':
-        setRemoveDiceMode(true);
-        setOpeningChest(null);
-        setShowReward(false);
-        setReward(null);
-        return;
+      case 'maxPlays':
+        setGame(prev => ({ ...prev, drawCount: Math.min(6, prev.drawCount + 1), enemyHpMultiplier: (prev.enemyHpMultiplier || 1) + 0.25 }));
+        addLog('开箱获得 手牌上限+1');
+        break;
     }
-    
     playSound('coin');
-    setOpeningChest(null);
+    setOpeningChest(false);
     setShowReward(false);
     setReward(null);
   }, [reward, setGame, pickReward, addLog]);
-  
+
   const upgradeShop = () => {
     if (shopLevel >= 3) return;
-    const cost = UPGRADE_COSTS[shopLevel];
-    if (game.souls < cost) {
-      addToast('\u91D1\u5E01\u4E0D\u8DB3\uFF01');
-      return;
-    }
-    setGame(prev => ({ ...prev, souls: prev.souls - cost, shopLevel: (prev.shopLevel || 1) + 1, stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + cost } }));
+    const upgCost = UPGRADE_COSTS[shopLevel];
+    if (game.souls < upgCost) { addToast('金币不足！'); return; }
+    setGame(prev => ({ ...prev, souls: prev.souls - upgCost, shopLevel: (prev.shopLevel || 1) + 1, stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + upgCost } }));
     playSound('levelup');
-    addToast(`\u5546\u5E97\u5347\u7EA7\u5230 Lv.${shopLevel + 1}\uFF01`);
-    addLog(`\u5546\u5E97\u5347\u7EA7\u5230 Lv.${shopLevel + 1}`);
+    addToast('商店升级到 Lv.' + (shopLevel + 1) + '！');
+    addLog('商店升级到 Lv.' + (shopLevel + 1));
   };
+
+  const weights = getAdjustedWeights(shopLevel);
+  const totalW = Object.values(weights).reduce((a, b) => a + b, 0);
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
       <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
-      
-      {/* Header */}
+
       <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
-        <PixelChest tier="gold" size={3} />
-        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">\u2726 \u795E\u79D8\u5B9D\u7BB1\u5C4B \u2726</h2>
+        <PixelChest size={3} />
+        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">✦ 神秘宝箱屋 ✦</h2>
       </div>
-      <p className="text-[var(--dungeon-text-dim)] mb-2 text-[9px] tracking-[0.1em] font-bold relative z-10">
-        "\u82B1\u8D39\u91D1\u5E01\uFF0C\u5F00\u542F\u5B9D\u7BB1\uFF0C\u83B7\u5F97\u968F\u673A\u5956\u52B1"
+      <p className="text-[var(--dungeon-text-dim)] mb-3 text-[9px] tracking-[0.1em] font-bold relative z-10">
+        "花费金币，开启宝箱，获得随机奖励"
       </p>
-      
-      {/* Shop Level & Gold */}
+
       <div className="flex items-center gap-4 mb-4 relative z-10">
         <div className="flex items-center gap-1 text-[var(--pixel-gold)] font-mono font-bold text-sm">
           <PixelCoin size={2} /> {game.souls}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[8px] text-[var(--dungeon-text-dim)]">\u5546\u5E97\u7B49\u7EA7:</span>
-          {[1,2,3].map(lv => (
-            <span key={lv} className={`w-3 h-3 border ${lv <= shopLevel ? 'bg-[var(--pixel-gold)] border-[var(--pixel-gold)]' : 'bg-transparent border-[var(--dungeon-panel-border)]'}`} style={{borderRadius:'1px'}} />
+          <span className="text-[8px] text-[var(--dungeon-text-dim)]">等级:</span>
+          {[1, 2, 3].map(lv => (
+            <span key={lv} className={`w-3 h-3 border ${lv <= shopLevel ? 'bg-[var(--pixel-gold)] border-[var(--pixel-gold)]' : 'bg-transparent border-[var(--dungeon-panel-border)]'}`} style={{ borderRadius: '1px' }} />
           ))}
           {shopLevel < 3 && (
-            <button
-              onClick={upgradeShop}
-              disabled={game.souls < UPGRADE_COSTS[shopLevel]}
+            <button onClick={upgradeShop} disabled={game.souls < UPGRADE_COSTS[shopLevel]}
               className={`text-[8px] font-bold px-2 py-0.5 border transition-all ${game.souls >= UPGRADE_COSTS[shopLevel] ? 'border-[var(--pixel-gold)] text-[var(--pixel-gold)] hover:bg-[var(--pixel-gold)] hover:text-black' : 'border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)] opacity-40'}`}
-              style={{borderRadius:'2px'}}
-            >
-              \u5347\u7EA7 {UPGRADE_COSTS[shopLevel]}g
-            </button>
+              style={{ borderRadius: '2px' }}>升级 {UPGRADE_COSTS[shopLevel]}g</button>
           )}
         </div>
       </div>
 
-      {/* Chest Selection */}
-      {!openingChest && !removeDiceMode && (
-        <div className="grid grid-cols-3 gap-3 w-full max-w-sm mb-4 relative z-10">
-          {(['bronze', 'silver', 'gold'] as ChestTier[]).map((tier) => {
-            const config = CHEST_TIERS[tier];
-            const cost = Math.floor(config.cost * (shopLevel >= 2 ? 0.9 : 1));
-            const canAfford = game.souls >= cost;
-            return (
-              <motion.button
-                key={tier}
-                disabled={!canAfford}
-                onClick={() => openChest(tier)}
-                whileHover={canAfford ? { scale: 1.05, y: -2 } : {}}
-                whileTap={canAfford ? { scale: 0.95 } : {}}
-                className={`flex flex-col items-center p-3 pixel-panel transition-all ${canAfford ? 'hover:border-opacity-100' : 'opacity-40 grayscale'}`}
-                style={{ borderColor: config.color, boxShadow: canAfford ? `0 0 12px ${config.glow}` : 'none' }}
-              >
-                <motion.div
-                  animate={canAfford ? { y: [0, -3, 0] } : {}}
-                  transition={{ repeat: Infinity, duration: 2, delay: Math.random() }}
-                >
-                  <PixelChest tier={tier} size={5} />
-                </motion.div>
-                <div className="text-[10px] font-bold mt-2 pixel-text-shadow" style={{ color: config.color }}>
-                  {config.label}
-                </div>
-                <div className={`flex items-center gap-0.5 text-[9px] font-mono font-bold mt-1 ${canAfford ? 'text-[var(--pixel-gold)]' : 'text-[var(--dungeon-text-dim)]'}`}>
-                  {cost} <PixelCoin size={1.5} />
-                </div>
-              </motion.button>
-            );
-          })}
+      {!openingChest && (
+        <div className="flex flex-col items-center gap-3 relative z-10 w-full max-w-xs">
+          <motion.button disabled={!canAfford} onClick={openChest}
+            whileHover={canAfford ? { scale: 1.05, y: -3 } : {}} whileTap={canAfford ? { scale: 0.95 } : {}}
+            className={`flex flex-col items-center p-5 pixel-panel w-full transition-all ${canAfford ? '' : 'opacity-40 grayscale'}`}
+            style={{ borderColor: '#d4a030', boxShadow: canAfford ? '0 0 16px rgba(212,160,48,0.3)' : 'none' }}>
+            <motion.div animate={canAfford ? { y: [0, -4, 0] } : {}} transition={{ repeat: Infinity, duration: 2.5 }}>
+              <PixelChest size={8} />
+            </motion.div>
+            <div className="text-sm font-bold mt-3 pixel-text-shadow text-[var(--pixel-gold)]">开启宝箱</div>
+            <div className={`flex items-center gap-0.5 text-xs font-mono font-bold mt-1 ${canAfford ? 'text-[var(--pixel-gold)]' : 'text-[var(--dungeon-text-dim)]'}`}>
+              {cost} <PixelCoin size={1.5} />
+            </div>
+          </motion.button>
+
+          <button onClick={() => setShowOdds(!showOdds)} className="text-[8px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] transition-colors underline">
+            {showOdds ? '隐藏概率' : '查看产出概率'}
+          </button>
+
+          <AnimatePresence>
+            {showOdds && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="w-full pixel-panel p-3 overflow-hidden" style={{ borderColor: 'var(--dungeon-panel-border)' }}>
+                <div className="text-[8px] font-bold text-[var(--dungeon-text-dim)] mb-2 text-center">产出概率 (Lv.{shopLevel})</div>
+                {Object.entries(weights).map(([key, w]) => {
+                  const pct = ((w / totalW) * 100).toFixed(1);
+                  const info = REWARD_TABLE[key as keyof typeof REWARD_TABLE];
+                  const barColor = key === 'drawCount' ? '#60a5fa' : key === 'augment' ? '#34d399' : key === 'reroll' ? '#a78bfa' : '#9ca3af';
+                  return (
+                    <div key={key} className="flex items-center gap-2 mb-1.5">
+                      <span className="text-[8px] w-16 text-right font-bold" style={{ color: barColor }}>{info.label}</span>
+                      <div className="flex-1 h-2 bg-[rgba(255,255,255,0.05)] overflow-hidden" style={{ borderRadius: '1px' }}>
+                        <div className="h-full transition-all" style={{ width: pct + '%', backgroundColor: barColor, borderRadius: '1px' }} />
+                      </div>
+                      <span className="text-[7px] text-[var(--dungeon-text-dim)] w-8 font-mono">{pct}%</span>
+                    </div>
+                  );
+                })}
+                {shopLevel < 3 && <div className="text-[7px] text-[var(--dungeon-text-dim)] mt-2 text-center">升级商店可提升稀有奖励概率</div>}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
-      {/* Opening Animation */}
       <AnimatePresence>
         {openingChest && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-          >
-            {/* Particles */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
             {particles.map(p => (
-              <motion.div
-                key={p.id}
+              <motion.div key={p.id}
                 initial={{ opacity: 0, scale: 0, x: '50%', y: '50%' }}
-                animate={{
-                  opacity: [0, 1, 0],
-                  scale: [0, 1.5, 0],
-                  x: `${p.x}%`,
-                  y: `${p.y}%`,
-                }}
-                transition={{ duration: 1.5, delay: p.delay, ease: 'easeOut' }}
+                animate={{ opacity: [0, 1, 0], scale: [0, 1.5, 0], x: p.x + '%', y: p.y + '%' }}
+                transition={{ duration: 1.2, delay: p.delay, ease: 'easeOut' }}
                 className="absolute w-2 h-2 rounded-full"
-                style={{ backgroundColor: p.color, boxShadow: `0 0 6px ${p.color}` }}
-              />
+                style={{ backgroundColor: p.color, boxShadow: '0 0 6px ' + p.color }} />
             ))}
-            
-            {/* Chest */}
-            <motion.div
-              className="flex flex-col items-center"
+            <motion.div className="flex flex-col items-center"
               animate={showReward ? {} : { scale: [1, 1.1, 1], rotate: [0, -2, 2, -2, 0] }}
-              transition={{ repeat: showReward ? 0 : Infinity, duration: 0.5 }}
-            >
-              <motion.div
-                animate={showReward ? { y: -20 } : {}}
-                transition={{ type: 'spring', stiffness: 200 }}
-              >
-                <PixelChest tier={openingChest} size={10} isOpen={showReward} />
+              transition={{ repeat: showReward ? 0 : Infinity, duration: 0.4 }}>
+              <motion.div animate={showReward ? { y: -20 } : {}} transition={{ type: 'spring', stiffness: 200 }}>
+                <PixelChest size={10} isOpen={showReward} />
               </motion.div>
-              
-              {/* Reward reveal */}
               <AnimatePresence>
                 {showReward && reward && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 30, scale: 0.5 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                    className="mt-4 flex flex-col items-center"
-                  >
-                    {/* Rarity glow ring */}
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
-                      className="absolute w-32 h-32 rounded-full opacity-20"
-                      style={{ border: `2px solid ${RARITY_COLORS[reward.rarity]}`, boxShadow: `0 0 20px ${RARITY_COLORS[reward.rarity]}` }}
-                    />
-                    
-                    <div
-                      className="px-6 py-4 pixel-panel flex flex-col items-center gap-2 min-w-[200px]"
-                      style={{ borderColor: RARITY_COLORS[reward.rarity], boxShadow: `0 0 20px ${RARITY_COLORS[reward.rarity]}40` }}
-                    >
-                      <div className="text-[8px] font-bold tracking-widest" style={{ color: RARITY_COLORS[reward.rarity] }}>
-                        {RARITY_LABELS[reward.rarity]}
-                      </div>
-                      
+                  <motion.div initial={{ opacity: 0, y: 30, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }} transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                    className="mt-4 flex flex-col items-center">
+                    <div className="px-6 py-4 pixel-panel flex flex-col items-center gap-2 min-w-[200px]"
+                      style={{ borderColor: RARITY_COLORS[reward.rarity], boxShadow: '0 0 20px ' + RARITY_COLORS[reward.rarity] + '40' }}>
+                      <div className="text-[8px] font-bold tracking-widest" style={{ color: RARITY_COLORS[reward.rarity] }}>{RARITY_LABELS[reward.rarity]}</div>
                       <div className="w-12 h-12 flex items-center justify-center">
-                        {reward.type === 'gold' && <PixelCoin size={5} />}
-                        {reward.type === 'heal' && <PixelHeart size={5} />}
                         {reward.type === 'dice' && <PixelDice size={5} />}
                         {reward.type === 'augment' && <PixelStar size={5} />}
-                        {reward.type === 'maxHp' && <PixelHeart size={5} />}
-                        {reward.type === 'maxPlays' && <PixelStar size={5} />}
                         {reward.type === 'reroll' && <PixelDice size={5} />}
-                        {reward.type === 'removeDice' && <PixelDice size={5} />}
+                        {reward.type === 'maxPlays' && <PixelStar size={5} />}
                       </div>
-                      
-                      <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">
-                        {reward.label}
-                      </div>
-                      <div className="text-[9px] text-[var(--dungeon-text-dim)]">
-                        {reward.desc}
-                      </div>
-                      
-                      <motion.button
-                        onClick={collectReward}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                      <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{reward.label}</div>
+                      <div className="text-[9px] text-[var(--dungeon-text-dim)]">{reward.desc}</div>
+                      <motion.button onClick={collectReward} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         className="mt-2 px-6 py-2 pixel-btn text-xs font-bold"
-                        style={{ borderColor: RARITY_COLORS[reward.rarity] }}
-                      >
-                        \u6536\u4E0B\u5956\u52B1
-                      </motion.button>
+                        style={{ borderColor: RARITY_COLORS[reward.rarity] }}>收下奖励</motion.button>
                     </div>
                   </motion.div>
                 )}
@@ -423,60 +274,10 @@ export const ShopScreen: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Remove Dice Mode */}
-      {removeDiceMode && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm p-4 pixel-panel mb-3 relative z-10"
-          style={{ borderColor: 'var(--pixel-red)' }}
-        >
-          <div className="text-center text-[9px] font-bold text-[var(--pixel-red)] mb-2">\u9009\u62E9\u8981\u79FB\u9664\u7684\u9AB0\u5B50</div>
-          <div className="flex flex-wrap justify-center gap-2 mb-3">
-            {game.ownedDice.map((d, idx) => {
-              const def = getDiceDef(d.defId);
-              const elemColor = ELEMENT_COLORS[def.element] || '#888';
-              return (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    playSound('shop_buy');
-                    setGame(prev => ({
-                      ...prev,
-                      ownedDice: prev.ownedDice.filter((_, i) => i !== idx),
-                    }));
-                    addLog('\u79FB\u9664\u4E86\u9AB0\u5B50: ' + def.name);
-                    addToast('\u79FB\u9664\u4E86 ' + def.name, 'info');
-                    setRemoveDiceMode(false);
-                  }}
-                  className="flex flex-col items-center p-1.5 border border-[rgba(255,255,255,0.1)] hover:border-[var(--pixel-red)] rounded transition-all"
-                  style={{ borderRadius: '3px' }}
-                >
-                  <div className="w-8 h-8 flex items-center justify-center mb-0.5" style={{ color: elemColor }}>
-                    <PixelDice size={3} />
-                  </div>
-                  <div className="text-[7px] text-[var(--dungeon-text-bright)]">{def.name}</div>
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={() => setRemoveDiceMode(false)}
-            className="w-full py-1 text-[8px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)]"
-          >
-            \u53D6\u6D88
-          </button>
-        </motion.div>
-      )}
-
-      {/* Leave button */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         onClick={() => setGame(prev => ({ ...prev, phase: 'map' }))}
-        className="w-full max-w-sm py-3 mt-3 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10"
-      >
-        \u79BB\u5F00\u5B9D\u7BB1\u5C4B
+        className="w-full max-w-xs py-3 mt-4 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10">
+        离开宝箱屋
       </motion.button>
     </div>
   );

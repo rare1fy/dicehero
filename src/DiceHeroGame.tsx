@@ -1505,6 +1505,7 @@ export default function DiceHeroGame() {
     setTimeout(() => {
       // Read latest game state from ref (avoids stale closure)
       const g = gameRef.current;
+      setRerollCount(0); // Reset reroll count for new turn
       const needDraw = Math.max(0, g.drawCount - remainingCount);
       
       let finalBag = [...g.diceBag];
@@ -3261,16 +3262,15 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 增幅模块槽位 (5个) */}
+              {/* 增幅模块槽位 (5个) - icon+缩略文字，横排 */}
               <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
                 <div className="flex gap-1 items-center">
-                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">模块</span>
                   {Array.from({ length: game.slots }).map((_, i) => {
                     const aug = game.augments[i] || null;
                     const isActive = aug ? activeAugments.some(a => a.id === aug.id) : false;
                     if (!aug) {
                       return (
-                        <div key={i} className="w-8 h-8 border-2 border-dashed border-[var(--dungeon-panel-border)] flex items-center justify-center opacity-30" style={{borderRadius:"2px"}}>
+                        <div key={i} className="flex-1 h-9 border-2 border-dashed border-[var(--dungeon-panel-border)] flex items-center justify-center opacity-30" style={{borderRadius:"2px"}}>
                           <span className="text-[8px] text-[var(--dungeon-text-dim)]">+</span>
                         </div>
                       );
@@ -3279,9 +3279,9 @@ useEffect(() => {
                       <motion.div
                         key={aug.id + "-" + i}
                         onClick={() => setSelectedAugment(aug)}
-                        animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                        animate={isActive ? { scale: [1, 1.05, 1] } : { scale: 1 }}
                         transition={isActive ? { repeat: Infinity, duration: 1.5 } : { duration: 0.3 }}
-                        className={`w-8 h-8 flex items-center justify-center cursor-pointer border-2 transition-all duration-200 shrink-0 ${
+                        className={`flex-1 h-9 flex items-center gap-1 cursor-pointer border-2 px-1 transition-all duration-200 ${
                           isActive
                             ? "bg-[var(--pixel-green-dark)] border-[var(--pixel-green)]"
                             : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
@@ -3289,39 +3289,48 @@ useEffect(() => {
                         style={{ borderRadius: "2px" }}
                         title={`${aug.name}: ${aug.description}`}
                       >
-                        <div className={`${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                          {getAugmentIcon(aug.condition, 14)}
+                        <div className={`shrink-0 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                          {getAugmentIcon(aug.condition, 12)}
                         </div>
+                        <span className={`text-[6px] font-bold leading-tight truncate ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                          {aug.name.length > 4 ? aug.name.slice(0, 4) : aug.name}
+                        </span>
                       </motion.div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* 骰子库轮转缩略图 */}
-              <div className="px-2 pb-1 pt-0.5 border-t border-[var(--dungeon-panel-border)]">
-                <div className="flex gap-0.5 overflow-x-auto no-scrollbar items-center">
-                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">骰子</span>
-                  {game.ownedDice.map((d, i) => {
-                    const def = getDiceDef(d.defId);
-                    const elemColor = ELEMENT_COLORS[def.element] || "#888";
-                    const inBag = game.diceBag.filter(id => id === d.defId).length > 0;
-                    return (
-                      <div
-                        key={i}
-                        className={`flex items-center justify-center border shrink-0 ${inBag ? "border-[rgba(255,255,255,0.15)]" : "border-[rgba(255,255,255,0.06)] opacity-40"}`}
-                        style={{ backgroundColor: `${elemColor}22`, borderRadius: "1px", width: "18px", height: "18px" }}
-                        title={`${def.name}${inBag ? " (在库中)" : " (已抽出)"}`}
-                      >
-                        <span className="text-[5px] font-bold" style={{ color: elemColor }}>
-                          {def.name.charAt(0)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  <span className="text-[6px] text-[var(--dungeon-text-dim)] ml-1 shrink-0 font-mono">
-                    {game.diceBag.length}库/{game.discardPile.length}弃
-                  </span>
+              {/* 骰子库 / 弃骰库 平行对齐，中间是流转缩略图 */}
+              <div className="px-2 pb-1 pt-1 border-t border-[var(--dungeon-panel-border)]">
+                <div className="flex items-center gap-1">
+                  {/* 骰子库标签 */}
+                  <div className="flex flex-col items-center shrink-0 w-8">
+                    <span className="text-[6px] font-bold text-[var(--pixel-green)]">库</span>
+                    <span className="text-[8px] font-mono font-bold text-[var(--pixel-green-light)]">{game.diceBag.length}</span>
+                  </div>
+                  {/* 中间流转缩略图 */}
+                  <div className="flex-1 flex gap-0.5 overflow-x-auto no-scrollbar items-center justify-center">
+                    {game.ownedDice.map((d, i) => {
+                      const def = getDiceDef(d.defId);
+                      const elemColor = ELEMENT_COLORS[def.element] || "#888";
+                      const inBag = game.diceBag.some(id => id === d.defId);
+                      const inDiscard = game.discardPile.some(id => id === d.defId);
+                      return (
+                        <div key={i}
+                          className={`shrink-0 flex items-center justify-center border ${inBag ? "border-[var(--pixel-green)] opacity-90" : inDiscard ? "border-[var(--pixel-red)] opacity-50" : "border-[rgba(255,255,255,0.08)] opacity-25"}`}
+                          style={{ backgroundColor: `${elemColor}22`, borderRadius: "1px", width: "16px", height: "16px" }}
+                          title={`${def.name}${inBag ? " (在库中)" : inDiscard ? " (已弃置)" : " (在手中)"}`}>
+                          <span className="text-[5px] font-bold" style={{ color: elemColor }}>{def.name.charAt(0)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* 弃骰库标签 */}
+                  <div className="flex flex-col items-center shrink-0 w-8">
+                    <span className="text-[6px] font-bold text-[var(--pixel-red)]">弃</span>
+                    <span className="text-[8px] font-mono font-bold text-[var(--pixel-red-light)]">{game.discardPile.length}</span>
+                  </div>
                 </div>
               </div>
               <CollapsibleLog logs={game.logs} />
