@@ -583,7 +583,6 @@ export default function DiceHeroGame() {
       const handDef = HAND_TYPES.find(h => h.name === handName);
       if (handDef) {
         const level = game.handLevels[handName] || 1;
-        const levelBonusBase = (level - 1) * 10;
         const levelBonusMult = (level - 1) * 0.3;
         // base已移除，纯倍率体系
         handMultiplier += (((handDef as any).mult || 1) - 1) + levelBonusMult;
@@ -3114,9 +3113,8 @@ useEffect(() => {
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
                       {HAND_TYPES.map(type => {
                         const level = game.handLevels[type.name] || 1;
-                        const levelBonusBase = (level - 1) * 10;
-                        const levelBonusMult = (level - 1) * 0.5;
-                        const currentBase = type.base + levelBonusBase;
+                        const levelBonusMult = (level - 1) * 0.3;
+                        const currentBase = 0; // base已移除，纯倍率体系
                         const currentMult = type.mult + levelBonusMult;
                         
                         return (
@@ -3128,7 +3126,7 @@ useEffect(() => {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[9px] bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] px-1.5 py-0.5 border border-[var(--dungeon-panel-border)] font-mono" style={{borderRadius:'2px'}}>
-                                  {currentBase} x {currentMult.toFixed(1)}
+                                  x{currentMult.toFixed(1)}
                                 </span>
                                 {level > 1 && (
                                   <span className="text-[9px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1.5 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{level}</span>

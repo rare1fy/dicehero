@@ -60,8 +60,9 @@ const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Ene
 };
 
 export const getEnemyForNode = (node: MapNode, depth: number, hpMultiplier: number = 1.0): Enemy => {
-  const hpScale = (1 + depth * BATTLE_SCALING.hpPerDepth) * hpMultiplier;
-  const dmgScale = 1 + depth * BATTLE_SCALING.dmgPerDepth;
+  const scaling = getDepthScaling(depth);
+  const hpScale = scaling.hpMult * hpMultiplier;
+  const dmgScale = scaling.dmgMult;
 
   if (node.type === 'boss') {
     return getBossForDepth(depth, hpScale, dmgScale);
@@ -91,8 +92,9 @@ const getBossForDepth = (depth: number, hpScale: number, dmgScale: number): Enem
  * Boss: 1-2 waves (wave 1: minions, wave 2: boss)
  */
 export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: number = 1.0): BattleWave[] => {
-  const hpScale = (1 + depth * BATTLE_SCALING.hpPerDepth) * hpMultiplier;
-  const dmgScale = 1 + depth * BATTLE_SCALING.dmgPerDepth;
+  const scaling = getDepthScaling(depth);
+  const hpScale = scaling.hpMult * hpMultiplier;
+  const dmgScale = scaling.dmgMult;
 
   if (node.type === 'boss') {
     // Boss fight: wave 1 = 2 normal minions, wave 2 = boss alone
