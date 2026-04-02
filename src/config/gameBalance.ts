@@ -16,7 +16,7 @@ export const PLAYER_INITIAL = {
   globalRerolls: 0,
   playsPerTurn: 1,
   souls: 0,
-  augmentSlots: 4,
+  augmentSlots: 5,
   drawCount: 4,       // 初始抽4颗骰子       // 初始抽3颗骰子（密集成长感）
   maxDrawCount: 6,
 } as const;
@@ -27,8 +27,8 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.90, dmgMult: 0.80 },  // depth 0: easy intro
-  { hpMult: 1.00, dmgMult: 0.85 },  // depth 1: warming up
+  { hpMult: 0.80, dmgMult: 0.75 },  // depth 0: easy intro (more enemies, less HP each)
+  { hpMult: 0.90, dmgMult: 0.80 },  // depth 1: warming up (more enemies, less HP each)
   { hpMult: 1.15, dmgMult: 0.95 },  // depth 2: getting serious
   { hpMult: 1.30, dmgMult: 1.05 },  // depth 3: elite encounter
   { hpMult: 1.40, dmgMult: 1.10 },  // depth 4: post-elite normal
@@ -77,7 +77,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 30,
+  restHeal: 35,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 30,
   /** 模块最大等级 */
@@ -89,9 +89,9 @@ export const CAMPFIRE_CONFIG = {
 // ============================================================
 export const LOOT_CONFIG = {
   /** 普通怪掉落金币 */
-  normalDropGold: 30,
+  normalDropGold: 35,
   /** 精英怪掉落金币 */
-  eliteDropGold: 60,
+  eliteDropGold: 70,
   /** Boss掉落金币 */
   bossDropGold: 100,
   /** 增幅选择数量 */

@@ -76,14 +76,28 @@ export interface StatusEffect {
 // 增幅模块
 // ============================================================
 
+export type AugmentCategory = 'transition' | 'economy' | 'endgame' | 'normal_attack' | 'self_harm';
+
+export interface AugmentContext {
+  rerollsThisTurn?: number;
+  hpLostThisTurn?: number;
+  hpLostThisBattle?: number;
+  currentHp?: number;
+  maxHp?: number;
+  currentGold?: number;
+  enemiesKilledThisBattle?: number;
+  consecutiveNormalAttacks?: number;
+}
+
 export interface Augment {
   id: string;
   name: string;
   level?: number;
-  condition: 'high_card' | 'pair' | 'two_pair' | 'n_of_a_kind' | 'full_house' | 'straight' | 'same_element' | 'element_count';
+  category?: AugmentCategory;
+  condition: 'high_card' | 'pair' | 'two_pair' | 'n_of_a_kind' | 'full_house' | 'straight' | 'same_element' | 'element_count' | 'always' | 'passive';
   conditionValue?: number;
   conditionElement?: DiceElement;
-  effect: (x: number, dice: Die[], level: number) => { damage?: number; armor?: number; heal?: number; multiplier?: number; pierce?: number; statusEffects?: StatusEffect[] };
+  effect: (x: number, dice: Die[], level: number, context?: AugmentContext) => { damage?: number; armor?: number; heal?: number; multiplier?: number; pierce?: number; goldBonus?: number; shopDiscount?: number; statusEffects?: StatusEffect[] };
   description: string;
 }
 
@@ -144,6 +158,18 @@ export interface LootItem {
   augmentOptions?: Augment[];
   diceDefId?: string;
   collected: boolean;
+}
+
+export type ChestTier = 'bronze' | 'silver' | 'gold';
+
+export interface ChestReward {
+  type: 'gold' | 'heal' | 'dice' | 'augment' | 'maxHp' | 'maxPlays' | 'removeDice' | 'reroll';
+  value?: number;
+  diceDefId?: string;
+  augment?: Augment;
+  label: string;
+  desc: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
 }
 
 export interface ShopItem {
@@ -241,6 +267,7 @@ export interface GameState {
   currentWaveIndex: number;       // current wave number
   logs: string[];
   shopItems: ShopItem[];
+  shopLevel: number;
   statuses: StatusEffect[];
   lootItems: LootItem[];
   enemyHpMultiplier: number;

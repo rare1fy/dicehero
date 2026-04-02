@@ -69,7 +69,7 @@ export default function DiceHeroGame() {
     discardPile: [],
     drawCount: PLAYER_INITIAL.drawCount,
     handLevels: {},
-    augments: [],
+    augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
     currentNodeId: null,
     map: generateMap(),
     phase: 'start',
@@ -77,6 +77,7 @@ export default function DiceHeroGame() {
     isEnemyTurn: false,
     logs: ['欢迎来到 DICE BATTLE。'],
     shopItems: [],
+    shopLevel: 1,
     statuses: [],
     lootItems: [],
     enemyHpMultiplier: 1.0,
@@ -236,8 +237,17 @@ export default function DiceHeroGame() {
       }
       
       // 添加增幅模块
-      // Relic system: just push new augment (no slot limit)
-      updated.augments = [...updated.augments, module.augment];
+      
+      // Augment module: find empty slot or replace
+      const newAugments = [...updated.augments];
+      const emptyIdx = newAugments.findIndex(a => a === null);
+      if (emptyIdx !== -1) {
+        newAugments[emptyIdx] = module.augment;
+      } else {
+        // All slots full - store for replacement choice
+        updated.pendingReplacementAugment = module.augment;
+      }
+      updated.augments = newAugments;
       
       return updated;
     });
@@ -580,28 +590,39 @@ export default function DiceHeroGame() {
 
     return game.augments.filter((aug): aug is Augment => {
       if (!aug) return false;
-      if (aug.condition === 'red_count') {
-        return selected.filter(d => d.color === '红色').length >= (aug.conditionValue || 0);
+      
+      // Always-active augments trigger on every play
+      if (aug.condition === 'always') return true;
+      
+      // Passive augments are handled separately (shop discount, interest, etc)
+      if (aug.condition === 'passive') return false;
+      
+      // Element count condition
+      if (aug.condition === 'element_count') {
+        if (aug.conditionElement) {
+          return selected.filter(d => d.element === aug.conditionElement).length >= (aug.conditionValue || 1);
+        }
+        return false;
       }
       
-      const conditionMap: Record<string, HandType> = {
-        'high_card': '普通攻击',
-        'pair': '对子',
-        'two_pair': '连对',
-        'n_of_a_kind': '三条',
-        'full_house': '葫芦',
-        'straight': '顺子',
-        'same_element': '同元素'
+      const conditionMap: Record<string, string> = {
+        'high_card': '\u666E\u901A\u653B\u51FB',
+        'pair': '\u5BF9\u5B50',
+        'two_pair': '\u8FDE\u5BF9',
+        'n_of_a_kind': '\u4E09\u6761',
+        'full_house': '\u8461\u82A6',
+        'straight': '\u987A\u5B50',
+        'same_element': '\u540C\u5143\u7D20'
       };
       
       const targetHand = conditionMap[aug.condition];
       if (!targetHand) return false;
       
       if (aug.condition === 'n_of_a_kind') {
-        return ['三条', '四条', '五条', '六条'].some(h => currentHands.allHands.includes(h as HandType));
+        return ['\u4E09\u6761', '\u56DB\u6761', '\u4E94\u6761', '\u516D\u6761'].some(h => currentHands.allHands.includes(h as any));
       }
       
-      return currentHands.allHands.includes(targetHand);
+      return currentHands.allHands.includes(targetHand as any);
     });
   }, [dice, game.augments, currentHands]);
 
@@ -661,7 +682,7 @@ export default function DiceHeroGame() {
     const triggeredAugments: { name: string, details: string }[] = [];
 
     activeAugments.forEach(aug => {
-      const res = aug.effect(X, selected, aug.level || 1);
+      const res = aug.effect(X, selected, aug.level || 1, { rerollsThisTurn: rerollCount, currentHp: game.hp, maxHp: game.maxHp, currentGold: game.souls });
       const details: string[] = [];
 
       if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
@@ -669,6 +690,7 @@ export default function DiceHeroGame() {
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
+      if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); details.push(`\u91D1\u5E01+${res.goldBonus}`); }
       if (res.statusEffects) {
         res.statusEffects.forEach(s => {
           const existing = statusEffects.find(es => es.type === s.type);
@@ -1737,13 +1759,36 @@ useEffect(() => {
     if (!pendingLootAugment) return;
     playSound('select');
     
-    // Relic system: just add to collection (no upgrade, no slot limit)
-    setGame(prev => {
-      const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
-      addLog(`\u83B7\u5F97\u4E86\u65B0\u9057\u7269: ${aug.name}`);
-      return { ...prev, augments: [...prev.augments, { ...aug, level: 1 }], lootItems: nextLoot };
-    });
-    setPendingLootAugment(null);
+    // Augment module: find empty slot or replace
+    const existingIdx = game.augments.findIndex(a => a?.id === aug.id);
+    if (existingIdx !== -1) {
+      // Upgrade existing
+      setGame(prev => {
+        const nextAugs = [...prev.augments];
+        const existing = nextAugs[existingIdx]!;
+        nextAugs[existingIdx] = { ...existing, level: (existing.level || 1) + 1 };
+        const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
+        addLog(`\u6A21\u5757\u5347\u7EA7: ${aug.name} Lv.${(existing.level || 1) + 1}`);
+        return { ...prev, augments: nextAugs, lootItems: nextLoot };
+      });
+      setPendingLootAugment(null);
+    } else {
+      const emptyIdx = game.augments.findIndex(a => a === null);
+      if (emptyIdx !== -1) {
+        setGame(prev => {
+          const nextAugs = [...prev.augments];
+          nextAugs[emptyIdx] = { ...aug, level: 1 };
+          const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
+          addLog(`\u83B7\u5F97\u65B0\u6A21\u5757: ${aug.name}`);
+          return { ...prev, augments: nextAugs, lootItems: nextLoot };
+        });
+        setPendingLootAugment(null);
+      } else {
+        // All slots full, need replacement UI
+        setGame(prev => ({ ...prev, pendingReplacementAugment: { ...aug, level: 1 } }));
+        setPendingLootAugment(null);
+      }
+    }
   };
 
   const replaceAugment = (newAug: Augment, replaceIdx: number) => {
@@ -1777,10 +1822,17 @@ useEffect(() => {
   };
 
   const pickReward = (aug: Augment) => {
-    // Relic system: just add to collection (no upgrade, no slot limit)
     setGame(prev => {
-      addLog(`获得了新遗物: ${aug.name}`);
-      return { ...prev, augments: [...prev.augments, { ...aug, level: 1 }], phase: 'map' };
+      const newAugments = [...prev.augments];
+      const emptyIdx = newAugments.findIndex(a => a === null);
+      if (emptyIdx !== -1) {
+        newAugments[emptyIdx] = { ...aug, level: 1 };
+        addLog(`\u83B7\u5F97\u4E86\u65B0\u6A21\u5757: ${aug.name}`);
+        return { ...prev, augments: newAugments, phase: 'map' };
+      } else {
+        // All 5 slots full, need to replace
+        return { ...prev, pendingReplacementAugment: { ...aug, level: 1 } };
+      }
     });
   };
 
@@ -3209,22 +3261,27 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 遗物栏 - 小格子无限累积 */}
+              {/* 增幅模块槽位 (5个) */}
               <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
-                <div className="flex gap-1 overflow-x-auto no-scrollbar items-center">
-                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">遗物</span>
-                  {game.augments.filter(a => a !== null).length === 0 && (
-                    <span className="text-[7px] text-[var(--dungeon-text-dim)] italic">无</span>
-                  )}
-                  {game.augments.filter((a): a is Augment => a !== null).map((aug, i) => {
-                    const isActive = activeAugments.some(a => a.id === aug.id);
+                <div className="flex gap-1 items-center">
+                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">模块</span>
+                  {Array.from({ length: game.slots }).map((_, i) => {
+                    const aug = game.augments[i] || null;
+                    const isActive = aug ? activeAugments.some(a => a.id === aug.id) : false;
+                    if (!aug) {
+                      return (
+                        <div key={i} className="w-8 h-8 border-2 border-dashed border-[var(--dungeon-panel-border)] flex items-center justify-center opacity-30" style={{borderRadius:"2px"}}>
+                          <span className="text-[8px] text-[var(--dungeon-text-dim)]">+</span>
+                        </div>
+                      );
+                    }
                     return (
                       <motion.div
                         key={aug.id + "-" + i}
                         onClick={() => setSelectedAugment(aug)}
                         animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
                         transition={isActive ? { repeat: Infinity, duration: 1.5 } : { duration: 0.3 }}
-                        className={`w-7 h-7 flex items-center justify-center cursor-pointer border-2 transition-all duration-200 shrink-0 ${
+                        className={`w-8 h-8 flex items-center justify-center cursor-pointer border-2 transition-all duration-200 shrink-0 ${
                           isActive
                             ? "bg-[var(--pixel-green-dark)] border-[var(--pixel-green)]"
                             : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
@@ -3233,7 +3290,7 @@ useEffect(() => {
                         title={`${aug.name}: ${aug.description}`}
                       >
                         <div className={`${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                          {getAugmentIcon(aug.condition, 12)}
+                          {getAugmentIcon(aug.condition, 14)}
                         </div>
                       </motion.div>
                     );
@@ -3241,10 +3298,10 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 骰子库展示 */}
-              <div className="px-2 pb-1.5 pt-0.5 border-t border-[var(--dungeon-panel-border)]">
+              {/* 骰子库轮转缩略图 */}
+              <div className="px-2 pb-1 pt-0.5 border-t border-[var(--dungeon-panel-border)]">
                 <div className="flex gap-0.5 overflow-x-auto no-scrollbar items-center">
-                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">骰子库</span>
+                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">骰子</span>
                   {game.ownedDice.map((d, i) => {
                     const def = getDiceDef(d.defId);
                     const elemColor = ELEMENT_COLORS[def.element] || "#888";
@@ -3252,23 +3309,21 @@ useEffect(() => {
                     return (
                       <div
                         key={i}
-                        className={`w-5 h-5 flex items-center justify-center border shrink-0 ${inBag ? "border-[rgba(255,255,255,0.15)]" : "border-[rgba(255,255,255,0.06)] opacity-40"}`}
-                        style={{ backgroundColor: `${elemColor}22`, borderRadius: "2px" }}
-                        title={`${def.name}`}
+                        className={`flex items-center justify-center border shrink-0 ${inBag ? "border-[rgba(255,255,255,0.15)]" : "border-[rgba(255,255,255,0.06)] opacity-40"}`}
+                        style={{ backgroundColor: `${elemColor}22`, borderRadius: "1px", width: "18px", height: "18px" }}
+                        title={`${def.name}${inBag ? " (在库中)" : " (已抽出)"}`}
                       >
-                        <span className="text-[6px] font-bold" style={{ color: elemColor }}>
+                        <span className="text-[5px] font-bold" style={{ color: elemColor }}>
                           {def.name.charAt(0)}
                         </span>
                       </div>
                     );
                   })}
-                  <span className="text-[7px] text-[var(--dungeon-text-dim)] ml-1 shrink-0">
+                  <span className="text-[6px] text-[var(--dungeon-text-dim)] ml-1 shrink-0 font-mono">
                     {game.diceBag.length}库/{game.discardPile.length}弃
                   </span>
                 </div>
               </div>
-
-              {/* 可折叠日志 */}
               <CollapsibleLog logs={game.logs} />
             </div>
 
