@@ -132,7 +132,7 @@ export const ShopScreen: React.FC = () => {
                   style={{ borderRadius: '3px' }}
                 >
                   <div className="w-8 h-8 flex items-center justify-center mb-0.5">
-                    <PixelDice size={20} color={elemColor} />
+                    <PixelDice size={3} />
                   </div>
                   <div className="text-[7px] text-[var(--dungeon-text-bright)]">{def.name}</div>
                   <div className="text-[6px] text-[var(--dungeon-text-dim)]">Lv.{d.level}</div>
