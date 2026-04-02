@@ -1544,6 +1544,12 @@ useEffect(() => {
       { id: 'gold', type: 'gold', value: enemies.reduce((s,e) => s + e.dropGold, 0), collected: false }
     ];
 
+    // Boss rewards: +1 draw count
+    const victoryNode = game.map.find(n => n.id === game.currentNodeId);
+    if (victoryNode?.type === 'boss') {
+      loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
+    }
+
     // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
     if (enemies.find(e => e.rerollReward)?.rerollReward) {
       const eliteRewards = LOOT_CONFIG.eliteRewards;
@@ -1784,6 +1790,7 @@ useEffect(() => {
     dice, setDice,
     showTutorial, setShowTutorial,
     showHandGuide, setShowHandGuide,
+    showDiceGuide, setShowDiceGuide,
     rerollFlash,
     pendingLootAugment, setPendingLootAugment,
     skillModuleOptions,

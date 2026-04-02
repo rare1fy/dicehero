@@ -28,6 +28,8 @@ export interface GameContextType {
   setShowTutorial: React.Dispatch<React.SetStateAction<boolean>>;
   showHandGuide: boolean;
   setShowHandGuide: React.Dispatch<React.SetStateAction<boolean>>;
+  showDiceGuide: boolean;
+  setShowDiceGuide: React.Dispatch<React.SetStateAction<boolean>>;
   rerollFlash: boolean;
   pendingLootAugment: { id: string; options: Augment[] } | null;
   setPendingLootAugment: React.Dispatch<React.SetStateAction<{ id: string; options: Augment[] } | null>>;

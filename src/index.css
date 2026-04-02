@@ -483,14 +483,14 @@
 }
 
 .pixel-dice-white {
-  background: linear-gradient(180deg, #f0f0f0 0%, #dcdce0 50%, #c8c8d0 100%);
-  border-color: #e0e0e8;
-  color: #2a2a35;
+  background: linear-gradient(180deg, #d0d4d8 0%, #b8bcc2 50%, #a0a8b0 100%);
+  border-color: #c0c4c8;
+  color: #2a2e35;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.1),
-    inset 2px 2px 0 rgba(255,255,255,0.8),
-    0 3px 0 #8a8a95;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+    inset -2px -2px 0 rgba(0,0,0,0.15),
+    inset 2px 2px 0 rgba(255,255,255,0.5),
+    0 3px 0 #707880;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
 }
 /* === ��ǿ��������� === */
 .pixel-dice {

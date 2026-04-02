@@ -8,15 +8,14 @@ import { PixelDice, PixelStar, PixelArrowUp, PixelClose } from './PixelIcons';
 import { ELEMENT_NAMES, ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
 
-type RewardTab = 'newDice' | 'upgrade' | 'remove';
+type RewardTab = 'newDice' | 'upgrade';
 
 export const DiceRewardScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
   const [activeTab, setActiveTab] = useState<RewardTab>('newDice');
   const [selectedNewDice, setSelectedNewDice] = useState<string | null>(null);
   const [selectedUpgradeDice, setSelectedUpgradeDice] = useState<number | null>(null);
-  const [selectedRemoveDice, setSelectedRemoveDice] = useState<number | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
+    const [confirmed, setConfirmed] = useState(false);
 
   // 根据战斗类型决定奖励池
   const battleType = useMemo(() => {
@@ -67,15 +66,6 @@ export const DiceRewardScreen: React.FC = () => {
       });
       addLog(`升级骰子: ${def.name} → Lv.${newLevel}`);
       addToast(`${def.name} 升级到 Lv.${newLevel}!`, 'buff');
-    } else if (activeTab === 'remove' && selectedRemoveDice !== null) {
-      const target = game.ownedDice[selectedRemoveDice];
-      const def = getDiceDef(target.defId);
-      setGame(prev => ({
-        ...prev,
-        ownedDice: prev.ownedDice.filter((_, i) => i !== selectedRemoveDice),
-      }));
-      addLog(`移除骰子: ${def.name}`);
-      addToast(`◇ 移除了 ${def.name}`, 'info');
     }
 
     // 延迟后跳转到 loot 阶段
@@ -201,7 +191,7 @@ export const DiceRewardScreen: React.FC = () => {
         ] as const).map(tab => (
           <button
             key={tab.id}
-            onClick={() => { if (!('disabled' in tab && tab.disabled)) { setActiveTab(tab.id); setSelectedNewDice(null); setSelectedUpgradeDice(null); setSelectedRemoveDice(null); } }}
+            onClick={() => { if (!('disabled' in tab && tab.disabled)) { setActiveTab(tab.id); setSelectedNewDice(null); setSelectedUpgradeDice(null); } }}
             disabled={'disabled' in tab && tab.disabled}
             className={`px-3 py-1.5 text-[9px] font-bold rounded transition-all ${
               activeTab === tab.id
@@ -276,24 +266,7 @@ export const DiceRewardScreen: React.FC = () => {
           )}
 
           {/* 移除骰子 */}
-          {activeTab === 'remove' && (
-            <motion.div
-              key="remove"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <div className="text-center text-[8px] text-[var(--dungeon-text-dim)] mb-2">
-                瘦身构筑，移除不需要的骰子（至少保留4颗）
-              </div>
-              <div className="flex justify-center gap-2.5 flex-wrap">
-                {removableDice.map(d => renderDiceCard(
-                  d.defId, d.level, selectedRemoveDice === d.index,
-                  () => setSelectedRemoveDice(selectedRemoveDice === d.index ? null : d.index)
-                ))}
-              </div>
-            </motion.div>
-          )}
+
         </AnimatePresence>
       </div>
 
@@ -308,9 +281,9 @@ export const DiceRewardScreen: React.FC = () => {
         </button>
         <button
           onClick={handleConfirm}
-          disabled={confirmed || (activeTab === 'newDice' && !selectedNewDice) || (activeTab === 'upgrade' && selectedUpgradeDice === null) || (activeTab === 'remove' && selectedRemoveDice === null)}
+          disabled={confirmed || (activeTab === 'newDice' && !selectedNewDice) || (activeTab === 'upgrade' && selectedUpgradeDice === null)}
           className={`px-6 py-2 text-[9px] font-bold transition-all ${
-            confirmed || (activeTab === 'newDice' && !selectedNewDice) || (activeTab === 'upgrade' && selectedUpgradeDice === null) || (activeTab === 'remove' && selectedRemoveDice === null)
+            confirmed || (activeTab === 'newDice' && !selectedNewDice) || (activeTab === 'upgrade' && selectedUpgradeDice === null)
               ? 'bg-[rgba(255,255,255,0.05)] text-[var(--dungeon-text-dim)] border border-[rgba(255,255,255,0.05)] cursor-not-allowed'
               : 'bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] border border-[var(--pixel-gold)] hover:bg-[var(--pixel-gold)] hover:text-black'
           }`}
