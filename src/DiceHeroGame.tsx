@@ -130,6 +130,7 @@ export default function DiceHeroGame() {
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
 
   const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
+  const [dyingEnemies, setDyingEnemies] = useState<Set<string>>(new Set());
   const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
 
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
@@ -263,7 +264,7 @@ export default function DiceHeroGame() {
     const waves = getEnemiesForNode(node, node.depth, game.enemyHpMultiplier);
     const firstWave = waves[0]?.enemies || [];
     setEnemies(firstWave);
-    setEnemyEffects({});
+    setEnemyEffects({}); setDyingEnemies(new Set());
     setPlayerEffect(null);
     // Boss出场音效
     if (node.type === 'boss') {
@@ -593,6 +594,7 @@ export default function DiceHeroGame() {
         case '对子': break;
         case '顺子': break; // 3顺 AOE
         case '连对': baseArmor += 5; break;
+        case '三连对': baseArmor += 8; break;
         case '三条': statusEffects.push({ type: 'vulnerable', value: 1, duration: 2 }); break; // 1层易伤
         case '4顺': statusEffects.push({ type: 'weak', value: 1, duration: 2 }); break; // AOE + 1层虚弱
         case '同元素': break; // 骰子效果x2在后面处理
@@ -1048,8 +1050,8 @@ export default function DiceHeroGame() {
         if (nextWaveIdx < game.battleWaves.length) {
           const nextWave = game.battleWaves[nextWaveIdx].enemies;
           setEnemies(nextWave);
-          setEnemyEffects({});
-          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false }));
+          setEnemyEffects({}); setDyingEnemies(new Set());
+          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
           setWaveAnnouncement(nextWaveIdx + 1);
           addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
           rollAllDice();
@@ -1130,8 +1132,8 @@ export default function DiceHeroGame() {
       if (nextWaveIdx < game.battleWaves.length) {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         setEnemies(nextWave);
-        setEnemyEffects({});
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false }));
+        setEnemyEffects({}); setDyingEnemies(new Set());
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
         setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
@@ -1152,10 +1154,24 @@ export default function DiceHeroGame() {
         for (const e of currentEnemies.filter(en => en.hp > 0)) {
           await new Promise(r => setTimeout(r, 350));
           
-          const isMelee = e.combatType === 'warrior' || e.combatType === 'guardian';
+          // Freeze check: completely skip action
+          const isFrozen = e.statuses.some(s => s.type === 'freeze' && s.duration > 0);
+          if (isFrozen) {
+            addLog(`${e.name} \u88AB\u51BB\u7ED3\uFF0C\u65E0\u6CD5\u884C\u52A8\uFF01`);
+            continue;
+          }
+          
+          // Slow check: affects movement and ranged damage
+          const isSlowed = e.statuses.some(s => s.type === 'slow' && s.duration > 0);
+                    const isMelee = e.combatType === 'warrior' || e.combatType === 'guardian';
           
           // Melee: must approach first
-          if (isMelee && e.distance > 0) {
+          // Slowed melee enemies cannot move
+          if (isMelee && e.distance > 0 && isSlowed) {
+            addLog(`${e.name} \u88AB\u51CF\u901F\uFF0C\u65E0\u6CD5\u79FB\u52A8\uFF01`);
+            continue;
+          }
+                    if (isMelee && e.distance > 0) {
             setEnemies(prev => prev.map(en =>
               en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
             ));
@@ -1247,17 +1263,19 @@ export default function DiceHeroGame() {
           setScreenShake(true);
           
           let damage = e.attackDmg;
-          // Warrior: melee powerhouse - 20% bonus damage at close range
+          // Warrior: melee powerhouse - 30% bonus at close range (the real threat)
           if (e.combatType === 'warrior') {
-            damage = Math.floor(damage * 1.2);
+            damage = Math.floor(damage * 1.3);
           }
-          // Ranger: slightly less per hit but attacks twice (handled below)
+          // Ranger: low per-hit damage but attacks twice (total ~0.80x)
           if (e.combatType === 'ranger') {
-            damage = Math.floor(damage * 0.55);
+            damage = Math.floor(damage * 0.40);
+            if (isSlowed) damage = Math.floor(damage * 0.5); // Slowed ranger even weaker
           }
-          // Caster: moderate damage but always applies a debuff
+          // Caster: low damage but always applies debuff (annoying, not deadly)
           if (e.combatType === 'caster') {
-            damage = Math.floor(damage * 0.8);
+            damage = Math.floor(damage * 0.65);
+            if (isSlowed) damage = Math.floor(damage * 0.5); // Slowed caster even weaker
           }
           const str = e.statuses.find(s => s.type === 'strength');
           if (str) damage += str.value;
@@ -1297,7 +1315,7 @@ export default function DiceHeroGame() {
           // Ranger: second hit after short delay
           if (e.combatType === 'ranger') {
             await new Promise(r => setTimeout(r, 250));
-            const secondHit = Math.floor(e.attackDmg * 0.55);
+            const secondHit = Math.floor(e.attackDmg * 0.40);
             setGame(prev => {
               let newArmor = prev.armor;
               let newHp = prev.hp;
@@ -1351,8 +1369,8 @@ export default function DiceHeroGame() {
       if (nextWaveIdx < game.battleWaves.length) {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         setEnemies(nextWave);
-        setEnemyEffects({});
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false }));
+        setEnemyEffects({}); setDyingEnemies(new Set());
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
         setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();

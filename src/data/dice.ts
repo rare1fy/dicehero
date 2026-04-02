@@ -48,9 +48,9 @@ const ice: DiceDef = {
   name: '冰霜骰子',
   element: 'ice',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时施加1层冰冻',
+  description: '出牌时减速敌人1回合',
   rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'weak', value: 2, duration: 2 } },
+  onPlay: { statusToEnemy: { type: 'slow', value: 1, duration: 1 } },
 };
 
 const thunder: DiceDef = {

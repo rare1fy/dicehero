@@ -24,6 +24,7 @@ export const HAND_TYPES: HandTypeDef[] = [
   { id: 'pair', name: '对子', icon: <PixelPair size={2} />, base: 0, mult: 2.0, description: '2颗点数相同。伤害 = 点数和 x 2.0' },
   { id: 'straight_3', name: '顺子', icon: <PixelArrowRight size={2} />, base: 0, mult: 1.5, description: '3颗及以上点数连续。伤害 = 点数和 x 1.5，AOE全体' },
   { id: 'two_pair', name: '连对', icon: <PixelLayers size={2} />, base: 0, mult: 2.5, description: '2组对子。伤害 = 点数和 x 2.5，获得5护甲' },
+  { id: 'three_pair', name: '三连对', icon: <PixelLayers size={2} />, base: 0, mult: 3.5, description: '3组对子。伤害 = 点数和 x 3.5，获得8护甲' },
   { id: 'three_of_a_kind', name: '三条', icon: <PixelTriangle size={2} />, base: 0, mult: 3.0, description: '3颗点数相同。伤害 = 点数和 x 3.0，施加1层易伤(2回合)' },
   { id: 'straight_4', name: '4顺', icon: <PixelArrowRight size={2} />, base: 0, mult: 2.5, description: '4颗点数连续。伤害 = 点数和 x 2.5，AOE全体，施加1层虚弱' },
   { id: 'same_element', name: '同元素', icon: <PixelDroplet size={2} />, base: 0, mult: 3.0, description: '至少4颗同元素(非普通)。伤害 = 点数和 x 3.0，骰子效果x2' },

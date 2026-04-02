@@ -15,6 +15,7 @@ export const checkHands = (dice: Die[]): HandResult => {
   const sortedCounts = Object.values(counts).sort((a, b) => b - a);
   const maxCount = sortedCounts[0];
   const isTwoPair = sortedCounts.length >= 2 && sortedCounts[0] === 2 && sortedCounts[1] === 2;
+  const isThreePair = sortedCounts.length >= 3 && sortedCounts[0] === 2 && sortedCounts[1] === 2 && sortedCounts[2] === 2;
   const isFullHouse = sortedCounts.length >= 2 && sortedCounts[0] >= 3 && sortedCounts[1] >= 2;
 
   const uniqueValues = Array.from(new Set(values)).sort((a, b) => a - b);
@@ -37,6 +38,7 @@ export const checkHands = (dice: Die[]): HandResult => {
   if (maxCount === 2 && dice.length === 2) hands.add('对子');
   if (isFullHouse && dice.length === 5) hands.add('葫芦');
   if (isTwoPair && dice.length === 4) hands.add('连对');
+  if (isThreePair && dice.length === 6) hands.add('三连对');
   
   // 顺子按长度区分
   if (isStraight && straightLen === 6) hands.add('6顺');
@@ -69,6 +71,7 @@ export const checkHands = (dice: Die[]): HandResult => {
   else if (maxCount === 4 && dice.length === 4) { activeHands.push('四条'); hasBaseHand = true; }
   else if (isFullHouse && dice.length === 5) { activeHands.push('葫芦'); hasBaseHand = true; }
   else if (maxCount === 3 && dice.length === 3) { activeHands.push('三条'); hasBaseHand = true; }
+  else if (isThreePair && dice.length === 6) { activeHands.push('三连对'); hasBaseHand = true; }
   else if (isTwoPair && dice.length === 4) { activeHands.push('连对'); hasBaseHand = true; }
   else if (maxCount === 2 && dice.length === 2) { activeHands.push('对子'); hasBaseHand = true; }
 
@@ -95,7 +98,7 @@ export const checkHands = (dice: Die[]): HandResult => {
 
   // 按优先级排序
   const priority: HandType[] = [
-    '皇家元素顺', '元素葫芦', '元素顺', '六条', '五条', '四条', '葫芦', '同元素', '6顺', '5顺', '4顺', '顺子', '三条', '连对', '对子', '普通攻击'
+    '皇家元素顺', '元素葫芦', '元素顺', '六条', '五条', '四条', '葫芦', '同元素', '6顺', '5顺', '4顺', '顺子', '三条', '三连对', '连对', '对子', '普通攻击'
   ];
   activeHands.sort((a, b) => priority.indexOf(a) - priority.indexOf(b));
 

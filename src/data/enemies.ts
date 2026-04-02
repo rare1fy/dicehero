@@ -91,6 +91,29 @@ const getBossForDepth = (depth: number, hpScale: number, dmgScale: number): Enem
  * Elite: 1 wave of 1 elite (+ maybe 1 normal sidekick)
  * Boss: 1-2 waves (wave 1: minions, wave 2: boss)
  */
+
+/**
+ * 根据层级过滤可用的普通敌人类型
+ * 设计原则：前几层只出近战（warrior/guardian），中期加入ranger，后期全类型
+ * - 层0-1: 只有 warrior, guardian（新手保护期，纯近战）
+ * - 层2-3: 加入 ranger（远程开始出现）
+ * - 层4+:  全类型（caster/priest 也开始出现）
+ */
+const getAvailableEnemies = (depth: number): typeof NORMAL_ENEMIES => {
+  if (depth <= 1) {
+    // 新手期：只出近战
+    const pool = NORMAL_ENEMIES.filter(e => e.combatType === 'warrior' || e.combatType === 'guardian');
+    return pool.length > 0 ? pool : NORMAL_ENEMIES.slice(0, 2);
+  }
+  if (depth <= 3) {
+    // 中前期：加入ranger
+    const pool = NORMAL_ENEMIES.filter(e => e.combatType !== 'caster' && e.combatType !== 'priest');
+    return pool.length > 0 ? pool : NORMAL_ENEMIES;
+  }
+  // 中后期：全类型
+  return NORMAL_ENEMIES;
+};
+
 export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: number = 1.0): BattleWave[] => {
   const scaling = getDepthScaling(depth);
   const hpScale = scaling.hpMult * hpMultiplier;
@@ -124,7 +147,8 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
     const enemyCount = depth === 0 ? 1 : Math.min(3, 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor((depth + 2) / 3))));
     const waveEnemies: Enemy[] = [];
     for (let i = 0; i < enemyCount; i++) {
-      const config = NORMAL_ENEMIES[Math.floor(Math.random() * NORMAL_ENEMIES.length)];
+      const pool = getAvailableEnemies(depth);
+      const config = pool[Math.floor(Math.random() * pool.length)];
       // Later waves slightly weaker
       const waveScale = w === 0 ? 1 : 0.8;
       const enemy = buildEnemy(config, hpScale * waveScale, dmgScale * waveScale);
