@@ -43,6 +43,48 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + 'pixel-dice-heavy ' + heavyGlow;
   }
 
+  // Blade dice - silver metallic with slash texture
+  if (diceDefId === 'blade') {
+    const bladeGlow = selected && !invalid ? 'dice-glow-blade' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-blade ' + bladeGlow;
+  }
+
+  // Amplify dice - purple-blue with radial glow
+  if (diceDefId === 'amplify') {
+    const ampGlow = selected && !invalid ? 'dice-glow-amplify' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-amplify ' + ampGlow;
+  }
+
+  // Split dice - teal green with crack lines
+  if (diceDefId === 'split') {
+    const splitGlow = selected && !invalid ? 'dice-glow-split' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-split ' + splitGlow;
+  }
+
+  // Joker dice - rainbow gradient with diamond pattern
+  if (diceDefId === 'joker') {
+    const jokerGlow = selected && !invalid ? 'dice-glow-joker' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-joker ' + jokerGlow;
+  }
+
+  // Chaos dice - dark red + gold with swirl
+  if (diceDefId === 'chaos') {
+    const chaosGlow = selected && !invalid ? 'dice-glow-chaos' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-chaos ' + chaosGlow;
+  }
+
+  // Cursed dice - dark purple with rune border
+  if (diceDefId === 'cursed') {
+    const cursedGlow = selected && !invalid ? 'dice-glow-cursed' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-cursed ' + cursedGlow;
+  }
+
+  // Cracked dice - dark gray with visible cracks
+  if (diceDefId === 'cracked') {
+    const crackedGlow = selected && !invalid ? 'dice-glow-cracked' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-cracked ' + crackedGlow;
+  }
+
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
   const glow = selected && !invalid ? style.glowClass : '';
   const effect = !rolling && !invalid ? style.effectClass : '';

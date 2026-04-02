@@ -1842,9 +1842,9 @@ useEffect(() => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <div className="text-[9px] tracking-[0.2em] text-[var(--pixel-purple)] font-bold mb-1">◆ 战前准备 ◆</div>
+                <div className="text-[11px] tracking-[0.2em] text-[var(--pixel-purple)] font-bold mb-1">◆ 战前准备 ◆</div>
                 <h2 className="text-lg font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1">选择技能模组</h2>
-                <p className="text-[9px] text-[var(--dungeon-text-dim)]">选择一个模组获得增幅，但需付出代价</p>
+                <p className="text-[11px] text-[var(--dungeon-text-dim)]">选择一个模组获得增幅，但需付出代价</p>
               </motion.div>
             </div>
 
@@ -1911,12 +1911,12 @@ useEffect(() => {
                     </div>
                     
                     {/* 名称 */}
-                    <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
+                    <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
                       {module.name}
                     </div>
                     
                     {/* 描述 */}
-                    <div className="text-[8px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
+                    <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
                       {formatDescription(module.description)}
                     </div>
                     
@@ -1924,7 +1924,7 @@ useEffect(() => {
                     <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1.5" />
                     
                     {/* 代价 */}
-                    <div className="text-[8px] font-bold text-[var(--pixel-red)] flex items-center gap-0.5">
+                    <div className="text-[10px] font-bold text-[var(--pixel-red)] flex items-center gap-0.5">
                       <PixelSkull size={1} />
                       {module.cost.label}
                     </div>
@@ -1940,7 +1940,7 @@ useEffect(() => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1 }}
                 onClick={handleSkipSkillModule}
-                className="w-full py-2.5 pixel-btn pixel-btn-ghost text-[10px] font-bold opacity-70 hover:opacity-100 transition-opacity"
+                className="w-full py-2.5 pixel-btn pixel-btn-ghost text-[12px] font-bold opacity-70 hover:opacity-100 transition-opacity"
               >
                 跳过，直接战斗
               </motion.button>
@@ -2062,12 +2062,12 @@ useEffect(() => {
                 >
                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[rgba(8,11,14,0.8)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
                       <PixelSkull size={1} className="inline-block mr-0.5" style={{ verticalAlign: 'middle' }} />
-                    <span className="text-[8px] text-[var(--pixel-orange)] font-bold">第{game.currentWaveIndex + 1}波</span>
-                    <span className="text-[7px] text-[var(--dungeon-text-dim)]">/ {game.battleWaves.length}波</span>
+                    <span className="text-[10px] text-[var(--pixel-orange)] font-bold">第{game.currentWaveIndex + 1}波</span>
+                    <span className="text-[9px] text-[var(--dungeon-text-dim)]">/ {game.battleWaves.length}波</span>
                   </div>
                   {game.currentWaveIndex + 1 < game.battleWaves.length && (
                     <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[rgba(8,11,14,0.65)] border border-[rgba(255,255,255,0.06)]" style={{borderRadius:'2px'}}>
-                      <span className="text-[6px] text-[var(--dungeon-text-dim)]">下波:</span>
+                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">下波:</span>
                       {game.battleWaves[game.currentWaveIndex + 1].enemies.slice(0, 3).map((ne, ni) => (
                         <div key={ni} className="inline-flex items-center" title={ne.name} style={{ transform: 'scale(0.5)', transformOrigin: 'center', margin: '-2px' }}>
                           {hasSpriteData(ne.name) ? <PixelSprite name={ne.name} size={2} /> : <PixelSkull size={2} />}
@@ -2193,7 +2193,7 @@ useEffect(() => {
 
                       {/* Enemy name + distance */}
                       <div className="text-center mb-0.5">
-                        <span className="font-bold text-[var(--dungeon-text-bright)] text-[10px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[7px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '近' : '远'}</span>
+                        <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '近' : '远'}</span>
                         {enemy.distance > 0 && (
                           <div className="flex items-center justify-center gap-0.5 mt-0.5">
                             {Array.from({ length: 3 }).map((_, idx) => (
@@ -2203,7 +2203,7 @@ useEffect(() => {
                                 boxShadow: idx < enemy.distance ? '0 0 3px rgba(224,120,48,0.5)' : 'none'
                               }} />
                             ))}
-                            <span className="text-[7px] text-[var(--pixel-orange-light)] font-mono ml-0.5">{'距'}{enemy.distance}</span>
+                            <span className="text-[9px] text-[var(--pixel-orange-light)] font-mono ml-0.5">{'距'}{enemy.distance}</span>
                           </div>
                         )}
                       </div>
@@ -2216,7 +2216,7 @@ useEffect(() => {
                           animate={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[7px] font-mono font-bold text-white pixel-text-shadow">
+                          <span className="text-[9px] font-mono font-bold text-white pixel-text-shadow">
                             {enemy.hp}/{enemy.maxHp}
                           </span>
                         </div>
@@ -2362,23 +2362,23 @@ useEffect(() => {
                       style={{ borderRadius: '4px' }}
                       onClick={e => e.stopPropagation()}
                     >
-                      <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-2 text-center pixel-text-shadow">波次详情</div>
+                      <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] mb-2 text-center pixel-text-shadow">波次详情</div>
                       {game.battleWaves.map((wave, wi) => (
                         <div key={wi} className={`mb-2 p-2 border ${wi === game.currentWaveIndex ? 'border-[var(--pixel-orange)] bg-[rgba(224,120,48,0.1)]' : 'border-[rgba(255,255,255,0.08)]'}`} style={{borderRadius:'3px'}}>
-                          <div className="text-[9px] font-bold mb-1" style={{ color: wi === game.currentWaveIndex ? 'var(--pixel-orange)' : 'var(--dungeon-text-dim)' }}>
+                          <div className="text-[11px] font-bold mb-1" style={{ color: wi === game.currentWaveIndex ? 'var(--pixel-orange)' : 'var(--dungeon-text-dim)' }}>
                             第{wi + 1}波 {wi === game.currentWaveIndex ? '(当前)' : wi < game.currentWaveIndex ? '(已清除)' : ''}
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {wave.enemies.map((we, ei) => (
                               <div key={ei} className="flex items-center gap-0.5 px-1 py-0.5 bg-[rgba(255,255,255,0.04)]" style={{borderRadius:'2px'}}>
-                                <span className="text-[8px] text-[var(--dungeon-text)]">{we.name}</span>
-                                <span className="text-[7px] text-[var(--dungeon-text-dim)]">HP{we.maxHp}</span>
+                                <span className="text-[10px] text-[var(--dungeon-text)]">{we.name}</span>
+                                <span className="text-[9px] text-[var(--dungeon-text-dim)]">HP{we.maxHp}</span>
                               </div>
                             ))}
                           </div>
                         </div>
                       ))}
-                      <button className="w-full mt-1 py-1 text-[9px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] transition-colors" onClick={() => setShowWaveDetail(false)}>关闭</button>
+                      <button className="w-full mt-1 py-1 text-[11px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] transition-colors" onClick={() => setShowWaveDetail(false)}>关闭</button>
                     </motion.div>
                   </motion.div>
                 )}
@@ -2649,7 +2649,7 @@ useEffect(() => {
                     {activeAugments.length > 0 && (
                       <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[rgba(10,10,15,0.8)]" style={{ borderRadius: '2px' }}>
                         {activeAugments.map((aug, i) => (
-                          <span key={i} className="flex items-center gap-0.5 text-[var(--pixel-green)] text-[9px] font-bold">
+                          <span key={i} className="flex items-center gap-0.5 text-[var(--pixel-green)] text-[11px] font-bold">
                             <PixelZap size={1} />{aug.name}
                           </span>
                         ))}
@@ -2788,7 +2788,7 @@ useEffect(() => {
                     className="flex items-center gap-1"
                   >
                     <PixelHeart size={1} />
-                    <span className="font-bold text-[9px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
+                    <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
                   </motion.div>
                   <div className="flex flex-wrap gap-0.5">
                     {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
@@ -2802,7 +2802,7 @@ useEffect(() => {
                     animate={{ width: `${(game.hp / game.maxHp) * 100}%` }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[8px] font-mono font-bold text-white pixel-text-shadow">
+                    <span className="text-[10px] font-mono font-bold text-white pixel-text-shadow">
                       {game.hp}/{game.maxHp} {game.armor > 0 && `[+${game.armor}]`}
                     </span>
                   </div>
@@ -2840,36 +2840,36 @@ useEffect(() => {
                               <div className="text-sm font-black text-[var(--dungeon-text-bright)] pixel-text-shadow">{infoEnemy.name}</div>
                               <div className="flex items-center gap-1 mt-0.5">
                                 <span className="text-xs" style={{ color: typeInfo.color }}>{typeInfo.icon} {typeInfo.name}</span>
-                                <span className="text-[8px] text-[var(--dungeon-text-dim)]">|</span>
-                                <span className="text-[9px] font-mono text-[var(--pixel-red-light)]">{infoEnemy.attackDmg} ATK</span>
+                                <span className="text-[10px] text-[var(--dungeon-text-dim)]">|</span>
+                                <span className="text-[11px] font-mono text-[var(--pixel-red-light)]">{infoEnemy.attackDmg} ATK</span>
                               </div>
                             </div>
                           </div>
                           <button onClick={() => setEnemyInfoTarget(null)} className="text-[var(--dungeon-text-dim)] hover:text-white text-sm font-bold"></button>
                         </div>
                         
-                        <div className="text-[9px] text-[var(--dungeon-text)] leading-relaxed mb-2 px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>
+                        <div className="text-[11px] text-[var(--dungeon-text)] leading-relaxed mb-2 px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>
                           {typeInfo.desc}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-1.5 mb-2">
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">生命</div>
-                            <div className="text-[10px] font-mono font-bold text-[var(--pixel-red-light)]">{infoEnemy.hp}/{infoEnemy.maxHp}</div>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">生命</div>
+                            <div className="text-[12px] font-mono font-bold text-[var(--pixel-red-light)]">{infoEnemy.hp}/{infoEnemy.maxHp}</div>
                           </div>
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">护甲</div>
-                            <div className="text-[10px] font-mono font-bold text-[var(--pixel-blue-light)]">{infoEnemy.armor}</div>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">护甲</div>
+                            <div className="text-[12px] font-mono font-bold text-[var(--pixel-blue-light)]">{infoEnemy.armor}</div>
                           </div>
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">距离</div>
-                            <div className="text-[10px] font-mono font-bold" style={{ color: isMelee && infoEnemy.distance > 0 ? 'var(--pixel-orange)' : 'var(--pixel-green-light)' }}>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">距离</div>
+                            <div className="text-[12px] font-mono font-bold" style={{ color: isMelee && infoEnemy.distance > 0 ? 'var(--pixel-orange)' : 'var(--pixel-green-light)' }}>
                               {infoEnemy.distance === 0 ? '近身' : `距离 ${infoEnemy.distance}`}
                             </div>
                           </div>
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[7px] text-[var(--dungeon-text-dim)]">行动</div>
-                            <div className="text-[10px] font-mono font-bold text-[var(--dungeon-text)]">
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">行动</div>
+                            <div className="text-[12px] font-mono font-bold text-[var(--dungeon-text)]">
                               {isMelee && infoEnemy.distance > 0 ? '逼近中' : '攻击'}
                             </div>
                           </div>
@@ -2878,7 +2878,7 @@ useEffect(() => {
                         {infoEnemy.statuses.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-1">
                             {infoEnemy.statuses.map((s, idx) => (
-                              <span key={idx} className="text-[8px] px-1 py-0.5 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)]" style={{borderRadius:'2px'}}>
+                              <span key={idx} className="text-[10px] px-1 py-0.5 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)]" style={{borderRadius:'2px'}}>
                                 {s.type} {s.value}
                               </span>
                             ))}
@@ -2895,7 +2895,7 @@ useEffect(() => {
                 {/* 骰子库指示器 */}
                 <div className="flex justify-between items-center mb-0.5 px-1">
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
-                  <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider">
+                  <div className="text-[10px] text-[var(--dungeon-text-dim)] font-bold tracking-wider">
                     回合 {game.battleTurn}
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                   </div>
@@ -2936,7 +2936,7 @@ useEffect(() => {
                           isNormalAttackMulti && die.selected ? undefined : die.diceDefId
                         )} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
-                          fontSize: '22px', width: '52px', height: '52px',
+                          fontSize: '26px', width: '56px', height: '56px',
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
@@ -2951,7 +2951,7 @@ useEffect(() => {
                       </motion.button>
                   ))}
                   {dice.every(d => d.spent) && (
-                    <div className="text-[var(--dungeon-text-dim)] text-[9px] font-bold py-4">所有骰子已使用</div>
+                    <div className="text-[var(--dungeon-text-dim)] text-[11px] font-bold py-4">所有骰子已使用</div>
                   )}
                 </div>
 
@@ -2967,16 +2967,16 @@ useEffect(() => {
                     return (
                       <div className="absolute inset-0 px-2 py-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)] overflow-hidden" style={{borderRadius:'2px'}}>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? '普通骰子' : def.name}</span>
-                          <span className="text-[7px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
+                          <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? '普通骰子' : def.name}</span>
+                          <span className="text-[9px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
                           {def.element !== 'normal' && (
-                            <span className="text-[7px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
+                            <span className="text-[9px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
                           )}
                           {def.onPlay && (
-                            <span className="text-[7px] text-[var(--pixel-orange-light)] ml-1">{getOnPlayDescription(def.onPlay)}</span>
+                            <span className="text-[9px] text-[var(--pixel-orange-light)] ml-1">{getOnPlayDescription(def.onPlay)}</span>
                           )}
                       {showAsNormal && (
-                        <span className="text-[7px] text-[var(--pixel-orange)] ml-1">效果已禁用</span>
+                        <span className="text-[9px] text-[var(--pixel-orange)] ml-1">效果已禁用</span>
                       )}
                         </div>
                       </div>
@@ -3003,7 +3003,7 @@ useEffect(() => {
                     style={{borderRadius:'2px', boxShadow: game.freeRerollsLeft > 0 ? '0 0 8px rgba(60,200,100,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                   >
                     <PixelRefresh size={2} />
-                    <span className="text-[10px] font-mono font-bold">{game.freeRerollsLeft}</span>
+                    <span className="text-[12px] font-mono font-bold">{game.freeRerollsLeft}</span>
                   </motion.button>
                   
                   {/* 主行动按钮 */}
@@ -3014,7 +3014,7 @@ useEffect(() => {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
-                        className="flex-1 py-2.5 bg-[var(--pixel-red-dark)] text-[var(--pixel-red-light)] border-3 border-[var(--pixel-red)] flex items-center justify-center font-bold text-[10px] tracking-[0.1em] battle-action-btn"
+                        className="flex-1 py-2.5 bg-[var(--pixel-red-dark)] text-[var(--pixel-red-light)] border-3 border-[var(--pixel-red)] flex items-center justify-center font-bold text-[12px] tracking-[0.1em] battle-action-btn"
                       >
                         <motion.div
                           animate={{ opacity: [0.5, 1, 0.5] }}
@@ -3031,7 +3031,7 @@ useEffect(() => {
                         exit={{ opacity: 0, x: 10 }}
                         onClick={playHand}
                         disabled={dice.some(d => d.playing) || game.playsLeft <= 0 || false /* always allow play */}
-                        className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[10px] tracking-[0.05em] battle-action-btn`}
+                        className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
                         style={{borderRadius:'2px', boxShadow: currentHands.bestHand !== '普通攻击' ? '0 0 10px rgba(60,200,100,0.25), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                       >
                         <PixelPlay size={2} /> {game.playsLeft > 0 ? (false /* always allow play */ ? '普通攻击' : `出牌: ${currentHands.bestHand}`) : '出牌次数耗尽'}
@@ -3043,7 +3043,7 @@ useEffect(() => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
                         disabled={true}
-                        className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[10px] tracking-[0.05em]"
+                        className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]"
                         style={{borderRadius:'2px'}}
                       >
                         回合结束中...
@@ -3056,7 +3056,7 @@ useEffect(() => {
                         exit={{ opacity: 0, x: 10 }}
                         onClick={() => endTurn()}
                         disabled={game.isEnemyTurn || dice.some(d => d.playing)}
-                        className="flex-1 py-2.5 bg-[var(--pixel-gold-dark)] border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[10px] tracking-[0.05em] battle-action-btn"
+                        className="flex-1 py-2.5 bg-[var(--pixel-gold-dark)] border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn"
                         style={{borderRadius:'2px', boxShadow: '0 0 8px rgba(200,168,60,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                       >
                         ⏭ 结束回合
@@ -3089,7 +3089,7 @@ useEffect(() => {
                           <div className={`flex items-center justify-center gap-0.5 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
                             {getAugmentIcon(aug.condition, 9)}
                           </div>
-                          <div className={`text-[7px] font-bold leading-tight line-clamp-1 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                          <div className={`text-[9px] font-bold leading-tight line-clamp-1 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
                             {aug.name}
                           </div>
                         </>
@@ -3143,15 +3143,15 @@ useEffect(() => {
                                 <span className="font-bold text-[var(--dungeon-text-bright)] text-xs pixel-text-shadow">{type.name}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-[9px] bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] px-1.5 py-0.5 border border-[var(--dungeon-panel-border)] font-mono" style={{borderRadius:'2px'}}>
+                                <span className="text-[11px] bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] px-1.5 py-0.5 border border-[var(--dungeon-panel-border)] font-mono" style={{borderRadius:'2px'}}>
                                   x{currentMult.toFixed(1)}
                                 </span>
                                 {level > 1 && (
-                                  <span className="text-[9px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1.5 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{level}</span>
+                                  <span className="text-[11px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1.5 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{level}</span>
                                 )}
                               </div>
                             </div>
-                            <p className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
+                            <p className="text-[11px] text-[var(--dungeon-text-dim)] leading-tight">
                               {formatDescription(type.description.replace(/\(\d+ \+ (总)?点数\) \* \d+\.\d+/, `(${currentBase} + $1点数) * ${currentMult.toFixed(1)}`).replace(/点数 \* \d+\.\d+/, `点数 * ${currentMult.toFixed(1)}`))}
                             </p>
                           </div>
@@ -3180,48 +3180,48 @@ useEffect(() => {
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="p-3 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-[10px] font-bold text-[var(--dungeon-text-bright)] tracking-[0.1em] pixel-text-shadow">◆ 结果计算详情 ◆</h3>
+                      <h3 className="text-[12px] font-bold text-[var(--dungeon-text-bright)] tracking-[0.1em] pixel-text-shadow">◆ 结果计算详情 ◆</h3>
                       <button onClick={() => setShowCalcModal(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]">
                         <PixelClose size={2} />
                       </button>
                     </div>
                     <div className="p-4 space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-[var(--dungeon-text-dim)]">激活牌型</span>
+                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">激活牌型</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-[var(--pixel-green)]">{expectedOutcome.bestHand}</span>
+                          <span className="text-[12px] font-bold text-[var(--pixel-green)]">{expectedOutcome.bestHand}</span>
                           {game.handLevels[expectedOutcome.bestHand] > 1 && (
-                            <span className="text-[8px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
+                            <span className="text-[10px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
                           )}
-                          <span className="text-[8px] text-[var(--dungeon-text-dim)] font-mono">(基础 {expectedOutcome.baseHandValue} / 倍率 x{expectedOutcome.handMultiplier.toFixed(1)})</span>
+                          <span className="text-[10px] text-[var(--dungeon-text-dim)] font-mono">(基础 {expectedOutcome.baseHandValue} / 倍率 x{expectedOutcome.handMultiplier.toFixed(1)})</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-[var(--dungeon-text-dim)]">选中骰子</span>
+                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">选中骰子</span>
                         <div className="flex gap-1">
                           {expectedOutcome.selectedValues.map((v, i) => (
-                            <span key={i} className="w-5 h-5 flex items-center justify-center bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[9px] font-bold text-[var(--dungeon-text-bright)]" style={{borderRadius:'2px'}}>{v}</span>
+                            <span key={i} className="w-5 h-5 flex items-center justify-center bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[11px] font-bold text-[var(--dungeon-text-bright)]" style={{borderRadius:'2px'}}>{v}</span>
                           ))}
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-[var(--dungeon-text-dim)]">基础点数 (X)</span>
-                        <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{expectedOutcome.X}</span>
+                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">基础点数 (X)</span>
+                        <span className="text-[12px] font-bold text-[var(--dungeon-text-bright)]">{expectedOutcome.X}</span>
                       </div>
                       <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-[var(--dungeon-text-dim)]">牌型基础伤害 <span className="text-[8px] opacity-50">({expectedOutcome.baseHandValue} + {expectedOutcome.X}) × {Math.round(expectedOutcome.handMultiplier * 100)}%</span></span>
+                        <div className="flex justify-between items-center text-[12px]">
+                          <span className="text-[var(--dungeon-text-dim)]">牌型基础伤害 <span className="text-[10px] opacity-50">({expectedOutcome.baseHandValue} + {expectedOutcome.X}) × {Math.round(expectedOutcome.handMultiplier * 100)}%</span></span>
                           <span className="text-[var(--dungeon-text)]">{expectedOutcome.baseDamage}</span>
                         </div>
                         {expectedOutcome.extraDamage !== 0 && (
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-[var(--dungeon-text-dim)]">加成伤害 <span className="text-[8px] opacity-50">× {Math.round(expectedOutcome.multiplier * 100)}%</span></span>
+                          <div className="flex justify-between items-center text-[12px]">
+                            <span className="text-[var(--dungeon-text-dim)]">加成伤害 <span className="text-[10px] opacity-50">× {Math.round(expectedOutcome.multiplier * 100)}%</span></span>
                             <span className="text-[var(--pixel-gold)]">+{expectedOutcome.extraDamage}</span>
                           </div>
                         )}
                         {expectedOutcome.pierceDamage > 0 && (
-                          <div className="flex justify-between items-center text-[10px]">
+                          <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)]">穿透伤害</span>
                             <span className="text-[var(--pixel-purple)]">+{expectedOutcome.pierceDamage}</span>
                           </div>
@@ -3229,7 +3229,7 @@ useEffect(() => {
                         
                         {/* Status Modifiers */}
                         {game.statuses.find(s => s.type === 'weak') && (
-                          <div className="flex justify-between items-center text-[10px]">
+                          <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
                               <PixelArrowDown size={1} /> 虚弱修正
                             </span>
@@ -3237,7 +3237,7 @@ useEffect(() => {
                           </div>
                         )}
                         {targetEnemy?.statuses.find(s => s.type === 'vulnerable') && (
-                          <div className="flex justify-between items-center text-[10px]">
+                          <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
                               <PixelArrowUp size={1} /> 易伤修正
                             </span>
@@ -3259,14 +3259,14 @@ useEffect(() => {
                       
                       {expectedOutcome.statusEffects.length > 0 && (
                         <div className="pt-3 space-y-2">
-                          <div className="text-[9px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em]">附加效果</div>
+                          <div className="text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em]">附加效果</div>
                           <div className="flex flex-wrap gap-2">
                             {expectedOutcome.statusEffects.map((s, i) => {
                               const info = STATUS_INFO[s.type];
                               return (
                                 <div key={i} className={`flex items-center gap-1 px-2 py-1 bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] ${info.color}`} style={{borderRadius:'2px'}}>
                                   {info.icon}
-                                  <span className="text-[9px] font-bold">{info.label} +{s.value}</span>
+                                  <span className="text-[11px] font-bold">{info.label} +{s.value}</span>
                                 </div>
                               );
                             })}
@@ -3296,9 +3296,9 @@ useEffect(() => {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative w-full max-w-xs pixel-panel p-5"
             >
-              <div className="text-[9px] tracking-[0.15em] text-[var(--pixel-green)] font-bold mb-2">◆ 牌型详情 ◆</div>
+              <div className="text-[11px] tracking-[0.15em] text-[var(--pixel-green)] font-bold mb-2">◆ 牌型详情 ◆</div>
               <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] mb-3 pixel-text-shadow">{selectedHandTypeInfo.name}</h3>
-              <p className="text-[var(--dungeon-text)] text-[11px] leading-relaxed mb-6">{formatDescription(selectedHandTypeInfo.description)}</p>
+              <p className="text-[var(--dungeon-text)] text-[13px] leading-relaxed mb-6">{formatDescription(selectedHandTypeInfo.description)}</p>
               <button 
                 onClick={() => setSelectedHandTypeInfo(null)}
                 className="w-full py-3 pixel-btn pixel-btn-ghost text-xs font-bold"
@@ -3332,7 +3332,7 @@ useEffect(() => {
                     {getAugmentIcon(selectedAugment.condition, 40)}
                   </div>
                   <div className="text-[var(--pixel-green)] font-bold text-lg mb-2 relative z-10 pixel-text-shadow">{selectedAugment.name}</div>
-                  <div className="text-[var(--dungeon-text-dim)] text-[10px] tracking-[0.1em] mb-3 relative z-10 flex items-center gap-1">
+                  <div className="text-[var(--dungeon-text-dim)] text-[12px] tracking-[0.1em] mb-3 relative z-10 flex items-center gap-1">
                     <span className="text-[var(--pixel-green)]">{getAugmentIcon(selectedAugment.condition, 12)}</span>
                     触发条件: {
                     selectedAugment.condition === 'high_card' ? '普通攻击' : 
@@ -3344,7 +3344,7 @@ useEffect(() => {
                     selectedAugment.condition === 'same_element' ? '同元素' :
                     selectedAugment.condition === 'element_count' ? '元素计数' : selectedAugment.condition
                   }</div>
-                  <div className="text-[var(--dungeon-text)] text-[11px] mb-5 relative z-10">{formatDescription(selectedAugment.description)}</div>
+                  <div className="text-[var(--dungeon-text)] text-[13px] mb-5 relative z-10">{formatDescription(selectedAugment.description)}</div>
                   <button 
                     onClick={() => setSelectedAugment(null)}
                     className="w-full py-2.5 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10"
@@ -3381,7 +3381,7 @@ useEffect(() => {
                 style={{ borderRadius: '2px' }}
               >
                 {style.icon}
-                <span className="text-[10px] font-bold pixel-text-shadow text-center">{t.message}</span>
+                <span className="text-[12px] font-bold pixel-text-shadow text-center">{t.message}</span>
               </motion.div>
             );
           })}
@@ -3398,11 +3398,11 @@ useEffect(() => {
               className="max-w-md w-full"
             >
               <div className="text-center mb-6">
-                <div className="inline-block px-3 py-1 bg-[var(--pixel-gold-dark)] border-2 border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] text-[9px] font-bold tracking-[0.15em] mb-3" style={{borderRadius:'2px'}}>
+                <div className="inline-block px-3 py-1 bg-[var(--pixel-gold-dark)] border-2 border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] text-[11px] font-bold tracking-[0.15em] mb-3" style={{borderRadius:'2px'}}>
                   ◆ 槽位已满 ◆
                 </div>
                 <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">选择要替换的模块</h3>
-                <p className="text-[var(--dungeon-text-dim)] text-[10px] mt-2">替换现有模块将返还大量金币</p>
+                <p className="text-[var(--dungeon-text-dim)] text-[12px] mt-2">替换现有模块将返还大量金币</p>
               </div>
 
               <div className="pixel-panel p-4 mb-6 flex items-center gap-3">
@@ -3410,9 +3410,9 @@ useEffect(() => {
                   <PixelZap size={4} />
                 </div>
                 <div>
-                  <div className="text-[9px] font-bold text-[var(--pixel-blue)] tracking-[0.1em] mb-0.5">新模块</div>
+                  <div className="text-[11px] font-bold text-[var(--pixel-blue)] tracking-[0.1em] mb-0.5">新模块</div>
                   <div className="text-base font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{game.pendingReplacementAugment.name}</div>
-                  <div className="text-[10px] text-[var(--dungeon-text-dim)] mt-0.5">{formatDescription(game.pendingReplacementAugment.description)}</div>
+                  <div className="text-[12px] text-[var(--dungeon-text-dim)] mt-0.5">{formatDescription(game.pendingReplacementAugment.description)}</div>
                 </div>
               </div>
 
@@ -3430,11 +3430,11 @@ useEffect(() => {
                       <PixelZap size={2} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="text-[9px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em] mb-0.5">替换槽位 {i + 1}</div>
+                      <div className="text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em] mb-0.5">替换槽位 {i + 1}</div>
                       <div className="text-xs font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{aug.name} (Lv.{aug.level})</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[9px] font-bold text-[var(--pixel-green)] tracking-[0.1em] mb-0.5">返还</div>
+                      <div className="text-[11px] font-bold text-[var(--pixel-green)] tracking-[0.1em] mb-0.5">返还</div>
                       <div className="text-xs font-bold text-[var(--pixel-green)] flex items-center gap-1">
                         <PixelCoin size={2} />
                         {(aug.level || 1) * 50}
@@ -3446,7 +3446,7 @@ useEffect(() => {
 
               <button
                 onClick={() => setGame(prev => ({ ...prev, pendingReplacementAugment: null }))}
-                className="w-full mt-6 py-3 text-[9px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.2em] hover:text-[var(--dungeon-text)] transition-colors"
+                className="w-full mt-6 py-3 text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.2em] hover:text-[var(--dungeon-text)] transition-colors"
               >
                 放弃新模块
               </button>
