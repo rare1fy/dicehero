@@ -4,7 +4,7 @@ import React from 'react';
 // 骰子元素与稀有度
 // ============================================================
 
-export type DiceElement = 'normal' | 'fire' | 'ice' | 'thunder' | 'poison' | 'holy' | 'shadow';
+export type DiceElement = 'normal' | 'fire' | 'ice' | 'thunder' | 'poison' | 'holy';
 export type DiceRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'curse';
 
 // ============================================================
@@ -58,7 +58,7 @@ export interface Die {
 // 牌型
 // ============================================================
 
-export type HandType = '普通攻击' | '对子' | '连对' | '三条' | '顺子' | '同元素' | '葫芦' | '四条' | '五条' | '六条' | '元素顺' | '元素葫芦' | '皇家元素顺' | '无效牌型';
+export type HandType = '普通攻击' | '对子' | '连对' | '三条' | '顺子' | '4顺' | '5顺' | '6顺' | '同元素' | '葫芦' | '四条' | '五条' | '六条' | '元素顺' | '元素葫芦' | '皇家元素顺' | '无效牌型';
 
 // ============================================================
 // 状态效果

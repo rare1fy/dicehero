@@ -21,7 +21,7 @@ const HIGHLIGHT_RULES: HighlightRule[] = [
   // 金币
   { pattern: /(\d+)\s*(金币|魂魄)/g, className: '__NUM_UNIT_GOLD__' },
   // 牌型名称
-  { pattern: /(普通攻击|对子|连对|三条|顺子|同花|葫芦|四条|五条|六条|同花顺|同花葫芦|皇家同花顺)/g, className: 'text-[var(--pixel-cyan)] font-bold' },
+  { pattern: /(普通攻击|对子|连对|三条|顺子|同元素|葫芦|四条|五条|六条|元素顺|元素葫芦|皇家元素顺)/g, className: 'text-[var(--pixel-cyan)] font-bold' },
   // 状态效果
   { pattern: /(灼烧|中毒|虚弱|易伤|护甲|闪避|力量)/g, className: 'text-[var(--pixel-orange)] font-bold' },
   // 骰子颜色
@@ -74,7 +74,7 @@ export const formatDescription = (text: string): React.ReactNode => {
   }
   
   // 规则5：牌型名称
-  const handRegex = /(普通攻击|对子|连对|三条|顺子|同花顺|同花葫芦|皇家同花顺|同花|葫芦|四条|五条|六条)/g;
+  const handRegex = /(普通攻击|对子|连对|三条|顺子|元素顺|元素葫芦|皇家元素顺|同元素|葫芦|四条|五条|六条)/g;
   while ((match = handRegex.exec(text)) !== null) {
     markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-hand' });
   }

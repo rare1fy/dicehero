@@ -20,27 +20,18 @@ const standard: DiceDef = {
   rarity: 'common',
 };
 
+// ============================================================
+// 进阶骰子 (uncommon)
+// ============================================================
+
 const heavy: DiceDef = {
   id: 'heavy',
-  name: '铅骰子',
+  name: '灌铅骰子',
   element: 'normal',
   faces: [3, 3, 4, 4, 5, 5],
   description: '点数偏高，无极端值',
   rarity: 'uncommon',
 };
-
-const light: DiceDef = {
-  id: 'light',
-  name: '木骰子',
-  element: 'normal',
-  faces: [1, 1, 2, 2, 3, 3],
-  description: '点数偏低，但稳定',
-  rarity: 'common',
-};
-
-// ============================================================
-// 元素骰子 (uncommon)
-// ============================================================
 
 const fire: DiceDef = {
   id: 'fire',
@@ -57,7 +48,7 @@ const ice: DiceDef = {
   name: '冰霜骰子',
   element: 'ice',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时施加2层虚弱(2回合)',
+  description: '出牌时施加1层冰冻',
   rarity: 'uncommon',
   onPlay: { statusToEnemy: { type: 'weak', value: 2, duration: 2 } },
 };
@@ -77,9 +68,9 @@ const poison: DiceDef = {
   name: '剧毒骰子',
   element: 'poison',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时施加2层中毒',
+  description: '出牌时施加3层中毒',
   rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'poison', value: 2 } },
+  onPlay: { statusToEnemy: { type: 'poison', value: 3 } },
 };
 
 const holy: DiceDef = {
@@ -92,28 +83,9 @@ const holy: DiceDef = {
   onPlay: { heal: 3 },
 };
 
-const shadow: DiceDef = {
-  id: 'shadow',
-  name: '暗影骰子',
-  element: 'shadow',
-  faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时施加1层易伤(2回合)',
-  rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'vulnerable', value: 1, duration: 2 } },
-};
-
 // ============================================================
 // 高级骰子 (rare)
 // ============================================================
-
-const stone: DiceDef = {
-  id: 'stone',
-  name: '石骰子',
-  element: 'normal',
-  faces: [4, 4, 5, 5, 6, 6],
-  description: '纯高数值骰子',
-  rarity: 'rare',
-};
 
 const blade: DiceDef = {
   id: 'blade',
@@ -123,26 +95,6 @@ const blade: DiceDef = {
   description: '出牌时+5伤害',
   rarity: 'rare',
   onPlay: { bonusDamage: 5 },
-};
-
-const inferno: DiceDef = {
-  id: 'inferno',
-  name: '烈焰骰子',
-  element: 'fire',
-  faces: [2, 3, 4, 5, 5, 6],
-  description: '出牌时施加4层灼烧',
-  rarity: 'rare',
-  onPlay: { statusToEnemy: { type: 'burn', value: 4 } },
-};
-
-const blizzard: DiceDef = {
-  id: 'blizzard',
-  name: '暴风雪骰子',
-  element: 'ice',
-  faces: [2, 3, 3, 4, 4, 5],
-  description: '出牌时施加3层虚弱(3回合)',
-  rarity: 'rare',
-  onPlay: { statusToEnemy: { type: 'weak', value: 3, duration: 3 } },
 };
 
 const amplify: DiceDef = {
@@ -155,29 +107,29 @@ const amplify: DiceDef = {
   onPlay: { bonusMult: 1.3 },
 };
 
+const split: DiceDef = {
+  id: 'split',
+  name: '分裂骰子',
+  element: 'normal',
+  faces: [2, 2, 3, 3, 4, 4],
+  description: '出牌后复制1个自己加入牌型（升级后复制更多）',
+  rarity: 'rare',
+  // 分裂效果在DiceHeroGame中特殊处理
+};
+
+const joker: DiceDef = {
+  id: 'joker',
+  name: '小丑骰子',
+  element: 'normal',
+  faces: [1, 1, 1, 1, 1, 1],
+  description: '每回合六面变为同一随机点数，天然凑对子/三条',
+  rarity: 'rare',
+  // 小丑效果在DiceHeroGame中特殊处理：每回合随机1个点数，六面全为该点数
+};
+
 // ============================================================
 // 传说骰子 (legendary)
 // ============================================================
-
-const phoenix: DiceDef = {
-  id: 'phoenix',
-  name: '凤凰骰子',
-  element: 'fire',
-  faces: [3, 4, 5, 5, 6, 6],
-  description: '出牌时施加5层灼烧+回复5HP',
-  rarity: 'legendary',
-  onPlay: { statusToEnemy: { type: 'burn', value: 5 }, heal: 5 },
-};
-
-const voidDice: DiceDef = {
-  id: 'void',
-  name: '虚空骰子',
-  element: 'shadow',
-  faces: [5, 5, 5, 5, 5, 5],
-  description: '固定5点，出牌时施加2层易伤(3回合)',
-  rarity: 'legendary',
-  onPlay: { statusToEnemy: { type: 'vulnerable', value: 2, duration: 3 } },
-};
 
 const chaos: DiceDef = {
   id: 'chaos',
@@ -217,31 +169,29 @@ const cracked: DiceDef = {
 
 /** 所有骰子定义的字典 */
 export const ALL_DICE: Record<string, DiceDef> = {
-  standard, light,
-  heavy, fire, ice, thunder, poison, holy, shadow,
-  stone, blade, inferno, blizzard, amplify,
-  phoenix, void: voidDice, chaos,
+  standard,
+  heavy, fire, ice, thunder, poison, holy,
+  blade, amplify, split, joker,
+  chaos,
   cursed, cracked,
 };
 
 /** 按稀有度分组 */
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
-  common: [standard, light],
-  uncommon: [heavy, fire, ice, thunder, poison, holy, shadow],
-  rare: [stone, blade, inferno, blizzard, amplify],
-  legendary: [phoenix, voidDice, chaos],
+  common: [standard],
+  uncommon: [heavy, fire, ice, thunder, poison, holy],
+  rare: [blade, amplify, split, joker],
+  legendary: [chaos],
   curse: [cursed, cracked],
 };
 
-/** 初始骰子库 (骰子定义ID列表) — 8颗: 6普通 + 1铅 + 1火 */
+/** 初始骰子库: 5普通 + 3灌铅，纯普通起步 */
 export const INITIAL_DICE_BAG: string[] = [
-  'standard', 'standard', 'standard', 'standard',
-  'standard', 'standard', 'standard', 'standard',
-  'heavy',
-  'fire',
+  'standard', 'standard', 'standard', 'standard', 'standard',
+  'heavy', 'heavy', 'heavy',
 ];
 
-/** 根据骰子定义掷骰 — 从faces中随机取一个 */
+/** 根据骰子定义掷骰 */
 export const rollDiceDef = (def: DiceDef): number => {
   return def.faces[Math.floor(Math.random() * def.faces.length)];
 };

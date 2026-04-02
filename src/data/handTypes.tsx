@@ -6,18 +6,34 @@ import {
 } from '../components/PixelIcons';
 import { HandTypeDef } from '../types/game';
 
+/**
+ * 牌型定义表 - 纯倍率体系
+ * 
+ * 伤害公式: 骰子点数和 x 牌型倍率 x 增幅倍率
+ * base字段保留为0（兼容旧代码），实际不参与计算
+ * 
+ * 设计原则:
+ * - 对子系(对子/连对/三条/四条/五条/六条): 单体爆发，倍率递增
+ * - 顺子系(3顺/4顺/5顺/6顺): AOE扫场，倍率从低到高
+ * - 三条系: 附加易伤效果
+ * - 葫芦系: 纯防御(护甲)
+ * - 元素系: 骰子onPlay效果翻倍
+ */
 export const HAND_TYPES: HandTypeDef[] = [
-  { id: 'high_card', name: '普通攻击', icon: <PixelZap size={2} />, base: 0, mult: 1, description: '任意单颗骰子。伤害 = 骰子点数。' },
-  { id: 'pair', name: '对子', icon: <PixelPair size={2} />, base: 3, mult: 1.3, description: '2颗点数相同的骰子。伤害 = (5 + 点数) × 1.6。' },
-  { id: 'two_pair', name: '连对', icon: <PixelLayers size={2} />, base: 5, mult: 1.5, description: '2组对子。伤害 = (8 + 总点数) × 2.0。' },
-  { id: 'three_of_a_kind', name: '三条', icon: <PixelTriangle size={2} />, base: 6, mult: 1.7, description: '3颗点数相同的骰子。伤害 = (10 + 总点数) × 2.2，附加2层灼烧。' },
-  { id: 'straight', name: '顺子', icon: <PixelArrowRight size={2} />, base: 8, mult: 1.8, description: '3颗及以上点数连续的骰子。伤害 = (12 + 总点数) × 2.2，AOE全体攻击，附加2层虚弱。' },
-  { id: 'same_element', name: '同元素', icon: <PixelDroplet size={2} />, base: 15, mult: 2.5, description: '至少4颗元素相同的骰子。伤害 = (25 + 总点数) × 3.5，附加2层中毒。' },
-  { id: 'full_house', name: '葡芦', icon: <PixelHouse size={2} />, base: 10, mult: 2.0, description: '1组三条 + 1组对子。伤害 = (16 + 总点数) × 2.8，获得15点护甲，附加2层易伤。' },
-  { id: 'four_of_a_kind', name: '四条', icon: <PixelSquare size={2} />, base: 14, mult: 2.5, description: '4颗点数相同的骰子。伤害 = (20 + 总点数) × 3.5，附加3层灼烧。' },
-  { id: 'five_of_a_kind', name: '五条', icon: <PixelStar size={2} />, base: 18, mult: 3.0, description: '5颗点数相同的骰子。伤害 = (25 + 总点数) × 4.0，附加4层灼烧。' },
-  { id: 'six_of_a_kind', name: '六条', icon: <PixelTrophy size={2} />, base: 22, mult: 3.5, description: '6颗点数相同的骰子。伤害 = (30 + 总点数) × 5.0，附加5层灼烧。' },
-  { id: 'element_straight', name: '元素顺', icon: <PixelZap size={2} />, base: 30, mult: 4.0, description: '同元素 + 顺子。伤害 = (50 + 总点数) × 6.0，AOE全体攻击，获得20点护甲，附加5层中毒。' },
-  { id: 'element_house', name: '元素葡芦', icon: <PixelWaves size={2} />, base: 35, mult: 4.5, description: '同元素 + 葡芦。伤害 = (55 + 总点数) × 6.5，获得30点护甲，附加8层中毒。' },
-  { id: 'royal_element', name: '皇家元素顺', icon: <PixelCrown size={2} />, base: 50, mult: 6.0, description: '同元素 + 顺子(1-6)。伤害 = (80 + 总点数) × 10.0，AOE全体攻击，获得50点护甲，附加15层中毒。' },
+  { id: 'high_card', name: '普通攻击', icon: <PixelZap size={2} />, base: 0, mult: 1.0, description: '任意单颗骰子。伤害 = 骰子点数和 x 1.0' },
+  { id: 'pair', name: '对子', icon: <PixelPair size={2} />, base: 0, mult: 2.0, description: '2颗点数相同。伤害 = 点数和 x 2.0' },
+  { id: 'straight_3', name: '顺子', icon: <PixelArrowRight size={2} />, base: 0, mult: 1.5, description: '3颗及以上点数连续。伤害 = 点数和 x 1.5，AOE全体' },
+  { id: 'two_pair', name: '连对', icon: <PixelLayers size={2} />, base: 0, mult: 2.5, description: '2组对子。伤害 = 点数和 x 2.5，获得5护甲' },
+  { id: 'three_of_a_kind', name: '三条', icon: <PixelTriangle size={2} />, base: 0, mult: 3.0, description: '3颗点数相同。伤害 = 点数和 x 3.0，施加1层易伤(2回合)' },
+  { id: 'straight_4', name: '4顺', icon: <PixelArrowRight size={2} />, base: 0, mult: 2.5, description: '4颗点数连续。伤害 = 点数和 x 2.5，AOE全体，施加1层虚弱' },
+  { id: 'same_element', name: '同元素', icon: <PixelDroplet size={2} />, base: 0, mult: 3.0, description: '至少4颗同元素(非普通)。伤害 = 点数和 x 3.0，骰子效果x2' },
+  { id: 'full_house', name: '葫芦', icon: <PixelHouse size={2} />, base: 0, mult: 4.0, description: '1组三条+1组对子。伤害 = 点数和 x 4.0，获得15护甲' },
+  { id: 'straight_5', name: '5顺', icon: <PixelArrowRight size={2} />, base: 0, mult: 3.5, description: '5颗点数连续。伤害 = 点数和 x 3.5，AOE全体，施加2层虚弱' },
+  { id: 'four_of_a_kind', name: '四条', icon: <PixelSquare size={2} />, base: 0, mult: 5.0, description: '4颗点数相同。伤害 = 点数和 x 5.0，施加2层易伤(2回合)' },
+  { id: 'straight_6', name: '6顺', icon: <PixelArrowRight size={2} />, base: 0, mult: 5.0, description: '6颗点数连续(1-6)。伤害 = 点数和 x 5.0，AOE全体，施加3层虚弱+10护甲' },
+  { id: 'element_straight', name: '元素顺', icon: <PixelZap size={2} />, base: 0, mult: 5.5, description: '同元素+顺子。伤害 = 点数和 x 5.5，AOE全体，骰子效果x2' },
+  { id: 'element_house', name: '元素葫芦', icon: <PixelWaves size={2} />, base: 0, mult: 6.0, description: '同元素+葫芦。伤害 = 点数和 x 6.0，骰子效果x2+25护甲' },
+  { id: 'five_of_a_kind', name: '五条', icon: <PixelStar size={2} />, base: 0, mult: 7.0, description: '5颗点数相同。伤害 = 点数和 x 7.0，施加3层易伤(2回合)' },
+  { id: 'six_of_a_kind', name: '六条', icon: <PixelTrophy size={2} />, base: 0, mult: 10.0, description: '6颗点数相同。伤害 = 点数和 x 10.0，施加5层易伤(3回合)' },
+  { id: 'royal_element', name: '皇家元素顺', icon: <PixelCrown size={2} />, base: 0, mult: 12.0, description: '同元素+顺子(1-6)。伤害 = 点数和 x 12.0，AOE全体，骰子效果x3+50护甲' },
 ];

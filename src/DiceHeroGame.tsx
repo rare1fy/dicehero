@@ -584,31 +584,34 @@ export default function DiceHeroGame() {
       if (handDef) {
         const level = game.handLevels[handName] || 1;
         const levelBonusBase = (level - 1) * 10;
-        const levelBonusMult = (level - 1) * 0.5;
-        baseHandValue += ((handDef as any).base || 0) + levelBonusBase;
+        const levelBonusMult = (level - 1) * 0.3;
+        // base已移除，纯倍率体系
         handMultiplier += (((handDef as any).mult || 1) - 1) + levelBonusMult;
       }
 
       switch (handName) {
         case '普通攻击': break;
         case '对子': break;
-        case '连对': break;
-        case '三条': statusEffects.push({ type: 'burn', value: 2 }); break;
-        case '顺子': statusEffects.push({ type: 'weak', value: 2 }); break;
-        case '同花': statusEffects.push({ type: 'poison', value: 2 }); break;
-        case '葫芦': baseArmor += 15; statusEffects.push({ type: 'vulnerable', value: 2 }); break;
-        case '四条': statusEffects.push({ type: 'burn', value: 3 }); break;
-        case '五条': statusEffects.push({ type: 'burn', value: 4 }); break;
-        case '六条': statusEffects.push({ type: 'burn', value: 5 }); break;
-        case '同花顺': baseArmor += 20; statusEffects.push({ type: 'poison', value: 5 }); break;
-        case '同花葫芦': baseArmor += 30; statusEffects.push({ type: 'poison', value: 8 }); break;
-        case '皇家同花顺': baseArmor += 50; statusEffects.push({ type: 'poison', value: 15 }); break;
+        case '顺子': break; // 3顺 AOE
+        case '连对': baseArmor += 5; break;
+        case '三条': statusEffects.push({ type: 'vulnerable', value: 1, duration: 2 }); break; // 1层易伤
+        case '4顺': statusEffects.push({ type: 'weak', value: 1, duration: 2 }); break; // AOE + 1层虚弱
+        case '同元素': break; // 骰子效果x2在后面处理
+        case '葫芦': baseArmor += 15; break; // 纯防御
+        case '5顺': statusEffects.push({ type: 'weak', value: 2, duration: 2 }); break; // AOE + 2层虚弱
+        case '四条': statusEffects.push({ type: 'vulnerable', value: 2, duration: 2 }); break; // 2层易伤
+        case '6顺': baseArmor += 10; statusEffects.push({ type: 'weak', value: 3, duration: 2 }); break; // AOE + 3层虚弱 + 10护甲
+        case '元素顺': break; // AOE + 骰子效果x2
+        case '元素葫芦': baseArmor += 25; break; // 骰子效果x2 + 25护甲
+        case '五条': statusEffects.push({ type: 'vulnerable', value: 3, duration: 2 }); break; // 3层易伤
+        case '六条': statusEffects.push({ type: 'vulnerable', value: 5, duration: 3 }); break; // 5层易伤
+        case '皇家元素顺': baseArmor += 50; break; // AOE + 骰子效果x3 + 50护甲
       }
     });
 
-    baseDamage = Math.floor((baseHandValue + X) * handMultiplier);
+    baseDamage = Math.floor(X * handMultiplier);
 
-    if (activeHands.some(h => ['同花', '同花顺', '同花葫芦', '皇家同花顺'].includes(h))) {
+    if (activeHands.some((h: string) => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h))) {
       baseArmor += baseDamage;
     }
 
@@ -651,7 +654,8 @@ export default function DiceHeroGame() {
     const skipOnPlay = selected.length > 1 && activeHands.includes('普通攻击') && activeHands.length === 1;
     // 同元素牌型时，骰子效果翻倍（同元素大奖励核心机制）
     const isSameElementHand = activeHands.some((h: string) => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h));
-    const elementBonus = isSameElementHand ? 2.0 : 1.0; // 同元素时效果×2
+    const isRoyalElement = activeHands.some((h) => h === '皇家元素顺');
+    const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0); // 同元素时效果×2
     
     selected.forEach(d => {
       if (skipOnPlay) return;

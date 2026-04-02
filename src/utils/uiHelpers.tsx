@@ -28,7 +28,6 @@ const ELEMENT_STYLE_MAP: Record<DiceElement, { diceClass: string; glowClass: str
   thunder: { diceClass: 'pixel-dice-gold',   glowClass: 'dice-glow-thunder', effectClass: 'dice-element-thunder', textureClass: 'dice-texture-thunder' },
   poison:  { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-poison',  effectClass: 'dice-element-poison',  textureClass: 'dice-texture-poison' },
   holy:    { diceClass: 'pixel-dice-gold',   glowClass: 'dice-glow-holy',    effectClass: 'dice-element-holy',    textureClass: 'dice-texture-holy' },
-  shadow:  { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-shadow',  effectClass: 'dice-element-shadow',  textureClass: 'dice-texture-shadow' },
 };
 
 // 8-Bit 像素风骰子样式 — 基于元素类型
@@ -68,7 +67,6 @@ export const ELEMENT_NAMES: Record<DiceElement, string> = {
   thunder: '雷',
   poison: '毒',
   holy: '圣',
-  shadow: '暗',
 };
 
 // 元素颜色映射 (用于文字着色)
@@ -79,5 +77,4 @@ export const ELEMENT_COLORS: Record<DiceElement, string> = {
   thunder: '#c070e0',
   poison: '#70c030',
   holy: '#d4a030',
-  shadow: '#9060c0',
 };

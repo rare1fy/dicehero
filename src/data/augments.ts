@@ -157,18 +157,6 @@ export const AUGMENTS_POOL: Augment[] = [
     description: '同元素(圣): 每颗圣光骰子额外回复 3 HP'
   },
   {
-    id: 'shadow_venom',
-    name: '暗影剧毒',
-    level: 1,
-    condition: 'same_element',
-    conditionElement: 'shadow',
-    effect: (_x, dice, level) => {
-      const shadowCount = dice.filter(d => d.element === 'shadow').length;
-      return { statusEffects: [{ type: 'poison', value: Math.floor(shadowCount * 2 * getScale(level)) }] };
-    },
-    description: '同元素(暗): 每颗暗影骰子附加 2 层中毒'
-  },
-  {
     id: 'fortification',
     name: '铜墙铁壁',
     level: 1,

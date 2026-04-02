@@ -39,7 +39,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'hands',
     title: '◆ 组合牌型 ◆',
-    content: '点击骰子选择，组成不同牌型。牌型越稀有伤害越高！如：对子、顺子、同花等。',
+    content: '点击骰子选择，组成不同牌型。牌型越稀有伤害越高！如：对子、顺子、同元素等。',
     icon: <PixelPair size={4} />,
     position: 'bottom',
   },

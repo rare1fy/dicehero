@@ -294,7 +294,7 @@ export const PixelArrowRight: React.FC<PixelIconProps> = ({ size = 2, className,
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 水滴 — 同花（5x6）
+// 水滴 — 同元素（5x6）
 export const PixelDroplet: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['', '', '#3c6cc8', '', ''],
@@ -360,7 +360,7 @@ export const PixelTrophy: React.FC<PixelIconProps> = ({ size = 2, className, sty
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
-// 波浪 — 同花葫芦（5x4）
+// 波浪 — 元素葫芦（5x4）
 export const PixelWaves: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [
     ['#3c6cc8', '', '', '#3c6cc8', ''],

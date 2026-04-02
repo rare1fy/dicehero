@@ -17,17 +17,43 @@ export const PLAYER_INITIAL = {
   playsPerTurn: 1,
   souls: 0,
   augmentSlots: 4,
-  drawCount: 4,
+  drawCount: 3,       // 初始抽3颗骰子（密集成长感）
   maxDrawCount: 6,
 } as const;
 
 // ============================================================
-// 战斗数值缩放
+// 战斗数值缩放 - 层级系数表（波浪式难度曲线）
 // ============================================================
+
+/** 层级难度系数表：替代线性缩放，精确控制每层难度 */
+export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
+  { hpMult: 0.55, dmgMult: 0.50 },  // 层0: 新手保护
+  { hpMult: 0.70, dmgMult: 0.65 },  // 层1: 简单
+  { hpMult: 0.85, dmgMult: 0.80 },  // 层2: 略有挑战
+  { hpMult: 1.10, dmgMult: 0.95 },  // 层3: 精英挑战（里程碑）
+  { hpMult: 1.20, dmgMult: 1.00 },  // 层4: 获得增长后新挑战
+  { hpMult: 1.40, dmgMult: 1.10 },  // 层5: 高挑战
+  { hpMult: 1.00, dmgMult: 1.00 },  // 层6: 营地（无战斗）
+  { hpMult: 1.80, dmgMult: 1.25 },  // 层7: 中期Boss
+  { hpMult: 1.10, dmgMult: 0.90 },  // 层8: Boss后喘息
+  { hpMult: 1.35, dmgMult: 1.10 },  // 层9: 回升
+  { hpMult: 1.60, dmgMult: 1.25 },  // 层10: 挑战
+  { hpMult: 1.85, dmgMult: 1.35 },  // 层11: 高挑战
+  { hpMult: 2.10, dmgMult: 1.45 },  // 层12: 极限
+  { hpMult: 1.00, dmgMult: 1.00 },  // 层13: 营地（无战斗）
+  { hpMult: 2.80, dmgMult: 1.55 },  // 层14: 终极Boss
+];
+
+/** 获取指定层级的缩放系数 */
+export const getDepthScaling = (depth: number): { hpMult: number; dmgMult: number } => {
+  if (depth < 0) return { hpMult: 0.55, dmgMult: 0.50 };
+  if (depth >= DEPTH_SCALING.length) return DEPTH_SCALING[DEPTH_SCALING.length - 1];
+  return DEPTH_SCALING[depth];
+};
+
+// 保留旧接口兼容（部分代码可能还引用）
 export const BATTLE_SCALING = {
-  /** 敌人HP随深度增长系数: hp * (1 + depth * hpPerDepth) */
   hpPerDepth: 0.15,
-  /** 敌人伤害随深度增长系数: dmg * (1 + depth * dmgPerDepth) */
   dmgPerDepth: 0.10,
 } as const;
 
@@ -48,7 +74,7 @@ export const SHOP_CONFIG = {
 } as const;
 
 // ============================================================
-// 篅火配置
+// 篝火配置
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
@@ -93,6 +119,7 @@ export const MAP_CONFIG = {
   fixedLayers: {
     0: { type: 'enemy' as const, count: 1 },
     1: { type: null, count: 3 },
+    3: { type: 'elite' as const, count: 1 },   // 第3层固定精英（里程碑）
     7: { type: 'boss' as const, count: 1 },
     14: { type: 'boss' as const, count: 1 },
     6: { type: 'campfire' as const, count: 2 },

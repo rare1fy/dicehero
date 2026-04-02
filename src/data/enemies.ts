@@ -1,5 +1,5 @@
 import { MapNode, Enemy, GameState, BattleWave } from '../types/game';
-import { BATTLE_SCALING } from '../config';
+import { BATTLE_SCALING, getDepthScaling } from '../config';
 import { 
   NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES,
   type EnemyConfig, type PatternAction 
