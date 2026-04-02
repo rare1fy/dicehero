@@ -483,15 +483,15 @@
 }
 
 .pixel-dice-white {
-  background-color: #4a5060;
-  border-color: #a0b0c0;
-  color: #e8eef4;
+  background: linear-gradient(180deg, #f0f0f0 0%, #dcdce0 50%, #c8c8d0 100%);
+  border-color: #e0e0e8;
+  color: #2a2a35;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.3),
-    inset 2px 2px 0 rgba(255,255,255,0.25),
-    0 3px 0 #2a2d35;
+    inset -2px -2px 0 rgba(0,0,0,0.1),
+    inset 2px 2px 0 rgba(255,255,255,0.8),
+    0 3px 0 #8a8a95;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
 }
-
 /* === ��ǿ��������� === */
 .pixel-dice {
   position: relative;
@@ -550,6 +550,32 @@
     0 0 8px rgba(160,96,208,0.3),
     0 2px 4px rgba(0,0,0,0.3) !important;
 }
+
+/* --- 雷电骰子 - 电光蓝紫色（区分于神圣骰子的金色） --- */
+.pixel-dice-thunder {
+  background: linear-gradient(180deg, #3a2870 0%, #2a1a5a 50%, #1e1048 100%);
+  border-color: #8060c0;
+  color: #d0b0ff;
+  box-shadow: 
+    inset 2px 2px 0 rgba(200,160,255,0.2),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+    0 0 8px rgba(128,96,192,0.4),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+  text-shadow: 0 0 4px rgba(180,140,255,0.6);
+}
+.pixel-dice-thunder::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 60%;
+  background: linear-gradient(180deg, rgba(200,160,255,0.5), transparent);
+  transform: translate(-50%, -50%) rotate(15deg);
+  pointer-events: none;
+  z-index: 1;
+}
+
 
 /* === Ԫ���������ӹ�Ч === */
 .dice-element-fire { position: relative; overflow: visible; }
@@ -1121,7 +1147,7 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 .dice-glow-white {
-  box-shadow: 0 0 10px rgba(136,153,170,0.5), 0 0 20px rgba(136,153,170,0.2);
+  box-shadow: 0 0 10px rgba(200,200,220,0.5), 0 0 20px rgba(200,200,220,0.2) !important;
 }
 
 .dice-glow-fire {

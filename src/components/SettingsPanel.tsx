@@ -11,9 +11,10 @@ import { resetTutorial } from './TutorialOverlay';
 interface SettingsPanelProps {
   onResetTutorial?: () => void;
   onOpenHandGuide?: () => void;
+  onOpenDiceGuide?: () => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, onOpenHandGuide }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, onOpenHandGuide, onOpenDiceGuide }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [volume, setVolume] = useState(getMasterVolume());
   const [sfx, setSfx] = useState(isSfxEnabled());
@@ -61,10 +62,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, o
               className="pixel-panel w-full max-w-xs overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
-              {/* 标题栏 — 像素风 */}
+              {/* 标题栏 */}
               <div className="p-3 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
                 <h3 className="text-xs text-[var(--pixel-gold)] pixel-text-shadow flex items-center gap-2">
-                  <PixelGear size={2} /> ◆ 设 置 ◆
+                  <PixelGear size={2} /> ✦ 设 置 ✦
                 </h3>
                 <button onClick={() => setIsOpen(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--pixel-red)]">
                   <PixelClose size={2} />
@@ -148,6 +149,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, o
                     className="w-full py-2 pixel-btn pixel-btn-ghost text-[10px] flex items-center justify-center gap-2"
                   >
                     <PixelBook size={2} /> 牌型图鉴
+                  </button>
+                )}
+
+                {/* 骰子图鉴 */}
+                {onOpenDiceGuide && (
+                  <button
+                    onClick={() => {
+                      onOpenDiceGuide();
+                      setIsOpen(false);
+                    }}
+                    className="w-full py-2 pixel-btn pixel-btn-ghost text-[10px] flex items-center justify-center gap-2"
+                  >
+                    <PixelBook size={2} /> 骰子图鉴
                   </button>
                 )}
 

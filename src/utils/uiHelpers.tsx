@@ -25,7 +25,7 @@ const ELEMENT_STYLE_MAP: Record<DiceElement, { diceClass: string; glowClass: str
   normal:  { diceClass: 'pixel-dice-white',  glowClass: 'dice-glow-white',   effectClass: '',                     textureClass: '' },
   fire:    { diceClass: 'pixel-dice-red',    glowClass: 'dice-glow-fire',    effectClass: 'dice-element-fire',    textureClass: 'dice-texture-fire' },
   ice:     { diceClass: 'pixel-dice-blue',   glowClass: 'dice-glow-ice',     effectClass: 'dice-element-ice',     textureClass: 'dice-texture-ice' },
-  thunder: { diceClass: 'pixel-dice-gold',   glowClass: 'dice-glow-thunder', effectClass: 'dice-element-thunder', textureClass: 'dice-texture-thunder' },
+  thunder: { diceClass: 'pixel-dice-thunder', glowClass: 'dice-glow-thunder', effectClass: 'dice-element-thunder', textureClass: 'dice-texture-thunder' },
   poison:  { diceClass: 'pixel-dice-purple', glowClass: 'dice-glow-poison',  effectClass: 'dice-element-poison',  textureClass: 'dice-texture-poison' },
   holy:    { diceClass: 'pixel-dice-gold',   glowClass: 'dice-glow-holy',    effectClass: 'dice-element-holy',    textureClass: 'dice-texture-holy' },
 };
@@ -116,7 +116,7 @@ export const ELEMENT_COLORS: Record<DiceElement, string> = {
   normal: '#8899aa',
   fire: '#e07830',
   ice: '#30a8d0',
-  thunder: '#c070e0',
+  thunder: '#8060c0',
   poison: '#70c030',
   holy: '#d4a030',
 };

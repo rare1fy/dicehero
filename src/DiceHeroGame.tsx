@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'motion/react';
 // --- Modular Imports ---
 import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult, OwnedDie, RunStats } from './types/game';
 import { INITIAL_STATS } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL } from './data/dice';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL, ALL_DICE } from './data/dice';
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
 import { DiceBagPanel } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
@@ -88,6 +88,7 @@ export default function DiceHeroGame() {
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
+  const [showDiceGuide, setShowDiceGuide] = useState(false);
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [pendingLootAugment, setPendingLootAugment] = useState<{id: string, options: Augment[] } | null>(null);
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());
@@ -3107,6 +3108,11 @@ useEffect(() => {
 
             {/* ===== 弹窗和模态框保持不变 ===== */}
 
+            {/* Dice Guide Modal */}
+            <AnimatePresence>
+              {showDiceGuide && (
+                <motion.div
+                  initial={{ opacity: 0 }}
             {/* Hand Types Guide Modal */}
             <AnimatePresence>
               {showHandGuide && (
@@ -3125,14 +3131,14 @@ useEffect(() => {
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 牌型图鉴 ◆</h3>
+                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">✦ 牌型图鉴 ✦</h3>
                       <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
                       {HAND_TYPES.map(type => {
                         const level = game.handLevels[type.name] || 1;
                         const levelBonusMult = (level - 1) * 0.3;
-                        const currentBase = 0; // base已移除，纯倍率体系
+                        const currentBase = 0;
                         const currentMult = type.mult + levelBonusMult;
                         
                         return (
@@ -3154,6 +3160,56 @@ useEffect(() => {
                             <p className="text-[11px] text-[var(--dungeon-text-dim)] leading-tight">
                               {formatDescription(type.description.replace(/\(\d+ \+ (总)?点数\) \* \d+\.\d+/, `(${currentBase} + $1点数) * ${currentMult.toFixed(1)}`).replace(/点数 \* \d+\.\d+/, `点数 * ${currentMult.toFixed(1)}`))}
                             </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Dice Guide Modal */}
+            <AnimatePresence>
+              {showDiceGuide && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
+                  onClick={() => setShowDiceGuide(false)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 20 }}
+                    className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
+                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">✦ 骰子图鉴 ✦</h3>
+                      <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
+                      {Object.values(ALL_DICE).map(diceDef => {
+                        const diceClass = getDiceElementClass(diceDef.element, false, false, false, diceDef.id);
+                        return (
+                          <div key={diceDef.id} className="flex items-center gap-3 p-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                            <div className={`${diceClass} flex-shrink-0 flex items-center justify-center relative`} style={{ width: '42px', height: '42px', fontSize: '18px', borderWidth: '3px', borderStyle: 'solid', borderRadius: '2px' }}>
+                              {diceDef.faces[Math.floor(diceDef.faces.length / 2)]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{diceDef.name}</span>
+                                <span className="text-[9px] px-1 py-0.5 bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]" style={{borderRadius:'1px'}}>
+                                  {diceDef.rarity === 'common' ? '普通' : diceDef.rarity === 'uncommon' ? '稀有' : '史诗'}
+                                </span>
+                              </div>
+                              <div className="text-[9px] text-[var(--dungeon-text-dim)] mb-0.5">{diceDef.description}</div>
+                              <div className="text-[9px] text-[var(--dungeon-text)] font-mono">
+                                面值: [{diceDef.faces.join(', ')}]
+                              </div>
+                            </div>
                           </div>
                         );
                       })}

@@ -6,7 +6,7 @@ import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
 
 export const GlobalTopBar: React.FC = () => {
-  const { game, setShowTutorial, setShowHandGuide, rerollFlash } = useGameContext();
+  const { game, setShowTutorial, setShowHandGuide, setShowDiceGuide, rerollFlash } = useGameContext();
   const [showStats, setShowStats] = useState(false);
 
   return (
@@ -56,7 +56,7 @@ export const GlobalTopBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} />
+        <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} onOpenDiceGuide={() => setShowDiceGuide(true)} />
       </div>
       <AnimatePresence>
         {showStats && <StatsModal onClose={() => setShowStats(false)} />}
