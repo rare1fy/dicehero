@@ -7,7 +7,7 @@ interface SkillModule {
   description: string;
   icon: React.ReactNode;
   augment: Augment;
-  cost: { type: 'maxHp' | 'reroll' | 'plays' | 'hp'; value: number; label: string };
+  cost: { type: 'maxHp' | 'reroll' | 'plays' | 'hp' | 'addNormalDice'; value: number; label: string };
 }
 
 interface Toast {

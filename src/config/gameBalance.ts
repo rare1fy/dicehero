@@ -147,8 +147,7 @@ export const SKILL_SELECT_CONFIG = {
   costPool: [
     { type: 'maxHp' as const, value: 8, label: '最大生命 -8' },
     { type: 'maxHp' as const, value: 12, label: '最大生命 -12' },
-    { type: 'reroll' as const, value: 1, label: '重掷机会 -1' },
-    { type: 'reroll' as const, value: 2, label: '重掷机会 -2' },
+    { type: 'addNormalDice' as const, value: 1, label: '骰子库 普通骰子+1' },
     { type: 'hp' as const, value: 10, label: '当前生命 -10' },
     { type: 'hp' as const, value: 15, label: '当前生命 -15' },
   ],
