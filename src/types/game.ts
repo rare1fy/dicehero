@@ -233,7 +233,7 @@ export interface GameState {
   augments: (Augment | null)[];
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward';
+  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target
@@ -244,6 +244,7 @@ export interface GameState {
   statuses: StatusEffect[];
   lootItems: LootItem[];
   enemyHpMultiplier: number;
+  chapter: number;          // 当前大关 (1-5)
   stats: RunStats;
   pendingReplacementAugment: Augment | null;
 }

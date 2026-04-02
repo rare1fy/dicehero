@@ -50,7 +50,7 @@ import { AugmentCard } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
-import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG } from './config';
+import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG, CHAPTER_CONFIG } from './config';
 
 export default function DiceHeroGame() {
   const [game, setGame] = useState<GameState>({
@@ -80,6 +80,7 @@ export default function DiceHeroGame() {
     statuses: [],
     lootItems: [],
     enemyHpMultiplier: 1.0,
+    chapter: 1,
     stats: { ...INITIAL_STATS },
     pendingReplacementAugment: null,
     targetEnemyUid: null,
@@ -265,7 +266,10 @@ export default function DiceHeroGame() {
   };
 
   const startBattle = async (node: MapNode) => {
-    const waves = getEnemiesForNode(node, node.depth, game.enemyHpMultiplier);
+    const waves = (() => {
+      const chapterScale = CHAPTER_CONFIG.chapterScaling[Math.min(game.chapter - 1, CHAPTER_CONFIG.chapterScaling.length - 1)];
+      return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult);
+    })();
     const firstWave = waves[0]?.enemies || [];
     setEnemies(firstWave);
     setEnemyEffects({}); setDyingEnemies(new Set());
@@ -1578,7 +1582,13 @@ useEffect(() => {
         const bossNode = prev.map.find(n => n.id === prev.currentNodeId);
         // 只有最终Boss(depth>=14)才进入胜利画面，中层Boss继续走图拿战利品
         if (bossNode && bossNode.depth >= 14) {
-          return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false };
+          // 判断是否为最终章
+          if (prev.chapter >= CHAPTER_CONFIG.totalChapters) {
+            return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false };
+          } else {
+            // 进入大关过渡
+            return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false };
+          }
         }
         // 中层Boss：继续走正常战利品流程
       }
@@ -1591,6 +1601,39 @@ useEffect(() => {
         isEnemyTurn: false
       };
     });
+  };
+
+  // === 大关过渡：进入下一章 ===
+  const handleNextChapter = () => {
+    setGame(prev => {
+      const nextChapter = prev.chapter + 1;
+      const healAmount = Math.floor(prev.maxHp * CHAPTER_CONFIG.chapterHealPercent);
+      const newHp = Math.min(prev.maxHp, prev.hp + healAmount);
+      const bonusGold = CHAPTER_CONFIG.chapterBonusGold;
+      const newMap = generateMap();
+      const diceIds = prev.ownedDice.map(d => d.defId);
+      const newBag = initDiceBag(diceIds);
+      return {
+        ...prev,
+        chapter: nextChapter,
+        map: newMap,
+        currentNodeId: null,
+        phase: 'map' as const,
+        hp: newHp,
+        armor: 0,
+        souls: prev.souls + bonusGold,
+        diceBag: newBag,
+        discardPile: [],
+        statuses: [],
+        battleTurn: 0,
+        isEnemyTurn: false,
+        battleWaves: [],
+        currentWaveIndex: 0,
+        logs: [...prev.logs, `\n=== 第${nextChapter}章: ${CHAPTER_CONFIG.chapterNames[nextChapter - 1]} ===\n回复了 ${healAmount} HP，获得 ${bonusGold} 金币`],
+      };
+    });
+    setEnemies([]);
+    playSound('victory');
   };
 
   const collectLoot = (id: string) => {
@@ -1813,6 +1856,67 @@ useEffect(() => {
 
   if (game.phase === 'gameover') {
     return <GameContext.Provider value={contextValue}><GameOverScreen /></GameContext.Provider>;
+  }
+
+  if (game.phase === 'chapterTransition') {
+    const chapterName = CHAPTER_CONFIG.chapterNames[game.chapter - 1] || '未知';
+    const nextChapterName = CHAPTER_CONFIG.chapterNames[game.chapter] || '未知';
+    const healAmount = Math.floor(game.maxHp * CHAPTER_CONFIG.chapterHealPercent);
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{ background: 'linear-gradient(180deg, #080b0e 0%, #1a1520 50%, #0e1317 100%)' }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-sm"
+        >
+          <div className="text-[var(--pixel-gold)] text-sm font-bold tracking-widest mb-2 pixel-text-shadow">
+            第{game.chapter}章
+          </div>
+          <div className="text-3xl font-black text-[var(--dungeon-text-bright)] pixel-text-shadow mb-4">
+            {chapterName}
+          </div>
+          <div className="text-[var(--pixel-green)] text-xl font-bold mb-6 pixel-text-shadow">
+            ✦ 通关成功 ✦
+          </div>
+          
+          <div className="bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] p-4 mb-6"
+            style={{ borderRadius: '2px' }}>
+            <div className="text-[var(--dungeon-text)] text-sm mb-3">通关奖励</div>
+            <div className="flex flex-col gap-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--dungeon-text-dim)]">回复生命</span>
+                <span className="text-[var(--pixel-green-light)] font-bold">+{healAmount} HP</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--dungeon-text-dim)]">奖励金币</span>
+                <span className="text-[var(--pixel-gold-light)] font-bold">+{CHAPTER_CONFIG.chapterBonusGold}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[var(--dungeon-text-dim)] text-xs mb-2">即将进入</div>
+          <div className="text-lg font-bold text-[var(--pixel-orange-light)] pixel-text-shadow mb-6">
+            第{game.chapter + 1}章: {nextChapterName}
+          </div>
+          
+          <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-4">
+            进度: {game.chapter}/{CHAPTER_CONFIG.totalChapters}
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleNextChapter}
+            className="px-8 py-3 bg-[var(--pixel-gold-dark)] border-2 border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] font-bold text-base tracking-wider pixel-text-shadow"
+            style={{ borderRadius: '2px' }}
+          >
+            继续冒险 →
+          </motion.button>
+        </motion.div>
+      </div>
+    );
   }
 
   if (game.phase === 'victory') {
@@ -2553,7 +2657,7 @@ useEffect(() => {
                                 ? '0 0 16px rgba(212,160,48,0.7), 0 0 4px rgba(212,160,48,0.4)' : 'none',
                               animationDelay: `${i * 100}ms`,
                             }}>
-                            <span className={`font-black ${d.element === 'normal' ? '' : 'pixel-text-shadow'}`}>{d.value}</span>
+                            <span className={`${d.element === 'normal' ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>{d.value}</span>
                             {d.element !== 'normal' && (
                               <div className="absolute top-0.5 right-0.5 pointer-events-none">
                                 <ElementBadge element={d.element} size={7} />
@@ -2951,7 +3055,7 @@ useEffect(() => {
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
-                        <span className={`font-black ${(die.element === 'normal' && (!die.diceDefId || die.diceDefId === 'normal' || die.diceDefId === 'loaded')) ? '' : 'pixel-text-shadow'}`}>
+                        <span className={`${(die.element === 'normal' && (!die.diceDefId || die.diceDefId === 'normal' || die.diceDefId === 'loaded')) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
                           {die.rolling ? "?" : die.value}
                         </span>
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (

@@ -14,6 +14,7 @@ export {
   MAP_CONFIG,
   SKILL_SELECT_CONFIG,
   AUGMENT_SCALING,
+  CHAPTER_CONFIG,
   DEPTH_SCALING,
   getDepthScaling,
 } from './gameBalance';

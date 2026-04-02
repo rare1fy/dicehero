@@ -160,3 +160,25 @@ export const AUGMENT_SCALING = {
   /** 等级缩放公式: 1 + (level - 1) * scaleFactor */
   scaleFactor: 0.5,
 } as const;
+
+// ============================================================
+// 大关配置 (5个大关，每章递增难度)
+// ============================================================
+export const CHAPTER_CONFIG = {
+  /** 总大关数 */
+  totalChapters: 5,
+  /** 大关名称 */
+  chapterNames: ['幽暗森林', '冰封山脉', '熔岩深渊', '暗影要塞', '永恒之巅'] as const,
+  /** 每章的敌人数值倍率 (HP和伤害) */
+  chapterScaling: [
+    { hpMult: 1.0, dmgMult: 1.0 },   // 第1章: 基准
+    { hpMult: 1.35, dmgMult: 1.20 },  // 第2章: +35% HP, +20% DMG
+    { hpMult: 1.75, dmgMult: 1.45 },  // 第3章: +75% HP, +45% DMG
+    { hpMult: 2.20, dmgMult: 1.70 },  // 第4章: +120% HP, +70% DMG
+    { hpMult: 2.80, dmgMult: 2.00 },  // 第5章: +180% HP, +100% DMG
+  ],
+  /** 每章过渡时回复的HP比例 */
+  chapterHealPercent: 0.5,
+  /** 每章过渡时获得的金币 */
+  chapterBonusGold: 50,
+} as const;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelRefresh, PixelPlay, PixelSword } from './PixelIcons';
+import { CHAPTER_CONFIG } from '../config';
 import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
 
@@ -12,6 +13,11 @@ export const GlobalTopBar: React.FC = () => {
   return (
     <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0">
       <div className="flex items-center gap-1.5">
+        {/* Chapter */}
+        <div className="flex items-center gap-1 text-[var(--pixel-orange-light)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+          <span className="font-bold">{game.chapter}-{CHAPTER_CONFIG.chapterNames[(game.chapter || 1) - 1]}</span>
+        </div>
+        <div className="w-[2px] h-4 bg-[var(--dungeon-panel-border)]" />
         {/* Gold */}
         <div className="flex items-center gap-1 text-[var(--pixel-gold)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-help" style={{borderRadius:'2px'}}>
           <PixelCoin size={2} /> <span className="font-bold">{game.souls}</span>
