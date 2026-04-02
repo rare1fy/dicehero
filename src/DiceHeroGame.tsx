@@ -2553,7 +2553,7 @@ useEffect(() => {
                                 ? '0 0 16px rgba(212,160,48,0.7), 0 0 4px rgba(212,160,48,0.4)' : 'none',
                               animationDelay: `${i * 100}ms`,
                             }}>
-                            <span className="pixel-text-shadow font-black">{d.value}</span>
+                            <span className={`font-black ${d.element === 'normal' ? '' : 'pixel-text-shadow'}`}>{d.value}</span>
                             {d.element !== 'normal' && (
                               <div className="absolute top-0.5 right-0.5 pointer-events-none">
                                 <ElementBadge element={d.element} size={7} />
@@ -2951,7 +2951,7 @@ useEffect(() => {
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
-                        <span className="pixel-text-shadow font-black">
+                        <span className={`font-black ${(die.element === 'normal' && (!die.diceDefId || die.diceDefId === 'normal' || die.diceDefId === 'loaded')) ? '' : 'pixel-text-shadow'}`}>
                           {die.rolling ? "?" : die.value}
                         </span>
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (
