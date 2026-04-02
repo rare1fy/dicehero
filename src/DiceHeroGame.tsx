@@ -69,7 +69,7 @@ export default function DiceHeroGame() {
     discardPile: [],
     drawCount: PLAYER_INITIAL.drawCount,
     handLevels: {},
-    augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
+    augments: [],
     currentNodeId: null,
     map: generateMap(),
     phase: 'start',
@@ -236,14 +236,8 @@ export default function DiceHeroGame() {
       }
       
       // 添加增幅模块
-      const newAugments = [...updated.augments];
-      const emptySlot = newAugments.findIndex(a => a === null);
-      if (emptySlot !== -1) {
-        newAugments[emptySlot] = module.augment;
-        updated.augments = newAugments;
-      } else {
-        updated.pendingReplacementAugment = module.augment;
-      }
+      // Relic system: just push new augment (no slot limit)
+      updated.augments = [...updated.augments, module.augment];
       
       return updated;
     });
@@ -425,15 +419,34 @@ export default function DiceHeroGame() {
     addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
 
+  // Calculate reroll HP cost: 0, 2, 4, 8, 16... (doubles each time after first free)
+  const getRerollHpCost = (count: number): number => {
+    if (count <= 0) return 0; // first reroll is free
+    return Math.pow(2, count); // 2, 4, 8, 16, 32...
+  };
+  const currentRerollCost = getRerollHpCost(rerollCount);
+  const canAffordReroll = game.hp > currentRerollCost;
+
   const rerollUnselected = async () => {
-    if (game.freeRerollsLeft <= 0 || game.isEnemyTurn || game.playsLeft <= 0) return;
-    playSound('roll');
+    if (game.isEnemyTurn || game.playsLeft <= 0) return;
     
-    if (game.freeRerollsLeft <= 0) {
+    // Check HP cost
+    const hpCost = getRerollHpCost(rerollCount);
+    if (hpCost > 0 && game.hp <= hpCost) {
+      addToast(`生命不足！重掷需要 ${hpCost} HP`, 'damage');
       setRerollFlash(true);
       setTimeout(() => setRerollFlash(false), 500);
+      return;
     }
-
+    
+    // Apply HP cost
+    if (hpCost > 0) {
+      setGame(prev => ({ ...prev, hp: prev.hp - hpCost }));
+      addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
+      addLog(`重掷消耗 ${hpCost} HP`);
+    }
+    
+    playSound('roll');
     // 设置未选中骰子的rolling状态
     setDice(prev => prev.map(d => d.selected || d.spent ? d : { ...d, rolling: true }));
 
@@ -483,7 +496,7 @@ export default function DiceHeroGame() {
         ...prev,
         diceBag: newBag,
         discardPile: finalDiscard,
-        freeRerollsLeft: prev.freeRerollsLeft > 0 ? prev.freeRerollsLeft - 1 : prev.freeRerollsLeft,
+        // HP cost already applied above
       };
     });
 
@@ -1225,22 +1238,30 @@ export default function DiceHeroGame() {
             // Attack turn: fall through to normal attack below
           }
           
-          // Priest (support): never attacks, heals/buffs/debuffs
+          // Priest (support): smart AI - prioritize healing damaged allies
           if (e.combatType === 'priest') {
             setEnemyEffectForUid(e.uid, 'skill');
             playSound('enemy_skill');
             const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
+            const damagedAllies = allies.filter(en => en.hp < en.maxHp);
+            const selfDamaged = e.hp < e.maxHp;
             
-            if (game.battleTurn % 3 === 0 && allies.length > 0) {
-              // Heal lowest HP ally
-              const lowestAlly = allies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
+            if (damagedAllies.length > 0) {
+              // Priority 1: Heal the most damaged ally
+              const lowestAlly = damagedAllies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
               const healVal = Math.floor(e.attackDmg * 2.5);
               setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
               addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
               addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
               playSound('enemy_heal');
-            } else if (game.battleTurn % 3 === 1 && allies.length > 0) {
-              // Buff random ally with strength
+            } else if (selfDamaged) {
+              // Priority 2: Heal self if damaged
+              const healVal = Math.floor(e.attackDmg * 1.5);
+              setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
+              addLog(`${e.name} 治疗自己 ${healVal} HP。`);
+              playSound('enemy_heal');
+            } else if (allies.length > 0 && game.battleTurn % 2 === 0) {
+              // Priority 3: Buff ally with strength (everyone full HP)
               const target = allies[Math.floor(Math.random() * allies.length)];
               setEnemies(prev => prev.map(en => {
                 if (en.uid !== target.uid) return en;
@@ -1250,9 +1271,9 @@ export default function DiceHeroGame() {
                 }
                 return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 2 }] };
               }));
-              addLog(`${e.name} 为 ${target.name} 施加了力量增强！`);
+              addLog(`${e.name} 为 ${target.name} 施加了力量强化！`);
             } else {
-              // Debuff player with weak
+              // Priority 4: Debuff player OR insert curse dice
               const existing = game.statuses.find(s => s.type === 'weak');
               if (!existing || existing.value < 3) {
                 setGame(prev => {
@@ -1265,11 +1286,17 @@ export default function DiceHeroGame() {
                 addLog(`${e.name} 对你施加了虚弱！`);
                 addFloatingText('虚弱', 'text-purple-400', undefined, 'player');
               } else {
-                // Already max debuff, heal self
-                const healVal = Math.floor(e.attackDmg * 1.5);
-                setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-                addLog(`${e.name} 治疗自己 ${healVal} HP。`);
-                playSound('enemy_heal');
+                // Insert a curse dice into player's dice bag!
+                const curseDice = Math.random() < 0.5 ? 'cursed' : 'cracked';
+                const curseName = curseDice === 'cursed' ? '诅咒骰子' : '碎裂骰子';
+                setGame(prev => ({
+                  ...prev,
+                  ownedDice: [...prev.ownedDice, { defId: curseDice, level: 1 }],
+                  diceBag: [...prev.diceBag, curseDice],
+                }));
+                addLog(`${e.name} 向你的骰子库塞入了一颗${curseName}！`);
+                addFloatingText(`+${curseName}`, 'text-red-400', undefined, 'player');
+                playSound('enemy_skill');
               }
             }
             
@@ -1710,38 +1737,13 @@ useEffect(() => {
     if (!pendingLootAugment) return;
     playSound('select');
     
-    const existingIdx = game.augments.findIndex(a => a?.id === aug.id);
-    if (existingIdx !== -1) {
-      // Upgrade existing
-      setGame(prev => {
-        const newAugs = [...prev.augments];
-        const existing = newAugs[existingIdx]!;
-        newAugs[existingIdx] = { ...existing, level: (existing.level || 1) + 1 };
-        const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
-        addLog(`升级了模块: ${aug.name} (Lv.${newAugs[existingIdx]!.level})`);
-        return { ...prev, augments: newAugs, lootItems: nextLoot };
-      });
-      setPendingLootAugment(null);
-    } else {
-      const emptyIdx = game.augments.findIndex(a => a === null);
-      if (emptyIdx !== -1) {
-        // Add to empty slot
-        setGame(prev => {
-          const newAugs = [...prev.augments];
-          newAugs[emptyIdx] = { ...aug, level: 1 };
-          const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
-          addLog(`获得了新模块: ${aug.name}`);
-          return { ...prev, augments: newAugs, lootItems: nextLoot };
-        });
-        setPendingLootAugment(null);
-      } else {
-        // Slots full, trigger replacement
-        setGame(prev => ({ ...prev, pendingReplacementAugment: aug }));
-        // Don't close pendingLootAugment yet, or do we? 
-        // Let's close it and let the replacement modal handle the loot collection state
-        setPendingLootAugment(null);
-      }
-    }
+    // Relic system: just add to collection (no upgrade, no slot limit)
+    setGame(prev => {
+      const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
+      addLog(`\u83B7\u5F97\u4E86\u65B0\u9057\u7269: ${aug.name}`);
+      return { ...prev, augments: [...prev.augments, { ...aug, level: 1 }], lootItems: nextLoot };
+    });
+    setPendingLootAugment(null);
   };
 
   const replaceAugment = (newAug: Augment, replaceIdx: number) => {
@@ -1775,26 +1777,10 @@ useEffect(() => {
   };
 
   const pickReward = (aug: Augment) => {
+    // Relic system: just add to collection (no upgrade, no slot limit)
     setGame(prev => {
-      const newAugs = [...prev.augments];
-      const existingIdx = newAugs.findIndex(a => a?.id === aug.id);
-      
-      if (existingIdx !== -1) {
-        const existing = newAugs[existingIdx]!;
-        newAugs[existingIdx] = { ...existing, level: (existing.level || 1) + 1 };
-        addLog(`升级了模块: ${aug.name} (Lv.${newAugs[existingIdx]!.level})`);
-        return { ...prev, augments: newAugs, phase: 'map' };
-      } else {
-        const emptyIdx = newAugs.findIndex(a => a === null);
-        if (emptyIdx !== -1) {
-          newAugs[emptyIdx] = { ...aug, level: 1 };
-          addLog(`获得了新模块: ${aug.name}`);
-          return { ...prev, augments: newAugs, phase: 'map' };
-        } else {
-          // Shop replacement logic
-          return { ...prev, pendingReplacementAugment: aug, phase: 'map' };
-        }
-      }
+      addLog(`获得了新遗物: ${aug.name}`);
+      return { ...prev, augments: [...prev.augments, { ...aug, level: 1 }], phase: 'map' };
     });
   };
 
@@ -3117,24 +3103,50 @@ useEffect(() => {
 
                 {/* 操作按钮行 */}
                 <div className="flex gap-1.5 items-center">
-                  {/* 重骰按钮 */}
+                  {/* 重掷按钮 - HP cost escalation with blood effect */}
                   <motion.button
-                    disabled={(game.freeRerollsLeft <= 0) || dice.every(d => d.spent || d.selected) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0}
+                    disabled={dice.every(d => d.spent || d.selected) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0 || (!canAffordReroll && currentRerollCost > 0)}
                     onClick={() => {
-                      if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
+                      if (game.isEnemyTurn) { addToast('敵人回合中，无法操作'); return; }
                       if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
                       if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
                       if (dice.every(d => d.spent || d.selected)) { addToast('没有可重掷的骰子'); return; }
-                      if (game.freeRerollsLeft <= 0) { addToast('没有剩余重掷次数'); return; }
                       rerollUnselected();
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`h-10 px-3 ${game.freeRerollsLeft > 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : 'bg-[var(--pixel-red-dark)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]'} disabled:opacity-30 border-3 flex items-center justify-center gap-2 transition-all shrink-0`}
-                    style={{borderRadius:'2px', boxShadow: game.freeRerollsLeft > 0 ? '0 0 8px rgba(60,200,100,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                    className={`h-10 px-3 ${currentRerollCost <= 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : currentRerollCost <= 4 ? 'bg-[#4a1a1a] border-[#c04040] text-[#ff8080]' : 'bg-[#5a0a0a] border-[#ff2020] text-[#ff4040]'} disabled:opacity-30 border-3 flex items-center justify-center gap-1.5 transition-all shrink-0 relative overflow-hidden`}
+                    style={{borderRadius:'2px', boxShadow: currentRerollCost <= 0 ? '0 0 8px rgba(60,200,100,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)' : `0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)}), inset -2px -2px 0 rgba(0,0,0,0.3)`}}
                   >
+                    {/* Blood drip particles when cost > 0 */}
+                    {currentRerollCost > 0 && (
+                      <>
+                        {[...Array(Math.min(6, Math.floor(currentRerollCost / 2) + 2))].map((_, i) => (
+                          <span
+                            key={i}
+                            className="absolute rounded-full animate-pulse"
+                            style={{
+                              width: `${2 + Math.random() * 2}px`,
+                              height: `${2 + Math.random() * 2}px`,
+                              backgroundColor: `rgba(255, ${30 + Math.random() * 40}, ${30 + Math.random() * 40}, ${0.4 + Math.random() * 0.4})`,
+                              left: `${10 + Math.random() * 80}%`,
+                              top: `${10 + Math.random() * 80}%`,
+                              animationDelay: `${Math.random() * 2}s`,
+                              animationDuration: `${0.8 + Math.random() * 1.2}s`,
+                            }}
+                          />
+                        ))}
+                      </>
+                    )}
                     <PixelRefresh size={2} />
-                    <span className="text-[12px] font-mono font-bold">{game.freeRerollsLeft}</span>
+                    {currentRerollCost <= 0 ? (
+                      <span className="text-[11px] font-mono font-bold">FREE</span>
+                    ) : (
+                      <span className="text-[10px] font-mono font-bold flex items-center gap-0.5">
+                        <span>-{currentRerollCost}</span>
+                        <PixelHeart size={1.5} />
+                      </span>
+                    )}
                   </motion.button>
                   
                   {/* 主行动按钮 */}
@@ -3197,39 +3209,63 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 模块槽行 */}
-              <div className="px-2 pb-1.5 pt-1 border-t-2 border-[var(--dungeon-panel-border)] flex gap-1.5 overflow-x-auto no-scrollbar">
-                {Array.from({ length: game.slots }).map((_, i) => {
-                  const aug = game.augments[i];
-                  const isActive = aug && activeAugments.some(a => a.id === aug.id);
-                  return (
-                    <motion.div 
-                      key={i}
-                      onClick={() => aug && setSelectedAugment(aug)}
-                      animate={isActive ? { scale: [1, 1.03, 1] } : { scale: 1 }}
-                      transition={isActive ? { repeat: Infinity, duration: 1.5 } : { duration: 0.3 }}
-                      className={`flex-1 h-10 flex flex-col items-center justify-center p-0.5 text-center cursor-pointer border-3 transition-all duration-200 ${
-                        isActive 
-                          ? "bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] pixel-select-glow" 
-                          : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)]"
-                      }`}
-                      style={{ borderRadius: '2px' }}
-                    >
-                      {aug ? (
-                        <>
-                          <div className={`flex items-center justify-center gap-0.5 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                            {getAugmentIcon(aug.condition, 9)}
-                          </div>
-                          <div className={`text-[9px] font-bold leading-tight line-clamp-1 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                            {aug.name}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-[var(--dungeon-panel-border)]"><PixelZap size={1} /></div>
-                      )}
-                    </motion.div>
-                  );
-                })}
+              {/* 遗物栏 - 小格子无限累积 */}
+              <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
+                <div className="flex gap-1 overflow-x-auto no-scrollbar items-center">
+                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">遗物</span>
+                  {game.augments.filter(a => a !== null).length === 0 && (
+                    <span className="text-[7px] text-[var(--dungeon-text-dim)] italic">无</span>
+                  )}
+                  {game.augments.filter((a): a is Augment => a !== null).map((aug, i) => {
+                    const isActive = activeAugments.some(a => a.id === aug.id);
+                    return (
+                      <motion.div
+                        key={aug.id + "-" + i}
+                        onClick={() => setSelectedAugment(aug)}
+                        animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                        transition={isActive ? { repeat: Infinity, duration: 1.5 } : { duration: 0.3 }}
+                        className={`w-7 h-7 flex items-center justify-center cursor-pointer border-2 transition-all duration-200 shrink-0 ${
+                          isActive
+                            ? "bg-[var(--pixel-green-dark)] border-[var(--pixel-green)]"
+                            : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
+                        }`}
+                        style={{ borderRadius: "2px" }}
+                        title={`${aug.name}: ${aug.description}`}
+                      >
+                        <div className={`${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                          {getAugmentIcon(aug.condition, 12)}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 骰子库展示 */}
+              <div className="px-2 pb-1.5 pt-0.5 border-t border-[var(--dungeon-panel-border)]">
+                <div className="flex gap-0.5 overflow-x-auto no-scrollbar items-center">
+                  <span className="text-[7px] font-bold text-[var(--dungeon-text-dim)] shrink-0 mr-0.5">骰子库</span>
+                  {game.ownedDice.map((d, i) => {
+                    const def = getDiceDef(d.defId);
+                    const elemColor = ELEMENT_COLORS[def.element] || "#888";
+                    const inBag = game.diceBag.filter(id => id === d.defId).length > 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`w-5 h-5 flex items-center justify-center border shrink-0 ${inBag ? "border-[rgba(255,255,255,0.15)]" : "border-[rgba(255,255,255,0.06)] opacity-40"}`}
+                        style={{ backgroundColor: `${elemColor}22`, borderRadius: "2px" }}
+                        title={`${def.name}`}
+                      >
+                        <span className="text-[6px] font-bold" style={{ color: elemColor }}>
+                          {def.name.charAt(0)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <span className="text-[7px] text-[var(--dungeon-text-dim)] ml-1 shrink-0">
+                    {game.diceBag.length}库/{game.discardPile.length}弃
+                  </span>
+                </div>
               </div>
 
               {/* 可折叠日志 */}
