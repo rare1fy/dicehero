@@ -27,21 +27,21 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.50, dmgMult: 0.45 },  // 层0: 新手保护
-  { hpMult: 0.65, dmgMult: 0.60 },  // 层1: 简单
-  { hpMult: 0.80, dmgMult: 0.75 },  // 层2: 略有挑战
-  { hpMult: 1.05, dmgMult: 0.90 },  // 层3: 精英挑战（里程碑）
-  { hpMult: 1.15, dmgMult: 0.95 },  // 层4: 获得增长后新挑战
-  { hpMult: 1.35, dmgMult: 1.05 },  // 层5: 高挑战
-  { hpMult: 1.00, dmgMult: 1.00 },  // 层6: 营地（无战斗）
-  { hpMult: 1.70, dmgMult: 1.20 },  // 层7: 中期Boss
-  { hpMult: 1.00, dmgMult: 0.85 },  // 层8: Boss后喘息
-  { hpMult: 1.40, dmgMult: 1.10 },  // 层9: 回升
-  { hpMult: 1.65, dmgMult: 1.25 },  // 层10: 挑战
-  { hpMult: 1.90, dmgMult: 1.40 },  // 层11: 高挑战
-  { hpMult: 2.20, dmgMult: 1.50 },  // 层12: 极限
-  { hpMult: 1.00, dmgMult: 1.00 },  // 层13: 营地（无战斗）
-  { hpMult: 2.80, dmgMult: 1.60 },  // 层14: 终极Boss
+  { hpMult: 0.55, dmgMult: 0.50 },  // depth 0: easy intro
+  { hpMult: 0.70, dmgMult: 0.65 },  // depth 1: warming up
+  { hpMult: 0.90, dmgMult: 0.80 },  // depth 2: getting serious
+  { hpMult: 1.15, dmgMult: 0.95 },  // depth 3: elite encounter
+  { hpMult: 1.25, dmgMult: 1.00 },  // depth 4: post-elite normal
+  { hpMult: 1.45, dmgMult: 1.10 },  // depth 5: mid-game peak
+  { hpMult: 1.10, dmgMult: 1.05 },  // depth 6: campfire breather
+  { hpMult: 1.85, dmgMult: 1.25 },  // depth 7: mid-boss
+  { hpMult: 1.10, dmgMult: 0.90 },  // depth 8: post-boss recovery
+  { hpMult: 1.55, dmgMult: 1.15 },  // depth 9: ramp up
+  { hpMult: 1.80, dmgMult: 1.30 },  // depth 10: harder
+  { hpMult: 2.05, dmgMult: 1.45 },  // depth 11: peak normal
+  { hpMult: 2.40, dmgMult: 1.55 },  // depth 12: pre-boss elite
+  { hpMult: 1.10, dmgMult: 1.05 },  // depth 13: campfire breather
+  { hpMult: 3.00, dmgMult: 1.70 },  // depth 14: final boss
 ];
 
 /** 获取指定层级的缩放系数 */
