@@ -1108,7 +1108,7 @@ export default function DiceHeroGame() {
 
     // Check for enemy deaths (works for both AOE and single target)
     const checkEnemyDeaths = async () => {
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 1200));
       // Re-read enemies after state update
       const aliveAfterAttack = enemies.filter(e => e.hp > 0);
       
@@ -2307,11 +2307,11 @@ useEffect(() => {
                 <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '4px' }}>
                 {[...enemies].sort((a, b) => b.distance - a.distance)
                   .map((enemy) => {
-                    if (enemy.hp <= 0) {
+                    const effect = enemyEffects[enemy.uid] || null;
+                    if (enemy.hp <= 0 && effect !== 'death') {
                       return <div key={enemy.uid} style={{ minWidth: '60px', minHeight: '100px' }} />;
                     }
                   const isTarget = isAoeActive ? (enemy.hp > 0) : (enemy.uid === (targetEnemyUid || enemies.find(e => e.hp > 0)?.uid));
-                  const effect = enemyEffects[enemy.uid] || null;
                   const currentNode = game.map.find(n => n.id === game.currentNodeId);
                   const baseSpriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
                   
