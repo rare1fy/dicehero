@@ -4,11 +4,11 @@ import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
 import { getNodeX } from '../utils/mapGenerator';
 import { playSound } from '../utils/sound';
-import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelInfo, PixelTreasure, PixelMerchant } from './PixelIcons';
+import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelInfo, PixelTreasure, PixelMerchant, PixelBook } from './PixelIcons';
 import { PixelSprite, hasSpriteData } from './PixelSprite';
 
 export const MapScreen: React.FC = () => {
-  const { game, startNode, addLog } = useGameContext();
+  const { game, startNode, addLog, setShowDiceGuide } = useGameContext();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const currentNode = game.map.find(n => n.id === game.currentNodeId);
   const reachableNodes = !game.currentNodeId 
@@ -47,7 +47,7 @@ export const MapScreen: React.FC = () => {
   const maxDepth = Math.max(...game.map.map(n => n.depth));
   const layerHeight = 140;
   const svgHeight = (maxDepth + 1) * layerHeight + 100;
-  const svgWidth = 520;
+  const svgWidth = 620;
 
   const getNodePos = (node: MapNode) => {
     const x = getNodeX(node, game.map) / 100 * (svgWidth - 100) + 50;
@@ -209,11 +209,11 @@ export const MapScreen: React.FC = () => {
             </div>
           </div>
           <button 
-            onClick={() => addLog("查看当前状态...")}
+            onClick={() => setShowDiceGuide(true)}
             className="w-10 h-10 bg-[var(--dungeon-panel)] border-3 border-[var(--dungeon-panel-border)] flex items-center justify-center text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)] transition-colors"
             style={{borderRadius:'2px'}}
           >
-            <PixelInfo size={2} />
+            <PixelBook size={2} />
           </button>
         </div>
       </div>

@@ -48,6 +48,14 @@ const EARLY_4_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'enemy', 'shop', 'event'],
 ];
 
+/** 前半程5节点模板 */
+const EARLY_5_TEMPLATES: LayerTemplate[] = [
+  ['enemy', 'event', 'enemy', 'enemy', 'shop'],
+  ['enemy', 'enemy', 'event', 'treasure', 'enemy'],
+  ['enemy', 'event', 'enemy', 'enemy', 'event'],
+  ['enemy', 'enemy', 'event', 'enemy', 'merchant'],
+];
+
 /** \u540e\u534a\u7a0b3\u8282\u70b9\u6a21\u677f\uff08\u5c428~12\uff09 */
 const LATE_3_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'enemy', 'event'],
@@ -73,6 +81,17 @@ const LATE_4_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'elite', 'shop', 'merchant'],
   ['enemy', 'event', 'treasure', 'merchant'],
 ];
+
+/** 后半程5节点模板 */
+const LATE_5_TEMPLATES: LayerTemplate[] = [
+  ['enemy', 'enemy', 'shop', 'event', 'treasure'],
+  ['enemy', 'elite', 'treasure', 'event', 'merchant'],
+  ['enemy', 'enemy', 'merchant', 'treasure', 'event'],
+  ['enemy', 'elite', 'shop', 'event', 'enemy'],
+  ['enemy', 'enemy', 'event', 'treasure', 'shop'],
+];
+
+
 
 /** 2\u8282\u70b9\u8425\u706b\u5c42\u6a21\u677f */
 const CAMPFIRE_2_TEMPLATES: LayerTemplate[] = [
@@ -106,6 +125,12 @@ function getLayerTemplate(depth: number, count: number, fixedType: string | null
 
   const isEarly = depth <= 5;
   const isRiskLayer = depth === 3 || depth === 10 || depth === 12;
+
+  if (count === 5) {
+    const pool = isEarly ? EARLY_5_TEMPLATES : LATE_5_TEMPLATES;
+    return shuffle(pickRandom(pool));
+  }
+
 
   if (count === 4) {
     const pool = isEarly ? EARLY_4_TEMPLATES : LATE_4_TEMPLATES;
@@ -316,6 +341,37 @@ export const generateMap = (): MapNode[] => {
   }
 
   // \u53bb\u91cd\u8fde\u63a5
+
+  // === Step 4: Economic node distribution fix ===
+  // Early layers (depth 0-2): no economic nodes
+  // Any layer: max 1 economic node
+  const economicNodeTypes: NodeType[] = ['shop', 'merchant', 'treasure'];
+  for (let l = 0; l < layers; l++) {
+    if (fixedLayerIds.has(l)) continue;
+    const layerNodes = nodes.filter(n => n.depth === l);
+
+    // First 3 layers: no economic nodes
+    if (l <= 2) {
+      layerNodes.forEach(node => {
+        if (economicNodeTypes.includes(node.type)) {
+          node.type = Math.random() < 0.5 ? 'enemy' : 'event';
+        }
+      });
+      continue;
+    }
+
+    // Any layer: max 1 economic node
+    let econCount = 0;
+    layerNodes.forEach(node => {
+      if (economicNodeTypes.includes(node.type)) {
+        econCount++;
+        if (econCount > 1) {
+          node.type = Math.random() < 0.5 ? 'enemy' : 'event';
+        }
+      }
+    });
+  }
+
   nodes.forEach(n => {
     n.connectedTo = [...new Set(n.connectedTo)];
   });

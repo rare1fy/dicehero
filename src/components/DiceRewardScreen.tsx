@@ -4,6 +4,7 @@ import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef, pickRandomDice, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
 import { ElementBadge, getOnPlayDescription, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { PixelDice, PixelStar } from './PixelIcons';
+import { MiniDice } from './DiceBagPanel';
 import { ELEMENT_NAMES, ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
 
@@ -261,22 +262,11 @@ export const DiceRewardScreen: React.FC = () => {
           当前骰子库 ({game.ownedDice.length}颗)
         </div>
         <div className="flex justify-center gap-1 flex-wrap">
-          {game.ownedDice.map((d, i) => {
-            const def = getDiceDef(d.defId);
-            const elemColor = ELEMENT_COLORS[def.element] || '#888';
-            return (
-              <div
-                key={i}
-                className="w-5 h-5 flex items-center justify-center rounded border border-[rgba(255,255,255,0.1)]"
-                style={{ backgroundColor: `${elemColor}22`, borderRadius: '2px' }}
-                title={`${def.name} Lv.${d.level}`}
-              >
-                <span className="text-[6px] font-bold" style={{ color: elemColor }}>
-                  {d.level > 1 ? d.level : '·'}
-                </span>
-              </div>
-            );
-          })}
+          {game.ownedDice.map((d, i) => (
+            <div key={i} title={`${getDiceDef(d.defId).name} Lv.${d.level}`}>
+              <MiniDice defId={d.defId} size={16} />
+            </div>
+          ))}
         </div>
       </div>
     </div>

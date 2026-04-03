@@ -117,17 +117,17 @@ export const MAP_CONFIG = {
   fixedLayers: {
     0: { type: 'enemy' as const, count: 1 },   // 起点教学战
     1: { type: null, count: 3 },                // 初次分路
-    2: { type: null, count: 4 },                // 扩散层
+    2: { type: null, count: 5 },                // 扩散层
     3: { type: null, count: 3 },                // 风险层（可出精英，但不强制）
-    4: { type: null, count: 4 },                // 调整层
-    5: { type: null, count: 4 },                // 构筑层
+    4: { type: null, count: 5 },                // 调整层
+    5: { type: null, count: 5 },                // 构筑层
     6: { type: 'campfire' as const, count: 2 }, // 营火休整
     7: { type: 'boss' as const, count: 1 },     // 中Boss
     8: { type: null, count: 3 },                // Boss后再分路
-    9: { type: null, count: 4 },                // 扩散层
-    10: { type: null, count: 4 },               // 中后期风险层
+    9: { type: null, count: 5 },                // 扩散层
+    10: { type: null, count: 5 },               // 中后期风险层
     11: { type: null, count: 3 },               // 构筑兑现层
-    12: { type: null, count: 4 },               // 压力层
+    12: { type: null, count: 5 },               // 压力层
     13: { type: 'campfire' as const, count: 2 },// 最终营火
     14: { type: 'boss' as const, count: 1 },    // 最终Boss
   } as Record<number, { type: string | null; count: number }>,

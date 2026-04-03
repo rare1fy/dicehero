@@ -46,7 +46,7 @@ import { DiceRewardScreen } from './components/DiceRewardScreen';
 import { GameOverScreen } from './components/GameOverScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 import { generateSkillModules } from './data/skillModules';
-import { AugmentCard } from './components/AugmentCard';
+import { AugmentCard, CONDITION_INFO, getConditionInfo } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
@@ -163,8 +163,15 @@ export default function DiceHeroGame() {
   } | null>(null);
   const [toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
   const toastIdRef = useRef(0);
+  const toastCdMap = useRef<Map<string, number>>(new Map());
 
   const addToast = (message: string, type: 'info' | 'damage' | 'heal' | 'gold' | 'buff' = 'info') => {
+    // Toast CD: same message won't repeat within 3s
+    const now = Date.now();
+    const lastTime = toastCdMap.current.get(message) || 0;
+    if (now - lastTime < 3000) return;
+    toastCdMap.current.set(message, now);
+
     const id = ++toastIdRef.current;
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
@@ -1142,6 +1149,7 @@ export default function DiceHeroGame() {
           setEnemies(nextWave);
           setEnemyEffects({}); setDyingEnemies(new Set());
           setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+          setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
           addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
           rollAllDice();
@@ -1224,7 +1232,8 @@ export default function DiceHeroGame() {
         setEnemies(nextWave);
         setEnemyEffects({}); setDyingEnemies(new Set());
         setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
-        setWaveAnnouncement(nextWaveIdx + 1);
+        setRerollCount(0);
+          setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
         return;
@@ -1479,7 +1488,8 @@ export default function DiceHeroGame() {
         setEnemies(nextWave);
         setEnemyEffects({}); setDyingEnemies(new Set());
         setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
-        setWaveAnnouncement(nextWaveIdx + 1);
+        setRerollCount(0);
+          setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
         rollAllDice();
         return;
@@ -2995,8 +3005,8 @@ useEffect(() => {
                     <PixelHeart size={1} />
                     <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
                   </motion.div>
+                  <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)]" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
                   <div className="flex flex-wrap gap-0.5">
-                  <span className="ml-auto text-[9px] font-mono font-bold text-[var(--dungeon-text-dim)] tracking-wider px-1.5 py-0.5 border border-[var(--dungeon-panel-border)]" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
                     {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
                     {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
                   </div>
@@ -3103,29 +3113,42 @@ useEffect(() => {
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
                   {/* 骰子队列流转缩略图 */}
                    <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
-                    <AnimatePresence mode="popLayout">
-                      {game.ownedDice.map((d, i) => {
-                        const inBag = game.diceBag.includes(d.defId);
-                        const inDiscard = game.discardPile.includes(d.defId);
-                        const inHand = !inBag && !inDiscard;
-                        return (
+                    {/* Left: Draw pile (remaining in bag) */}
+                    <div className="flex gap-px items-center justify-end flex-1">
+                      <AnimatePresence mode="popLayout">
+                        {game.ownedDice.filter((d) => game.diceBag.includes(d.defId)).map((d, i) => (
                           <motion.div
-                            key={d.defId + "-q-" + i}
+                            key={d.defId + "-bag-" + i}
                             layout
                             initial={{ opacity: 0, y: 10, scale: 0.5 }}
-                            animate={{
-                              opacity: inBag ? 0.9 : inHand ? 0.5 : 0.25,
-                              y: inHand ? -2 : 0,
-                              scale: inHand ? 1.1 : 1,
-                            }}
+                            animate={{ opacity: 0.9, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -10, scale: 0.5 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                           >
                             <MiniDice defId={d.defId} size={14} />
                           </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                    {/* Separator */}
+                    <div className="w-px h-4 bg-[var(--dungeon-text-dim)] opacity-40 mx-1 shrink-0" />
+                    {/* Right: Discard pile */}
+                    <div className="flex gap-px items-center justify-start flex-1">
+                      <AnimatePresence mode="popLayout">
+                        {game.ownedDice.filter((d) => game.discardPile.includes(d.defId)).map((d, i) => (
+                          <motion.div
+                            key={d.defId + "-disc-" + i}
+                            layout
+                            initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                            animate={{ opacity: 0.25, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.5 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                          >
+                            <MiniDice defId={d.defId} size={14} />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
                   </div>
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                 </div>
@@ -3354,12 +3377,14 @@ useEffect(() => {
                         }}
                         title={`${aug.name}: ${aug.description}`}
                       >
-                        <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
-                          {getAugmentIcon(aug.condition, 12)}
+                        <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
+                          <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
+                            {getAugmentIcon(aug.condition, 12)}
+                          </div>
+                          <span className="text-[5px] font-bold leading-none px-0.5 py-px truncate max-w-full" style={{ color: getConditionInfo(aug.condition).color, backgroundColor: getConditionInfo(aug.condition).bgColor, border: `1px solid ${getConditionInfo(aug.condition).borderColor}`, borderRadius: '1px' }}>
+                            {getConditionInfo(aug.condition).abbr}
+                          </span>
                         </div>
-                        <span className={`text-[6px] font-bold leading-tight truncate ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                          {aug.name.length > 4 ? aug.name.slice(0, 4) : aug.name}
-                        </span>
                       </motion.div>
                     );
                   })}
@@ -3426,57 +3451,6 @@ useEffect(() => {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Dice Guide Modal */}
-            <AnimatePresence>
-              {showDiceGuide && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
-                  onClick={() => setShowDiceGuide(false)}
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, y: 20 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.9, y: 20 }}
-                    className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 骰子图鉴 ◆</h3>
-                      <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
-                      {Object.values(ALL_DICE).map(diceDef => {
-                        const diceClass = getDiceElementClass(diceDef.element, false, false, false, diceDef.id);
-                        return (
-                          <div key={diceDef.id} className="flex items-center gap-3 p-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className={`${diceClass} flex-shrink-0 flex items-center justify-center relative`} style={{ width: '42px', height: '42px', fontSize: '18px', borderWidth: '3px', borderStyle: 'solid', borderRadius: '2px' }}>
-                              {diceDef.faces[Math.floor(diceDef.faces.length / 2)]}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{diceDef.name}</span>
-                                <span className="text-[9px] px-1 py-0.5 bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]" style={{borderRadius:'1px'}}>
-                                  {diceDef.rarity === 'common' ? '普通' : diceDef.rarity === 'uncommon' ? '稀有' : '史诗'}
-                                </span>
-                              </div>
-                              <div className="text-[9px] text-[var(--dungeon-text-dim)] mb-0.5">{diceDef.description}</div>
-                              <div className="text-[9px] text-[var(--dungeon-text)] font-mono">
-                                面值: [{diceDef.faces.join(', ')}]
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
 
             
 
@@ -3773,6 +3747,58 @@ useEffect(() => {
       </AnimatePresence>
       </div>
     </div>
+      {/* Dice Guide Modal - Global */}
+      <AnimatePresence>
+        {showDiceGuide && (
+          <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
+          onClick={() => setShowDiceGuide(false)}
+          >
+          <motion.div
+          initial={{ scale: 0.9, y: 20 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.9, y: 20 }}
+          className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+          onClick={e => e.stopPropagation()}
+          >
+          <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
+          <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 骰子图鉴 ◆</h3>
+          <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
+          {Object.values(ALL_DICE).map(diceDef => {
+          const diceClass = getDiceElementClass(diceDef.element, false, false, false, diceDef.id);
+          return (
+          <div key={diceDef.id} className="flex items-center gap-3 p-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+          <div className={`${diceClass} flex-shrink-0 flex items-center justify-center relative`} style={{ width: '42px', height: '42px', fontSize: '18px', borderWidth: '3px', borderStyle: 'solid', borderRadius: '2px' }}>
+          {diceDef.faces[Math.floor(diceDef.faces.length / 2)]}
+          </div>
+          <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{diceDef.name}</span>
+          <span className="text-[9px] px-1 py-0.5 bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]" style={{borderRadius:'1px'}}>
+          {diceDef.rarity === 'common' ? '普通' : diceDef.rarity === 'uncommon' ? '稀有' : '史诗'}
+          </span>
+          </div>
+          <div className="text-[9px] text-[var(--dungeon-text-dim)] mb-0.5">{diceDef.description}</div>
+          <div className="text-[9px] text-[var(--dungeon-text)] font-mono">
+          面值: [{diceDef.faces.join(', ')}]
+          </div>
+          </div>
+          </div>
+          );
+          })}
+          </div>
+          </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+
     </GameContext.Provider>
   );
 }
