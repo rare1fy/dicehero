@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'motion/react';
 // --- Modular Imports ---
 import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult, OwnedDie, RunStats } from './types/game';
 import { INITIAL_STATS } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL, ALL_DICE } from './data/dice';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL, ALL_DICE, collapseElement, ELEMENTAL_COLLAPSE_ELEMENTS } from './data/dice';
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
@@ -52,6 +52,24 @@ import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
 import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG, CHAPTER_CONFIG } from './config';
+
+
+// 元素骰子坍缩 + 小丑骰子1-9随机
+const applyDiceSpecialEffects = (diceArr: Die[]): Die[] => {
+  return diceArr.map(d => {
+    const def = getDiceDef(d.diceDefId);
+    // 元素骰子：随机坍缩为五种元素之一
+    if (def.isElemental) {
+      const collapsed = collapseElement();
+      return { ...d, element: collapsed as DiceElement, collapsedElement: collapsed as DiceElement };
+    }
+    // 小丑骰子：1-9随机（faces已包含1-9）
+    if (d.diceDefId === 'joker') {
+      return { ...d, value: def.faces[Math.floor(Math.random() * def.faces.length)] };
+    }
+    return d;
+  });
+};
 
 export default function DiceHeroGame() {
   const [game, setGame] = useState<GameState>({
@@ -328,22 +346,8 @@ export default function DiceHeroGame() {
     setGame(prev => ({ ...prev, stats: { ...prev.stats, totalRerolls: prev.stats.totalRerolls + 1 } }));
     }
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
-    // 小丑骰子：每回合所有面变为同一随机点数
-    setDice(prev => prev.map(d => {
-      if (d.diceDefId === 'joker') {
-        const jokerValue = Math.floor(Math.random() * 6) + 1;
-        return { ...d, value: jokerValue };
-      }
-      return d;
-    }));
-    // 小丑骰子：每回合所有面变为同一随机点数
-    setDice(prev => prev.map(d => {
-      if (d.diceDefId === 'joker') {
-        const jokerValue = Math.floor(Math.random() * 6) + 1;
-        return { ...d, value: jokerValue };
-      }
-      return d;
-    }));
+    // 元素骰子坍缩 + 小丑骰子1-9随机
+    setDice(prev => applyDiceSpecialEffects(prev));
     playSound('dice_lock');
     // Auto-sort dice by value ascending after roll
     await new Promise(r => setTimeout(r, 200));
@@ -485,7 +489,10 @@ export default function DiceHeroGame() {
     if (game.isEnemyTurn || game.playsLeft <= 0) return;
     
     // Check HP cost
-    const hpCost = getRerollHpCost(rerollCount);
+    let hpCost = getRerollHpCost(rerollCount);
+    // 诅咒骰子：手中有诅咒骰子时，重Roll代价翻倍
+    const hasCursedInHand = dice.some(d => !d.selected && !d.spent && getDiceDef(d.diceDefId).isCursed);
+    if (hasCursedInHand) hpCost *= 2;
     if (hpCost > 0 && game.hp <= hpCost) {
       addToast(`生命不足！重掷需要 ${hpCost} HP`, 'damage');
       setRerollFlash(true);
@@ -544,7 +551,7 @@ export default function DiceHeroGame() {
       });
       // 通过闭包更新dice状态
       setTimeout(() => {
-        setDice(newDice);
+        setDice(applyDiceSpecialEffects(newDice));
         addLog(`重掷结果: ${newDice.filter(nd => unselectedIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
       }, 0);
 
@@ -596,7 +603,14 @@ export default function DiceHeroGame() {
 
   const currentHands = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
-    return checkHands(selected);
+    // 分裂骰子：复制一个相同点数的虚拟骰子加入牌型判定
+    let evalDice = [...selected];
+    selected.forEach(d => {
+      if (d.diceDefId === 'split') {
+        evalDice.push({ ...d, id: d.id + 9000, diceDefId: 'standard' }); // 虚拟分裂副本
+      }
+    });
+    return checkHands(evalDice);
   }, [dice]);
 
   // 多选普通攻击检测：选了多颗骰子但不成牌型
@@ -766,6 +780,46 @@ export default function DiceHeroGame() {
     selected.forEach(d => {
       if (skipOnPlay) return;
       const def = getDiceDef(d.diceDefId);
+      
+      // 元素骰子：根据坍缩后的元素产生不同效果
+      if (def.isElemental && d.collapsedElement) {
+        const diceValue = d.value;
+        switch (d.collapsedElement) {
+          case 'fire':
+            // 火：摧毁敌人所有护甲 + 基于点数的真实伤害
+            pierceDamage += Math.floor(diceValue * 3 * elementBonus);
+            // 护甲摧毁在实际结算时处理（标记）
+            statusEffects.push({ type: 'burn', value: 99 }); // 99 = 特殊标记：摧毁护甲
+            break;
+          case 'ice':
+            // 冰：冻结1回合，点数结算减半
+            statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
+            // 冰元素点数减半已在baseDamage计算前处理
+            break;
+          case 'thunder':
+            // 雷：对其他敌人造成等量穿透伤害（AOE标记）
+            pierceDamage += Math.floor(diceValue * 2 * elementBonus);
+            break;
+          case 'poison':
+            // 毒：叠加毒层，跨回合持续掉血
+            const poisonStacks = Math.floor((diceValue + 2) * elementBonus);
+            const existingPoison = statusEffects.find(es => es.type === 'poison');
+            if (existingPoison) existingPoison.value += poisonStacks;
+            else statusEffects.push({ type: 'poison', value: poisonStacks });
+            break;
+          case 'holy':
+            // 圣光：恢复等同点数的生命值
+            extraHeal += Math.floor(diceValue * elementBonus);
+            break;
+        }
+        return; // 元素骰子不走普通onPlay
+      }
+      
+      // 碎裂骰子：反噬伤害
+      if (def.onPlay?.selfDamage) {
+        extraHeal -= def.onPlay.selfDamage; // 负回血 = 自伤
+      }
+      
       if (!def.onPlay) return;
       const op = def.onPlay;
       if (op.bonusDamage) extraDamage += Math.floor(op.bonusDamage * elementBonus);
