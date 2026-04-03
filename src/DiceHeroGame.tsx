@@ -56,12 +56,14 @@ import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG, CHAPTER_
 
 // 元素骰子坍缩 + 小丑骰子1-9随机
 const applyDiceSpecialEffects = (diceArr: Die[]): Die[] => {
+  // 元素骰子统一坍缩：同一批次所有元素骰子共享同一个元素
+  const hasElemental = diceArr.some(d => getDiceDef(d.diceDefId).isElemental);
+  const sharedElement = hasElemental ? collapseElement() : null;
   return diceArr.map(d => {
     const def = getDiceDef(d.diceDefId);
-    // 元素骰子：随机坍缩为五种元素之一
-    if (def.isElemental) {
-      const collapsed = collapseElement();
-      return { ...d, element: collapsed as DiceElement, collapsedElement: collapsed as DiceElement };
+    // 元素骰子：使用统一坍缩的元素
+    if (def.isElemental && sharedElement) {
+      return { ...d, element: sharedElement as DiceElement, collapsedElement: sharedElement as DiceElement };
     }
     // 小丑骰子：1-9随机（faces已包含1-9）
     if (d.diceDefId === 'joker') {
@@ -329,7 +331,8 @@ export default function DiceHeroGame() {
     }));
     // 直接用新bag抽取（避免闭包旧值问题）
     const freshBag = initDiceBag(game.ownedDice);
-    const freshCount = game.drawCount;
+    const drawCountBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
+    const freshCount = game.drawCount + drawCountBonus;
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
     if (fShuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
     setGame(prev => ({ ...prev, diceBag: fBag, discardPile: fDiscard }));
@@ -442,7 +445,8 @@ export default function DiceHeroGame() {
 
   const rollAllDice = async () => {
     playSound('roll');
-    const count = game.drawCount;
+    const relicDrawBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
+    const count = game.drawCount + relicDrawBonus;
     
     // 从骰子库抽取
     const { drawn, newBag, newDiscard, shuffled } = drawFromBag(game.diceBag, game.discardPile, count);
@@ -500,9 +504,29 @@ export default function DiceHeroGame() {
       return;
     }
     
+    // 急救沙漏遗物：前N次卖血重Roll不扣血
+    const hourglassRelic = game.relics.find(r => r.id === 'emergency_hourglass');
+    if (hourglassRelic && hpCost > 0 && (hourglassRelic.counter || 0) < (hourglassRelic.maxCounter || 2)) {
+      // 消耗一次免费卖血机会
+      setGame(prev => ({
+        ...prev,
+        relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: (r.counter || 0) + 1 } : r)
+      }));
+      addToast('⌛ 急救沙漏: 免除卖血伤害!', 'buff');
+      hpCost = 0;
+    }
+
     // Apply HP cost
     if (hpCost > 0) {
-      setGame(prev => ({ ...prev, hp: prev.hp - hpCost }));
+      setGame(prev => {
+        // on_reroll 遗物触发（如黑市合同）
+        let goldBonus = 0;
+        prev.relics.filter(r => r.trigger === 'on_reroll').forEach(relic => {
+          const res = relic.effect({ hpLostThisTurn: hpCost });
+          if (res.goldBonus) goldBonus += res.goldBonus;
+        });
+        return { ...prev, hp: prev.hp - hpCost, souls: prev.souls + goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldBonus } };
+      });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
       addLog(`重掷消耗 ${hpCost} HP`);
     }
@@ -766,6 +790,36 @@ export default function DiceHeroGame() {
 
       if (details.length > 0) {
         triggeredAugments.push({ name: aug.name, details: details.join(', ') });
+      }
+    });
+
+    // --- Relic on_play effects ---
+    game.relics.filter(r => r.trigger === 'on_play').forEach(relic => {
+      const relicCtx = {
+        handType: bestHand,
+        diceCount: selected.length,
+        diceValues: selected.map(d => d.value),
+        diceDefIds: selected.map(d => d.diceDefId),
+        pointSum: X,
+        rerollsThisTurn: rerollCount,
+        currentHp: game.hp,
+        maxHp: game.maxHp,
+        currentGold: game.souls,
+        loadedDiceCount: selected.filter(d => d.diceDefId === 'heavy').length,
+        hasSplitDice: selected.some(d => d.diceDefId === 'split'),
+        splitDiceValue: selected.find(d => d.diceDefId === 'split')?.value || 0,
+        hasSpecialDice: selected.some(d => !['standard'].includes(d.diceDefId)),
+        elementsUsedThisBattle: new Set(game.elementsUsedThisBattle),
+      };
+      const res = relic.effect(relicCtx);
+      const details = [];
+      if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
+      if (res.armor) { extraArmor += res.armor; details.push(`护甲+${res.armor}`); }
+      if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
+      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
+      if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
+      if (details.length > 0) {
+        triggeredAugments.push({ name: '🔮' + relic.name, details: details.join(', ') });
       }
     });
 
@@ -1720,8 +1774,20 @@ useEffect(() => {
     playSound('victory');
     addLog(`击败了 ${enemies[0]?.name || ""}！`);
     
+    let baseGold = enemies.reduce((s,e) => s + e.dropGold, 0);
+    // on_battle_end 遗物触发（如废品回收站）
+    game.relics.filter(r => r.trigger === 'on_battle_end').forEach(relic => {
+      const res = relic.effect({
+        cursedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCursed).length,
+        crackedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCracked).length,
+      });
+      if (res.goldBonus && res.goldBonus > 0) {
+        baseGold += res.goldBonus;
+        addToast(`♻️ ${relic.name}: +${res.goldBonus}金币`, 'gold');
+      }
+    });
     const loot: LootItem[] = [
-      { id: 'gold', type: 'gold', value: enemies.reduce((s,e) => s + e.dropGold, 0), collected: false }
+      { id: 'gold', type: 'gold', value: baseGold, collected: false }
     ];
 
     // Boss rewards: +1 draw count
@@ -1752,6 +1818,12 @@ useEffect(() => {
     // 遗物掉落：精英战/Boss战必掉，普通战30%概率
     const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
                        allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
+        // 重置急救沙漏计数器（每场战斗重新计数）
+    setGame(prev => ({
+      ...prev,
+      relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 0 } : r)
+    }));
+
     const relicDropChance = battleType === 'enemy' ? 0.3 : 1.0;
     if (Math.random() < relicDropChance) {
       const relicPool = getRelicRewardPool(battleType);
@@ -3462,7 +3534,7 @@ useEffect(() => {
                     </div>
                   )}
                   {game.relics.map((relic, i) => {
-                    const isActive = false; // TODO: relic activation logic
+                    const isActive = relic.trigger === 'passive' || (relic.trigger === 'on_play' && game.phase === 'battle');
                     const iconMap: Record<string, string> = {
                       blade: '⚔', flag: '⚑', weight: '⚓', pendulum: '☸',
                       grail: '☕', gauge: '≡', prism: '◇', resonator: '☉',
