@@ -62,7 +62,7 @@ const blade: DiceDef = {
   faces: [1, 2, 3, 4, 5, 6],
   description: '出牌时额外 +20 基础伤害，前期打工神器',
   rarity: 'rare',
-  onPlay: { bonusDamage: 20 },
+  onPlay: { bonusDamage: 15 },
 };
 
 const amplify: DiceDef = {
@@ -127,7 +127,7 @@ const cracked: DiceDef = {
   faces: [1, 1, 1, 2, 2, 2],
   description: '打出后受到3点反噬伤害。回合结束时若未打出则自行销毁',
   rarity: 'curse',
-  onPlay: { selfDamage: 3 },
+  onPlay: { selfDamage: 2 },
   isCracked: true,
 };
 

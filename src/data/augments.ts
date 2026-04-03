@@ -20,7 +20,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     category: 'transition',
     condition: 'always',
-    effect: (_x, _dice, level) => ({ armor: Math.floor(4 * getScale(level)) }),
+    effect: (_x, _dice, level) => ({ armor: Math.floor(5 * getScale(level)) }),
     description: '每次出牌: 获得 4 点护甲',
   },
   {
@@ -29,7 +29,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     category: 'transition',
     condition: 'always',
-    effect: (_x, _dice, level) => ({ heal: Math.floor(2 * getScale(level)) }),
+    effect: (_x, _dice, level) => ({ heal: Math.floor(3 * getScale(level)) }),
     description: '每次出牌: 回复 2 HP',
   },
   {

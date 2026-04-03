@@ -803,18 +803,15 @@ export default function DiceHeroGame() {
       const relicCtx = {
         handType: bestHand,
         diceCount: selected.length,
-        diceValues: selected.map(d => d.value),
-        diceDefIds: selected.map(d => d.diceDefId),
         pointSum: X,
+        loadedDiceCount: selected.filter(d => getDiceDef(d.diceDefId).id === 'heavy').length,
         rerollsThisTurn: rerollCount,
         currentHp: game.hp,
         maxHp: game.maxHp,
-        currentGold: game.souls,
-        loadedDiceCount: selected.filter(d => d.diceDefId === 'heavy').length,
-        hasSplitDice: selected.some(d => d.diceDefId === 'split'),
-        splitDiceValue: selected.find(d => d.diceDefId === 'split')?.value || 0,
-        hasSpecialDice: selected.some(d => !['standard'].includes(d.diceDefId)),
-        elementsUsedThisBattle: new Set(game.elementsUsedThisBattle),
+        hasSplitDice: selected.some(d => getDiceDef(d.diceDefId).id === 'split'),
+        splitDiceValue: selected.find(d => getDiceDef(d.diceDefId).id === 'split')?.value || 0,
+        elementsUsedThisBattle: new Set(game.elementsUsedThisBattle || []),
+        hasSpecialDice: selected.some(d => !['standard', 'heavy'].includes(getDiceDef(d.diceDefId).id)),
       };
       const res = relic.effect(relicCtx);
       const details = [];
@@ -1596,7 +1593,55 @@ export default function DiceHeroGame() {
         }
 
 
-        // --- 4. Enemy Turn End: process each enemy's poison ---
+        
+        // --- 3.5. Elite/Boss: 塞废骰子 ---
+        // 精英怪每2回合塞一颗碎裂骰子，Boss每回合塞一颗（低血量时塞诅咒骰子）
+        for (const e of currentEnemies.filter(en => en.hp > 0)) {
+          const isElite = e.maxHp > 80 && e.maxHp <= 200; // 精英怪HP范围
+          const isBoss = e.maxHp > 200; // Boss HP范围
+          
+          if (isElite && game.battleTurn % 2 === 0) {
+            // 精英每2回合塞一颗碎裂骰子
+            setGame(prev => ({
+              ...prev,
+              ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
+              diceBag: [...prev.diceBag, 'cracked'],
+            }));
+            addLog(`${e.name} 向你的骰子库塞入了一颗碎裂骰子！`);
+            addFloatingText('+碎裂骰子', 'text-red-400', undefined, 'player');
+            playSound('enemy_skill');
+            await new Promise(r => setTimeout(r, 400));
+          }
+          
+          if (isBoss) {
+            const hpRatio = e.hp / e.maxHp;
+            if (hpRatio < 0.4) {
+              // Boss低血量：塞诅咒骰子
+              setGame(prev => ({
+                ...prev,
+                ownedDice: [...prev.ownedDice, { defId: 'cursed', level: 1 }],
+                diceBag: [...prev.diceBag, 'cursed'],
+              }));
+              addLog(`${e.name} 施放诅咒，向你的骰子库塞入了一颗诅咒骰子！`);
+              addFloatingText('+诅咒骰子', 'text-purple-400', undefined, 'player');
+              playSound('enemy_skill');
+              await new Promise(r => setTimeout(r, 400));
+            } else if (game.battleTurn % 2 === 0) {
+              // Boss正常：每2回合塞碎裂骰子
+              setGame(prev => ({
+                ...prev,
+                ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
+                diceBag: [...prev.diceBag, 'cracked'],
+              }));
+              addLog(`${e.name} 向你的骰子库塞入了一颗碎裂骰子！`);
+              addFloatingText('+碎裂骰子', 'text-red-400', undefined, 'player');
+              playSound('enemy_skill');
+              await new Promise(r => setTimeout(r, 400));
+            }
+          }
+        }
+
+// --- 4. Enemy Turn End: process each enemy's poison ---
     setEnemies(prev => prev.map(e => {
       if (e.hp <= 0) return e;
       let nextStatuses = [...e.statuses];
@@ -1637,7 +1682,14 @@ export default function DiceHeroGame() {
     }
 
     // --- 5. Player Turn Start ---
-    setGame(prev => {
+    
+      // 薛定谔的袋子：若上回合未使用重Roll，本回合额外抽1颗
+      let schrodingerBonus = 0;
+      if (game.relics.some(r => r.id === 'schrodinger_bag') && rerollCount === 0) {
+        schrodingerBonus = 1;
+        addLog('薛定谔的袋子：未重Roll，下回合额外抽1颗骰子！');
+      }
+setGame(prev => {
       const nextTurn = prev.battleTurn + 1;
       let nextStatuses = [...prev.statuses];
       let burnDamage = 0;

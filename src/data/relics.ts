@@ -22,7 +22,7 @@ const grindstone: Relic = {
   rarity: 'common',
   trigger: 'on_play',
   effect: (ctx) => ({
-    damage: (ctx.diceCount || 0) <= 2 ? 15 : 0,
+    damage: (ctx.diceCount || 0) <= 2 ? 12 : 0,
   }),
 };
 
@@ -34,7 +34,7 @@ const ironBanner: Relic = {
   rarity: 'uncommon',
   trigger: 'on_play',
   effect: (ctx) => ({
-    damage: (ctx.rerollsThisTurn || 0) * 8,
+    damage: (ctx.rerollsThisTurn || 0) * 6,
   }),
 };
 
@@ -77,7 +77,7 @@ const crimsonGrail: Relic = {
   effect: (ctx) => {
     const hpPercent = (ctx.currentHp || 100) / (ctx.maxHp || 100);
     const lostPercent = 1 - hpPercent;
-    const mult = 1 + Math.min(2.0, lostPercent * 3.0);
+    const mult = 1 + Math.min(1.5, lostPercent * 2.5);
     return { multiplier: mult };
   },
 };
@@ -133,7 +133,7 @@ const perfectionist: Relic = {
     const ht = ctx.handType || '';
     const isPureHand = (ht === '葫芦' || ht === '四条' || ht === '五条');
     const noSpecial = !ctx.hasSpecialDice;
-    return { multiplier: isPureHand && noSpecial ? 5.0 : 1 };
+    return { multiplier: isPureHand && noSpecial ? 4.0 : 1 };
   },
 };
 
@@ -162,7 +162,7 @@ const vampireFangs: Relic = {
   rarity: 'rare',
   trigger: 'on_kill',
   effect: (ctx) => ({
-    heal: Math.floor((ctx.overkillDamage || 0) * 0.3),
+    heal: Math.floor((ctx.overkillDamage || 0) * 0.25),
   }),
 };
 
@@ -186,7 +186,7 @@ const scrapYard: Relic = {
   rarity: 'uncommon',
   trigger: 'on_battle_end',
   effect: (ctx) => ({
-    goldBonus: ((ctx.cursedDiceInHand || 0) + (ctx.crackedDiceInHand || 0)) * 8,
+    goldBonus: ((ctx.cursedDiceInHand || 0) + (ctx.crackedDiceInHand || 0)) * 10,
   }),
 };
 

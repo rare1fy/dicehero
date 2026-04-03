@@ -17,7 +17,7 @@ export const PLAYER_INITIAL = {
   playsPerTurn: 1,
   souls: 0,
   augmentSlots: 5,
-  drawCount: 3,       // 初始抽4颗骰子       // 初始抽3颗骰子（密集成长感）
+  drawCount: 4,       // 初始抽4颗骰子（保证基础牌型可用性）
   maxDrawCount: 6,
 } as const;
 
@@ -27,8 +27,8 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.75, dmgMult: 0.55 },  // depth 0: 教学关，极弱敌人让玩家熟悉操作
-  { hpMult: 0.85, dmgMult: 0.65 },  // depth 1: 热身，仍然轻松
+  { hpMult: 0.65, dmgMult: 0.50 },  // depth 0: 教学关，极弱敌人让玩家熟悉操作
+  { hpMult: 0.75, dmgMult: 0.60 },  // depth 1: 热身，仍然轻松
   { hpMult: 0.95, dmgMult: 0.80 },  // depth 2: 开始有点压力
   { hpMult: 1.05, dmgMult: 0.90 },  // depth 3: 精英里程碑（HP高但伤害克制）
   { hpMult: 0.95, dmgMult: 0.85 },  // depth 4: 精英后喘息
@@ -77,7 +77,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 25,
+  restHeal: 30,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 20,
   /** 模块最大等级 */
@@ -89,11 +89,11 @@ export const CAMPFIRE_CONFIG = {
 // ============================================================
 export const LOOT_CONFIG = {
   /** 普通怪掉落金币 */
-  normalDropGold: 22,
+  normalDropGold: 25,
   /** 精英怪掉落金币 */
-  eliteDropGold: 45,
+  eliteDropGold: 50,
   /** Boss掉落金币 */
-  bossDropGold: 70,
+  bossDropGold: 80,
   /** 增幅选择数量 */
   augmentChoiceCount: 3,
   /** 精英奖励池 */
@@ -165,7 +165,7 @@ export const SKILL_SELECT_CONFIG = {
 // ============================================================
 export const AUGMENT_SCALING = {
   /** 等级缩放公式: 1 + (level - 1) * scaleFactor */
-  scaleFactor: 0.5,
+  scaleFactor: 0.4,
 } as const;
 
 // ============================================================
