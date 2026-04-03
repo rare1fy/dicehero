@@ -8,6 +8,7 @@ import { PixelDice } from './PixelIcons';
 /** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
 const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
   standard: { bg: '#98a0a8', border: '#a0a8b0', dot: '#1a1e25' },
+  elemental: { bg: '#3a2858', border: '#7040b8', dot: '#d0a0ff' },
   heavy:    { bg: '#4a4a58', border: '#6a6a7a', dot: '#d0d0d8' },
   fire:     { bg: '#c04020', border: '#e07830', dot: '#ffe0a0' },
   ice:      { bg: '#2080a8', border: '#30a8d0', dot: '#c0e8ff' },

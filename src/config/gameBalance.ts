@@ -17,7 +17,7 @@ export const PLAYER_INITIAL = {
   playsPerTurn: 1,
   souls: 0,
   augmentSlots: 5,
-  drawCount: 4,       // 初始抽4颗骰子（保证基础牌型可用性）
+  drawCount: 3,       // 初始抽3颗骰子
   maxDrawCount: 6,
 } as const;
 

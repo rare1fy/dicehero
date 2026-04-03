@@ -55,6 +55,7 @@ export interface EventConfig {
  * 注意：当 needsRandomHandType=true 时，
  * 描述和标签中的 {handType} 会被替换为实际随机牌型名。
  */
+
 export const EVENTS_POOL: EventConfig[] = [
   {
     id: 'shadow_creature',
@@ -64,35 +65,39 @@ export const EVENTS_POOL: EventConfig[] = [
     options: [
       {
         label: '发起战斗',
-        sub: '击败它以获取宝箱中的战利品',
+        sub: '击败它以获取战利品（需要消耗资源战斗）',
         color: 'bg-red-600 hover:bg-red-500',
         action: { type: 'startBattle' },
       },
       {
         label: '悄悄绕过',
-        sub: '避免战斗，但可能会在穿过荆棘时受伤 (-5 HP)',
+        sub: '避免战斗，但穿越荆棘受伤 (-8 HP)',
         color: 'bg-zinc-700 hover:bg-zinc-600',
-        action: { type: 'modifyHp', value: -5, toast: '穿过荆棘受伤 -5 HP', toastType: 'damage', log: '悄悄绕过了怪物，但受到了 5 点伤害。' },
+        action: { type: 'modifyHp', value: -8, toast: '穿过荆棘受伤 -8 HP', toastType: 'damage', log: '悄悄绕过了怪物，但受到了 8 点伤害。' },
       },
     ],
   },
   {
     id: 'ancient_altar',
     title: '古老祭坛',
-    desc: '你发现了一个被遗忘的祭坛，上面刻着两种不同的符文。你可以选择其中一种力量。',
+    desc: '你发现了一个被遗忘的祭坛，上面刻着两种不同的符文。你只能选择其中一种力量。',
     iconId: 'star',
     options: [
       {
         label: '贪婪符文',
-        sub: '立即获得 40 枚金币',
+        sub: '+30 金币，但 -10 HP（献血祭祀）',
         color: 'bg-amber-600 hover:bg-amber-500',
-        action: { type: 'modifySouls', value: 40, log: '在祭坛获得了 40 金币。' },
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifySouls', value: 30 }, { type: 'modifyHp', value: -10 }], toast: '获得30金币，损失10HP', toastType: 'gold', log: '在祭坛献血获得了 30 金币，损失 10 HP。' },
+        ]},
       },
       {
         label: '力量符文',
-        sub: '永久增加 1 颗初始骰子',
+        sub: '永久+1初始骰子，但 -20 HP（剧痛刻印）',
         color: 'bg-blue-600 hover:bg-blue-500',
-        action: { type: 'modifyDiceCount', value: 1, log: '在祭坛获得了 1 颗骰子。' },
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifyDiceCount', value: 1 }, { type: 'modifyHp', value: -20 }], toast: '+1骰子，-20HP', toastType: 'buff', log: '在祭坛获得了 1 颗骰子，但损失 20 HP。' },
+        ]},
       },
     ],
   },
@@ -105,35 +110,37 @@ export const EVENTS_POOL: EventConfig[] = [
     options: [
       {
         label: '强化【{handType}】',
-        sub: '提升该牌型的基础威力 (-15 HP)',
+        sub: '提升该牌型的基础威力，代价 -15 HP',
         color: 'bg-purple-600 hover:bg-purple-500',
         action: { type: 'upgradeHandType', value: -15, toast: '禁忌知识的代价 -15 HP', toastType: 'damage', log: '消耗 15 生命，【{handType}】升级了！' },
       },
       {
-        label: '洞察未来',
-        sub: '获得 3 次全局重骰机会',
+        label: '拒绝交易',
+        sub: '获得 2 次全局重掷（安全但收益小）',
         color: 'bg-zinc-700 hover:bg-zinc-600',
-        action: { type: 'modifyGlobalRerolls', value: 3, toast: '+3 全局重骰', toastType: 'buff', log: '获得了 3 次全局重骰机会。' },
+        action: { type: 'modifyGlobalRerolls', value: 2, toast: '+2 全局重掷', toastType: 'buff', log: '拒绝了虚空交易，获得 2 次全局重掷。' },
       },
     ],
   },
   {
     id: 'deadly_trap',
     title: '致命陷阱',
-    desc: '你触发了一个隐藏的机关！无数箭矢从墙壁中射出。',
+    desc: '你触发了一个隐藏的机关！无数毒箭从墙壁中射出。',
     iconId: 'flame',
     options: [
       {
-        label: '全力躲避',
-        sub: '虽然避开了被害，但仍受了重伤 (-20 HP)',
+        label: '硬扛毒箭',
+        sub: '-15 HP，但在残骸中找到 25 金币',
         color: 'bg-orange-600 hover:bg-orange-500',
-        action: { type: 'modifyHp', value: -20, toast: '陷阱触发！-20 HP', toastType: 'damage', log: '踩中陷阱，扣除 20 生命。' },
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifyHp', value: -15 }, { type: 'modifySouls', value: 25 }], toast: '-15HP, +25金币', toastType: 'damage', log: '踩中陷阱受伤，但在残骸中找到了 25 金币。' },
+        ]},
       },
       {
         label: '舍财保命',
-        sub: '丢弃一些金币来触发备用机关 (-30 金币)',
+        sub: '-20 金币触发备用机关，完全避开',
         color: 'bg-zinc-700 hover:bg-zinc-600',
-        action: { type: 'modifySouls', value: -30, log: '丢弃了 30 金币以避开陷阱。' },
+        action: { type: 'modifySouls', value: -20, log: '丢弃了 20 金币以避开陷阱。' },
       },
     ],
   },
@@ -145,127 +152,106 @@ export const EVENTS_POOL: EventConfig[] = [
     options: [
       {
         label: '购买生命药剂',
-        sub: '花费 25 金币回复 30 HP',
+        sub: '-25 金币，回复 35 HP',
         color: 'bg-emerald-600 hover:bg-emerald-500',
-        action: { type: 'modifySouls', value: -25,
-          toast: '购买生命药剂',
-          log: '购买了生命药剂，回复 30 HP。',
-        },
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifySouls', value: -25 }, { type: 'modifyHp', value: 35 }], toast: '-25金币, +35HP', toastType: 'heal', log: '购买了生命药剂，回复 35 HP。' },
+        ]},
       },
       {
         label: '购买强化药水',
-        sub: '花费 35 金币，永久提升最大生命 10 点',
+        sub: '-35 金币，永久 +10 最大生命',
         color: 'bg-blue-600 hover:bg-blue-500',
-        action: { type: 'modifyMaxHp', value: 10,
-          log: '购买了强化药水，最大生命 +10！',
-        },
+        action: { type: 'modifyMaxHp', value: 10, log: '购买了强化药水，最大生命 +10！' },
+      },
+      {
+        label: '讨价还价',
+        sub: '有50%概率免费获得药剂，50%概率被赶走',
+        color: 'bg-zinc-700 hover:bg-zinc-600',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 0.5, actions: [{ type: 'modifyHp', value: 25 }], toast: '讨价成功！免费回复25HP', toastType: 'heal', log: '讨价还价成功，免费获得药剂！' },
+          { weight: 0.5, actions: [{ type: 'noop' }], toast: '旅商不悦，拒绝交易', toastType: 'damage', log: '旅商被激怒，拒绝了你的交易。' },
+        ]},
       },
     ],
   },
   {
     id: 'wheel_of_fate',
     title: '命运之轮',
-    desc: '你发现了一个古老的命运之轮，轮盘上刻满了神秘的符号。你可以转动它，但结果难以预料。',
+    desc: '你发现了一个古老的命运之轮，轮盘上刻满了神秘的符号。转动它需要付出代价。',
     iconId: 'refresh',
     options: [
       {
-        label: '转动命运之轮',
-        sub: '随机获得：+50 金币 / +2 重骰 / -15 HP',
+        label: '献血转动（-10 HP）',
+        sub: '70%概率+40金币，30%概率+1每回合免费重掷',
         color: 'bg-cyan-600 hover:bg-cyan-500',
-        action: {
-          type: 'randomOutcome',
-          outcomes: [
-            { weight: 0.4, actions: [{ type: 'modifySouls', value: 50 }], toast: '幸运！+50 金币', toastType: 'gold', log: '命运之轮转出了 50 金币！' },
-            { weight: 0.3, actions: [{ type: 'modifyGlobalRerolls', value: 2 }], toast: '幸运！+2 全局重骰', toastType: 'buff', log: '命运之轮赐予了 2 次全局重骰！' },
-            { weight: 0.3, actions: [{ type: 'modifyHp', value: -15 }], toast: '厄运降临！-15 HP', toastType: 'damage', log: '命运之轮带来了厄运，损失 15 HP！' },
-          ],
-        },
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 0.7, actions: [{ type: 'modifyHp', value: -10 }, { type: 'modifySouls', value: 40 }], toast: '幸运！-10HP, +40金币', toastType: 'gold', log: '命运之轮转出了 40 金币！' },
+          { weight: 0.3, actions: [{ type: 'modifyHp', value: -10 }, { type: 'modifyFreeRerollsPerTurn', value: 1 }], toast: '大吉！-10HP, +1免费重掷/回合', toastType: 'buff', log: '命运之轮赐予了永久免费重掷！' },
+        ]},
       },
       {
-        label: '谨慎离开',
-        sub: '不冒险，安全通过',
+        label: '观望离开',
+        sub: '安全但错过机会',
         color: 'bg-zinc-700 hover:bg-zinc-600',
-        action: { type: 'noop', log: '你明智地选择了离开命运之轮。' },
+        action: { type: 'noop', log: '你选择了安全离开。' },
       },
     ],
   },
   {
-    id: 'shadow_forge',
-    title: '暗影锻炉',
-    desc: '一座被遗弃的锻炉仍在燃烧着幽蓝色的火焰。你可以利用它来强化自己的能力。',
-    iconId: 'flame',
-    options: [
-      {
-        label: '锻造护甲',
-        sub: '消耗 20 HP，本场游戏每回合额外获得 1 次免费重骰',
-        color: 'bg-blue-600 hover:bg-blue-500',
-        action: { type: 'modifyFreeRerollsPerTurn', value: 1,
-          toast: '暗影锻炉烤伤 -20 HP，每回合免费重骰 +1', toastType: 'damage',
-          log: '在暗影锻炉中锻造了护甲，每回合免费重骰 +1！',
-        },
-      },
-      {
-        label: '混炼武器',
-        sub: '消耗 20 HP，永久增加 1 次出牌机会',
-        color: 'bg-orange-600 hover:bg-orange-500',
-        action: { type: 'modifyMaxPlays', value: 1,
-          toast: '暗影锻炉烤伤 -20 HP，出牌次数 +1', toastType: 'damage',
-          log: '在暗影锻炉中混炼了武器，出牌次数 +1！',
-        },
-      },
-    ],
-  },
-  {
-    id: 'lost_spirit',
-    title: '迷途灵魂',
-    desc: '一个迷途的灵魂向你求助，它愿意用自己的力量作为报答。但你也可以选择吞噬它。',
+    id: 'cursed_spring',
+    title: '诅咒之泉',
+    desc: '一汪散发着诡异紫光的泉水出现在你面前。泉水能恢复伤口，但也会留下诅咒。',
     iconId: 'heart',
-    needsRandomHandType: true,
     options: [
       {
-        label: '帮助灵魂',
-        sub: '回复 20 HP，获得 20 金币',
-        color: 'bg-pink-600 hover:bg-pink-500',
-        action: { type: 'modifyHp', value: 20,
-          log: '帮助了迷途灵魂，获得了它的祝福。',
-        },
+        label: '饮用泉水',
+        sub: '+40 HP，但最大生命永久 -5',
+        color: 'bg-emerald-600 hover:bg-emerald-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifyHp', value: 40 }, { type: 'modifyMaxHp', value: -5 }], toast: '+40HP, 最大生命-5', toastType: 'heal', log: '饮用诅咒之泉，恢复40HP但最大生命永久-5。' },
+        ]},
       },
       {
-        label: '吞噬灵魂',
-        sub: '强化【{handType}】但损失 10 HP',
-        color: 'bg-red-600 hover:bg-red-500',
-        action: { type: 'upgradeHandType', value: -10,
-          toast: '吞噬灵魂 -10 HP，【{handType}】升级！', toastType: 'damage',
-          log: '吞噬了灵魂，【{handType}】升级了！',
-        },
+        label: '净化泉水',
+        sub: '-15 金币净化后安全饮用，+20 HP',
+        color: 'bg-blue-600 hover:bg-blue-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifySouls', value: -15 }, { type: 'modifyHp', value: 20 }], toast: '-15金币, +20HP', toastType: 'heal', log: '花费15金币净化泉水，安全回复20HP。' },
+        ]},
       },
     ],
   },
-,
   {
-    id: 'ancient_forge',
-    title: '古代锻造炉',
-    desc: '你发现了一座古代锻造炉，炉火仍在燃烧。炉旁有一个神秘的符文和一堆金币。',
-    iconId: 'flame' as const,
+    id: 'dice_gambler',
+    title: '骰子赌徒',
+    desc: '一个神秘的赌徒向你发起挑战：用你的资源赌一把，赢了翻倍，输了全无。',
+    iconId: 'question',
     options: [
       {
-        label: '触碰符文',
-        sub: '获得随机增幅模块，但损失 10 HP',
-        color: 'var(--pixel-purple)',
-        action: { type: 'grantAugment' as const, value: -10, toast: '符文融入体内，获得增幅模块', toastType: 'buff' as const, log: '触碰符文获得了增幅模块，但损失了 10 HP。' },
+        label: '赌上 30 金币',
+        sub: '50%概率+60金币，50%概率-30金币',
+        color: 'bg-amber-600 hover:bg-amber-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 0.5, actions: [{ type: 'modifySouls', value: 60 }], toast: '赢了！+60金币', toastType: 'gold', log: '赌赢了！获得60金币！' },
+          { weight: 0.5, actions: [{ type: 'modifySouls', value: -30 }], toast: '输了...-30金币', toastType: 'damage', log: '赌输了，损失30金币。' },
+        ]},
       },
       {
-        label: '拿走金币',
-        sub: '+30 金币',
-        color: 'var(--pixel-gold)',
-        action: { type: 'modifySouls' as const, value: 30, toast: '+30 金币', toastType: 'gold' as const, log: '拿走了炉旁的 30 金币。' },
+        label: '赌上生命力',
+        sub: '50%概率+1出牌次数，50%概率-20HP',
+        color: 'bg-red-600 hover:bg-red-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 0.5, actions: [{ type: 'modifyMaxPlays', value: 1 }], toast: '赢了！+1出牌次数', toastType: 'buff', log: '赌赢了！永久+1出牌次数！' },
+          { weight: 0.5, actions: [{ type: 'modifyHp', value: -20 }], toast: '输了...-20HP', toastType: 'damage', log: '赌输了，损失20HP。' },
+        ]},
       },
       {
-        label: '离开',
-        sub: '不想冒险',
-        color: 'var(--dungeon-text-dim)',
-        action: { type: 'noop' as const, log: '你谨慎地离开了锻造炉。' },
+        label: '拒绝赌博',
+        sub: '安全离开',
+        color: 'bg-zinc-700 hover:bg-zinc-600',
+        action: { type: 'noop', log: '你拒绝了赌徒的挑战。' },
       },
     ],
-  }
+  },
 ];

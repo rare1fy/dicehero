@@ -194,7 +194,7 @@ export const DICE_MAX_LEVEL = 3;
 export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
   switch (battleType) {
     case 'enemy':
-      return [...DICE_BY_RARITY.uncommon];
+      return [...DICE_BY_RARITY.common, ...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare.slice(0, 2)];
     case 'elite':
       return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare];
     case 'boss':

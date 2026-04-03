@@ -20,7 +20,7 @@ export const DiceRewardScreen: React.FC = () => {
   // 根据战斗类型决定奖励池
   const battleType = useMemo(() => {
     const node = game.map.find(n => n.id === game.currentNodeId);
-    return (node?.type as 'enemy' | 'elite' | 'boss') || 'enemy';
+    const t = node?.type; return (t === 'elite' || t === 'boss') ? t : 'enemy';
   }, [game.currentNodeId, game.map]);
 
   // 3选1新骰子 - 优先刷新玩家已有的特殊骰子（构筑流派感）

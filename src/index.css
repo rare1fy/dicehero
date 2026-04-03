@@ -2908,3 +2908,29 @@ input[type="range"]::-webkit-slider-runnable-track {
 .dice-glow-cracked {
   box-shadow: 0 0 8px rgba(90,90,100,0.4), 0 0 16px rgba(90,90,100,0.2) !important;
 }
+
+/* Elemental dice - purple swirling energy */
+.pixel-dice-elemental {
+  background: linear-gradient(135deg, #3a1858 0%, #5a2898 40%, #4020a0 60%, #301868 100%) !important;
+  border-color: #7040b8 !important;
+  box-shadow: 0 0 8px rgba(112, 64, 184, 0.5), inset 0 0 4px rgba(160, 100, 255, 0.3) !important;
+  animation: elemental-pulse 2s ease-in-out infinite !important;
+  color: #d0a0ff !important;
+}
+.pixel-dice-elemental::after {
+  content: '✦';
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 6px;
+  color: #c080ff;
+  opacity: 0.8;
+}
+@keyframes elemental-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(112, 64, 184, 0.4), inset 0 0 3px rgba(160, 100, 255, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(140, 80, 220, 0.7), inset 0 0 6px rgba(180, 120, 255, 0.4); }
+}
+.dice-glow-elemental {
+  box-shadow: 0 0 16px rgba(140, 80, 220, 0.8), 0 0 4px rgba(180, 120, 255, 0.5) !important;
+}
+

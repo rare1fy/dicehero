@@ -1641,6 +1641,13 @@ export default function DiceHeroGame() {
           }
         }
 
+    // 先计算谁会被毒死（在state更新之前）
+    const poisonSurvivors = enemies.filter(e => {
+      if (e.hp <= 0) return false;
+      const pois = e.statuses.find(s => s.type === 'poison');
+      if (pois && pois.value > 0) return e.hp - pois.value > 0;
+      return true;
+    });
 // --- 4. Enemy Turn End: process each enemy's poison ---
     setEnemies(prev => prev.map(e => {
       if (e.hp <= 0) return e;
@@ -1789,11 +1796,12 @@ setGame(prev => {
           if (f === 3) playSound('reroll');
         }
         setDice(pd => pd.map(d => ({ ...d, rolling: false, kept: false })));
+        // 元素骰子坍缩 + 小丑骰子1-9随机
+        setDice(prev => applyDiceSpecialEffects(prev));
         playSound('dice_lock');
         // Auto-sort dice by value ascending after roll
         await new Promise(r => setTimeout(r, 200));
         setDice(prev => [...prev].sort((a, b) => a.value - b.value));
-        // Debug: check final dice state
       };
       doRoll();
     }, 100);
@@ -1831,6 +1839,14 @@ useEffect(() => {
   }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft]);
 
   const handleVictory = () => {
+    // 战斗结束：销毁敌人塞的废骰子（cursed/cracked）
+    setGame(prev => ({
+      ...prev,
+      ownedDice: prev.ownedDice.filter(d => d.defId !== 'cursed' && d.defId !== 'cracked'),
+      diceBag: prev.diceBag.filter(id => id !== 'cursed' && id !== 'cracked'),
+      discardPile: prev.discardPile.filter(id => id !== 'cursed' && id !== 'cracked'),
+    }));
+
     // 战斗胜利统计
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
     const nodeType = currentNode?.type || 'enemy';
@@ -2541,7 +2557,7 @@ useEffect(() => {
 
                 {/* Multi-enemy fixed-slot display (no reflow on death) */}
                 <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '4px' }}>
-                {[...enemies].sort((a, b) => b.distance - a.distance)
+                {[...enemies]  /* 不排序，保持稳定渲染顺序避免位置闪现 */
                   .map((enemy) => {
                     const effect = enemyEffects[enemy.uid] || null;
                     if (enemy.hp <= 0 && effect !== 'death') {
@@ -4072,6 +4088,52 @@ useEffect(() => {
 
 
 
-    </GameContext.Provider>
+    
+      {/* 全局牌型图鉴模态框 - 在所有界面都可用 */}
+      <AnimatePresence>
+        {showHandGuide && game.phase !== 'battle' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
+            onClick={() => setShowHandGuide(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
+                <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 牌型图鉴 ◆</h3>
+                <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-white text-xs">✕</button>
+              </div>
+              <div className="overflow-y-auto p-3 flex-1">
+                {HAND_TYPES.filter(h => !['同花顺','皇家同花顺','同花','满堂红','同元素对','同元素三条','同元素四条','同元素五条','同元素六骰'].includes(h.name)).map(ht => {
+                  const level = game.handLevels[ht.id] || 1;
+                  const baseDmg = ht.base + (level - 1) * 3;
+                  const mult = ht.mult + (level - 1) * 0.3;
+                  return (
+                    <div key={ht.id} className="flex items-center justify-between py-1.5 border-b border-[rgba(255,255,255,0.05)]">
+                      <div className="flex-1">
+                        <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{ht.name}</span>
+                        <span className="text-[8px] text-[var(--dungeon-text-dim)] ml-1">Lv.{level}</span>
+                      </div>
+                      <div className="text-[9px]">
+                        <span className="text-[var(--pixel-cyan)]">{baseDmg}</span>
+                        <span className="text-[var(--dungeon-text-dim)] mx-0.5">×</span>
+                        <span className="text-[var(--pixel-red)]">{mult.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+</GameContext.Provider>
   );
 }
