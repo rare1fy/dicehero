@@ -121,7 +121,8 @@ export default function DiceHeroGame() {
   const gameRef = useRef(game);
   gameRef.current = game;
   const [diceDrawAnim, setDiceDrawAnim] = useState(false); // 抽骰子入场动画
-  const [diceDiscardAnim, setDiceDiscardAnim] = useState(false); // 弃骰子退场动画
+  const [diceDiscardAnim, setDiceDiscardAnim] = useState(false);
+  const [shuffleAnimating, setShuffleAnimating] = useState(false); // 洗牌动画状态 // 弃骰子退场动画
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [rerollCount, setRerollCount] = useState(0);
   const targetEnemyUid = game.targetEnemyUid;
@@ -441,6 +442,8 @@ export default function DiceHeroGame() {
     
     // Shuffle notice
     if (shuffled) {
+            setShuffleAnimating(true);
+            setTimeout(() => setShuffleAnimating(false), 800);
       addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
     }
     
@@ -520,6 +523,8 @@ export default function DiceHeroGame() {
       // 从骰子库抽取等量新骰子
       const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, unselectedDefIds.length);
       if (shuffled) {
+                setShuffleAnimating(true);
+                setTimeout(() => setShuffleAnimating(false), 800);
         addToast(' 弃骰库洗回骰子库', 'info');
       }
 
@@ -1566,7 +1571,7 @@ export default function DiceHeroGame() {
         wasShuffled = result.shuffled;
       }
       
-      if (wasShuffled) addToast('\u2728 \u5f03\u9ab0\u5e93\u5df2\u6d17\u56de\u9ab0\u5b50\u5e93!', 'buff');
+      if (wasShuffled) { setShuffleAnimating(true); setTimeout(() => setShuffleAnimating(false), 800); addToast('\u2728 \u5f03\u9ab0\u5e93\u5df2\u6d17\u56de\u9ab0\u5b50\u5e93!', 'buff'); }
       
       // Merge kept dice + fresh dice
       const keptDice: Die[] = remainingDice.map((d) => ({
@@ -3113,48 +3118,72 @@ useEffect(() => {
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
                   {/* 骰子队列流转缩略图 */}
                    <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
-                    {/* Left: Draw pile (remaining in bag) */}
-                    <div className="flex gap-px items-center justify-end flex-1">
+                    {/* Left: Draw pile - only diceBag remaining, highlight next-to-draw */}
+                    <div className="flex gap-px items-center justify-end flex-1 overflow-hidden">
                       <AnimatePresence mode="popLayout">
-                        {game.ownedDice.filter((d) => game.diceBag.includes(d.defId)).map((d, i) => (
-                          <motion.div
-                            key={d.defId + "-bag-" + i}
-                            layout
-                            initial={{ opacity: 0, y: 10, scale: 0.5 }}
-                            animate={{ opacity: 0.9, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -10, scale: 0.5 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                          >
-                            <MiniDice defId={d.defId} size={14} />
-                          </motion.div>
-                        ))}
+                        {(() => {
+                          const bagDice = game.diceBag.map((defId, i) => ({ defId, idx: i }));
+                          const drawCount = game.drawCount || 4;
+                          const handSize = dice.filter(d => !d.spent).length;
+                          const nextDrawCount = Math.max(0, drawCount - handSize);
+                          return bagDice.map(({ defId, idx }) => {
+                            const isNextDraw = idx < nextDrawCount;
+                            return (
+                              <motion.div
+                                key={defId + "-bag-" + idx}
+                                layout
+                                initial={shuffleAnimating ? { opacity: 0, x: 60, scale: 0.3 } : { opacity: 0, y: 10, scale: 0.5 }}
+                                animate={{
+                                  opacity: isNextDraw ? 1 : 0.6,
+                                  y: isNextDraw ? -1 : 0,
+                                  x: 0,
+                                  scale: isNextDraw ? 1.15 : 1,
+                                }}
+                                exit={{ opacity: 0, scale: 0.3, y: -8 }}
+                                transition={shuffleAnimating
+                                  ? { type: "spring", stiffness: 200, damping: 20, delay: idx * 0.04 }
+                                  : { type: "spring", stiffness: 300, damping: 25 }}
+                              >
+                                <MiniDice defId={defId} size={14} highlight={isNextDraw} />
+                              </motion.div>
+                            );
+                          });
+                        })()}
                       </AnimatePresence>
+                      {game.diceBag.length === 0 && !shuffleAnimating && (
+                        <span className="text-[7px] text-[var(--dungeon-text-dim)] font-mono italic">empty</span>
+                      )}
                     </div>
                     {/* Separator */}
                     <div className="w-px h-4 bg-[var(--dungeon-text-dim)] opacity-40 mx-1 shrink-0" />
-                    {/* Right: Discard pile */}
-                    <div className="flex gap-px items-center justify-start flex-1">
+                    {/* Right: Discard pile queue */}
+                    <div className="flex gap-px items-center justify-start flex-1 overflow-hidden">
                       <AnimatePresence mode="popLayout">
-                        {game.ownedDice.filter((d) => game.discardPile.includes(d.defId)).map((d, i) => (
+                        {game.discardPile.map((defId, i) => (
                           <motion.div
-                            key={d.defId + "-disc-" + i}
+                            key={defId + "-disc-" + i}
                             layout
                             initial={{ opacity: 0, y: 10, scale: 0.5 }}
-                            animate={{ opacity: 0.25, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -10, scale: 0.5 }}
+                            animate={shuffleAnimating
+                              ? { opacity: 0, x: -60, scale: 0.3, transition: { duration: 0.3, delay: i * 0.03 } }
+                              : { opacity: 0.3, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, x: -40, scale: 0.3 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                           >
-                            <MiniDice defId={d.defId} size={14} />
+                            <MiniDice defId={defId} size={14} />
                           </motion.div>
                         ))}
                       </AnimatePresence>
+                      {game.discardPile.length === 0 && (
+                        <span className="text-[7px] text-[var(--dungeon-text-dim)] font-mono italic">empty</span>
+                      )}
                     </div>
                   </div>
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                 </div>
 
                 {/* 骰子行 */}
-                <div className="flex justify-center gap-2.5 mb-1.5 min-h-[60px] items-end relative">
+                <div className="flex justify-center gap-2.5 mb-1.5 min-h-[80px] items-end relative pt-[20px]">
                   {dice.filter(d => !d.spent).map((die) => (
                       <motion.button
                         key={`die-${die.id}`}
