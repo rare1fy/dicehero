@@ -77,7 +77,7 @@ export const SHOP_CONFIG = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
-  restHeal: 35,
+  restHeal: 25,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 30,
   /** 模块最大等级 */
@@ -89,11 +89,11 @@ export const CAMPFIRE_CONFIG = {
 // ============================================================
 export const LOOT_CONFIG = {
   /** 普通怪掉落金币 */
-  normalDropGold: 35,
+  normalDropGold: 18,
   /** 精英怪掉落金币 */
-  eliteDropGold: 70,
+  eliteDropGold: 40,
   /** Boss掉落金币 */
-  bossDropGold: 100,
+  bossDropGold: 65,
   /** 增幅选择数量 */
   augmentChoiceCount: 3,
   /** 精英奖励池 */

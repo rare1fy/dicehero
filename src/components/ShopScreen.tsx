@@ -8,18 +8,18 @@ import { AUGMENTS_POOL } from '../data/augments';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
 import { ChestReward, Augment } from '../types/game';
 
-const CHEST_COST = 25;
-const UPGRADE_COSTS = [0, 80, 150];
+const CHEST_COST = 35;
+const UPGRADE_COSTS = [0, 120, 250];
 
 const REWARD_TABLE = {
-  dice:      { weight: 40, label: '骰子' },
-  augment:   { weight: 30, label: '增幅模块' },
-  reroll:    { weight: 20, label: '重投机会' },
-  drawCount: { weight: 10, label: '手牌上限+1' },
+  dice:      { weight: 50, label: '骰子' },
+  augment:   { weight: 25, label: '增幅模块' },
+  reroll:    { weight: 22, label: '重投机会' },
+  drawCount: { weight: 3, label: '手牌上限+1' },
 };
 
 function getAdjustedWeights(shopLevel: number) {
-  const bonus = (shopLevel - 1) * 5;
+  const bonus = (shopLevel - 1) * 3;
   return {
     dice:      REWARD_TABLE.dice.weight,
     augment:   REWARD_TABLE.augment.weight + bonus,
@@ -51,7 +51,7 @@ function generateReward(shopLevel: number): ChestReward {
       return { type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity };
     }
     case 'augment': {
-      const pool = AUGMENTS_POOL.filter(a => a.category !== undefined);
+      const pool = AUGMENTS_POOL.filter(a => a.category !== undefined && (shopLevel >= 2 || a.category === 'transition' || a.category === 'economy'));
       if (pool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
       const pick = pool[Math.floor(Math.random() * pool.length)];
       const rarity = (pick.category === 'endgame' || pick.category === 'self_harm') ? 'rare' as const : 'uncommon' as const;

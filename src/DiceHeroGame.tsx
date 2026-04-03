@@ -2961,6 +2961,7 @@ useEffect(() => {
                     <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
                   </motion.div>
                   <div className="flex flex-wrap gap-0.5">
+                  <span className="ml-auto text-[9px] font-mono font-bold text-[var(--dungeon-text-dim)] tracking-wider px-1.5 py-0.5 border border-[var(--dungeon-panel-border)]" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
                     {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
                     {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
                   </div>
@@ -3062,13 +3063,52 @@ useEffect(() => {
 
               <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
 
-                {/* 骰子库指示器 */}
-                <div className="flex justify-between items-center mb-0.5 px-1">
+                {/* 骰子库 + 骰子队列流转 + 弃骰库 (对齐) */}
+                <div className="flex items-center gap-1 mb-0.5 px-1">
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
-                  <div className="text-[10px] text-[var(--dungeon-text-dim)] font-bold tracking-wider">
-                    回合 {game.battleTurn}
-                  <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
+                  {/* 骰子队列流转缩略图 */}
+                  <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
+                    <AnimatePresence mode="popLayout">
+                      {game.ownedDice.map((d, i) => {
+                        const def = getDiceDef(d.defId);
+                        const elemColor = ELEMENT_COLORS[def.element] || "#888";
+                        const inBag = game.diceBag.includes(d.defId);
+                        const inDiscard = game.discardPile.includes(d.defId);
+                        const inHand = !inBag && !inDiscard;
+                        return (
+                          <motion.div
+                            key={d.defId + "-q-" + i}
+                            layout
+                            initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                            animate={{
+                              opacity: inBag ? 0.9 : inHand ? 0.5 : 0.25,
+                              y: inHand ? -2 : 0,
+                              scale: inHand ? 1.1 : 1,
+                            }}
+                            exit={{ opacity: 0, y: -10, scale: 0.5 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            className={`shrink-0 flex items-center justify-center border ${
+                              inBag ? "border-[var(--pixel-blue)]" :
+                              inHand ? "border-[var(--pixel-gold)]" :
+                              "border-[var(--pixel-red)] opacity-30"
+                            }`}
+                            style={{
+                              backgroundColor: `${elemColor}${inBag ? "33" : inHand ? "55" : "11"}`,
+                              borderRadius: "1px",
+                              width: "14px",
+                              height: "14px",
+                            }}
+                            title={`${def.name}${inBag ? " (库中)" : inHand ? " (手中)" : " (已弃置)"}`}
+                          >
+                            <span className="text-[5px] font-bold" style={{ color: elemColor }}>
+                              {def.name.charAt(0)}
+                            </span>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                   </div>
+                  <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                 </div>
 
                 {/* 骰子行 */}
@@ -3301,38 +3341,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 骰子库 / 弃骰库 平行对齐，中间是流转缩略图 */}
-              <div className="px-2 pb-1 pt-1 border-t border-[var(--dungeon-panel-border)]">
-                <div className="flex items-center gap-1">
-                  {/* 骰子库标签 */}
-                  <div className="flex flex-col items-center shrink-0 w-8">
-                    <span className="text-[6px] font-bold text-[var(--pixel-green)]">库</span>
-                    <span className="text-[8px] font-mono font-bold text-[var(--pixel-green-light)]">{game.diceBag.length}</span>
-                  </div>
-                  {/* 中间流转缩略图 */}
-                  <div className="flex-1 flex gap-0.5 overflow-x-auto no-scrollbar items-center justify-center">
-                    {game.ownedDice.map((d, i) => {
-                      const def = getDiceDef(d.defId);
-                      const elemColor = ELEMENT_COLORS[def.element] || "#888";
-                      const inBag = game.diceBag.some(id => id === d.defId);
-                      const inDiscard = game.discardPile.some(id => id === d.defId);
-                      return (
-                        <div key={i}
-                          className={`shrink-0 flex items-center justify-center border ${inBag ? "border-[var(--pixel-green)] opacity-90" : inDiscard ? "border-[var(--pixel-red)] opacity-50" : "border-[rgba(255,255,255,0.08)] opacity-25"}`}
-                          style={{ backgroundColor: `${elemColor}22`, borderRadius: "1px", width: "16px", height: "16px" }}
-                          title={`${def.name}${inBag ? " (在库中)" : inDiscard ? " (已弃置)" : " (在手中)"}`}>
-                          <span className="text-[5px] font-bold" style={{ color: elemColor }}>{def.name.charAt(0)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* 弃骰库标签 */}
-                  <div className="flex flex-col items-center shrink-0 w-8">
-                    <span className="text-[6px] font-bold text-[var(--pixel-red)]">弃</span>
-                    <span className="text-[8px] font-mono font-bold text-[var(--pixel-red-light)]">{game.discardPile.length}</span>
-                  </div>
-                </div>
-              </div>
               <CollapsibleLog logs={game.logs} />
             </div>
 
