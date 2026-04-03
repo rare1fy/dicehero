@@ -21,7 +21,7 @@ import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewar
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
-import { ALL_RELICS } from './data/relics';
+import { ALL_RELICS, getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from './data/relics';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode, getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
@@ -1747,6 +1747,28 @@ useEffect(() => {
       const pool = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
       for (let i = 0; i < LOOT_CONFIG.augmentChoiceCount; i++) options.push(pool[i]);
       loot.push({ id: 'augment', type: 'augment', augmentOptions: options, collected: false });
+    }
+
+    // 遗物掉落：精英战/Boss战必掉，普通战30%概率
+    const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
+                       allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
+    const relicDropChance = battleType === 'enemy' ? 0.3 : 1.0;
+    if (Math.random() < relicDropChance) {
+      const relicPool = getRelicRewardPool(battleType);
+      const ownedRelicIds = game.relics.map(r => r.id);
+      const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
+      if (newRelics.length > 0) {
+        const newRelic = newRelics[0];
+        loot.push({ id: 'relic-' + newRelic.id, type: 'gold' as any, value: 0, collected: true });
+        // 直接添加遗物到状态（在下面的setGame中处理）
+        setTimeout(() => {
+          setGame(prev => ({
+            ...prev,
+            relics: [...prev.relics, { ...newRelic }],
+          }));
+          addToast('✦ 获得遗物: ' + newRelic.name + '!', 'buff');
+        }, 500);
+      }
     }
     setGame(prev => {
       const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
