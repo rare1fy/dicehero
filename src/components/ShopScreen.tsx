@@ -8,6 +8,9 @@ import { AUGMENTS_POOL } from '../data/augments';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
 import { ChestReward, Augment, ShopItem } from '../types/game';
 
+// ============================================================
+// 宝箱配置（宝箱节点使用）
+// ============================================================
 const CHEST_COST = 35;
 const UPGRADE_COSTS = [0, 120, 250];
 
@@ -24,7 +27,7 @@ function getAdjustedWeights(shopLevel: number) {
     dice:      REWARD_TABLE.dice.weight,
     augment:   REWARD_TABLE.augment.weight + bonus,
     reroll:    REWARD_TABLE.reroll.weight - bonus * 0.5,
-    drawCount: REWARD_TABLE.drawCount.weight, // 极低概率，不随等级增加
+    drawCount: REWARD_TABLE.drawCount.weight,
   };
 }
 
@@ -71,6 +74,9 @@ const RARITY_LABELS: Record<string, string> = {
   common: '普通', uncommon: '稀有', rare: '史诗', legendary: '传说',
 };
 
+// ============================================================
+// 像素宝箱 SVG
+// ============================================================
 const PixelChest: React.FC<{ size?: number; isOpen?: boolean }> = ({ size = 4, isOpen = false }) => {
   const px = size;
   return (
@@ -85,7 +91,147 @@ const PixelChest: React.FC<{ size?: number; isOpen?: boolean }> = ({ size = 4, i
   );
 };
 
-export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode = false }) => {
+// ============================================================
+// 像素商人 SVG
+// ============================================================
+const PixelMerchant: React.FC<{ size?: number }> = ({ size = 4 }) => {
+  const px = size;
+  return (
+    <svg width={px * 10} height={px * 12} viewBox="0 0 10 12" shapeRendering="crispEdges">
+      <rect x="3" y="0" width="4" height="1" fill="#8B4513" />
+      <rect x="2" y="1" width="6" height="1" fill="#A0522D" />
+      <rect x="1" y="2" width="8" height="1" fill="#8B4513" />
+      <rect x="3" y="3" width="4" height="3" fill="#FFDAB9" />
+      <rect x="4" y="4" width="1" height="1" fill="#333" />
+      <rect x="6" y="4" width="1" height="1" fill="#333" />
+      <rect x="4" y="5" width="3" height="1" fill="#D2691E" opacity="0.6" />
+      <rect x="2" y="6" width="6" height="4" fill="#4a2c6a" />
+      <rect x="3" y="6" width="4" height="1" fill="#6a3c8a" />
+      <rect x="4" y="7" width="2" height="1" fill="#d4a030" />
+      <rect x="3" y="10" width="2" height="1" fill="#654321" />
+      <rect x="6" y="10" width="2" height="1" fill="#654321" />
+    </svg>
+  );
+};
+
+// ============================================================
+// 游荡商人界面（shop 节点）— 只卖3个商品，没有宝箱
+// ============================================================
+const MerchantScreen: React.FC = () => {
+  const { game, setGame, pickReward, addToast, addLog } = useGameContext();
+  const shopItems = game.shopItems || [];
+
+  const buyItem = useCallback((item: ShopItem) => {
+    if (game.souls < item.price) { addToast('金币不足！'); return; }
+    playSound('shop_buy');
+    setGame(prev => {
+      const newState: any = {
+        ...prev,
+        souls: prev.souls - item.price,
+        stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + item.price },
+        shopItems: prev.shopItems.filter(si => si.id !== item.id),
+      };
+      if (item.type === 'reroll') {
+        newState.freeRerollsPerTurn = prev.freeRerollsPerTurn + 1;
+      }
+      if (item.type === 'dice' || item.type === 'specialDice') {
+        newState.ownedDice = [...prev.ownedDice, { defId: item.diceDefId!, level: 1 }];
+      }
+      if (item.type === 'removeDice') {
+        const removeIdx = prev.ownedDice.findLastIndex(d => d.defId !== 'basic');
+        if (removeIdx >= 0) {
+          newState.ownedDice = prev.ownedDice.filter((_: any, i: number) => i !== removeIdx);
+        }
+      }
+      return newState;
+    });
+    if (item.type === 'augment' && item.augment) {
+      pickReward(item.augment);
+    }
+    addToast('\u2705 购买了 ' + item.label, 'gold');
+    addLog('商人购买: ' + item.label + ' (-' + item.price + 'g)');
+  }, [game.souls, setGame, pickReward, addToast, addLog]);
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
+      <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
+
+      <div className="flex items-center gap-3 mb-1 mt-4 relative z-10">
+        <PixelMerchant size={3} />
+        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">{'\uD83C\uDFF7\uFE0F'} 游荡商人</h2>
+      </div>
+      <p className="text-[var(--dungeon-text-dim)] mb-4 text-[9px] tracking-[0.1em] font-bold relative z-10">
+        "嘿，旅人…看看这些好货，价格公道…大概吧"
+      </p>
+
+      <div className="flex items-center gap-1 text-[var(--pixel-gold)] font-mono font-bold text-sm mb-4 relative z-10">
+        <PixelCoin size={2} /> {game.souls}
+      </div>
+
+      <div className="w-full max-w-xs flex flex-col gap-3 relative z-10">
+        {shopItems.length === 0 && (
+          <div className="text-center text-[var(--dungeon-text-dim)] text-[10px] py-8">
+            商人的货物已经卖完了…
+          </div>
+        )}
+        {shopItems.map((item, idx) => {
+          const canBuy = game.souls >= item.price;
+          const typeColor = item.type === 'augment' ? '#34d399'
+            : (item.type === 'dice' || item.type === 'specialDice') ? '#60a5fa'
+            : item.type === 'reroll' ? '#a78bfa'
+            : '#9ca3af';
+          return (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className={`w-full pixel-panel p-3 flex items-center gap-3 transition-all ${canBuy ? 'cursor-pointer' : 'opacity-50'}`}
+              style={{ borderColor: canBuy ? typeColor + '80' : 'var(--dungeon-panel-border)' }}
+            >
+              <div className="w-10 h-10 bg-[var(--dungeon-bg)] border-2 flex items-center justify-center flex-shrink-0"
+                style={{ borderColor: typeColor + '60', borderRadius: '2px' }}>
+                {(item.type === 'dice' || item.type === 'specialDice') && <PixelDice size={3} />}
+                {item.type === 'augment' && <PixelStar size={3} />}
+                {item.type === 'reroll' && <PixelDice size={3} />}
+                {item.type === 'removeDice' && <span className="text-[10px]">{'\u2702'}</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow truncate">{item.label}</div>
+                <div className="text-[8px] text-[var(--dungeon-text-dim)] leading-tight mt-0.5">{item.desc}</div>
+              </div>
+              <motion.button
+                disabled={!canBuy}
+                whileHover={canBuy ? { scale: 1.05 } : {}}
+                whileTap={canBuy ? { scale: 0.95 } : {}}
+                onClick={() => canBuy && buyItem(item)}
+                className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-mono font-bold border transition-all flex-shrink-0 ${
+                  canBuy
+                    ? 'border-[var(--pixel-gold)] text-[var(--pixel-gold)] hover:bg-[var(--pixel-gold)] hover:text-black'
+                    : 'border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]'
+                }`}
+                style={{ borderRadius: '2px' }}
+              >
+                {item.price} <PixelCoin size={1.2} />
+              </motion.button>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        onClick={() => setGame(prev => ({ ...prev, phase: 'map' }))}
+        className="w-full max-w-xs py-3 mt-6 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10">
+        离开商人
+      </motion.button>
+    </div>
+  );
+};
+
+// ============================================================
+// 宝箱界面（treasure 节点）
+// ============================================================
+const TreasureScreen: React.FC = () => {
   const { game, setGame, pickReward, addToast, addLog } = useGameContext();
   const [openingChest, setOpeningChest] = useState(false);
   const [reward, setReward] = useState<ChestReward | null>(null);
@@ -94,7 +240,7 @@ export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode 
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
 
   const shopLevel = game.shopLevel || 1;
-  const cost = Math.floor(CHEST_COST * (treasureMode ? 0.5 : 1) * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
+  const cost = Math.floor(CHEST_COST * 0.5 * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
   const canAfford = game.souls >= cost;
 
   const openChest = useCallback(async () => {
@@ -147,8 +293,8 @@ export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode 
     if (game.souls < upgCost) { addToast('金币不足！'); return; }
     setGame(prev => ({ ...prev, souls: prev.souls - upgCost, shopLevel: (prev.shopLevel || 1) + 1, stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + upgCost } }));
     playSound('levelup');
-    addToast('商店升级到 Lv.' + (shopLevel + 1) + '！');
-    addLog('商店升级到 Lv.' + (shopLevel + 1));
+    addToast('宝箱升级到 Lv.' + (shopLevel + 1) + '！');
+    addLog('宝箱升级到 Lv.' + (shopLevel + 1));
   };
 
   const weights = getAdjustedWeights(shopLevel);
@@ -160,7 +306,7 @@ export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode 
 
       <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
         <PixelChest size={3} />
-        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">◆ 神秘宝箱屋 ✦</h2>
+        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">{'\u2726'} 神秘宝箱屋 {'\u2727'}</h2>
       </div>
       <p className="text-[var(--dungeon-text-dim)] mb-3 text-[9px] tracking-[0.1em] font-bold relative z-10">
         "花费金币，开启宝箱，获得随机奖励"
@@ -221,7 +367,7 @@ export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode 
                     </div>
                   );
                 })}
-                {shopLevel < 3 && <div className="text-[7px] text-[var(--dungeon-text-dim)] mt-2 text-center">升级商店可提升稀有奖励概率</div>}
+                {shopLevel < 3 && <div className="text-[7px] text-[var(--dungeon-text-dim)] mt-2 text-center">升级宝箱可提升稀有奖励概率</div>}
               </motion.div>
             )}
           </AnimatePresence>
@@ -274,68 +420,21 @@ export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode 
         )}
       </AnimatePresence>
 
-      
-      {/* 商品列表 - 仅在shop模式显示 */}
-      {!treasureMode && game.shopItems && game.shopItems.length > 0 && (
-        <div className="w-full max-w-xs mt-4 relative z-10">
-          <div className="text-[10px] font-bold text-[var(--pixel-gold)] tracking-widest mb-2 text-center">── 商品 ──</div>
-          <div className="flex flex-col gap-2">
-            {game.shopItems.map((item: ShopItem) => {
-              const bought = !!(game as any)._boughtShopItems?.includes(item.id);
-              const canBuy = game.souls >= item.price && !bought;
-              return (
-                <motion.button
-                  key={item.id}
-                  disabled={!canBuy}
-                  whileHover={canBuy ? { scale: 1.02, x: 2 } : {}}
-                  whileTap={canBuy ? { scale: 0.98 } : {}}
-                  onClick={() => {
-                    if (!canBuy) return;
-                    playSound('shop_buy');
-                    // 扣金币
-                    setGame(prev => ({
-                      ...prev,
-                      souls: prev.souls - item.price,
-                      stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + item.price },
-                      // 标记已购买
-                      _boughtShopItems: [...((prev as any)._boughtShopItems || []), item.id],
-                      // 应用效果
-                      ...(item.type === 'reroll' ? { freeRerollsPerTurn: prev.freeRerollsPerTurn + 1 } : {}),
-                      ...(item.type === 'dice' || item.type === 'specialDice' ? { ownedDice: [...prev.ownedDice, { defId: item.diceDefId!, level: 1 }] } : {}),
-                    }));
-                    if (item.type === 'augment' && item.augment) {
-                      pickReward(item.augment);
-                    }
-                    addToast('✅ 购买了 ' + item.label, 'gold');
-                    addLog('商店购买: ' + item.label + ' (-' + item.price + 'g)');
-                  }}
-                  className={`w-full pixel-panel p-3 flex items-center gap-3 transition-all ${bought ? 'opacity-30 grayscale' : canBuy ? '' : 'opacity-50'}`}
-                  style={{ borderColor: bought ? 'var(--dungeon-panel-border)' : canBuy ? 'var(--pixel-gold)' : 'var(--dungeon-panel-border)' }}
-                >
-                  <div className="w-8 h-8 bg-[var(--dungeon-bg)] border-2 border-[var(--dungeon-panel-border)] flex items-center justify-center" style={{borderRadius:'2px'}}>
-                    {(item.type === 'dice' || item.type === 'specialDice') && <PixelDice size={2} />}
-                    {item.type === 'augment' && <PixelStar size={2} />}
-                    {item.type === 'reroll' && <PixelDice size={2} />}
-                    {item.type === 'removeDice' && <PixelStar size={2} />}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{item.label}</div>
-                    <div className="text-[8px] text-[var(--dungeon-text-dim)] leading-tight">{item.desc}</div>
-                  </div>
-                  <div className={`flex items-center gap-0.5 text-[10px] font-mono font-bold ${canBuy ? 'text-[var(--pixel-gold)]' : 'text-[var(--dungeon-text-dim)]'}`}>
-                    {bought ? '已购' : (<>{item.price} <PixelCoin size={1.5} /></>)}
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-<motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         onClick={() => setGame(prev => ({ ...prev, phase: 'map' }))}
-        className="w-full max-w-xs py-3 mt-4 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10">{treasureMode ? '离开宝箱' : '离开商店'}
+        className="w-full max-w-xs py-3 mt-4 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10">
+        离开宝箱
       </motion.button>
     </div>
   );
+};
+
+// ============================================================
+// 导出组件：根据 treasureMode 切换
+// ============================================================
+export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode = false }) => {
+  if (treasureMode) {
+    return <TreasureScreen />;
+  }
+  return <MerchantScreen />;
 };

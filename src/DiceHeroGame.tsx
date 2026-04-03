@@ -374,65 +374,70 @@ export default function DiceHeroGame() {
         startBattle(node);
       }
     } else if (node.type === 'shop') {
-            const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
+      // 游荡商人：随机3个商品，价格随机
+      const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
-      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
-      // Random special dice for shop
-      const shopDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
-      const shopDice = shopDicePool[0];
-      const dicePrice = shopDice.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10;
-
-      const shopItems: ShopItem[] = [
-        ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: randPrice() })),
-        {
-          id: 'dice_' + shopDice.id,
-          type: 'specialDice' as const,
-          diceDefId: shopDice.id,
-          label: shopDice.name,
-          desc: shopDice.description + ' [' + shopDice.faces.join(',') + ']',
-          price: dicePrice
-        },
-        ...augs.map(aug => ({
-          id: aug.id,
-          type: 'augment' as const,
-          augment: aug,
-          label: aug.name,
-          desc: aug.description,
-          price: randPrice()
-        }))
-      ];
+      // 构建候选商品池
+      const candidateItems: ShopItem[] = [];
+      // 候选：增幅模块
+      const shuffledAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
+      for (const aug of shuffledAugs.slice(0, 3)) {
+        candidateItems.push({
+          id: 'aug_' + aug.id, type: 'augment' as const, augment: aug,
+          label: aug.name, desc: aug.description, price: randPrice()
+        });
+      }
+      // 候选：骰子
+      const shuffledDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
+      for (const d of shuffledDice.slice(0, 2)) {
+        candidateItems.push({
+          id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id,
+          label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']',
+          price: d.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10
+        });
+      }
+      // 候选：重掷强化
+      candidateItems.push({
+        id: 'reroll_' + Math.random().toString(36).slice(2, 6), type: 'reroll' as const,
+        label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: randPrice()
+      });
+      // 从候选池随机抽3个
+      const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
       setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'campfire') {
       playSound('campfire');
       setCampfireView('main');
       setGame(prev => ({ ...prev, phase: 'campfire', currentNodeId: node.id }));
     } else if (node.type === 'merchant') {
-      // Merchant: same as shop but with different inventory
+      // 游荡商人：随机3个商品，价格随机
       const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
-      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
-      const shopDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
-      const shopDice = shopDicePool[0];
-      const dicePrice = shopDice.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10;
-      const shopItems: ShopItem[] = [
-        ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: randPrice() })),
-        {
-          id: 'dice_' + shopDice.id,
-          type: 'specialDice' as const,
-          diceDefId: shopDice.id,
-          label: shopDice.name,
-          desc: shopDice.description + ' [' + shopDice.faces.join(',') + ']',
-          price: dicePrice
-        },
-        ...augs.map(aug => ({
-          id: aug.id,
-          type: 'augment' as const,
-          augment: aug,
-          label: aug.name,
-          desc: aug.description,
-          price: randPrice()
-        }))
-      ];
+      // 构建候选商品池
+      const candidateItems: ShopItem[] = [];
+      // 候选：增幅模块
+      const shuffledAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
+      for (const aug of shuffledAugs.slice(0, 3)) {
+        candidateItems.push({
+          id: 'aug_' + aug.id, type: 'augment' as const, augment: aug,
+          label: aug.name, desc: aug.description, price: randPrice()
+        });
+      }
+      // 候选：骰子
+      const shuffledDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
+      for (const d of shuffledDice.slice(0, 2)) {
+        candidateItems.push({
+          id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id,
+          label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']',
+          price: d.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10
+        });
+      }
+      // 候选：重掷强化
+      candidateItems.push({
+        id: 'reroll_' + Math.random().toString(36).slice(2, 6), type: 'reroll' as const,
+        label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: randPrice()
+      });
+      // 从候选池随机抽3个
+      const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
       setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'treasure') {
       // Treasure: chest-only mode
@@ -2055,20 +2060,20 @@ useEffect(() => {
     if (next === 4 || next === 9) {
       setGame(prev => ({ ...prev, phase: 'campfire', currentNode: next }));
     } else if (next === 5) {
-            const [minP, maxP] = SHOP_CONFIG.priceRange;
+      // 游荡商人：随机3个商品
+      const [minP, maxP] = SHOP_CONFIG.priceRange;
       const rp = () => Math.floor(Math.random() * (maxP - minP + 1)) + minP;
-      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
-      const shopItems: ShopItem[] = [
-        ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: rp() })),
-        ...augs.map(aug => ({
-          id: aug.id,
-          type: 'augment' as const,
-          augment: aug,
-          label: aug.name,
-          desc: aug.description,
-          price: rp()
-        }))
-      ];
+      const candidates: ShopItem[] = [];
+      const sAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
+      for (const aug of sAugs.slice(0, 3)) {
+        candidates.push({ id: 'aug_' + aug.id, type: 'augment' as const, augment: aug, label: aug.name, desc: aug.description, price: rp() });
+      }
+      const sDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
+      for (const d of sDice.slice(0, 2)) {
+        candidates.push({ id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id, label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']', price: d.rarity === 'rare' ? rp() + 30 : rp() + 10 });
+      }
+      candidates.push({ id: 'reroll_legacy', type: 'reroll' as const, label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: rp() });
+      const shopItems: ShopItem[] = candidates.sort(() => Math.random() - 0.5).slice(0, 3);
       setGame(prev => ({ ...prev, phase: 'shop', currentNode: next, shopItems }));
     } else if (next === 7) {
       setGame(prev => ({ ...prev, phase: 'event', currentNode: next }));
