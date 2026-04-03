@@ -435,8 +435,8 @@ export default function DiceHeroGame() {
       ];
       setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'treasure') {
-      // Treasure: same as shop (chest system)
-      setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id }));
+      // Treasure: chest-only mode
+      setGame(prev => ({ ...prev, phase: 'treasure' as any, currentNodeId: node.id }));
     } else if (node.type === 'event') {
       playSound('event');
       setGame(prev => ({ ...prev, phase: 'event', currentNodeId: node.id }));
@@ -1214,6 +1214,23 @@ export default function DiceHeroGame() {
       hp: Math.min(prev.maxHp, prev.hp + outcome.heal)
     }));
 
+    // on_kill 遗物效果：检查是否有敌人被击杀
+    setTimeout(() => {
+      const killedEnemies = enemies.filter(e => e.hp <= 0);
+      if (killedEnemies.length > 0) {
+        game.relics.filter(r => r.trigger === 'on_kill').forEach(relic => {
+          killedEnemies.forEach(killed => {
+            const overkill = Math.abs(killed.hp);
+            const res = relic.effect({ overkillDamage: overkill });
+            if (res.heal && res.heal > 0) {
+              setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + res.heal) }));
+              addToast(`🧛 ${relic.name}: +${res.heal}HP`, 'heal');
+            }
+          });
+        });
+      }
+    }, 300);
+
     // Mark dice as spent & add to discard pile
     const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
     setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
@@ -1818,12 +1835,6 @@ useEffect(() => {
     // 遗物掉落：精英战/Boss战必掉，普通战30%概率
     const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
                        allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
-        // 重置急救沙漏计数器（每场战斗重新计数）
-    setGame(prev => ({
-      ...prev,
-      relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 0 } : r)
-    }));
-
     const relicDropChance = battleType === 'enemy' ? 0.3 : 1.0;
     if (Math.random() < relicDropChance) {
       const relicPool = getRelicRewardPool(battleType);
@@ -1831,7 +1842,7 @@ useEffect(() => {
       const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
       if (newRelics.length > 0) {
         const newRelic = newRelics[0];
-        loot.push({ id: 'relic-' + newRelic.id, type: 'gold' as any, value: 0, collected: true });
+        loot.push({ id: 'relic-' + newRelic.id, type: 'relic' as any, value: 0, collected: true, relicData: newRelic });
         // 直接添加遗物到状态（在下面的setGame中处理）
         setTimeout(() => {
           setGame(prev => ({
@@ -1865,7 +1876,8 @@ useEffect(() => {
         map: newMap,
         phase: 'diceReward',
         lootItems: loot,
-        isEnemyTurn: false
+        isEnemyTurn: false,
+        relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 0 } : r)
       };
     });
   };
@@ -2192,6 +2204,7 @@ useEffect(() => {
         {game.phase === 'diceReward' && <DiceRewardScreen />}
         {game.phase === 'loot' && <LootScreen />}
         {game.phase === 'shop' && <ShopScreen />}
+        {game.phase === 'treasure' && <ShopScreen treasureMode={true} />}
         {game.phase === 'campfire' && <CampfireScreen />}
         {game.phase === 'event' && <EventScreen />}
 

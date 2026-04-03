@@ -39,6 +39,7 @@ export const LootScreen: React.FC = () => {
           case 'maxPlays': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-red-light)]', label: '出牌次数', borderColor: 'var(--pixel-red)' };
           case 'diceCount': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-orange-light)]', label: '骰子数量', borderColor: 'var(--pixel-orange)' };
           case 'specialDice': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-green-light)]', label: '特殊骰子', borderColor: 'var(--pixel-green)' };
+          case 'relic': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '✨ 遗物', borderColor: 'var(--pixel-purple)' };
           default: return { icon: <PixelStar size={3} />, color: 'text-[var(--dungeon-text-dim)]', label: '物品', borderColor: 'var(--dungeon-panel-border)' };
         }
       };
@@ -73,10 +74,11 @@ export const LootScreen: React.FC = () => {
                item.type === 'maxPlays' ? `+${item.value} 出牌次数` :
                item.type === 'specialDice' && item.diceDefId ? getDiceDef(item.diceDefId).name :
                item.type === 'diceCount' ? `+${item.value} 骰子` :
+               item.type === 'relic' && item.relicData ? `✨ ${item.relicData.name}` :
                `+${item.value} 每回合重掷次数`}
             </div>
             <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
-              {item.type === 'augment' ? '点击从中选择一个模块' : `点击拾取该奖励`}
+              {item.type === 'relic' && item.relicData ? item.relicData.description : item.type === 'augment' ? '点击从中选择一个模块' : `点击拾取该奖励`}
             </div>
           </div>
         </motion.button>

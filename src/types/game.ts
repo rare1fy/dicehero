@@ -157,12 +157,13 @@ export interface Enemy {
 
 export interface LootItem {
   id: string;
-  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice' | 'diceChoice';
+  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice' | 'diceChoice' | 'relic';
   value?: number;
   augment?: Augment;
   augmentOptions?: Augment[];
   diceDefId?: string;
   collected: boolean;
+  relicData?: Relic;
 }
 
 export type ChestTier = 'bronze' | 'silver' | 'gold';
