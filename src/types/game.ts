@@ -18,11 +18,15 @@ export interface DiceDef {
   faces: number[];
   description: string;
   rarity: DiceRarity;
+  isElemental?: boolean;   // 元素骰子：抽到时随机坍缩
+  isCursed?: boolean;      // 诅咒骰子：重Roll代价翻倍
+  isCracked?: boolean;     // 碎裂骰子：回合结束自毁
   onPlay?: {
     bonusDamage?: number;
     bonusMult?: number;
     heal?: number;
     pierce?: number;
+    selfDamage?: number;     // 反噬伤害
     statusToEnemy?: StatusEffect;
     statusToSelf?: StatusEffect;
     aoe?: boolean;
@@ -47,6 +51,7 @@ export interface Die {
   diceDefId: string;
   value: number;
   element: DiceElement;
+  collapsedElement?: DiceElement;  // 元素骰子坍缩后的实际元素
   selected: boolean;
   spent: boolean;
   rolling?: boolean;
@@ -252,6 +257,82 @@ export interface MerchantItem {
   rerollAmount?: number;
 }
 
+
+// ============================================================
+// 遗物系统
+// ============================================================
+
+export type RelicTrigger = 
+  | 'on_play'          // 每次出牌时
+  | 'on_kill'          // 击杀敌人时
+  | 'on_reroll'        // 重Roll时
+  | 'on_turn_start'    // 回合开始时
+  | 'on_turn_end'      // 回合结束时
+  | 'on_battle_start'  // 战斗开始时
+  | 'on_battle_end'    // 战斗结束时
+  | 'on_damage_taken'  // 受到伤害时
+  | 'passive';         // 被动持续生效
+
+export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
+
+export interface RelicContext {
+  // 出牌信息
+  handType?: string;
+  diceCount?: number;
+  diceValues?: number[];
+  diceDefIds?: string[];
+  pointSum?: number;
+  // 战斗状态
+  rerollsThisTurn?: number;
+  hpLostThisTurn?: number;
+  hpLostThisBattle?: number;
+  currentHp?: number;
+  maxHp?: number;
+  currentGold?: number;
+  enemiesKilledThisBattle?: number;
+  overkillDamage?: number;
+  // 元素追踪
+  elementsUsedThisBattle?: Set<string>;
+  // 特殊骰子追踪
+  hasSplitDice?: boolean;
+  splitDiceValue?: number;
+  hasLoadedDice?: boolean;
+  loadedDiceCount?: number;
+  hasSpecialDice?: boolean;
+  cursedDiceInHand?: number;
+  crackedDiceInHand?: number;
+  // 免费重Roll追踪
+  freeRerollsUsed?: number;
+}
+
+export interface RelicEffect {
+  damage?: number;
+  armor?: number;
+  heal?: number;
+  multiplier?: number;
+  pierce?: number;
+  goldBonus?: number;
+  drawCountBonus?: number;
+  freeRerolls?: number;
+  // 特殊标记
+  canLockDice?: boolean;
+  maxPointsUnlocked?: boolean;
+}
+
+export interface Relic {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;           // icon标识符（对应PixelIcons中的组件）
+  rarity: RelicRarity;
+  trigger: RelicTrigger;
+  effect: (context: RelicContext) => RelicEffect;
+  // 计数型遗物
+  counter?: number;        // 当前计数值
+  maxCounter?: number;      // 最大计数（用于显示进度）
+  counterLabel?: string;    // 计数标签（如"层"、"次"）
+}
+
 export interface GameState {
   hp: number;
   maxHp: number;
@@ -272,6 +353,8 @@ export interface GameState {
 
   handLevels: Record<string, number>;
   augments: (Augment | null)[];
+  relics: Relic[];                     // 遗物列表（无限制数量）
+  elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
   map: MapNode[];
   phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure' | 'merchant';

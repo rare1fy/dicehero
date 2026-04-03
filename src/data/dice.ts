@@ -1,8 +1,16 @@
-/**
- * dice.ts - 骰子定义表
+﻿/**
+ * dice.ts - 骰子定义表 v2
  * 
- * 所有骰子的模板定义。每颗骰子有独立的元素类型、面值分布、稀有度和出牌效果。
- * 骰子是核心构筑单元，通过骰子库(deck) + 弃骰库(discard) 循环运转。
+ * === 骰子体系 v2 ===
+ * 1. 元素骰子：合并火/冰/雷/毒/圣为一种，抽到时随机坍缩
+ * 2. 灌铅骰子：只能掷出 4/5/6，高下限
+ * 3. 混沌骰子：只能掷出 1 和 6，极端分布
+ * 4. 锋刃骰子：+20 基础伤害
+ * 5. 倍增骰子：x1.5 倍率
+ * 6. 小丑骰子：1-9 随机
+ * 7. 分裂骰子：出牌时复制自身加入结算
+ * 8. 诅咒骰子：0点，重Roll代价翻倍
+ * 9. 碎裂骰子：固定1-2点，反噬伤害
  */
 
 import type { DiceDef, DiceRarity } from '../types/game';
@@ -28,59 +36,19 @@ const heavy: DiceDef = {
   id: 'heavy',
   name: '灌铅骰子',
   element: 'normal',
-  faces: [3, 3, 4, 4, 5, 5],
-  description: '点数偏高，无极端值',
+  faces: [4, 4, 5, 5, 6, 6],
+  description: '只能掷出4/5/6，稳定性极高的底牌',
   rarity: 'uncommon',
 };
 
-const fire: DiceDef = {
-  id: 'fire',
-  name: '火焰骰子',
-  element: 'fire',
+const elemental: DiceDef = {
+  id: 'elemental',
+  name: '元素骰子',
+  element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时施加2层灼烧',
+  description: '抽到时随机坍缩为火/冰/雷/毒/圣之一，重Roll会重置元素',
   rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'burn', value: 2 } },
-};
-
-const ice: DiceDef = {
-  id: 'ice',
-  name: '冰霜骰子',
-  element: 'ice',
-  faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时冰冻敌人1回合',
-  rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'freeze', value: 1, duration: 1 } },
-};
-
-const thunder: DiceDef = {
-  id: 'thunder',
-  name: '雷电骰子',
-  element: 'thunder',
-  faces: [1, 1, 1, 6, 6, 6],
-  description: '极端分布，出牌时+3穿透伤害',
-  rarity: 'uncommon',
-  onPlay: { pierce: 3 },
-};
-
-const poison: DiceDef = {
-  id: 'poison',
-  name: '剧毒骰子',
-  element: 'poison',
-  faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时施加3层中毒',
-  rarity: 'uncommon',
-  onPlay: { statusToEnemy: { type: 'poison', value: 3 } },
-};
-
-const holy: DiceDef = {
-  id: 'holy',
-  name: '圣光骰子',
-  element: 'holy',
-  faces: [2, 3, 3, 4, 4, 5],
-  description: '出牌时回复3HP',
-  rarity: 'uncommon',
-  onPlay: { heal: 3 },
+  isElemental: true,
 };
 
 // ============================================================
@@ -92,19 +60,19 @@ const blade: DiceDef = {
   name: '锋刃骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时+5伤害',
+  description: '出牌时额外 +20 基础伤害，前期打工神器',
   rarity: 'rare',
-  onPlay: { bonusDamage: 5 },
+  onPlay: { bonusDamage: 20 },
 };
 
 const amplify: DiceDef = {
   id: 'amplify',
-  name: '增幅骰子',
+  name: '倍增骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时总伤害x1.3',
+  description: '出牌时总伤害 x1.5，中后期核心乘区',
   rarity: 'rare',
-  onPlay: { bonusMult: 1.3 },
+  onPlay: { bonusMult: 1.5 },
 };
 
 const split: DiceDef = {
@@ -112,19 +80,17 @@ const split: DiceDef = {
   name: '分裂骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌后复制1个自己加入牌型（升级后复制更多）',
+  description: '出牌时分裂出一个相同点数的临时骰子加入结算',
   rarity: 'rare',
-  // 分裂效果在DiceHeroGame中特殊处理
 };
 
 const joker: DiceDef = {
   id: 'joker',
   name: '小丑骰子',
   element: 'normal',
-  faces: [1, 2, 3, 4, 5, 6],
-  description: '每回合六面变为同一随机点数，天然凑对子/三条',
+  faces: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  description: '点数1-9随机，突破六面限制',
   rarity: 'rare',
-  // 小丑效果在DiceHeroGame中特殊处理：每回合随机1个点数，六面全为该点数
 };
 
 // ============================================================
@@ -135,10 +101,9 @@ const chaos: DiceDef = {
   id: 'chaos',
   name: '混沌骰子',
   element: 'normal',
-  faces: [1, 1, 6, 6, 6, 6],
-  description: '极端分布，出牌时总伤害x1.5',
+  faces: [1, 1, 1, 6, 6, 6],
+  description: '只能掷出1和6，专为凑满堂红/多条服务',
   rarity: 'legendary',
-  onPlay: { bonusMult: 1.5 },
 };
 
 // ============================================================
@@ -149,55 +114,60 @@ const cursed: DiceDef = {
   id: 'cursed',
   name: '诅咒骰子',
   element: 'normal',
-  faces: [1, 1, 1, 2, 2, 2],
-  description: '点数极低的诅咒',
+  faces: [0, 0, 0, 0, 0, 0],
+  description: '点数永远为0，重Roll代价翻倍',
   rarity: 'curse',
+  isCursed: true,
 };
 
 const cracked: DiceDef = {
   id: 'cracked',
   name: '碎裂骰子',
   element: 'normal',
-  faces: [0, 1, 1, 2, 2, 3],
-  description: '有一面是0点',
+  faces: [1, 1, 1, 2, 2, 2],
+  description: '打出后受到3点反噬伤害。回合结束时若未打出则自行销毁',
   rarity: 'curse',
+  onPlay: { selfDamage: 3 },
+  isCracked: true,
 };
 
 // ============================================================
 // 骰子注册表
 // ============================================================
 
-/** 所有骰子定义的字典 */
 export const ALL_DICE: Record<string, DiceDef> = {
   standard,
-  heavy, fire, ice, thunder, poison, holy,
+  heavy, elemental,
   blade, amplify, split, joker,
   chaos,
   cursed, cracked,
 };
 
-/** 按稀有度分组 */
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
   common: [standard],
-  uncommon: [heavy, fire, ice, thunder, poison, holy],
+  uncommon: [heavy, elemental],
   rare: [blade, amplify, split, joker],
   legendary: [chaos],
   curse: [cursed, cracked],
 };
 
-/** 初始骰子库: 5普通 + 3灌铅，纯普通起步 */
 export const INITIAL_DICE_BAG: string[] = [
   'standard', 'standard', 'standard', 'standard',
   'heavy',
   'blade',
 ];
 
-/** 根据骰子定义掷骰 */
+export const ELEMENTAL_COLLAPSE_ELEMENTS = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+export type CollapseElement = typeof ELEMENTAL_COLLAPSE_ELEMENTS[number];
+
+export const collapseElement = (): CollapseElement => {
+  return ELEMENTAL_COLLAPSE_ELEMENTS[Math.floor(Math.random() * ELEMENTAL_COLLAPSE_ELEMENTS.length)];
+};
+
 export const rollDiceDef = (def: DiceDef): number => {
   return def.faces[Math.floor(Math.random() * def.faces.length)];
 };
 
-/** 获取骰子定义，找不到返回普通骰子 */
 export const getDiceDef = (id: string): DiceDef => {
   return ALL_DICE[id] || ALL_DICE['standard'];
 };
@@ -206,25 +176,21 @@ export const getDiceDef = (id: string): DiceDef => {
 // 骰子升级体系
 // ============================================================
 
-/** 骰子升级：每面+N点 */
 export const getUpgradedFaces = (def: DiceDef, level: number): number[] => {
-  const bonus = Math.max(0, level - 1); // Lv1=+0, Lv2=+1, Lv3=+2
+  const bonus = Math.max(0, level - 1);
   return def.faces.map(f => f + bonus);
 };
 
-/** 骰子升级：onPlay效果增强系数 */
 export const getDiceLevelScale = (level: number): number => {
-  return 1 + (level - 1) * 0.5; // Lv1=1.0, Lv2=1.5, Lv3=2.0
+  return 1 + (level - 1) * 0.5;
 };
 
-/** 骰子最大等级 */
 export const DICE_MAX_LEVEL = 3;
 
 // ============================================================
 // 骰子构筑奖励池
 // ============================================================
 
-/** 根据战斗类型获取骰子奖励池 */
 export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
   switch (battleType) {
     case 'enemy':
@@ -236,7 +202,6 @@ export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceD
   }
 };
 
-/** 从池中随机抽取N个不重复骰子 */
 export const pickRandomDice = (pool: DiceDef[], count: number): DiceDef[] => {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const seen = new Set<string>();
@@ -249,4 +214,12 @@ export const pickRandomDice = (pool: DiceDef[], count: number): DiceDef[] => {
     }
   }
   return result;
+};
+
+export const ELEMENT_EFFECT_DESC: Record<string, string> = {
+  fire: '破甲爆燃：摧毁敌人所有护甲，附加真实伤害',
+  ice: '绝对控制：冻结敌人1回合，点数结算减半',
+  thunder: '传导AOE：对其他敌人造成等量穿透伤害',
+  poison: '叠层斩杀：施加毒层，跨回合持续掉血',
+  holy: '经济续航：恢复等同点数的生命值',
 };

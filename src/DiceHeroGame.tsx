@@ -21,6 +21,7 @@ import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewar
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
+import { ALL_RELICS } from './data/relics';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode, getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
@@ -86,7 +87,9 @@ export default function DiceHeroGame() {
     pendingReplacementAugment: null,
     targetEnemyUid: null,
     battleWaves: [],
-    currentWaveIndex: 0
+    currentWaveIndex: 0,
+    relics: [],
+    elementsUsedThisBattle: [],
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
@@ -3114,7 +3117,7 @@ useEffect(() => {
               <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
 
                 {/* 骰子库 + 骰子队列流转 + 弃骰库 (对齐) */}
-                <div className="flex items-center gap-1 mb-0.5 px-1">
+                <div className="flex items-center gap-1 mb-0.5 px-1 mt-1">
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
                   {/* 骰子队列流转缩略图 */}
                    <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
@@ -3373,47 +3376,70 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 增幅模块槽位 (5个) - icon+缩略文字，横排 */}
+
+              {/* 遗物栏 - 无限遗物icon展示 + 增幅模块 */}
               <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
-                <div className="flex gap-1 items-center">
-                  {Array.from({ length: game.slots }).map((_, i) => {
-                    const aug = game.augments[i] || null;
-                    const isActive = aug ? activeAugments.some(a => a.id === aug.id) : false;
-                    if (!aug) {
-                      return (
-                        <div key={i} className="flex-1 h-9 border-2 border-dashed border-[var(--dungeon-panel-border)] flex items-center justify-center opacity-30" style={{borderRadius:"2px"}}>
-                          <span className="text-[8px] text-[var(--dungeon-text-dim)]">+</span>
-                        </div>
-                      );
-                    }
+                <div className="flex flex-wrap gap-1 items-center min-h-[28px]">
+                  {game.relics.length === 0 && game.augments.every(a => !a) && (
+                    <div className="flex-1 flex items-center justify-center opacity-30">
+                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">暂无遗物</span>
+                    </div>
+                  )}
+                  {game.relics.map((relic, i) => {
+                    const isActive = false; // TODO: relic activation logic
+                    const iconMap: Record<string, string> = {
+                      blade: '⚔', flag: '⚑', weight: '⚓', pendulum: '☸',
+                      grail: '☕', gauge: '≡', prism: '◇', resonator: '☉',
+                      diamond: '♦', hourglass: '⌛', fangs: '☠', contract: '✉',
+                      recycle: '♻', hand: '✋', eye: '◉', infinity: '∞', bag: '☣',
+                    };
                     return (
                       <motion.div
-                        key={aug.id + "-" + i}
-                        onClick={() => setSelectedAugment(aug)}
-                        animate={isActive ? { scale: [1, 1.08, 1], y: [0, -1, 0] } : { scale: 1 }}
+                        key={relic.id + "-r-" + i}
+                        animate={isActive ? { scale: [1, 1.15, 1], y: [0, -2, 0] } : { scale: 1 }}
                         transition={isActive ? { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } : { duration: 0.3 }}
-                        className={`flex-1 h-9 flex items-center gap-1 cursor-pointer border-2 px-1 transition-all duration-200 ${
+                        className={`w-7 h-8 flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
                           isActive
-                            ? "border-[var(--pixel-gold)]"
+                            ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.35)] to-[rgba(180,120,30,0.15)]"
                             : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
                         }`}
-                        style={{
-                          borderRadius: "2px",
-                          ...(isActive ? {
-                            background: 'linear-gradient(180deg, rgba(212,160,48,0.35) 0%, rgba(180,120,30,0.15) 100%)',
-                            boxShadow: '0 0 8px rgba(212,160,48,0.5), inset 0 0 6px rgba(212,160,48,0.2)',
-                          } : {})
-                        }}
+                        style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}) }}
+                        title={`${relic.name}: ${relic.description}`}
+                      >
+                        <span className={`text-[14px] leading-none ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                          {iconMap[relic.icon] || '✦'}
+                        </span>
+                        {relic.counter !== undefined && (
+                          <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none mt-px">
+                            {relic.counter}{relic.counterLabel || ''}
+                          </span>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                  {game.augments.filter(Boolean).map((aug, i) => {
+                    if (!aug) return null;
+                    const isActive = activeAugments.some(a => a.id === aug.id);
+                    return (
+                      <motion.div
+                        key={"aug-" + aug.id + "-" + i}
+                        onClick={() => setSelectedAugment(aug)}
+                        animate={isActive ? { scale: [1, 1.15, 1], y: [0, -2, 0] } : { scale: 1 }}
+                        transition={isActive ? { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } : { duration: 0.3 }}
+                        className={`w-7 h-8 flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
+                          isActive
+                            ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.35)] to-[rgba(180,120,30,0.15)]"
+                            : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
+                        }`}
+                        style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}) }}
                         title={`${aug.name}: ${aug.description}`}
                       >
-                        <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                          <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
-                            {getAugmentIcon(aug.condition, 12)}
-                          </div>
-                          <span className="text-[5px] font-bold leading-none px-0.5 py-px truncate max-w-full" style={{ color: getConditionInfo(aug.condition).color, backgroundColor: getConditionInfo(aug.condition).bgColor, border: `1px solid ${getConditionInfo(aug.condition).borderColor}`, borderRadius: '1px' }}>
-                            {getConditionInfo(aug.condition).abbr}
-                          </span>
+                        <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
+                          {getAugmentIcon(aug.condition, 12)}
                         </div>
+                        <span className="text-[5px] font-bold leading-none px-0.5 py-px truncate max-w-full" style={{ color: getConditionInfo(aug.condition).color, backgroundColor: getConditionInfo(aug.condition).bgColor, border: `1px solid ${getConditionInfo(aug.condition).borderColor}`, borderRadius: '1px' }}>
+                          {getConditionInfo(aug.condition).abbr}
+                        </span>
                       </motion.div>
                     );
                   })}
