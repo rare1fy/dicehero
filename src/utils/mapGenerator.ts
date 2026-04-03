@@ -92,7 +92,6 @@ const LATE_5_TEMPLATES: LayerTemplate[] = [
 ];
 
 
-
 /** 2\u8282\u70b9\u8425\u706b\u5c42\u6a21\u677f */
 const CAMPFIRE_2_TEMPLATES: LayerTemplate[] = [
   ['campfire', 'campfire'],
