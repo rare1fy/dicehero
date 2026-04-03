@@ -1,9 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS, getOnPlayDescription } from './PixelDiceShapes';
 import { ELEMENT_NAMES, ELEMENT_COLORS } from '../utils/uiHelpers';
 import { PixelDice } from './PixelIcons';
+
+/** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
+const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
+  standard: { bg: '#98a0a8', border: '#a0a8b0', dot: '#1a1e25' },
+  heavy:    { bg: '#4a4a58', border: '#6a6a7a', dot: '#d0d0d8' },
+  fire:     { bg: '#c04020', border: '#e07830', dot: '#ffe0a0' },
+  ice:      { bg: '#2080a8', border: '#30a8d0', dot: '#c0e8ff' },
+  thunder:  { bg: '#5040a0', border: '#8060c0', dot: '#ffe040' },
+  poison:   { bg: '#408020', border: '#70c030', dot: '#c0ff80' },
+  holy:     { bg: '#a08020', border: '#d4a030', dot: '#ffe890' },
+  blade:    { bg: '#707888', border: '#98a8b8', dot: '#e0e8f0' },
+  amplify:  { bg: '#4030a0', border: '#7060d0', dot: '#c0b0ff' },
+  split:    { bg: '#206858', border: '#30b898', dot: '#80ffd0' },
+  joker:    { bg: '#a04080', border: '#e060b0', dot: '#ffe0f0' },
+  chaos:    { bg: '#802020', border: '#c03030', dot: '#ffd040' },
+  cursed:   { bg: '#402050', border: '#6030a0', dot: '#c080f0' },
+  cracked:  { bg: '#383838', border: '#585858', dot: '#a0a0a0' },
+};
+
+const getDefColor = (defId: string) => DICE_MINI_COLORS[defId] || DICE_MINI_COLORS.standard;
 
 interface DiceBagPanelProps {
   ownedDice: string[];
@@ -13,29 +33,94 @@ interface DiceBagPanelProps {
 }
 
 /**
- * DiceBagPanel - 骰子库/弃骰库信息面板
- * 
- * position='left': 显示骰子库（待抽）数量
- * position='right': 显示弃骰库（已用）数量
- * 点击可展开查看详细骰子列表。
+ * MiniDice - 骰子队列中的迷你骰子缩略图
+ * 保持颜色和特点与手牌一致
+ */
+export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: boolean }> = ({ defId, size = 16, highlight = false }) => {
+  const def = getDiceDef(defId);
+  const colors = getDefColor(defId);
+  const hasElement = def.element !== 'normal';
+  const s = size;
+  const inner = Math.max(6, s - 4);
+
+  return (
+    <div
+      className="shrink-0 relative flex items-center justify-center"
+      style={{
+        width: s,
+        height: s,
+        background: `linear-gradient(180deg, ${colors.bg}dd 0%, ${colors.bg}99 100%)`,
+        border: `${highlight ? 2 : 1}px solid ${colors.border}${highlight ? 'ff' : '88'}`,
+        borderRadius: '2px',
+        boxShadow: highlight
+          ? `0 0 4px ${colors.border}66, inset 1px 1px 0 rgba(255,255,255,0.15)`
+          : `inset 1px 1px 0 rgba(255,255,255,0.1)`,
+      }}
+      title={def.name}
+    >
+      {/* 骰子点 */}
+      <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
+        <circle cx="4" cy="4" r="2" fill={colors.dot} />
+      </svg>
+      {/* 元素标记 */}
+      {hasElement && s >= 14 && (
+        <div className="absolute -top-0.5 -right-0.5 pointer-events-none">
+          <ElementBadge element={def.element} size={Math.max(6, Math.floor(s * 0.45))} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** 外部骰子队列缩略图 - 横排展示 */
+export const DiceQueueThumbnail: React.FC<{
+  diceIds: string[];
+  maxShow?: number;
+  direction?: 'ltr' | 'rtl';
+}> = ({ diceIds, maxShow = 12, direction = 'ltr' }) => {
+  const showIds = direction === 'ltr' ? diceIds.slice(0, maxShow) : diceIds.slice(-maxShow).reverse();
+  const overflow = diceIds.length - maxShow;
+
+  return (
+    <div className={`flex items-center gap-px ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+      <AnimatePresence mode="popLayout">
+        {showIds.map((defId, idx) => (
+          <motion.div
+            key={`${defId}-q-${idx}`}
+            layout
+            initial={{ opacity: 0, scale: 0.3, x: direction === 'ltr' ? 10 : -10 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.3, y: -8 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25, delay: idx * 0.01 }}
+          >
+            <MiniDice defId={defId} size={14} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+      {overflow > 0 && (
+        <span className="text-[7px] font-mono font-bold text-[var(--dungeon-text-dim)] ml-0.5">+{overflow}</span>
+      )}
+    </div>
+  );
+};
+
+/**
+ * DiceBagPanel - 骰子库/弃骰库面板
+ * position='left': 骰子库 (蓝色)
+ * position='right': 弃骰库 (红色)
  */
 export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, discardPile, position = 'left' }) => {
   const [expanded, setExpanded] = useState(false);
-
-  const countDice = (ids: string[]) => {
-    const counts: Record<string, number> = {};
-    ids.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
-    return counts;
-  };
-
-  const bagCounts = countDice(diceBag);
-  const discardCounts = countDice(discardPile);
-  const ownedCounts = countDice(ownedDice);
   const isLeft = position === 'left';
+
+  const targetList = isLeft ? diceBag : discardPile;
+  const title = isLeft ? '骰子库' : '弃骰库';
+  const color = isLeft ? 'var(--pixel-blue)' : 'var(--pixel-red)';
+  const lightColor = isLeft ? 'var(--pixel-blue-light)' : 'var(--pixel-red-light)';
+  const darkColor = isLeft ? 'var(--pixel-blue-dark)' : 'var(--pixel-red-dark)';
 
   return (
     <>
-      {/* 紧凑指示器 */}
       <div className="flex items-center">
         <button
           onClick={() => setExpanded(!expanded)}
@@ -45,25 +130,22 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
               : 'border-[var(--pixel-red)] hover:border-[var(--pixel-red-light)]'
           }`}
           style={{ borderRadius: '2px' }}
-          title={isLeft ? '骰子库（点击查看详情）' : '弃牌库（点击查看详情）'}
+          title={isLeft ? '查看骰子库详情' : '查看弃骰库详情'}
         >
           {isLeft ? (
             <>
               <PixelDice size={2} />
               <span className="text-[9px] font-mono font-bold text-[var(--pixel-blue-light)]">{diceBag.length}</span>
-              <span className="text-[7px] text-[var(--dungeon-text-dim)]">库</span>
             </>
           ) : (
             <>
               <svg width="10" height="10" viewBox="0 0 10 10" style={{ imageRendering: 'pixelated' }}><rect x="1" y="1" width="8" height="8" rx="1" fill="var(--pixel-red-dark)" stroke="var(--pixel-red-light)" strokeWidth="1" /><circle cx="3.5" cy="3.5" r="1" fill="var(--pixel-red-light)" /><circle cx="6.5" cy="6.5" r="1" fill="var(--pixel-red-light)" /></svg>
               <span className="text-[9px] font-mono font-bold text-[var(--pixel-red-light)]">{discardPile.length}</span>
-              <span className="text-[7px] text-[var(--dungeon-text-dim)]">弃</span>
             </>
           )}
         </button>
       </div>
 
-      {/* 展开面板 */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -81,89 +163,61 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
               className="w-[90vw] max-w-md max-h-[80vh] overflow-y-auto pixel-panel p-4 bg-[var(--dungeon-bg)]"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black text-[var(--dungeon-text-bright)] pixel-text-shadow tracking-wide">
-                  ◆ 骰子库 ◆
+                <h3 className="text-sm font-black pixel-text-shadow tracking-wide" style={{ color: lightColor }}>
+                  {title} ({targetList.length})
                 </h3>
                 <button
                   onClick={() => setExpanded(false)}
                   className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] text-xs font-bold"
                 >
-                  
+                  {'\u2715'}
                 </button>
               </div>
 
-              {/* 总览 */}
-              <div className="flex gap-2 mb-3">
-                <div className="flex-1 px-2 py-1.5 bg-[var(--pixel-blue-dark)] border-2 border-[var(--pixel-blue)] text-center" style={{ borderRadius: '2px' }}>
-                  <div className="text-[8px] text-[var(--pixel-blue-light)] font-bold tracking-wider">待抽</div>
-                  <div className="text-lg font-black text-[var(--pixel-blue-light)]">{diceBag.length}</div>
-                </div>
-                <div className="flex-1 px-2 py-1.5 bg-[var(--pixel-red-dark)] border-2 border-[var(--pixel-red)] text-center" style={{ borderRadius: '2px' }}>
-                  <div className="text-[8px] text-[var(--pixel-red-light)] font-bold tracking-wider">已用</div>
-                  <div className="text-lg font-black text-[var(--pixel-red-light)]">{discardPile.length}</div>
-                </div>
-                <div className="flex-1 px-2 py-1.5 bg-[var(--pixel-gold-dark)] border-2 border-[var(--pixel-gold)] text-center" style={{ borderRadius: '2px' }}>
-                  <div className="text-[8px] text-[var(--pixel-gold-light)] font-bold tracking-wider">总计</div>
-                  <div className="text-lg font-black text-[var(--pixel-gold-light)]">{ownedDice.length}</div>
-                </div>
+              {/* \u7EDF\u8BA1\u6805 */}
+              <div className="px-2 py-1.5 mb-3 border-2 text-center" style={{ backgroundColor: darkColor, borderColor: color, borderRadius: '2px' }}>
+                <div className="text-[8px] font-bold tracking-wider" style={{ color: lightColor }}>{title}</div>
+                <div className="text-lg font-black" style={{ color: lightColor }}>{targetList.length}</div>
               </div>
 
-              {/* 骰子列表 */}
-              <div className="text-[8px] font-bold text-[var(--dungeon-text-dim)] tracking-wider mb-1.5">全部骰子</div>
-              <div className="flex flex-col gap-1">
-                {Object.entries(ownedCounts).map(([defId, total]) => {
-                  const def = getDiceDef(defId);
-                  const inBag = bagCounts[defId] || 0;
-                  const inDiscard = discardCounts[defId] || 0;
-                  const inHand = total - inBag - inDiscard;
-
-                  return (
-                    <div
-                      key={defId}
-                      className="flex items-center gap-2 px-2 py-1.5 bg-[var(--dungeon-panel-bg)] border-2 transition-colors"
-                      style={{ borderColor: RARITY_COLORS[def.rarity], borderRadius: '2px' }}
-                    >
-                      <div className="w-5 h-5 flex items-center justify-center">
-                        {def.element !== 'normal' ? (
-                          <ElementBadge element={def.element} size={14} />
-                        ) : (
-                          <PixelDice size={2} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{def.name}</span>
-                          <span className="text-[7px] font-bold tracking-wider" style={{ color: RARITY_TEXT_COLORS[def.rarity] }}>
-                            {RARITY_LABELS[def.rarity]}
-                          </span>
-                        </div>
-                        <div className="text-[8px] text-[var(--dungeon-text-dim)] leading-tight truncate">
-                          [{def.faces.join(',')}]
-                          {def.element !== 'normal' && (
-                            <span style={{ color: ELEMENT_COLORS[def.element] }}> {ELEMENT_NAMES[def.element]}</span>
-                          )}
-                        </div>
-                        {def.onPlay && (
-                          <div className="text-[7px] text-[var(--pixel-orange-light)] leading-tight truncate">
-                            {getOnPlayDescription(def.onPlay)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-[8px] font-mono font-bold shrink-0">
-                        <span className="text-[var(--pixel-blue-light)]" title="待抽">{inBag}</span>
-                        <span className="text-[var(--dungeon-text-dim)]">/</span>
-                        <span className="text-[var(--pixel-orange-light)]" title="手中">{inHand > 0 ? inHand : 0}</span>
-                        <span className="text-[var(--dungeon-text-dim)]">/</span>
-                        <span className="text-[var(--pixel-red-light)]" title="已用">{inDiscard}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-2 text-[7px] text-[var(--dungeon-text-dim)] text-center tracking-wider">
-                颜色: <span className="text-[var(--pixel-blue-light)]">待抽</span> / <span className="text-[var(--pixel-orange-light)]">手中</span> / <span className="text-[var(--pixel-red-light)]">已用</span>
-              </div>
+              {/* \u9AB0\u5B50\u961F\u5217\u5217\u8868 - \u6BCF\u4E2A\u9AB0\u5B50\u72EC\u7ACB\u5C55\u793A */}
+              {targetList.length === 0 ? (
+                <div className="text-center py-8 text-[var(--dungeon-text-dim)] text-xs">
+                  {isLeft ? '骰子库已空，弃骰库将洗回' : '弃骰库为空'}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 justify-start">
+                  {targetList.map((defId, idx) => {
+                    const def = getDiceDef(defId);
+                    const colors = getDefColor(defId);
+                    return (
+                      <motion.div
+                        key={`${defId}-${idx}`}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.02 }}
+                        className="flex flex-col items-center gap-0.5 p-1.5 border-2 bg-[var(--dungeon-panel-bg)]"
+                        style={{
+                          borderColor: RARITY_COLORS[def.rarity] + '88',
+                          borderRadius: '3px',
+                          minWidth: '52px',
+                        }}
+                      >
+                        {/* Mini dice - same style as queue */}
+                        <MiniDice defId={defId} size={28} highlight />
+                        {/* \u540D\u79F0 */}
+                        <span className="text-[7px] font-bold text-[var(--dungeon-text)] leading-none text-center max-w-[48px] truncate">
+                          {def.name}
+                        </span>
+                        {/* \u7A00\u6709\u5EA6 */}
+                        <span className="text-[6px] font-bold" style={{ color: RARITY_TEXT_COLORS[def.rarity] }}>
+                          {RARITY_LABELS[def.rarity]}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

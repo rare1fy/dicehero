@@ -107,7 +107,8 @@ export const CampfireScreen: React.FC = () => {
             const def = getDiceDef(target.defId);
             const currentFaces = getUpgradedFaces(def, target.level);
             const nextFaces = getUpgradedFaces(def, target.level + 1);
-            const canUpgrade = true; // 免费升级
+            const upgradeCost = CAMPFIRE_CONFIG.upgradeCostPerLevel * target.level;
+            const canUpgrade = game.souls >= upgradeCost;
             const onPlayDesc = getOnPlayDescription(def.onPlay);
 
             return (
@@ -132,6 +133,7 @@ export const CampfireScreen: React.FC = () => {
                 <button
                   disabled={!canUpgrade}
                   onClick={() => {
+                    if (!canUpgrade) { addToast('金币不足！'); return; }
                     playSound('armor');
                     const newLevel = target.level + 1;
                     setGame(prev => {
@@ -139,8 +141,9 @@ export const CampfireScreen: React.FC = () => {
                       newOwned[selectedDiceIdx] = { ...newOwned[selectedDiceIdx], level: newLevel };
                       return {
                         ...prev,
+                        souls: prev.souls - upgradeCost,
+                        stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + upgradeCost },
                                                 ownedDice: newOwned,
-                        phase: 'map',
                       };
                     });
                     addLog(`${def.name} 已强化至 Lv.${target.level + 1}！`);

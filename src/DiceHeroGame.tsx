@@ -19,7 +19,7 @@ import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, Map
 import { INITIAL_STATS } from './types/game';
 import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL, ALL_DICE } from './data/dice';
 import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
-import { DiceBagPanel } from './components/DiceBagPanel';
+import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
 import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
 import { getEnemyForNode, getEnemiesForNode } from './data/enemies';
@@ -388,6 +388,37 @@ export default function DiceHeroGame() {
       playSound('campfire');
       setCampfireView('main');
       setGame(prev => ({ ...prev, phase: 'campfire', currentNodeId: node.id }));
+    } else if (node.type === 'merchant') {
+      // Merchant: same as shop but with different inventory
+      const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
+      const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+      const augs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5).slice(0, SHOP_CONFIG.augmentCount);
+      const shopDicePool = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
+      const shopDice = shopDicePool[0];
+      const dicePrice = shopDice.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10;
+      const shopItems: ShopItem[] = [
+        ...SHOP_CONFIG.fixedItems.map(item => ({ ...item, price: randPrice() })),
+        {
+          id: 'dice_' + shopDice.id,
+          type: 'specialDice' as const,
+          diceDefId: shopDice.id,
+          label: shopDice.name,
+          desc: shopDice.description + ' [' + shopDice.faces.join(',') + ']',
+          price: dicePrice
+        },
+        ...augs.map(aug => ({
+          id: aug.id,
+          type: 'augment' as const,
+          augment: aug,
+          label: aug.name,
+          desc: aug.description,
+          price: randPrice()
+        }))
+      ];
+      setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
+    } else if (node.type === 'treasure') {
+      // Treasure: same as shop (chest system)
+      setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id }));
     } else if (node.type === 'event') {
       playSound('event');
       setGame(prev => ({ ...prev, phase: 'event', currentNodeId: node.id }));
@@ -1217,6 +1248,10 @@ export default function DiceHeroGame() {
           const isFrozen = e.statuses.some(s => s.type === 'freeze' && s.duration > 0);
           if (isFrozen) {
             addLog(`${e.name} \u88AB\u51BB\u7ED3\uFF0C\u65E0\u6CD5\u884C\u52A8\uFF01`);
+            addFloatingText('\u51BB\u7ED3', 'text-cyan-400', undefined, 'enemy');
+            setEnemyEffectForUid(e.uid, 'shake');
+            await new Promise(r => setTimeout(r, 400));
+            setEnemyEffectForUid(e.uid, null);
             continue;
           }
           
@@ -1933,7 +1968,7 @@ useEffect(() => {
             {chapterName}
           </div>
           <div className="text-[var(--pixel-green)] text-xl font-bold mb-6 pixel-text-shadow">
-            ✦ 通关成功 ✦
+            ◆ 通关成功 ◆
           </div>
           
           <div className="bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] p-4 mb-6"
@@ -3067,11 +3102,9 @@ useEffect(() => {
                 <div className="flex items-center gap-1 mb-0.5 px-1">
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
                   {/* 骰子队列流转缩略图 */}
-                  <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
+                   <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
                     <AnimatePresence mode="popLayout">
                       {game.ownedDice.map((d, i) => {
-                        const def = getDiceDef(d.defId);
-                        const elemColor = ELEMENT_COLORS[def.element] || "#888";
                         const inBag = game.diceBag.includes(d.defId);
                         const inDiscard = game.discardPile.includes(d.defId);
                         const inHand = !inBag && !inDiscard;
@@ -3087,22 +3120,8 @@ useEffect(() => {
                             }}
                             exit={{ opacity: 0, y: -10, scale: 0.5 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className={`shrink-0 flex items-center justify-center border ${
-                              inBag ? "border-[var(--pixel-blue)]" :
-                              inHand ? "border-[var(--pixel-gold)]" :
-                              "border-[var(--pixel-red)] opacity-30"
-                            }`}
-                            style={{
-                              backgroundColor: `${elemColor}${inBag ? "33" : inHand ? "55" : "11"}`,
-                              borderRadius: "1px",
-                              width: "14px",
-                              height: "14px",
-                            }}
-                            title={`${def.name}${inBag ? " (库中)" : inHand ? " (手中)" : " (已弃置)"}`}
                           >
-                            <span className="text-[5px] font-bold" style={{ color: elemColor }}>
-                              {def.name.charAt(0)}
-                            </span>
+                            <MiniDice defId={d.defId} size={14} />
                           </motion.div>
                         );
                       })}
@@ -3319,20 +3338,26 @@ useEffect(() => {
                       <motion.div
                         key={aug.id + "-" + i}
                         onClick={() => setSelectedAugment(aug)}
-                        animate={isActive ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-                        transition={isActive ? { repeat: Infinity, duration: 1.5 } : { duration: 0.3 }}
+                        animate={isActive ? { scale: [1, 1.08, 1], y: [0, -1, 0] } : { scale: 1 }}
+                        transition={isActive ? { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } : { duration: 0.3 }}
                         className={`flex-1 h-9 flex items-center gap-1 cursor-pointer border-2 px-1 transition-all duration-200 ${
                           isActive
-                            ? "bg-[var(--pixel-green-dark)] border-[var(--pixel-green)]"
+                            ? "border-[var(--pixel-gold)]"
                             : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
                         }`}
-                        style={{ borderRadius: "2px" }}
+                        style={{
+                          borderRadius: "2px",
+                          ...(isActive ? {
+                            background: 'linear-gradient(180deg, rgba(212,160,48,0.35) 0%, rgba(180,120,30,0.15) 100%)',
+                            boxShadow: '0 0 8px rgba(212,160,48,0.5), inset 0 0 6px rgba(212,160,48,0.2)',
+                          } : {})
+                        }}
                         title={`${aug.name}: ${aug.description}`}
                       >
-                        <div className={`shrink-0 ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                        <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
                           {getAugmentIcon(aug.condition, 12)}
                         </div>
-                        <span className={`text-[6px] font-bold leading-tight truncate ${isActive ? "text-[var(--pixel-green-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
+                        <span className={`text-[6px] font-bold leading-tight truncate ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
                           {aug.name.length > 4 ? aug.name.slice(0, 4) : aug.name}
                         </span>
                       </motion.div>
@@ -3364,7 +3389,7 @@ useEffect(() => {
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">✦ 牌型图鉴 ✦</h3>
+                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 牌型图鉴 ◆</h3>
                       <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
@@ -3420,7 +3445,7 @@ useEffect(() => {
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">✦ 骰子图鉴 ✦</h3>
+                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 骰子图鉴 ◆</h3>
                       <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
@@ -3750,4 +3775,4 @@ useEffect(() => {
     </div>
     </GameContext.Provider>
   );
-}
+}

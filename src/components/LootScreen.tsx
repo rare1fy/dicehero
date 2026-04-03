@@ -7,6 +7,7 @@ import { getDiceDef } from '../data/dice';
 import { ElementBadge } from './PixelDiceShapes';
 import { AugmentCard } from './AugmentCard';
 import { getAugmentIcon } from '../utils/uiHelpers';
+import { CONDITION_INFO, getConditionInfo } from './AugmentCard';
 import { formatDescription } from '../utils/richText';
 
 export const LootScreen: React.FC = () => {
@@ -114,6 +115,18 @@ export const LootScreen: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none pixel-text-shadow">{aug.name}</div>
+                    {/* 触发条件标签 */}
+                    {(() => {
+                      const cond = getConditionInfo(aug.condition);
+                      return (
+                        <div className="flex items-center gap-1.5 mt-1 mb-0.5">
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 border-l-2" style={{ borderLeftColor: cond.color, backgroundColor: cond.bgColor, borderRadius: '0 2px 2px 0' }}>
+                            <span style={{ color: cond.color }}>{getAugmentIcon(aug.condition, 10)}</span>
+                            <span className="text-[8px] font-black" style={{ color: cond.color }}>{cond.label}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="text-[9px] text-[var(--dungeon-text-dim)] mt-0.5 leading-tight">{formatDescription(aug.description)}</div>
                   </div>
                 </motion.button>

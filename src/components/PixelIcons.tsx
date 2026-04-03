@@ -627,3 +627,46 @@ export const PIXEL_ICON_MAP = {
   mute: PixelMute,
   music: PixelMusic,
 };
+
+/** 像素宝箱图标 */
+export const PixelTreasure: React.FC<{ size?: number; className?: string }> = ({ size = 2, className }) => {
+  const s = size;
+  return (
+    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated' }}>
+      {/* 箱体 */}
+      <rect x="1" y="3" width="6" height="4" fill="#8B6914" />
+      <rect x="1" y="3" width="6" height="1" fill="#A07818" />
+      {/* 箱盖 */}
+      <rect x="0" y="2" width="8" height="2" fill="#C8961E" rx="1" />
+      {/* 锁扣 */}
+      <rect x="3" y="3" width="2" height="2" fill="#FFD700" />
+      <rect x="3.5" y="4" width="1" height="1" fill="#8B6914" />
+      {/* 高光 */}
+      <rect x="2" y="2" width="1" height="1" fill="#FFE066" opacity="0.6" />
+    </svg>
+  );
+};
+
+/** 像素游荡商人图标 */
+export const PixelMerchant: React.FC<{ size?: number; className?: string }> = ({ size = 2, className }) => {
+  const s = size;
+  return (
+    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated' }}>
+      {/* 帽子 */}
+      <rect x="2" y="0" width="4" height="1" fill="#6B4226" />
+      <rect x="1" y="1" width="6" height="1" fill="#8B5A2B" />
+      {/* 头 */}
+      <rect x="3" y="2" width="2" height="2" fill="#FFDAB9" />
+      {/* 身体/斗篷 */}
+      <rect x="2" y="4" width="4" height="3" fill="#4A6741" />
+      <rect x="1" y="5" width="1" height="2" fill="#3A5731" />
+      <rect x="6" y="5" width="1" height="2" fill="#3A5731" />
+      {/* 背包 */}
+      <rect x="6" y="3" width="2" height="3" fill="#8B6914" />
+      <rect x="6" y="3" width="2" height="1" fill="#A07818" />
+      {/* 脚 */}
+      <rect x="2" y="7" width="2" height="1" fill="#5C3317" />
+      <rect x="4" y="7" width="2" height="1" fill="#5C3317" />
+    </svg>
+  );
+};

@@ -15,7 +15,7 @@ const REWARD_TABLE = {
   dice:      { weight: 50, label: '骰子' },
   augment:   { weight: 25, label: '增幅模块' },
   reroll:    { weight: 22, label: '重投机会' },
-  drawCount: { weight: 3, label: '手牌上限+1' },
+  drawCount: { weight: 0.5, label: '手牌上限+1' },
 };
 
 function getAdjustedWeights(shopLevel: number) {
@@ -24,7 +24,7 @@ function getAdjustedWeights(shopLevel: number) {
     dice:      REWARD_TABLE.dice.weight,
     augment:   REWARD_TABLE.augment.weight + bonus,
     reroll:    REWARD_TABLE.reroll.weight - bonus * 0.5,
-    drawCount: REWARD_TABLE.drawCount.weight + bonus * 0.5,
+    drawCount: REWARD_TABLE.drawCount.weight, // 极低概率，不随等级增加
   };
 }
 
@@ -85,7 +85,7 @@ const PixelChest: React.FC<{ size?: number; isOpen?: boolean }> = ({ size = 4, i
   );
 };
 
-export const ShopScreen: React.FC = () => {
+export const ShopScreen: React.FC<{ treasureMode?: boolean }> = ({ treasureMode = false }) => {
   const { game, setGame, pickReward, addToast, addLog } = useGameContext();
   const [openingChest, setOpeningChest] = useState(false);
   const [reward, setReward] = useState<ChestReward | null>(null);
@@ -94,7 +94,7 @@ export const ShopScreen: React.FC = () => {
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
 
   const shopLevel = game.shopLevel || 1;
-  const cost = Math.floor(CHEST_COST * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
+  const cost = Math.floor(CHEST_COST * (treasureMode ? 0.5 : 1) * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
   const canAfford = game.souls >= cost;
 
   const openChest = useCallback(async () => {
@@ -160,7 +160,7 @@ export const ShopScreen: React.FC = () => {
 
       <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
         <PixelChest size={3} />
-        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">✦ 神秘宝箱屋 ✦</h2>
+        <h2 className="text-lg font-black pixel-text-shadow tracking-wide">◆ 神秘宝箱屋 ✦</h2>
       </div>
       <p className="text-[var(--dungeon-text-dim)] mb-3 text-[9px] tracking-[0.1em] font-bold relative z-10">
         "花费金币，开启宝箱，获得随机奖励"

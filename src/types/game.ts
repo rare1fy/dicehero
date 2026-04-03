@@ -105,7 +105,7 @@ export interface Augment {
 // 地图
 // ============================================================
 
-export type NodeType = 'enemy' | 'elite' | 'boss' | 'shop' | 'event' | 'campfire';
+export type NodeType = 'enemy' | 'elite' | 'boss' | 'shop' | 'event' | 'campfire' | 'treasure' | 'merchant';
 
 export interface MapNode {
   id: string;
@@ -237,6 +237,21 @@ export const INITIAL_STATS: RunStats = {
   goldSpent: 0,
 };
 
+
+// 游荡商人物品
+export interface MerchantItem {
+  id: string;
+  type: 'dice' | 'augment' | 'heal' | 'reroll' | 'diceCount';
+  label: string;
+  desc: string;
+  price: number;
+  bought: boolean;
+  diceDefId?: string;
+  augment?: Augment;
+  healAmount?: number;
+  rerollAmount?: number;
+}
+
 export interface GameState {
   hp: number;
   maxHp: number;
@@ -259,7 +274,7 @@ export interface GameState {
   augments: (Augment | null)[];
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition';
+  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure' | 'merchant';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target
@@ -267,6 +282,7 @@ export interface GameState {
   currentWaveIndex: number;       // current wave number
   logs: string[];
   shopItems: ShopItem[];
+  merchantItems: MerchantItem[];
   shopLevel: number;
   statuses: StatusEffect[];
   lootItems: LootItem[];

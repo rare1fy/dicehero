@@ -2143,22 +2143,24 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 .map-node-completed {
-  opacity: 0.3;
+  opacity: 0.4;
   transform: scale(0.85);
   filter: grayscale(0.5);
 }
 
 .map-node-locked {
-  opacity: 0.25;
+  opacity: 0.4;
 }
 
 /* ��ͼ�ڵ�������ɫ */
-.map-node-enemy { background: linear-gradient(180deg, rgba(200,168,60,0.2) 0%, rgba(139,116,20,0.35) 100%); }
-.map-node-elite { background: linear-gradient(180deg, rgba(200,64,60,0.2) 0%, rgba(139,26,20,0.35) 100%); }
-.map-node-boss { background: linear-gradient(180deg, rgba(139,60,200,0.25) 0%, rgba(90,26,139,0.4) 100%); }
-.map-node-shop { background: linear-gradient(180deg, rgba(60,200,100,0.15) 0%, rgba(26,139,52,0.3) 100%); }
-.map-node-event { background: linear-gradient(180deg, rgba(60,108,200,0.15) 0%, rgba(26,60,139,0.3) 100%); }
-.map-node-campfire { background: linear-gradient(180deg, rgba(200,124,60,0.2) 0%, rgba(139,80,20,0.35) 100%); }
+.map-node-enemy { background: linear-gradient(180deg, rgba(200,168,60,0.3) 0%, rgba(139,116,20,0.5) 100%); }
+.map-node-elite { background: linear-gradient(180deg, rgba(200,64,60,0.3) 0%, rgba(139,26,20,0.5) 100%); }
+.map-node-boss { background: linear-gradient(180deg, rgba(139,60,200,0.35) 0%, rgba(90,26,139,0.55) 100%); }
+.map-node-shop { background: linear-gradient(180deg, rgba(60,200,100,0.25) 0%, rgba(26,139,52,0.45) 100%); }
+.map-node-event { background: linear-gradient(180deg, rgba(60,108,200,0.25) 0%, rgba(26,60,139,0.45) 100%); }
+.map-node-campfire { background: linear-gradient(180deg, rgba(200,124,60,0.3) 0%, rgba(139,80,20,0.5) 100%); }
+.map-node-treasure { background: linear-gradient(180deg, rgba(200,170,40,0.3) 0%, rgba(180,140,20,0.5) 100%); }
+.map-node-merchant { background: linear-gradient(180deg, rgba(40,160,80,0.3) 0%, rgba(20,120,50,0.5) 100%); }
 
 /* ��ͼ�ڵ����嶯�� �� �ɴ�ڵ� */
 @keyframes map-node-pulse {
@@ -2190,12 +2192,12 @@ input[type="range"]::-webkit-slider-runnable-track {
 .map-path-locked {
   stroke: var(--dungeon-panel-border);
   stroke-dasharray: 4 4;
-  opacity: 0.12;
+  opacity: 0.25;
 }
 
 /* ��ͼ����װ�� �� ��Ԩʯ�� */
 .map-bg-dungeon {
-  background-color: #060809;
+  background-color: #0c1018;
   background-image:
     /* ʯǽ���� �� ����� */
     repeating-linear-gradient(

@@ -4,7 +4,7 @@ import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
 import { getNodeX } from '../utils/mapGenerator';
 import { playSound } from '../utils/sound';
-import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelCoin, PixelHeart, PixelRefresh, PixelInfo } from './PixelIcons';
+import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelInfo, PixelTreasure, PixelMerchant } from './PixelIcons';
 import { PixelSprite, hasSpriteData } from './PixelSprite';
 
 export const MapScreen: React.FC = () => {
@@ -29,7 +29,14 @@ export const MapScreen: React.FC = () => {
             });
           }
         } else {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          // 开局居中到第一层节点
+          const firstNodes = document.querySelectorAll('[id^="node-0-"]');
+          if (firstNodes.length > 0) {
+            const midNode = firstNodes[Math.floor(firstNodes.length / 2)];
+            midNode?.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+          } else {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
         }
         isInitialMount.current = false;
       }
@@ -55,21 +62,19 @@ export const MapScreen: React.FC = () => {
     shop: { icon: <PixelShopBag size={2} />, label: '商店', color: 'var(--pixel-green)', bgClass: 'map-node-shop' },
     event: { icon: <PixelQuestion size={2} />, label: '事件', color: 'var(--pixel-blue)', bgClass: 'map-node-event' },
     campfire: { icon: <PixelCampfire size={2} />, label: '篝火', color: 'var(--pixel-orange)', bgClass: 'map-node-campfire' },
+    treasure: { icon: <PixelTreasure size={2} />, label: '宝箱', color: 'var(--pixel-gold)', bgClass: 'map-node-treasure' },
+    merchant: { icon: <PixelMerchant size={2} />, label: '商人', color: 'var(--pixel-green)', bgClass: 'map-node-merchant' },
   };
 
   return (
     <div className="flex flex-col h-full map-bg-dungeon text-[var(--dungeon-text)] relative overflow-hidden">
       <div className="absolute inset-0 pixel-dither-overlay" />
       
-      <div className="absolute top-0 left-0 right-0 z-20 p-4 pb-10 pt-3" style={{background:'linear-gradient(to bottom, #06060c 40%, transparent)'}}>
+      <div className="absolute top-0 left-0 right-0 z-20 p-4 pb-10 pt-3" style={{background:'linear-gradient(to bottom, #0c1018 40%, transparent)'}}>
         <div className="flex justify-between items-end">
           <div>
             <h2 className="text-xl font-black tracking-wider text-[var(--dungeon-text-bright)] pixel-text-shadow leading-none">◆ THE VOID ◆</h2>
             <p className="text-[var(--dungeon-text-dim)] text-[10px] tracking-[0.1em] mt-1.5 font-bold">深度 {currentNode?.depth ?? 0} / {maxDepth}</p>
-          </div>
-          <div className="flex items-center gap-1.5 bg-[rgba(10,10,15,0.8)] px-2.5 py-1 border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-            <PixelCoin size={2} />
-            <span className="font-mono font-bold text-xs text-[var(--pixel-gold)]">{game.souls}</span>
           </div>
         </div>
       </div>
@@ -123,11 +128,11 @@ export const MapScreen: React.FC = () => {
                   <path 
                     key={`${node.id}-${targetId}`}
                     d={`M ${start.x} ${start.y} C ${start.x} ${midY} ${end.x} ${midY} ${end.x} ${end.y}`}
-                    stroke={isReachablePath ? 'var(--pixel-gold)' : isCompletedPath ? 'var(--dungeon-panel-highlight)' : 'var(--dungeon-panel-border)'}
+                    stroke={isReachablePath ? 'var(--pixel-gold)' : isCompletedPath ? 'var(--pixel-gold)' : 'rgba(140,160,180,0.7)'}
                     strokeWidth={isReachablePath ? '3' : '2'}
                     strokeDasharray={isReachablePath ? 'none' : isCompletedPath ? 'none' : '6 4'}
                     fill="none"
-                    opacity={isReachablePath ? 0.9 : isCompletedPath ? 0.25 : 0.2}
+                    opacity={isReachablePath ? 1.0 : isCompletedPath ? 0.6 : 0.45}
                     filter={isReachablePath ? 'url(#pathGlow)' : 'none'}
                   />
                 );
@@ -171,7 +176,7 @@ export const MapScreen: React.FC = () => {
                   <span className="relative z-10">{config.icon}</span>
                 </div>
                 <span className={`text-[8px] font-bold tracking-wider leading-none pixel-text-shadow whitespace-nowrap
-                  ${isCurrent ? 'text-[var(--pixel-gold)]' : isReachable ? 'opacity-80' : 'text-[var(--dungeon-text-dim)] opacity-30'}
+                  ${isCurrent ? 'text-[var(--pixel-gold)]' : isReachable ? 'opacity-80' : 'text-[var(--dungeon-text-dim)] opacity-65'}
                 `}
                 style={{ color: isReachable && !isCurrent ? config.color : undefined }}
                 >
@@ -184,7 +189,7 @@ export const MapScreen: React.FC = () => {
       </div>
 
       {/* Footer Status */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-5" style={{background:'linear-gradient(to top, #06060c 50%, transparent)'}}>
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-5" style={{background:'linear-gradient(to top, #0c1018 50%, transparent)'}}>
         <div className="max-w-sm mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="flex flex-col">

@@ -17,7 +17,7 @@ export const PLAYER_INITIAL = {
   playsPerTurn: 1,
   souls: 0,
   augmentSlots: 5,
-  drawCount: 4,       // 初始抽4颗骰子       // 初始抽3颗骰子（密集成长感）
+  drawCount: 3,       // 初始抽4颗骰子       // 初始抽3颗骰子（密集成长感）
   maxDrawCount: 6,
 } as const;
 
@@ -27,21 +27,21 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数表：替代线性缩放，精确控制每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.80, dmgMult: 0.75 },  // depth 0: easy intro (more enemies, less HP each)
-  { hpMult: 0.90, dmgMult: 0.80 },  // depth 1: warming up (more enemies, less HP each)
-  { hpMult: 1.15, dmgMult: 0.95 },  // depth 2: getting serious
-  { hpMult: 1.30, dmgMult: 1.05 },  // depth 3: elite encounter
-  { hpMult: 1.40, dmgMult: 1.10 },  // depth 4: post-elite normal
-  { hpMult: 1.55, dmgMult: 1.20 },  // depth 5: mid-game peak
-  { hpMult: 1.25, dmgMult: 1.05 },  // depth 6: campfire breather
-  { hpMult: 2.00, dmgMult: 1.30 },  // depth 7: mid-boss
-  { hpMult: 1.35, dmgMult: 1.00 },  // depth 8: post-boss recovery
-  { hpMult: 1.70, dmgMult: 1.20 },  // depth 9: ramp up
-  { hpMult: 2.00, dmgMult: 1.35 },  // depth 10: harder
-  { hpMult: 2.30, dmgMult: 1.50 },  // depth 11: peak normal
-  { hpMult: 2.55, dmgMult: 1.60 },  // depth 12: pre-boss elite
-  { hpMult: 1.45, dmgMult: 1.10 },  // depth 13: campfire breather
-  { hpMult: 3.20, dmgMult: 1.75 },  // depth 14: final boss
+  { hpMult: 0.75, dmgMult: 0.55 },  // depth 0: 教学关，极弱敌人让玩家熟悉操作
+  { hpMult: 0.85, dmgMult: 0.65 },  // depth 1: 热身，仍然轻松
+  { hpMult: 0.95, dmgMult: 0.80 },  // depth 2: 开始有点压力
+  { hpMult: 1.05, dmgMult: 0.90 },  // depth 3: 精英里程碑（HP高但伤害克制）
+  { hpMult: 0.95, dmgMult: 0.85 },  // depth 4: 精英后喘息
+  { hpMult: 1.15, dmgMult: 1.00 },  // depth 5: 稳步提升
+  { hpMult: 1.00, dmgMult: 0.90 },  // depth 6: 营火前轻松关
+  { hpMult: 1.50, dmgMult: 1.10 },  // depth 7: 中期Boss（挑战但不绝望）
+  { hpMult: 0.80, dmgMult: 0.75 },  // depth 8: Boss后明显恢复期
+  { hpMult: 1.20, dmgMult: 1.00 },  // depth 9: 重新爬坡
+  { hpMult: 1.50, dmgMult: 1.15 },  // depth 10: 后期开始
+  { hpMult: 1.80, dmgMult: 1.30 },  // depth 11: 后期递增
+  { hpMult: 2.10, dmgMult: 1.45 },  // depth 12: pre-boss精英区
+  { hpMult: 1.20, dmgMult: 1.00 },  // depth 13: 营火前轻松关
+  { hpMult: 2.30, dmgMult: 1.50 },  // depth 14: 最终Boss（史诗但可打）
 ];
 
 /** 获取指定层级的缩放系数 */
@@ -79,7 +79,7 @@ export const CAMPFIRE_CONFIG = {
   /** 休整回复量 */
   restHeal: 25,
   /** 模块强化费用系数: cost = level * costPerLevel */
-  upgradeCostPerLevel: 30,
+  upgradeCostPerLevel: 20,
   /** 模块最大等级 */
   maxAugmentLevel: 5,
 } as const;
@@ -89,11 +89,11 @@ export const CAMPFIRE_CONFIG = {
 // ============================================================
 export const LOOT_CONFIG = {
   /** 普通怪掉落金币 */
-  normalDropGold: 18,
+  normalDropGold: 22,
   /** 精英怪掉落金币 */
-  eliteDropGold: 40,
+  eliteDropGold: 45,
   /** Boss掉落金币 */
-  bossDropGold: 65,
+  bossDropGold: 70,
   /** 增幅选择数量 */
   augmentChoiceCount: 3,
   /** 精英奖励池 */
@@ -115,22 +115,32 @@ export const MAP_CONFIG = {
   restBeforeBossLayers: [6, 13],
   /** 固定层配置 */
   fixedLayers: {
-    0: { type: 'enemy' as const, count: 1 },
-    1: { type: null, count: 3 },
-    3: { type: 'elite' as const, count: 1 },   // 第3层固定精英（里程碑）
-    7: { type: 'boss' as const, count: 1 },
-    14: { type: 'boss' as const, count: 1 },
-    6: { type: 'campfire' as const, count: 2 },
-    13: { type: 'campfire' as const, count: 2 },
+    0: { type: 'enemy' as const, count: 1 },   // 起点教学战
+    1: { type: null, count: 3 },                // 初次分路
+    2: { type: null, count: 4 },                // 扩散层
+    3: { type: null, count: 3 },                // 风险层（可出精英，但不强制）
+    4: { type: null, count: 4 },                // 调整层
+    5: { type: null, count: 4 },                // 构筑层
+    6: { type: 'campfire' as const, count: 2 }, // 营火休整
+    7: { type: 'boss' as const, count: 1 },     // 中Boss
+    8: { type: null, count: 3 },                // Boss后再分路
+    9: { type: null, count: 4 },                // 扩散层
+    10: { type: null, count: 4 },               // 中后期风险层
+    11: { type: null, count: 3 },               // 构筑兑现层
+    12: { type: null, count: 4 },               // 压力层
+    13: { type: 'campfire' as const, count: 2 },// 最终营火
+    14: { type: 'boss' as const, count: 1 },    // 最终Boss
   } as Record<number, { type: string | null; count: number }>,
-  /** 随机层节点数范围 [min, max] */
+  /** 随机层节点数范围 [min, max]（仅作fallback） */
   randomLayerNodeRange: [2, 4] as [number, number],
-  /** 节点类型权重（随机层） */
+  /** 节点类型权重（仅作fallback，主要用层模板） */
   nodeTypeWeights: [
     { type: 'elite' as const, cumWeight: 0.10 },
-    { type: 'campfire' as const, cumWeight: 0.24 },
-    { type: 'shop' as const, cumWeight: 0.38 },
-    { type: 'event' as const, cumWeight: 0.58 },
+    { type: 'campfire' as const, cumWeight: 0.22 },
+    { type: 'treasure' as const, cumWeight: 0.32 },
+    { type: 'shop' as const, cumWeight: 0.44 },
+    { type: 'merchant' as const, cumWeight: 0.52 },
+    { type: 'event' as const, cumWeight: 0.62 },
     // 剩余概率 = enemy
   ],
 } as const;
@@ -169,10 +179,10 @@ export const CHAPTER_CONFIG = {
   /** 每章的敌人数值倍率 (HP和伤害) */
   chapterScaling: [
     { hpMult: 1.0, dmgMult: 1.0 },   // 第1章: 基准
-    { hpMult: 1.30, dmgMult: 1.18 },  // 第2章: +35% HP, +20% DMG
-    { hpMult: 1.65, dmgMult: 1.40 },  // 第3章: +75% HP, +45% DMG
-    { hpMult: 2.05, dmgMult: 1.65 },  // 第4章: +120% HP, +70% DMG
-    { hpMult: 2.50, dmgMult: 1.90 },  // 第5章: +180% HP, +100% DMG
+    { hpMult: 1.25, dmgMult: 1.15 },  // 第2章: +25% HP, +15% DMG（温和递增）
+    { hpMult: 1.55, dmgMult: 1.30 },  // 第3章: +55% HP, +30% DMG
+    { hpMult: 1.90, dmgMult: 1.50 },  // 第4章: +90% HP, +50% DMG
+    { hpMult: 2.30, dmgMult: 1.70 },  // 第5章: +130% HP, +70% DMG（降低天花板）
   ],
   /** 每章过渡时回复的HP比例 */
   chapterHealPercent: 0.5,

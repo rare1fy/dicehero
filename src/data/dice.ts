@@ -111,7 +111,7 @@ const split: DiceDef = {
   id: 'split',
   name: '分裂骰子',
   element: 'normal',
-  faces: [2, 2, 3, 3, 4, 4],
+  faces: [1, 2, 3, 4, 5, 6],
   description: '出牌后复制1个自己加入牌型（升级后复制更多）',
   rarity: 'rare',
   // 分裂效果在DiceHeroGame中特殊处理

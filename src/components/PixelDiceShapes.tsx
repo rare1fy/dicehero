@@ -152,14 +152,15 @@ export const getOnPlayDescription = (onPlay?: {
   if (onPlay.statusToEnemy) {
     const s = onPlay.statusToEnemy;
     const statusNames: Record<string, string> = {
-      burn: '灼热', weak: '虚弱', poison: '中毒', vulnerable: '易伤',
+      burn: '灼烧', weak: '虚弱', poison: '中毒', vulnerable: '易伤',
+      freeze: '冻结', slow: '减速', strength: '力量强化',
     };
     const name = statusNames[s.type] || s.type;
     parts.push(`${name} ${s.value}${s.duration ? `(${s.duration}回合)` : ''}`);
   }
   if (onPlay.pierce) parts.push(`穿透 +${onPlay.pierce}`);
   if (onPlay.heal) parts.push(`回复 ${onPlay.heal}HP`);
-  if (onPlay.bonusDamage) parts.push(`伤害 +${onPlay.bonusDamage}`);
-  if (onPlay.bonusMult) parts.push(`伤害 x${onPlay.bonusMult}`);
+  if (onPlay.bonusDamage) parts.push(`额外伤害 +${onPlay.bonusDamage}`);
+  if (onPlay.bonusMult) parts.push(`伤害倍率 x${onPlay.bonusMult}`);
   return parts.join(', ');
 };

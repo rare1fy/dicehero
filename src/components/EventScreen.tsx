@@ -117,10 +117,14 @@ export const EventScreen: React.FC = () => {
           if (roll < cumWeight) {
             if (outcome.toast) addToast(outcome.toast, outcome.toastType || 'buff');
             // 执行子动作
+            const hasBattle = outcome.actions.some(a => a.type === 'startBattle');
             for (const subAction of outcome.actions) {
               executeAction({ ...subAction, toast: undefined, log: undefined }, handType);
             }
-            setGame(prev => ({ ...prev, phase: 'map' }));
+            // Only return to map if no battle was started (startBattle sets phase itself)
+            if (!hasBattle) {
+              setGame(prev => ({ ...prev, phase: 'map' }));
+            }
             if (outcome.log) addLog(outcome.log);
             return;
           }
