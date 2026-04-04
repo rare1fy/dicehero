@@ -1,4 +1,4 @@
-﻿/**
+/**
  * dice.ts - 骰子定义表 v2
  * 
  * === 骰子体系 v2 ===
@@ -234,7 +234,7 @@ export const pickRandomDice = (pool: DiceDef[], count: number): DiceDef[] => {
 };
 
 export const ELEMENT_EFFECT_DESC: Record<string, string> = {
-  fire: '破甲爆燃：摧毁敌人所有护甲，附加真实伤害',
+  fire: '破甲爆燃：摧毁敌人所有护甲，附加真实伤害，并施加点数灼烧',
   ice: '绝对控制：冻结敌人1回合，点数结算减半',
   thunder: '传导AOE：对其他敌人造成等量穿透伤害',
   poison: '叠层斩杀：施加毒层，跨回合持续掉血',

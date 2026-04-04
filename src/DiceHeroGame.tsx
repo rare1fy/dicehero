@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -98,6 +98,10 @@ export default function DiceHeroGame() {
     currentWaveIndex: 0,
     relics: [],
     elementsUsedThisBattle: [],
+    consecutiveNormalAttacks: 0,
+    enemiesKilledThisBattle: 0,
+    hpLostThisBattle: 0,
+    hpLostThisTurn: 0,
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
@@ -674,6 +678,7 @@ export default function DiceHeroGame() {
     let extraArmor = 0;
     let extraHeal = 0;
     let pierceDamage = 0;
+    let armorBreak = false;
     let multiplier = 1;
     const triggeredAugments: { name: string, details: string }[] = [];
 
@@ -719,6 +724,10 @@ export default function DiceHeroGame() {
         splitDiceValue: selected.find(d => getDiceDef(d.diceDefId).id === 'split')?.value || 0,
         elementsUsedThisBattle: new Set(game.elementsUsedThisBattle || []),
         hasSpecialDice: selected.some(d => !['standard', 'heavy'].includes(getDiceDef(d.diceDefId).id)),
+        consecutiveNormalAttacks: game.consecutiveNormalAttacks || 0,
+        enemiesKilledThisBattle: game.enemiesKilledThisBattle || 0,
+        hpLostThisBattle: game.hpLostThisBattle || 0,
+        hpLostThisTurn: game.hpLostThisTurn || 0,
       };
       const res = relic.effect(relicCtx);
       const details = [];
@@ -752,10 +761,10 @@ export default function DiceHeroGame() {
         const diceValue = d.value;
         switch (d.collapsedElement) {
           case 'fire':
-            // 火：摧毁敌人所有护甲 + 基于点数的真实伤害
-            pierceDamage += Math.floor(diceValue * 3 * totalElementBonus);
-            // 护甲摧毁在实际结算时处理（标记）
-            statusEffects.push({ type: 'burn', value: 99 }); // 99 = 特殊标记：摧毁护甲
+            // 火：摧毁敌人所有护甲 + 基于点数的真实伤害 + 点数灼烧
+            pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
+            armorBreak = true;
+            statusEffects.push({ type: 'burn', value: diceValue });
             break;
           case 'ice':
             // 冰：冻结1回合，点数结算减半
@@ -825,6 +834,7 @@ export default function DiceHeroGame() {
       handMultiplier,
       extraDamage: modifiedDamage - baseDamage - pierceDamage,
       pierceDamage,
+      armorBreak,
       multiplier,
       triggeredAugments,
       bestHand,
@@ -1132,6 +1142,8 @@ export default function DiceHeroGame() {
         if (e.hp <= 0) return e;
         let dmg = outcome.damage;
         let arm = e.armor;
+        // 火元素：摧毁护甲
+        if (outcome.armorBreak) { arm = 0; }
         if (arm > 0) {
           const absorbed = Math.min(arm, dmg);
           arm -= absorbed;
@@ -1154,6 +1166,8 @@ export default function DiceHeroGame() {
       // Single target
       let remainingDamage = outcome.damage;
       let enemyArmor = targetEnemy.armor;
+      // 火元素：摧毁护甲
+      if (outcome.armorBreak) { enemyArmor = 0; }
       if (enemyArmor > 0) {
         const absorbed = Math.min(enemyArmor, remainingDamage);
         enemyArmor -= absorbed;
@@ -1200,6 +1214,11 @@ export default function DiceHeroGame() {
       hp: Math.min(prev.maxHp, prev.hp + outcome.heal)
     }));
 
+    // Track kills for war_profiteer_relic
+    const killCount = enemies.filter(e => e.hp <= 0).length;
+    if (killCount > 0) {
+      setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + killCount }));
+    }
     // on_kill 遗物效果：检查是否有敌人被击杀
     setTimeout(() => {
       const killedEnemies = enemies.filter(e => e.hp <= 0);
@@ -1239,7 +1258,9 @@ export default function DiceHeroGame() {
     // Mark dice as spent & add to discard pile
     const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
     setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
-    setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds] }));
+    const usedElements = dice.filter(d => d.selected && !d.spent && d.element !== 'normal').map(d => d.element);
+    const isNormalAttackPlay = bestHand === '普通攻击';
+    setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
 
     let logMsg = `打出 ${bestHand}，造成 ${outcome.damage} 伤害`;
     if (outcome.armor > 0) logMsg += `，获得 ${outcome.armor} 护甲`;
@@ -1388,6 +1409,7 @@ export default function DiceHeroGame() {
       }
       handleVictory();
       return;
+    }
 
     // --- 2.5. Pre-Action: process each enemy's poison ---
     const enemyDeathsFromPoison: string[] = [];
@@ -1432,7 +1454,6 @@ export default function DiceHeroGame() {
       return;
     }
 
-    }
 
         // --- 3. Each alive enemy takes action ---
         // Rules:
@@ -1624,7 +1645,7 @@ export default function DiceHeroGame() {
                 };
               }
             }
-            return { ...prev, hp: newHp, armor: newArmor };
+            return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + (prev.hp - newHp), hpLostThisBattle: (prev.hpLostThisBattle || 0) + (prev.hp - newHp) };
           });
           
           addFloatingText(`-${damage}`, 'text-red-500', undefined, 'player');
@@ -1767,7 +1788,8 @@ setGame(prev => {
       isEnemyTurn: false, 
       armor: 0,
       playsLeft: prev.maxPlays,
-      freeRerollsLeft: prev.freeRerollsPerTurn
+      freeRerollsLeft: prev.freeRerollsPerTurn,
+      hpLostThisTurn: 0
     }));
 
     // === 留手牌机制 ===
@@ -1775,12 +1797,14 @@ setGame(prev => {
     const remainingDice = dice.filter(d => !d.spent);
     const remainingCount = remainingDice.length;
     
+    // Capture schrodinger bonus before entering setTimeout (closure captures value)
+    const schrodingerBonus = _schrodingerBonus;
     // Use setTimeout to ensure previous state updates are flushed
     setTimeout(() => {
       // Read latest game state from ref (avoids stale closure)
       const g = gameRef.current;
       setRerollCount(0); // Reset reroll count for new turn
-      const needDraw = Math.max(0, g.drawCount - remainingCount);
+      const needDraw = Math.max(0, g.drawCount + schrodingerBonus - remainingCount);
       
       let finalBag = [...g.diceBag];
       let finalDiscard = [...g.discardPile];
@@ -3482,10 +3506,10 @@ useEffect(() => {
                   {game.relics.map((relic, i) => {
                     const isActive = relic.trigger === 'passive' || (relic.trigger === 'on_play' && game.phase === 'battle');
                     const iconMap: Record<string, string> = {
-                      blade: '⚔', flag: '⚑', weight: '■', pendulum: '◈',
-                      grail: '☗', gauge: '◎', prism: '◇', resonator: '✦',
-                      diamond: '♦', hourglass: '⧗', fangs: '☠', contract: '✂',
-                      recycle: '♻', hand: '✋', eye: '◉', infinity: '∞', bag: '☖',
+                      blade: '⚔️', flag: '🚩', weight: '🏋️', pendulum: '📍',
+                      grail: '🏆', gauge: '📊', prism: '💎', resonator: '✨',
+                      diamond: '💎', hourglass: '⌛', fangs: '🧛', contract: '📜',
+                      recycle: '♻️', hand: '✋', eye: '👁️', infinity: '♾️', bag: '👜',
                     };
                     return (
                       <motion.div
@@ -3501,7 +3525,7 @@ useEffect(() => {
                         onClick={() => setSelectedRelic(relic)}
                       >
                         <span className={`text-[14px] leading-none ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                          {iconMap[relic.icon] || '✦'}
+                          {iconMap[relic.icon] || '✨'}
                         </span>
                         {relic.counter !== undefined && (
                           <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none mt-px">
@@ -3625,6 +3649,18 @@ useEffect(() => {
                           <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)]">穿透伤害</span>
                             <span className="text-[var(--pixel-purple)]">+{expectedOutcome.pierceDamage}</span>
+                          </div>
+                        )}
+                        {expectedOutcome.armorBreak && (
+                          <div className="flex justify-between items-center text-[12px]">
+                            <span className="text-[var(--dungeon-text-dim)]">🔥 破甲</span>
+                            <span className="text-orange-400">摧毁护甲</span>
+                          </div>
+                        )}
+                        {expectedOutcome.statusEffects?.filter(s => s.type === 'burn').length > 0 && (
+                          <div className="flex justify-between items-center text-[12px]">
+                            <span className="text-[var(--dungeon-text-dim)]">🔥 灼烧</span>
+                            <span className="text-orange-400">+{expectedOutcome.statusEffects.filter(s => s.type === 'burn').reduce((sum, s) => sum + s.value, 0)}/回合</span>
                           </div>
                         )}
                         

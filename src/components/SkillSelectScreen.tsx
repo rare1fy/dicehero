@@ -98,11 +98,11 @@ export const SkillSelectScreen: React.FC = () => {
             >
               <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
               <div className="text-2xl mb-1.5">{({
-                blade: '', flag: '', weight: '■', pendulum: '◈',
-                grail: '', gauge: '◎', prism: '◇', resonator: '',
-                diamond: '', hourglass: '⧗', fangs: '', contract: '',
-                recycle: '', eye: '◉', infinity: '∞', bag: '',
-              } as Record<string, string>)[relic.icon] || ''}</div>
+                blade: '⚔️', flag: '🚩', weight: '🏋️', pendulum: '📍',
+                grail: '🏆', gauge: '📊', prism: '💎', resonator: '✨',
+                diamond: '💎', hourglass: '⌛', fangs: '🧛', contract: '📜',
+                recycle: '♻️', eye: '👁️', infinity: '♾️', bag: '👜',
+              } as Record<string, string>)[relic.icon] || '✨'}</div>
               <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
                 {relic.name}
               </div>
