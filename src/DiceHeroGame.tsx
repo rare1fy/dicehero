@@ -1172,7 +1172,7 @@ export default function DiceHeroGame() {
             else { newStatuses.push({ ...s }); }
           });
         }
-        if (newHp <= 0) setEnemyEffectForUid(e.uid, 'death');
+        if (newHp <= 0) { setEnemyEffectForUid(e.uid, 'death'); playSound('enemy_death'); }
         return { ...e, hp: newHp, armor: arm, statuses: newStatuses };
       }));
     } else {
@@ -1187,7 +1187,7 @@ export default function DiceHeroGame() {
         remainingDamage -= absorbed;
       }
       finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
-      if (finalEnemyHp <= 0) setEnemyEffectForUid(targetUid, 'death');
+      if (finalEnemyHp <= 0) { setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death'); }
       
       setEnemies(prev => prev.map(e => {
         if (e.uid !== targetUid) return e;
@@ -1398,7 +1398,7 @@ export default function DiceHeroGame() {
     });
 
     await new Promise(r => setTimeout(r, 600));
-    if (currentPlayerHp <= 0) { playSound('defeat'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
+    if (currentPlayerHp <= 0) { playSound('player_death'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
 
     // --- 2. Process each enemy's burn damage ---
     let enemyDeathsFromBurn: string[] = [];
@@ -1810,7 +1810,7 @@ setGame(prev => {
 
     await new Promise(r => setTimeout(r, 100));
 
-    if (currentPlayerHp <= 0) { playSound('defeat'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
+    if (currentPlayerHp <= 0) { playSound('player_death'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
 
     setGame(prev => ({ 
       ...prev, 

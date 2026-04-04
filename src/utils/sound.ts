@@ -6,7 +6,8 @@ type SoundType =
   | 'critical' | 'poison' | 'burn' | 'shield_break' | 'reroll'
   | 'map_move' | 'shop_buy' | 'campfire' | 'event' | 'boss_appear'
   | 'dice_lock' | 'augment_activate' | 'turn_end'
-  | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe';
+  | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe'
+  | 'enemy_death' | 'player_death';
 
 let audioCtx: AudioContext | null = null;
 let _bgmOscillators: OscillatorNode[] = [];
@@ -575,6 +576,82 @@ export const playSound = (type: SoundType) => {
         sweep.start(now); sweep.stop(now + 0.25);
         break;
       }
+      
+      case 'enemy_death': {
+        // 敌人死亡 — 低沉爆裂+碎片飞散+消散
+        // Layer 1: 低频爆裂
+        const deathBoom = ctx.createOscillator();
+        const dbg = ctx.createGain();
+        deathBoom.type = 'sawtooth';
+        deathBoom.frequency.setValueAtTime(120, now);
+        deathBoom.frequency.exponentialRampToValueAtTime(20, now + 0.3);
+        dbg.gain.setValueAtTime(0.2, now);
+        dbg.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        deathBoom.connect(dbg); dbg.connect(master);
+        deathBoom.start(now); deathBoom.stop(now + 0.35);
+        // Layer 2: 碎片飞散（高频噪声粒子）
+        for (let i = 0; i < 4; i++) {
+          const shard = ctx.createOscillator();
+          const sg = ctx.createGain();
+          shard.type = 'square';
+          shard.frequency.setValueAtTime(300 + Math.random() * 500, now + i * 0.03);
+          shard.frequency.exponentialRampToValueAtTime(50, now + i * 0.03 + 0.1);
+          sg.gain.setValueAtTime(0.06, now + i * 0.03);
+          sg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.12);
+          shard.connect(sg); sg.connect(master);
+          shard.start(now + i * 0.03); shard.stop(now + i * 0.03 + 0.12);
+        }
+        // Layer 3: 消散下行音
+        const fade = ctx.createOscillator();
+        const fg = ctx.createGain();
+        fade.type = 'sine';
+        fade.frequency.setValueAtTime(400, now + 0.1);
+        fade.frequency.exponentialRampToValueAtTime(60, now + 0.5);
+        fg.gain.setValueAtTime(0.08, now + 0.1);
+        fg.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        fade.connect(fg); fg.connect(master);
+        fade.start(now + 0.1); fade.stop(now + 0.55);
+        break;
+      }
+      
+      case 'player_death': {
+        // 玩家死亡 — 沉重心跳渐停+不和谐下行+回响消散
+        // Layer 1: 心跳渐停（两次低频脉冲，第二次更弱更慢）
+        [0, 0.3].forEach((t, i) => {
+          const beat = ctx.createOscillator();
+          const bg = ctx.createGain();
+          beat.type = 'sine';
+          beat.frequency.setValueAtTime(50, now + t);
+          beat.frequency.exponentialRampToValueAtTime(25, now + t + 0.15);
+          bg.gain.setValueAtTime(0.25 * (1 - i * 0.4), now + t);
+          bg.gain.exponentialRampToValueAtTime(0.001, now + t + 0.2);
+          beat.connect(bg); bg.connect(master);
+          beat.start(now + t); beat.stop(now + t + 0.2);
+        });
+        // Layer 2: 不和谐下行和弦（小二度+减五度）
+        [293, 277, 207].forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.setValueAtTime(f, now + 0.5);
+          o.frequency.exponentialRampToValueAtTime(f * 0.4, now + 1.2);
+          g.gain.setValueAtTime(0.08, now + 0.5 + i * 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
+          o.connect(g); g.connect(master);
+          o.start(now + 0.5 + i * 0.05); o.stop(now + 1.3);
+        });
+        // Layer 3: 最后一声低沉回响
+        const echo = ctx.createOscillator();
+        const eg = ctx.createGain();
+        echo.type = 'triangle';
+        echo.frequency.setValueAtTime(80, now + 1.0);
+        echo.frequency.exponentialRampToValueAtTime(30, now + 2.0);
+        eg.gain.setValueAtTime(0.12, now + 1.0);
+        eg.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+        echo.connect(eg); eg.connect(master);
+        echo.start(now + 1.0); echo.stop(now + 2.0);
+        break;
+      }
     }
   } catch (e) {
     console.error('Audio error:', e);
@@ -610,16 +687,117 @@ const BGM_CONFIGS: Record<string, BGMConfig> = {
     drumVol: 0.018,
   },
   battle: {
-    // 紧张战斗进行曲 — Dm Bb C Dm 快节奏小调 (64 notes ~34s loop)
-    melody: [294, 349, 440, 392, 349, 294, 262, 294, 233, 294, 349, 392, 349, 294, 262, 233, 262, 330, 392, 440, 523, 494, 440, 392, 294, 349, 440, 523, 494, 440, 349, 294, 349, 294, 349, 440, 392, 349, 262, 294, 466, 440, 392, 349, 294, 262, 233, 262, 262, 294, 349, 392, 440, 523, 587, 523, 440, 392, 349, 294, 262, 233, 262, 294],
-    bass:   [147, 147, 147, 147, 117, 117, 131, 131, 117, 117, 117, 117, 131, 131, 147, 147, 147, 147, 131, 131, 117, 117, 131, 131, 131, 131, 147, 147, 147, 147, 117, 117, 147, 147, 117, 117, 131, 131, 147, 147, 117, 117, 131, 131, 131, 131, 147, 147, 131, 131, 147, 147, 147, 147, 131, 131, 147, 147, 117, 117, 131, 131, 147, 147],
+    // Lydian调式战斗曲 — C Lydian (C D E F# G A B)
+    // 和弦走向: Cmaj7 → D → Em7 → Bm → Cmaj7 → A → D → G
+    // 明亮、梦幻、带有冒险感的旋律，30秒循环 (168 notes × 180ms = 30.24s)
+    melody: [
+      // Phrase 1: Cmaj7 — 明亮开场，Lydian特征音F#点缀 (bar 1-2)
+      523, 494, 440, 523,  392, 370, 392, 440,
+      523, 587, 523, 494,  440, 392, 440, 494,
+      // Phrase 2: D — 上行推进，充满活力 (bar 3-4)
+      587, 523, 587, 659,  587, 523, 494, 440,
+      494, 523, 587, 523,  494, 440, 392, 440,
+      // Phrase 3: Em7 — 柔和过渡，呼吸感 (bar 5-6)
+      330, 392, 440, 494,  523, 494, 440, 392,
+      370, 440, 494, 523,  494, 440, 392, 370,
+      // Phrase 4: Bm — 紧张感，半音下行 (bar 7-8)
+      494, 440, 392, 370,  392, 440, 494, 587,
+      523, 494, 440, 392,  370, 330, 370, 392,
+      // Phrase 5: Cmaj7 — 回归主调，旋律变奏 (bar 9-10)
+      440, 494, 523, 587,  659, 587, 523, 494,
+      523, 440, 392, 440,  494, 523, 587, 523,
+      // Phrase 6: A — 温暖过渡 (bar 11-12)
+      440, 523, 494, 440,  392, 370, 392, 440,
+      330, 370, 440, 494,  440, 392, 370, 330,
+      // Phrase 7: D — 高潮推进 (bar 13-14)
+      587, 659, 587, 523,  587, 659, 784, 659,
+      587, 523, 494, 523,  587, 523, 494, 440,
+      // Phrase 8: G → 回到C — 解决感，循环衔接 (bar 15-16)
+      392, 440, 494, 523,  587, 523, 494, 440,
+      494, 523, 440, 392,  370, 392, 440, 494,
+      // Phrase 9: Em7 → Bm — 回声变奏 (bar 17-18)
+      330, 370, 440, 494,  523, 587, 523, 494,
+      494, 440, 392, 370,  330, 370, 392, 440,
+      // Phrase 10: Cmaj7 — 渐弱回归 (bar 19-20)
+      523, 494, 440, 494,  523, 587, 523, 440,
+      392, 440, 494, 440,  392, 370, 392, 440,
+      // Coda: 8音过渡回开头
+      523, 494, 440, 392,  440, 494, 523, 494
+    ],
+    bass: [
+      // Cmaj7 (C bass)
+      131, 131, 131, 131,  131, 131, 131, 131,
+      131, 131, 131, 131,  131, 131, 131, 131,
+      // D (D bass)
+      147, 147, 147, 147,  147, 147, 147, 147,
+      147, 147, 147, 147,  147, 147, 147, 147,
+      // Em7 (E bass)
+      165, 165, 165, 165,  165, 165, 165, 165,
+      165, 165, 165, 165,  165, 165, 165, 165,
+      // Bm (B bass)
+      247, 247, 247, 247,  247, 247, 247, 247,
+      247, 247, 247, 247,  247, 247, 247, 247,
+      // Cmaj7 (C bass)
+      131, 131, 131, 131,  131, 131, 131, 131,
+      131, 131, 131, 131,  131, 131, 131, 131,
+      // A (A bass)
+      220, 220, 220, 220,  220, 220, 220, 220,
+      220, 220, 220, 220,  220, 220, 220, 220,
+      // D (D bass)
+      147, 147, 147, 147,  147, 147, 147, 147,
+      147, 147, 147, 147,  147, 147, 147, 147,
+      // G → C (G then C bass)
+      196, 196, 196, 196,  196, 196, 196, 196,
+      131, 131, 131, 131,  131, 131, 131, 131,
+      // Em7 → Bm
+      165, 165, 165, 165,  165, 165, 165, 165,
+      247, 247, 247, 247,  247, 247, 247, 247,
+      // Cmaj7
+      131, 131, 131, 131,  131, 131, 131, 131,
+      131, 131, 131, 131,  131, 131, 131, 131,
+      // Coda: C bass
+      131, 131, 131, 131,  131, 131, 131, 131
+    ],
     tempo: 180,
-    melodyType: 'square',
-    bassType: 'sawtooth',
-    melodyVol: 0.035,
-    bassVol: 0.025,
-    drumPattern: [true, false, true, false, true, false, true, false, true, false, true, false, true, true, false, true, true, false, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, true, false, true, false, false, true, true, false, true, true, true, false, true, false, true, true, false, true, true, false, true, false, true, false, true, false, true, true, true, true],
-    drumVol: 0.035,
+    melodyType: 'square' as OscillatorType,
+    bassType: 'triangle' as OscillatorType,
+    melodyVol: 0.032,
+    bassVol: 0.022,
+    drumPattern: [
+      // Bar 1-2: 基础4/4拍
+      true, false, false, false,  true, false, true, false,
+      true, false, false, false,  true, false, true, false,
+      // Bar 3-4: 推进感加强
+      true, false, true, false,  true, false, false, true,
+      true, false, true, false,  true, false, true, false,
+      // Bar 5-6: 呼吸段，鼓点减少
+      true, false, false, false,  false, false, true, false,
+      true, false, false, false,  false, false, true, false,
+      // Bar 7-8: 紧张段，加密
+      true, false, true, false,  true, false, true, true,
+      true, true, false, true,  true, false, true, false,
+      // Bar 9-10: 回归主调
+      true, false, false, false,  true, false, true, false,
+      true, false, false, true,  true, false, false, false,
+      // Bar 11-12: 温暖过渡
+      true, false, false, false,  true, false, false, false,
+      true, false, true, false,  false, false, true, false,
+      // Bar 13-14: 高潮，鼓点密集
+      true, false, true, true,  true, false, true, false,
+      true, true, false, true,  true, false, true, true,
+      // Bar 15-16: 解决+衔接
+      true, false, true, false,  true, false, false, true,
+      true, false, false, false,  true, false, true, false,
+      // Bar 17-18: 回声变奏
+      true, false, false, false,  true, false, true, false,
+      true, false, true, false,  true, false, false, true,
+      // Bar 19-20: 渐弱回归
+      true, false, false, false,  false, false, true, false,
+      true, false, false, false,  false, false, false, false,
+      // Coda
+      true, false, false, false,  false, false, true, false
+    ],
+    drumVol: 0.03,
   },
   boss: {
     // 威压Boss战 — 低沉厚重，半音阶下行 + 强力鼓点
