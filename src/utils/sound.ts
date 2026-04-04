@@ -1,3 +1,6 @@
+import battleNormalMp3 from '../assets/DiceBattle-Normal.mp3';
+import battleBossMp3 from '../assets/DiceBattle-Boss.mp3';
+
 // === 增强版音效系统 ===
 
 type SoundType = 
@@ -21,8 +24,8 @@ let bgmEnabled = true;
 let mp3Audio: HTMLAudioElement | null = null;
 let mp3BgmPlaying = false;
 const MP3_BGM_MAP: Record<string, string> = {
-  battle: '/DiceBattle-Normal.mp3',
-  boss: '/DiceBattle-Boss.mp3',
+  battle: battleNormalMp3,
+  boss: battleBossMp3,
 };
 
 const getCtx = (): AudioContext => {
