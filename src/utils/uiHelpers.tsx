@@ -213,10 +213,24 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + 'pixel-dice-cracked ' + crackedGlow;
   }
 
-  // Elemental dice - multi-element energy flow
+  // Elemental dice — show element-specific style when collapsed, default when in bag
   if (diceDefId === 'elemental') {
-    const elemGlow = selected && !invalid ? 'dice-glow-elemental' : '';
-    return base + selection + rollAnim + invalidStyle + 'pixel-dice-elemental ' + elemGlow;
+    if (element !== 'normal' && !rolling) {
+      // Collapsed to a specific element — use that element's full style
+      const elemStyle = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
+      const elemGlow = selected && !invalid ? elemStyle.glowClass : '';
+      const elemEffect = !invalid ? elemStyle.effectClass : '';
+      const elemTexture = !invalid ? elemStyle.textureClass : '';
+      return base + selection + invalidStyle + elemStyle.diceClass + ' ' + elemGlow + ' ' + elemEffect + ' ' + elemTexture + ' dice-elemental-badge';
+    }
+    if (rolling && element !== 'normal') {
+      // Rolling animation — show the cycling element's style briefly
+      const cycleStyle = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
+      return base + selection + rollAnim + invalidStyle + cycleStyle.diceClass + ' dice-elemental-rolling';
+    }
+    // Default state (in bag / not yet collapsed)
+    const defaultGlow = selected && !invalid ? 'dice-glow-elemental' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-elemental ' + defaultGlow;
   }
 
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;

@@ -53,6 +53,7 @@ import { PixelSprite, hasSpriteData } from './components/PixelSprite';
 import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, CHAPTER_CONFIG } from './config';
 import { applyDiceSpecialEffects } from './logic/diceEffects';
 import { HandGuideModal } from './components/HandGuideModal';
+import { DiceGuideModal } from './components/DiceGuideModal';
 import { ChapterTransition } from './components/ChapterTransition';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ReplacementModal } from './components/ReplacementModal';
@@ -171,6 +172,7 @@ export default function DiceHeroGame() {
     finalArmor: number;
     finalHeal: number;
     statusEffects: any[];
+    isSameElement?: boolean;
   } | null>(null);
   const [toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
   const toastIdRef = useRef(0);
@@ -330,7 +332,9 @@ export default function DiceHeroGame() {
       await new Promise(resolve => setTimeout(resolve, frameTimes[f]));
       setDice(prev => prev.map(d => {
         const def = getDiceDef(d.diceDefId);
-        return { ...d, value: rollDiceDef(def) };
+        const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+        const randElem = def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : d.element;
+        return { ...d, value: rollDiceDef(def), element: randElem as any };
       }));
       if (f === 3) playSound('reroll');
     setGame(prev => ({ ...prev, stats: { ...prev.stats, totalRerolls: prev.stats.totalRerolls + 1 } }));
@@ -462,7 +466,9 @@ export default function DiceHeroGame() {
       await new Promise(resolve => setTimeout(resolve, frameTimes[i]));
       setDice(prev => prev.map(d => {
         const def = getDiceDef(d.diceDefId);
-        return { ...d, value: rollDiceDef(def) };
+        const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+        const randElem = def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : d.element;
+        return { ...d, value: rollDiceDef(def), element: randElem as any };
       }));
       if (i === 3) playSound('reroll');
     }
@@ -534,7 +540,9 @@ export default function DiceHeroGame() {
       setDice(prev => prev.map(d => {
         if (d.selected || d.spent) return d;
         const def = getDiceDef(d.diceDefId);
-        return { ...d, value: rollDiceDef(def) };
+        const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+        const randElem = def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : d.element;
+        return { ...d, value: rollDiceDef(def), element: randElem as any };
       }));
     }
 
@@ -619,14 +627,8 @@ export default function DiceHeroGame() {
 
   const currentHands = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
-    // 分裂骰子：复制一个相同点数的虚拟骰子加入牌型判定
-    let evalDice = [...selected];
-    selected.forEach(d => {
-      if (d.diceDefId === 'split') {
-        evalDice.push({ ...d, id: d.id + 9000, diceDefId: 'standard' }); // 虚拟分裂副本
-      }
-    });
-    return checkHands(evalDice);
+    // 分裂骰子：手牌中当普通骰子，结算演出时才分裂
+    return checkHands(selected);
   }, [dice]);
 
   // 多选普通攻击检测：选了多颗骰子但不成牌型
@@ -980,25 +982,90 @@ export default function DiceHeroGame() {
       finalArmor: outcome.armor,
       finalHeal: outcome.heal,
       statusEffects: outcome.statusEffects,
+      isSameElement: currentHands.activeHands.some(h => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h)),
     });
     playSound('augment_activate');
     await new Promise(r => setTimeout(r, 600));
 
     // ========================================
-    // Phase 2: 逐颗骰子计分 (每颗0.3s)
+    // Phase 2: 逐颗骰子计分 (每颗0.3s) — 分裂骰子在此阶段弹出
     // ========================================
     setSettlementPhase('dice');
     let runningBase = outcome.baseHandValue;
-    for (let i = 0; i < selected.length; i++) {
-      runningBase += selected[i].value;
+    let settleDice = [...selected]; // 实际参与结算的骰子列表
+    let splitOccurred = false;
+    for (let i = 0; i < settleDice.length; i++) {
+      runningBase += settleDice[i].value;
       const currentRunning = runningBase;
-      setSettlementData(prev => prev ? { ...prev, currentBase: currentRunning, currentEffectIdx: i } : prev);
+      setSettlementData(prev => prev ? { ...prev, currentBase: currentRunning, currentEffectIdx: i, selectedDice: [...settleDice] } : prev);
       playSound('select');
       await new Promise(r => setTimeout(r, 300));
+
+      // 分裂骰子：播放到它时额外弹出一颗随机点数骰子
+      if (settleDice[i].diceDefId === 'split' && !isNormalAttackMulti) {
+        const splitValue = Math.floor(Math.random() * 6) + 1;
+        const splitDie: Die = {
+          id: settleDice[i].id + 9000,
+          diceDefId: 'standard',
+          value: splitValue,
+          element: 'normal',
+          selected: true,
+          spent: false,
+          rolling: false,
+        };
+        // 插入到当前位置之后
+        settleDice.splice(i + 1, 0, splitDie);
+        splitOccurred = true;
+        playSound('augment_activate');
+        // 更新显示 — 新骰子弹出
+        setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice] } : prev);
+        await new Promise(r => setTimeout(r, 400));
+        addLog(`分裂骰子分裂！额外弹出点数 ${splitValue}`);
+      }
+    }
+
+    // 如果发生了分裂，重新计算牌型和伤害
+    if (splitOccurred) {
+      const newHandResult = checkHands(settleDice);
+      const newBestHand = newHandResult.bestHand;
+      if (newBestHand !== outcome.bestHand) {
+        addLog(`分裂改变了牌型！${outcome.bestHand} → ${newBestHand}`);
+        addToast(`🎲 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
+        playSound(newBestHand === '普通攻击' ? 'hit' : 'augment_activate');
+      }
+      // 重新计算伤害（用新的骰子列表和牌型）
+      const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
+      let newHandMult = 1;
+      newHandResult.activeHands.forEach(handName => {
+        const handDef = HAND_TYPES.find(h => h.name === handName);
+        if (handDef) {
+          const level = game.handLevels[handName] || 1;
+          const levelBonusMult = (level - 1) * 0.3;
+          newHandMult += (((handDef as any).mult || 1) - 1) + levelBonusMult;
+        }
+      });
+      const newBaseDamage = Math.floor(newX * newHandMult);
+      const newTotalDamage = Math.floor((newBaseDamage + (outcome.damage - Math.floor(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+      // 更新 outcome 的伤害值（用闭包变量）
+      outcome.damage = Math.max(0, newTotalDamage);
+      outcome.bestHand = newBestHand;
+      outcome.X = newX;
+      outcome.handMultiplier = newHandMult;
+      runningBase = 0;
+      settleDice.forEach(d => runningBase += d.value);
+      runningBase += outcome.baseHandValue;
+      setSettlementData(prev => prev ? {
+        ...prev,
+        bestHand: newBestHand,
+        selectedDice: [...settleDice],
+        currentBase: runningBase,
+        currentMult: newHandMult,
+        finalDamage: outcome.damage,
+      } : prev);
+      await new Promise(r => setTimeout(r, 500));
     }
     await new Promise(r => setTimeout(r, 200));
 
-    // ========================================
     // Phase 2.5: 倍率强调动画 (0.5s)
     // ========================================
     setSettlementPhase('mult');
@@ -1628,13 +1695,8 @@ export default function DiceHeroGame() {
           }
         }
 
-    // 先计算谁会被毒死（在state更新之前）
-    const _poisonSurvivors = enemies.filter(e => {
-      if (e.hp <= 0) return false;
-      const pois = e.statuses.find(s => s.type === 'poison');
-      if (pois && pois.value > 0) return e.hp - pois.value > 0;
-      return true;
-    });
+    // --- 4. Enemy Turn End: process each enemy's poison ---
+    const enemyDeathsFromPoison: string[] = [];
 // --- 4. Enemy Turn End: process each enemy's poison ---
     setEnemies(prev => prev.map(e => {
       if (e.hp <= 0) return e;
@@ -1645,6 +1707,7 @@ export default function DiceHeroGame() {
         addFloatingText(`-${poison.value}`, 'text-purple-400', <PixelPoison size={2} />, 'enemy');
         nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
         const newHp = Math.max(0, e.hp - poison.value);
+        if (newHp <= 0) enemyDeathsFromPoison.push(e.uid);
         nextStatuses = tickStatuses(nextStatuses);
         return { ...e, hp: newHp, statuses: nextStatuses };
       }
@@ -1657,8 +1720,8 @@ export default function DiceHeroGame() {
     // Check if all enemies died from poison
     // Note: we need to re-read enemies after the state update, but since this is async
     // we'll check based on the computed values
-    const aliveAfterPoison = enemies.filter(e => e.hp > 0);
-    if (aliveAfterPoison.length === 0) {
+    const aliveAfterPoison = enemies.filter(e => e.hp > 0 && !enemyDeathsFromPoison.includes(e.uid));
+    if (aliveAfterPoison.length === 0 && enemyDeathsFromPoison.length > 0) {
       const nextWaveIdx = game.currentWaveIndex + 1;
       if (nextWaveIdx < game.battleWaves.length) {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
@@ -3709,6 +3772,7 @@ useEffect(() => {
       </div>
     </div>
       {/* Dice Guide Modal - Global */}
+      <DiceGuideModal />
       {/* Global Hand Guide Modal */}
       <HandGuideModal />
 </GameContext.Provider>
