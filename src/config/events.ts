@@ -3,6 +3,16 @@
  * 
  * 定义所有随机事件的纯数据配置。
  * 事件的实际效果由 EventScreen 根据 action 字段解释执行。
+ * 
+ * 可用action类型：
+ * - startBattle: 触发战斗
+ * - modifyHp: 修改当前HP
+ * - modifySouls: 修改金币
+ * - modifyMaxHp: 修改最大HP
+ * - upgradeHandType: 强化牌型（需要 needsRandomHandType）
+ * - grantRelic: 获得一个随机遗物
+ * - randomOutcome: 随机结果
+ * - noop: 无操作
  */
 
 export interface EventOptionConfig {
@@ -14,14 +24,10 @@ export interface EventOptionConfig {
     type: 'startBattle'
       | 'modifyHp'
       | 'modifySouls'
-      | 'modifyDiceCount'
       | 'upgradeHandType'
-      | 'modifyGlobalRerolls'
       | 'modifyMaxHp'
-      | 'modifyFreeRerollsPerTurn'
-      | 'modifyMaxPlays'
+      | 'grantRelic'
       | 'randomOutcome'
-      | 'grantAugment'
       | 'noop';
     value?: number;
     /** 随机结果配置（仅 randomOutcome 类型使用） */
@@ -51,12 +57,11 @@ export interface EventConfig {
 
 /**
  * 事件配置池
- * 
- * 注意：当 needsRandomHandType=true 时，
- * 描述和标签中的 {handType} 会被替换为实际随机牌型名。
  */
-
 export const EVENTS_POOL: EventConfig[] = [
+  // ============================================================
+  // 1. 阴影中的怪物 — 经典战or逃
+  // ============================================================
   {
     id: 'shadow_creature',
     title: '阴影中的怪物',
@@ -77,6 +82,10 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+
+  // ============================================================
+  // 2. 古老祭坛 — 献血换牌型升级 or 金币
+  // ============================================================
   {
     id: 'ancient_altar',
     title: '古老祭坛',
@@ -93,14 +102,18 @@ export const EVENTS_POOL: EventConfig[] = [
       },
       {
         label: '力量符文',
-        sub: '永久+1初始骰子，但 -20 HP（剧痛刻印）',
-        color: 'bg-blue-600 hover:bg-blue-500',
+        sub: '获得一件遗物，但 -15 HP（剧痛刻印）',
+        color: 'bg-purple-600 hover:bg-purple-500',
         action: { type: 'randomOutcome', outcomes: [
-          { weight: 1.0, actions: [{ type: 'modifyDiceCount', value: 1 }, { type: 'modifyHp', value: -20 }], toast: '+1骰子，-20HP', toastType: 'buff', log: '在祭坛获得了 1 颗骰子，但损失 20 HP。' },
+          { weight: 1.0, actions: [{ type: 'grantRelic' }, { type: 'modifyHp', value: -15 }], toast: '获得遗物！但损失15HP', toastType: 'buff', log: '在祭坛忍受剧痛，获得了一件遗物。' },
         ]},
       },
     ],
   },
+
+  // ============================================================
+  // 3. 虚空交易 — 强化牌型 or 安全离开
+  // ============================================================
   {
     id: 'void_trade',
     title: '虚空交易',
@@ -109,19 +122,23 @@ export const EVENTS_POOL: EventConfig[] = [
     needsRandomHandType: true,
     options: [
       {
-        label: '强化【{handType}】',
+        label: '强化「{handType}」',
         sub: '提升该牌型的基础威力，代价 -15 HP',
         color: 'bg-purple-600 hover:bg-purple-500',
-        action: { type: 'upgradeHandType', value: -15, toast: '禁忌知识的代价 -15 HP', toastType: 'damage', log: '消耗 15 生命，【{handType}】升级了！' },
+        action: { type: 'upgradeHandType', value: -15, toast: '禁忌知识的代价 -15 HP', toastType: 'damage', log: '消耗 15 生命，「{handType}」升级了！' },
       },
       {
         label: '拒绝交易',
-        sub: '获得 2 次全局重掷（安全但收益小）',
+        sub: '安全离开，保存实力',
         color: 'bg-zinc-700 hover:bg-zinc-600',
-        action: { type: 'modifyGlobalRerolls', value: 2, toast: '+2 全局重掷', toastType: 'buff', log: '拒绝了虚空交易，获得 2 次全局重掷。' },
+        action: { type: 'noop', log: '拒绝了虚空交易，安全离开。' },
       },
     ],
   },
+
+  // ============================================================
+  // 4. 致命陷阱 — 硬扛换金币 or 花钱避开
+  // ============================================================
   {
     id: 'deadly_trap',
     title: '致命陷阱',
@@ -144,6 +161,10 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+
+  // ============================================================
+  // 5. 神秘旅商 — 买药 or 买最大HP or 讨价还价
+  // ============================================================
   {
     id: 'mysterious_merchant',
     title: '神秘旅商',
@@ -162,11 +183,13 @@ export const EVENTS_POOL: EventConfig[] = [
         label: '购买强化药水',
         sub: '-35 金币，永久 +10 最大生命',
         color: 'bg-blue-600 hover:bg-blue-500',
-        action: { type: 'modifyMaxHp', value: 10, log: '购买了强化药水，最大生命 +10！' },
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifySouls', value: -35 }, { type: 'modifyMaxHp', value: 10 }], toast: '-35金币, 最大HP+10', toastType: 'buff', log: '购买了强化药水，最大生命 +10！' },
+        ]},
       },
       {
         label: '讨价还价',
-        sub: '有50%概率免费获得药剂，50%概率被赶走',
+        sub: '50%概率免费获得药剂，50%概率被赶走',
         color: 'bg-zinc-700 hover:bg-zinc-600',
         action: { type: 'randomOutcome', outcomes: [
           { weight: 0.5, actions: [{ type: 'modifyHp', value: 25 }], toast: '讨价成功！免费回复25HP', toastType: 'heal', log: '讨价还价成功，免费获得药剂！' },
@@ -175,6 +198,10 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+
+  // ============================================================
+  // 6. 命运之轮 — 赌金币 or 安全离开
+  // ============================================================
   {
     id: 'wheel_of_fate',
     title: '命运之轮',
@@ -183,11 +210,11 @@ export const EVENTS_POOL: EventConfig[] = [
     options: [
       {
         label: '献血转动（-10 HP）',
-        sub: '70%概率+40金币，30%概率+1每回合免费重掷',
+        sub: '60%概率+40金币，40%概率获得一件遗物',
         color: 'bg-cyan-600 hover:bg-cyan-500',
         action: { type: 'randomOutcome', outcomes: [
-          { weight: 0.7, actions: [{ type: 'modifyHp', value: -10 }, { type: 'modifySouls', value: 40 }], toast: '幸运！-10HP, +40金币', toastType: 'gold', log: '命运之轮转出了 40 金币！' },
-          { weight: 0.3, actions: [{ type: 'modifyHp', value: -10 }, { type: 'modifyFreeRerollsPerTurn', value: 1 }], toast: '大吉！-10HP, +1免费重掷/回合', toastType: 'buff', log: '命运之轮赐予了永久免费重掷！' },
+          { weight: 0.6, actions: [{ type: 'modifyHp', value: -10 }, { type: 'modifySouls', value: 40 }], toast: '幸运！-10HP, +40金币', toastType: 'gold', log: '命运之轮转出了 40 金币！' },
+          { weight: 0.4, actions: [{ type: 'modifyHp', value: -10 }, { type: 'grantRelic' }], toast: '大吉！-10HP, 获得遗物！', toastType: 'buff', log: '命运之轮赐予了一件遗物！' },
         ]},
       },
       {
@@ -198,6 +225,10 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+
+  // ============================================================
+  // 7. 诅咒之泉 — 回血但降最大HP or 花钱净化
+  // ============================================================
   {
     id: 'cursed_spring',
     title: '诅咒之泉',
@@ -222,6 +253,10 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+
+  // ============================================================
+  // 8. 骰子赌徒 — 赌金币 or 赌HP or 离开
+  // ============================================================
   {
     id: 'dice_gambler',
     title: '骰子赌徒',
@@ -239,10 +274,10 @@ export const EVENTS_POOL: EventConfig[] = [
       },
       {
         label: '赌上生命力',
-        sub: '50%概率+1出牌次数，50%概率-20HP',
+        sub: '50%概率获得遗物，50%概率-20HP',
         color: 'bg-red-600 hover:bg-red-500',
         action: { type: 'randomOutcome', outcomes: [
-          { weight: 0.5, actions: [{ type: 'modifyMaxPlays', value: 1 }], toast: '赢了！+1出牌次数', toastType: 'buff', log: '赌赢了！永久+1出牌次数！' },
+          { weight: 0.5, actions: [{ type: 'grantRelic' }], toast: '赢了！获得遗物！', toastType: 'buff', log: '赌赢了！获得一件遗物！' },
           { weight: 0.5, actions: [{ type: 'modifyHp', value: -20 }], toast: '输了...-20HP', toastType: 'damage', log: '赌输了，损失20HP。' },
         ]},
       },
@@ -251,6 +286,68 @@ export const EVENTS_POOL: EventConfig[] = [
         sub: '安全离开',
         color: 'bg-zinc-700 hover:bg-zinc-600',
         action: { type: 'noop', log: '你拒绝了赌徒的挑战。' },
+      },
+    ],
+  },
+
+  // ============================================================
+  // 9. 遗忘铸炉 — 新事件：强化牌型 or 获取遗物
+  // ============================================================
+  {
+    id: 'forgotten_forge',
+    title: '遗忘铸炉',
+    desc: '一座仍在燃烧的古老铸炉隐藏在洞穴深处。炉火中似乎蕴含着某种力量。',
+    iconId: 'flame',
+    needsRandomHandType: true,
+    options: [
+      {
+        label: '投入金币淬炼',
+        sub: '-30 金币，强化「{handType}」牌型',
+        color: 'bg-orange-600 hover:bg-orange-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifySouls', value: -30 }, { type: 'upgradeHandType', value: 0 }], toast: '-30金币，牌型强化！', toastType: 'buff', log: '花费30金币在铸炉中淬炼，「{handType}」升级了！' },
+        ]},
+      },
+      {
+        label: '探索铸炉遗迹',
+        sub: '70%概率找到遗物，30%概率被烫伤(-12HP)',
+        color: 'bg-amber-600 hover:bg-amber-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 0.7, actions: [{ type: 'grantRelic' }], toast: '在遗迹中找到了遗物！', toastType: 'buff', log: '在铸炉遗迹中发现了一件遗物！' },
+          { weight: 0.3, actions: [{ type: 'modifyHp', value: -12 }], toast: '被铸炉烫伤 -12HP', toastType: 'damage', log: '探索时被铸炉烫伤，损失12HP。' },
+        ]},
+      },
+      {
+        label: '离开',
+        sub: '安全离开',
+        color: 'bg-zinc-700 hover:bg-zinc-600',
+        action: { type: 'noop', log: '你选择离开铸炉。' },
+      },
+    ],
+  },
+
+  // ============================================================
+  // 10. 灵魂裂隙 — 新事件：高风险高收益
+  // ============================================================
+  {
+    id: 'soul_rift',
+    title: '灵魂裂隙',
+    desc: '空间中出现了一道闪烁的裂隙，另一侧传来强大的能量波动。踏入其中可能改变命运。',
+    iconId: 'star',
+    options: [
+      {
+        label: '踏入裂隙',
+        sub: '-20 HP，但获得遗物 + 30金币',
+        color: 'bg-purple-600 hover:bg-purple-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'modifyHp', value: -20 }, { type: 'grantRelic' }, { type: 'modifySouls', value: 30 }], toast: '-20HP, 获得遗物+30金币！', toastType: 'buff', log: '踏入灵魂裂隙，付出20HP的代价，获得遗物和30金币。' },
+        ]},
+      },
+      {
+        label: '谨慎观察',
+        sub: '从裂隙边缘拾取散落的金币 (+15金币)',
+        color: 'bg-amber-600 hover:bg-amber-500',
+        action: { type: 'modifySouls', value: 15, toast: '+15金币', toastType: 'gold', log: '从裂隙边缘拾取了15金币。' },
       },
     ],
   },

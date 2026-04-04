@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { AUGMENTS_POOL } from '../data/augments';
+import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { PixelQuestion, PixelHeart, PixelSkull, PixelStar, PixelFlame, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
 import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
@@ -59,11 +59,6 @@ export const EventScreen: React.FC = () => {
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
-      case 'modifyDiceCount': {
-        setGame(prev => ({ ...prev, diceCount: Math.min(6, prev.diceCount + (action.value || 0)), phase: 'map' }));
-        if (resolvedLog) addLog(resolvedLog);
-        return;
-      }
       case 'upgradeHandType': {
         const hpCost = action.value || 0; // negative
         if (resolvedToast) addToast(resolvedToast, 'damage');
@@ -79,27 +74,10 @@ export const EventScreen: React.FC = () => {
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
-      case 'modifyGlobalRerolls': {
-        if (resolvedToast) addToast(resolvedToast, action.toastType || 'buff');
-        setGame(prev => ({ ...prev, globalRerolls: prev.globalRerolls + (action.value || 0), phase: 'map' }));
-        if (resolvedLog) addLog(resolvedLog);
-        return;
-      }
       case 'modifyMaxHp': {
         const val = action.value || 0;
-        setGame(prev => ({ ...prev, souls: prev.souls - 35, maxHp: prev.maxHp + val, hp: prev.hp + val, phase: 'map' }));
-        if (resolvedLog) addLog(resolvedLog);
-        return;
-      }
-      case 'modifyFreeRerollsPerTurn': {
-        if (resolvedToast) addToast(resolvedToast, action.toastType || 'damage');
-        setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), freeRerollsPerTurn: prev.freeRerollsPerTurn + (action.value || 0), phase: 'map' }));
-        if (resolvedLog) addLog(resolvedLog);
-        return;
-      }
-      case 'modifyMaxPlays': {
-        if (resolvedToast) addToast(resolvedToast, action.toastType || 'damage');
-        setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp - 20), maxPlays: prev.maxPlays + (action.value || 0), phase: 'map' }));
+        setGame(prev => ({ ...prev, maxHp: prev.maxHp + val, hp: Math.min(prev.maxHp + val, prev.hp + (val > 0 ? val : 0)), phase: 'map' }));
+        if (resolvedToast) addToast(resolvedToast, action.toastType || 'buff');
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
@@ -126,16 +104,15 @@ export const EventScreen: React.FC = () => {
         }
         return;
       }
-      case 'grantAugment': {
-        // Grant random augment + HP cost
-        if (action.value) {
-          setGame(prev => ({ ...prev, hp: Math.max(1, prev.hp + action.value!) }));
-        }
-        // Pick a random augment
-        const pool = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-        const aug = pool[0];
-        if (aug) {
-          pickReward(aug);
+      case 'grantRelic': {
+        // 获得一个随机遗物
+        const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+        const picks = pickRandomRelics(relicPool, 1, game.relics.map(r => r.id));
+        if (picks.length > 0) {
+          const relic = picks[0];
+          setGame(prev => ({ ...prev, relics: [...prev.relics, relic] }));
+          addToast(`获得遗物「${relic.name}」!`, 'buff');
+          addLog(`获得了遗物「${relic.name}」`);
         }
         setGame(prev => ({ ...prev, phase: 'map' }));
         if (resolvedLog) addLog(resolvedLog);

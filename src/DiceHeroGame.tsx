@@ -21,8 +21,8 @@ import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './dat
 import { drawFromBag, initDiceBag } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
-import { getRelicRewardPool, pickRandomRelics } from './data/relics';
-import { AUGMENTS_POOL } from './data/augments';
+import { getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from './data/relics';
+// augments import removed - unified into relics
 import { getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
@@ -333,11 +333,11 @@ export default function DiceHeroGame() {
       // 构建候选商品池
       const candidateItems: ShopItem[] = [];
       // 候选：遗物
-      const shuffledAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-      for (const aug of shuffledAugs.slice(0, 3)) {
+      const shuffledRelics = pickRandomRelics([...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare], 3, game.relics.map(r => r.id));
+      for (const shopRelic of shuffledRelics) {
         candidateItems.push({
-          id: 'aug_' + aug.id, type: 'augment' as const, augment: aug,
-          label: aug.name, desc: aug.description, price: randPrice()
+          id: 'relic_' + shopRelic.id, type: 'augment' as const, augment: { ...shopRelic, condition: 'passive' as any } as any,
+          label: shopRelic.name, desc: shopRelic.description, price: randPrice()
         });
       }
       // 候选：骰子
@@ -1917,12 +1917,12 @@ useEffect(() => {
       }
     }
 
-    if (allWaveEnemies.some(e => e.dropAugment)) {
-      const options: Augment[] = [];
-      const pool = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < LOOT_CONFIG.augmentChoiceCount; i++) options.push(pool[i]);
-      loot.push({ id: 'augment', type: 'augment', augmentOptions: options, collected: false });
-    }
+    // (augment loot removed - unified into relic drops)
+
+
+
+
+
 
     // 遗物掉落：精英战/Boss战必掉，普通战30%概率
     const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
@@ -2151,9 +2151,9 @@ useEffect(() => {
       const [minP, maxP] = SHOP_CONFIG.priceRange;
       const rp = () => Math.floor(Math.random() * (maxP - minP + 1)) + minP;
       const candidates: ShopItem[] = [];
-      const sAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-      for (const aug of sAugs.slice(0, 3)) {
-        candidates.push({ id: 'aug_' + aug.id, type: 'augment' as const, augment: aug, label: aug.name, desc: aug.description, price: rp() });
+      const sRelics = pickRandomRelics([...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare], 3, game.relics.map(r => r.id));
+      for (const aug of sRelics) {
+        candidates.push({ id: 'aug_' + aug.id, type: 'augment' as const, augment: { ...aug, condition: 'passive' as any } as any, label: aug.name, desc: aug.description, price: rp() });
       }
       const sDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
       for (const d of sDice.slice(0, 2)) {

@@ -4,7 +4,7 @@ import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { PixelCoin, PixelStar, PixelDice } from './PixelIcons';
 import { DICE_BY_RARITY } from '../data/dice';
-import { AUGMENTS_POOL } from '../data/augments';
+import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
 
 // ============================================================
@@ -52,13 +52,15 @@ function generateReward(shopLevel: number): ChestReward {
         : (DICE_BY_RARITY.uncommon || []).includes(pick) ? 'uncommon' as const : 'common' as const;
       return { type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity };
     }
+
     case 'augment': {
-      const pool = AUGMENTS_POOL.filter(a => a.category !== undefined && (shopLevel >= 2 || a.category === 'transition' || a.category === 'economy'));
-      if (pool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
-      const pick = pool[Math.floor(Math.random() * pool.length)];
-      const rarity = (pick.category === 'endgame' || pick.category === 'self_harm') ? 'rare' as const : 'uncommon' as const;
-      return { type: 'augment', augment: { ...pick }, label: pick.name, desc: pick.description, rarity };
+      const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+      if (relicPool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
+      const pick = relicPool[Math.floor(Math.random() * relicPool.length)];
+      const rarity = pick.rarity === 'rare' ? 'rare' as const : pick.rarity === 'uncommon' ? 'uncommon' as const : 'common' as const;
+      return { type: 'augment', augment: { ...pick, condition: () => true } as any, label: pick.name, desc: pick.description, rarity };
     }
+
     case 'reroll':
       return { type: 'reroll', value: 1, label: '+1 重投', desc: '永久增加每回合免费重投次数', rarity: 'uncommon' };
     case 'drawCount':

@@ -303,6 +303,8 @@ export interface RelicContext {
   hasSpecialDice?: boolean;
   cursedDiceInHand?: number;
   crackedDiceInHand?: number;
+  // 连续普攻追踪
+  consecutiveNormalAttacks?: number;
   // 免费重Roll追踪
   freeRerollsUsed?: number;
 }

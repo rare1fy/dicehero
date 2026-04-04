@@ -1,5 +1,5 @@
-﻿/**
- * relics.ts - 遗物定义表
+/**
+ * relics.ts - 遗物定义表（统一遗物池）
  * 
  * 四大核心体系：
  * 1. 基础打工类 (Flat/Chips) - 提供基础数值保障
@@ -17,7 +17,7 @@ import type { Relic } from '../types/game';
 const grindstone: Relic = {
   id: 'grindstone',
   name: '磨刀石',
-  description: '打出≤2颗骰子的牌型时，额外+15基础伤害',
+  description: '打出≤2颗骰子的牌型时，额外+12基础伤害',
   icon: 'blade',
   rarity: 'common',
   trigger: 'on_play',
@@ -29,7 +29,7 @@ const grindstone: Relic = {
 const ironBanner: Relic = {
   id: 'iron_banner',
   name: '铁血战旗',
-  description: '本回合每次卖血重Roll，下次出牌+8基础伤害(可叠加)',
+  description: '本回合每次卖血Roll，下次出牌+6基础伤害(可叠加)',
   icon: 'flag',
   rarity: 'uncommon',
   trigger: 'on_play',
@@ -63,6 +63,28 @@ const chaosPendulum: Relic = {
   },
 };
 
+const ironSkinRelic: Relic = {
+  id: 'iron_skin_relic',
+  name: '铁皮护符',
+  description: '每次出牌获得5点护甲',
+  icon: 'blade',
+  rarity: 'common',
+  trigger: 'on_play',
+  effect: () => ({ armor: 5 }),
+};
+
+const scattershotRelic: Relic = {
+  id: 'scattershot_relic',
+  name: '散射弹幕',
+  description: '普通攻击时，每颗选中骰子额外+4伤害',
+  icon: 'blade',
+  rarity: 'common',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    damage: (ctx.handType === '普通攻击') ? (ctx.diceCount || 0) * 4 : 0,
+  }),
+};
+
 // ============================================================
 // 体系二：倍率起飞类
 // ============================================================
@@ -70,7 +92,7 @@ const chaosPendulum: Relic = {
 const crimsonGrail: Relic = {
   id: 'crimson_grail',
   name: '猩红圣杯',
-  description: '损失HP比例转化为最终伤害倍率(最高x3.0)',
+  description: '损失HP比例转化为最终伤害倍率(最高x2.5)',
   icon: 'grail',
   rarity: 'rare',
   trigger: 'on_play',
@@ -125,7 +147,7 @@ const elementalResonator: Relic = {
 const perfectionist: Relic = {
   id: 'perfectionist',
   name: '完美主义强迫症',
-  description: '打出葫芦/四条/五条且无特殊骰子(纯白板)时，伤害x5',
+  description: '打出葫芦/四条/五条且无特殊骰子(纯白杆)时，伤害x4',
   icon: 'diamond',
   rarity: 'legendary',
   trigger: 'on_play',
@@ -135,6 +157,43 @@ const perfectionist: Relic = {
     const noSpecial = !ctx.hasSpecialDice;
     return { multiplier: isPureHand && noSpecial ? 4.0 : 1 };
   },
+};
+
+const twinStarsRelic: Relic = {
+  id: 'twin_stars_relic',
+  name: '双子星',
+  description: '打出对子时，最终伤害x1.5',
+  icon: 'diamond',
+  rarity: 'uncommon',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    multiplier: (ctx.handType === '对子') ? 1.5 : 1,
+  }),
+};
+
+const voidEchoRelic: Relic = {
+  id: 'void_echo_relic',
+  name: '虚空回响',
+  description: '打出连对时，最终伤害x1.8',
+  icon: 'diamond',
+  rarity: 'uncommon',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    multiplier: (ctx.handType === '连对') ? 1.8 : 1,
+  }),
+};
+
+const glassCannonRelic: Relic = {
+  id: 'glass_cannon_relic',
+  name: '玻璃大炮',
+  description: '每次出牌：伤害x2.0，但损失4HP',
+  icon: 'blade',
+  rarity: 'rare',
+  trigger: 'on_play',
+  effect: () => ({
+    multiplier: 2.0,
+    heal: -4,
+  }),
 };
 
 // ============================================================
@@ -157,7 +216,7 @@ const emergencyHourglass: Relic = {
 const vampireFangs: Relic = {
   id: 'vampire_fangs',
   name: '吸血鬼假牙',
-  description: '击杀时溢出伤害的30%转化为生命恢复',
+  description: '击杀时溢出伤害的25%转化为生命恢复',
   icon: 'fangs',
   rarity: 'rare',
   trigger: 'on_kill',
@@ -169,7 +228,7 @@ const vampireFangs: Relic = {
 const blackMarketContract: Relic = {
   id: 'black_market_contract',
   name: '黑市合同',
-  description: '每次卖血重Roll时，获得等同扣血值的金币',
+  description: '每次卖血Roll时，获得等同扣血值的金币',
   icon: 'contract',
   rarity: 'uncommon',
   trigger: 'on_reroll',
@@ -186,7 +245,66 @@ const scrapYard: Relic = {
   rarity: 'uncommon',
   trigger: 'on_battle_end',
   effect: (ctx) => ({
-    goldBonus: ((ctx.cursedDiceInHand || 0) + (ctx.crackedDiceInHand || 0)) * 10,
+    goldBonus: ((ctx.cursedDiceInHand || 0) + (ctx.crackedDiceInHand || 0)) * 8,
+  }),
+};
+
+const merchantsEyeRelic: Relic = {
+  id: 'merchants_eye_relic',
+  name: '商人之眼',
+  description: '每次出牌额外获得3金币',
+  icon: 'bag',
+  rarity: 'common',
+  trigger: 'on_play',
+  effect: () => ({ goldBonus: 3 }),
+};
+
+const warProfiteerRelic: Relic = {
+  id: 'war_profiteer_relic',
+  name: '战争商人',
+  description: '每击杀一个敌人，本场战斗每次出牌额外+5金币',
+  icon: 'bag',
+  rarity: 'uncommon',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    goldBonus: (ctx.enemiesKilledThisBattle || 0) * 5,
+  }),
+};
+
+const interestRelic: Relic = {
+  id: 'interest_relic',
+  name: '利息存款',
+  description: '每场战斗结束时，每10金币产生1金币利息',
+  icon: 'bag',
+  rarity: 'uncommon',
+  trigger: 'on_battle_end',
+  effect: (ctx) => ({
+    goldBonus: Math.floor((ctx.currentGold || 0) / 10),
+  }),
+};
+
+const painAmplifierRelic: Relic = {
+  id: 'pain_amplifier_relic',
+  name: '痛觉放大器',
+  description: '每次出牌：本场战斗已损失HP的15%转化为额外伤害',
+  icon: 'blade',
+  rarity: 'rare',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    damage: Math.floor((ctx.hpLostThisBattle || 0) * 0.15),
+  }),
+};
+
+const masochistRelic: Relic = {
+  id: 'masochist_relic',
+  name: '受虐狂',
+  description: '每次出牌：本回合损失HP的50%转化为护甲，20%回复',
+  icon: 'blade',
+  rarity: 'rare',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    armor: Math.floor((ctx.hpLostThisTurn || 0) * 0.5),
+    heal: Math.floor((ctx.hpLostThisTurn || 0) * 0.2),
   }),
 };
 
@@ -219,7 +337,7 @@ const quantumObserver: Relic = {
 const limitBreaker: Relic = {
   id: 'limit_breaker',
   name: '底线突破',
-  description: '小丑骰子最大点数解禁(不再受限于9)',
+  description: '小丑骰子最大点数解锁(不再受限于9)',
   icon: 'infinity',
   rarity: 'legendary',
   trigger: 'passive',
@@ -241,34 +359,62 @@ const schrodingerBag: Relic = {
   },
 };
 
+const comboMasterRelic: Relic = {
+  id: 'combo_master_relic',
+  name: '连招大师',
+  description: '连续使用普攻，每次伤害+5且倍率+0.1（非普攻出牌重置）',
+  icon: 'blade',
+  rarity: 'uncommon',
+  trigger: 'on_play',
+  effect: (ctx) => ({
+    damage: (ctx.handType === '普通攻击') ? (ctx.consecutiveNormalAttacks || 0) * 5 : 0,
+    multiplier: (ctx.handType === '普通攻击') ? 1 + (ctx.consecutiveNormalAttacks || 0) * 0.1 : 1,
+  }),
+};
+
 // ============================================================
 // 遗物注册表
 // ============================================================
 
 export const ALL_RELICS: Record<string, Relic> = {
+  // 基础打工
   grindstone,
   iron_banner: ironBanner,
   heavy_metal_core: heavyMetalCore,
   chaos_pendulum: chaosPendulum,
+  iron_skin_relic: ironSkinRelic,
+  scattershot_relic: scattershotRelic,
+  // 倍率起飞
   crimson_grail: crimsonGrail,
   arithmetic_gauge: arithmeticGauge,
   mirror_prism: mirrorPrism,
   elemental_resonator: elementalResonator,
   perfectionist,
+  twin_stars_relic: twinStarsRelic,
+  void_echo_relic: voidEchoRelic,
+  glass_cannon_relic: glassCannonRelic,
+  // 经济续航
   emergency_hourglass: emergencyHourglass,
   vampire_fangs: vampireFangs,
   black_market_contract: blackMarketContract,
   scrap_yard: scrapYard,
+  merchants_eye_relic: merchantsEyeRelic,
+  war_profiteer_relic: warProfiteerRelic,
+  interest_relic: interestRelic,
+  pain_amplifier_relic: painAmplifierRelic,
+  masochist_relic: masochistRelic,
+  // 机制突变
   overflow_conduit: overflowConduit,
   quantum_observer: quantumObserver,
   limit_breaker: limitBreaker,
   schrodinger_bag: schrodingerBag,
+  combo_master_relic: comboMasterRelic,
 };
 
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
-  common: [grindstone, heavyMetalCore, chaosPendulum],
-  uncommon: [ironBanner, blackMarketContract, scrapYard],
-  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass],
+  common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic],
+  uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic],
+  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic],
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker],
 };
 

@@ -12,7 +12,7 @@ let audioCtx: AudioContext | null = null;
 let _bgmOscillators: OscillatorNode[] = [];
 let _bgmGains: GainNode[] = [];
 let bgmPlaying = false;
-let masterVolume = 0.5;
+let masterVolume = 0.8;
 let sfxEnabled = true;
 let bgmEnabled = true;
 
@@ -92,7 +92,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(523, now); // C5
         osc.frequency.exponentialRampToValueAtTime(784, now + 0.06); // G5
-        g.gain.setValueAtTime(0.06, now);
+        g.gain.setValueAtTime(0.15, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.08);
@@ -106,7 +106,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.05, now + i * 0.05);
+          g.gain.setValueAtTime(0.12, now + i * 0.05);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.1);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.1);
@@ -147,7 +147,7 @@ export const playSound = (type: SoundType) => {
           o.type = i === 2 ? 'square' : 'sawtooth';
           o.frequency.setValueAtTime(f, now);
           o.frequency.exponentialRampToValueAtTime(f * 0.3, now + 0.3);
-          g.gain.setValueAtTime(0.12, now + i * 0.02);
+          g.gain.setValueAtTime(0.25, now + i * 0.02);
           g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.02); o.stop(now + 0.35);
@@ -161,7 +161,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(300, now);
         osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
-        g.gain.setValueAtTime(0.08, now);
+        g.gain.setValueAtTime(0.18, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.2);
@@ -175,7 +175,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(600, now);
         osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
-        g.gain.setValueAtTime(0.12, now);
+        g.gain.setValueAtTime(0.25, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.3);
@@ -189,7 +189,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.06, now + i * 0.08);
+          g.gain.setValueAtTime(0.14, now + i * 0.08);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.3);
@@ -241,7 +241,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(800, now);
         osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
-        g.gain.setValueAtTime(0.06, now);
+        g.gain.setValueAtTime(0.14, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.2);
@@ -255,7 +255,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(400, now);
         osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-        g.gain.setValueAtTime(0.08, now);
+        g.gain.setValueAtTime(0.18, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.25);
@@ -268,7 +268,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(400, now);
         osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-        g.gain.setValueAtTime(0.08, now);
+        g.gain.setValueAtTime(0.18, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.3);
@@ -282,7 +282,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.04, now + i * 0.06);
+          g.gain.setValueAtTime(0.1, now + i * 0.06);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.15);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.15);
@@ -297,7 +297,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'square';
           o.frequency.value = 150 + Math.random() * 200;
-          g.gain.setValueAtTime(0.04, now + i * 0.03);
+          g.gain.setValueAtTime(0.1, now + i * 0.03);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.05);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.03); o.stop(now + i * 0.03 + 0.05);
@@ -312,7 +312,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.08, now + i * 0.12);
+          g.gain.setValueAtTime(0.18, now + i * 0.12);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.5);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.5);
@@ -327,7 +327,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sawtooth';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.1, now + i * 0.2);
+          g.gain.setValueAtTime(0.2, now + i * 0.2);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.6);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.2); o.stop(now + i * 0.2 + 0.6);
@@ -342,7 +342,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.07, now + i * 0.1);
+          g.gain.setValueAtTime(0.16, now + i * 0.1);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.4);
@@ -356,7 +356,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(392, now);
         osc.frequency.exponentialRampToValueAtTime(523, now + 0.08);
-        g.gain.setValueAtTime(0.04, now);
+        g.gain.setValueAtTime(0.1, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.1);
@@ -370,7 +370,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.05, now + i * 0.07);
+          g.gain.setValueAtTime(0.12, now + i * 0.07);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.15);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.15);
@@ -401,7 +401,7 @@ export const playSound = (type: SoundType) => {
         osc.frequency.setValueAtTime(330, now);
         osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
         osc.frequency.exponentialRampToValueAtTime(330, now + 0.4);
-        g.gain.setValueAtTime(0.06, now);
+        g.gain.setValueAtTime(0.14, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.5);
@@ -430,7 +430,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.04, now + i * 0.04);
+          g.gain.setValueAtTime(0.1, now + i * 0.04);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.12);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.12);
@@ -444,7 +444,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(440, now);
         osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
-        g.gain.setValueAtTime(0.05, now);
+        g.gain.setValueAtTime(0.12, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.25);
@@ -604,22 +604,22 @@ const BGM_CONFIGS: Record<string, BGMConfig> = {
     tempo: 320,
     melodyType: 'sine',
     bassType: 'triangle',
-    melodyVol: 0.018,
-    bassVol: 0.012,
+    melodyVol: 0.04,
+    bassVol: 0.025,
     drumPattern: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
-    drumVol: 0.008,
+    drumVol: 0.018,
   },
   battle: {
-    // 紧张战斗进行曲 — Dm Bb C Dm 快节奏小调
-    melody: [294, 349, 440, 392, 349, 294, 262, 294, 349, 392, 440, 523, 494, 440, 349, 294],
-    bass:   [147, 147, 117, 117, 131, 131, 147, 147, 147, 147, 117, 117, 131, 131, 147, 147],
+    // 紧张战斗进行曲 — Dm Bb C Dm 快节奏小调 (64 notes ~34s loop)
+    melody: [294, 349, 440, 392, 349, 294, 262, 294, 233, 294, 349, 392, 349, 294, 262, 233, 262, 330, 392, 440, 523, 494, 440, 392, 294, 349, 440, 523, 494, 440, 349, 294, 349, 294, 349, 440, 392, 349, 262, 294, 466, 440, 392, 349, 294, 262, 233, 262, 262, 294, 349, 392, 440, 523, 587, 523, 440, 392, 349, 294, 262, 233, 262, 294],
+    bass:   [147, 147, 147, 147, 117, 117, 131, 131, 117, 117, 117, 117, 131, 131, 147, 147, 147, 147, 131, 131, 117, 117, 131, 131, 131, 131, 147, 147, 147, 147, 117, 117, 147, 147, 117, 117, 131, 131, 147, 147, 117, 117, 131, 131, 131, 131, 147, 147, 131, 131, 147, 147, 147, 147, 131, 131, 147, 147, 117, 117, 131, 131, 147, 147],
     tempo: 180,
     melodyType: 'square',
     bassType: 'sawtooth',
-    melodyVol: 0.015,
-    bassVol: 0.012,
-    drumPattern: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, true],
-    drumVol: 0.02,
+    melodyVol: 0.035,
+    bassVol: 0.025,
+    drumPattern: [true, false, true, false, true, false, true, false, true, false, true, false, true, true, false, true, true, false, false, true, true, false, true, false, true, false, true, false, true, false, true, true, true, false, true, false, true, false, false, true, true, false, true, true, true, false, true, false, true, true, false, true, true, false, true, false, true, false, true, false, true, true, true, true],
+    drumVol: 0.035,
   },
   boss: {
     // 威压Boss战 — 低沉厚重，半音阶下行 + 强力鼓点
@@ -628,10 +628,10 @@ const BGM_CONFIGS: Record<string, BGMConfig> = {
     tempo: 240,
     melodyType: 'sawtooth',
     bassType: 'sawtooth',
-    melodyVol: 0.014,
-    bassVol: 0.016,
+    melodyVol: 0.035,
+    bassVol: 0.035,
     drumPattern: [true, false, false, true, true, false, false, true, true, false, true, false, true, true, false, true],
-    drumVol: 0.025,
+    drumVol: 0.04,
   },
 };
 

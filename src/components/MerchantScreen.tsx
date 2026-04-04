@@ -4,7 +4,7 @@ import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { PixelCoin, PixelDice } from './PixelIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
-import { AUGMENTS_POOL } from '../data/augments';
+import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
 import type { Augment } from '../types/game';
 
@@ -53,13 +53,14 @@ function generateMerchantItems(chapter: number): MerchantItem[] {
         break;
       }
       case 'augment': {
-        const pool = AUGMENTS_POOL.filter(a => a.category !== undefined);
-        if (pool.length === 0) continue;
-        const pick = pool[Math.floor(Math.random() * pool.length)];
-        const basePrice = 40;
+        const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+        const relicPicks = pickRandomRelics(relicPool, 1, []);
+        if (relicPicks.length === 0) continue;
+        const relicPick = relicPicks[0];
+        const basePrice = relicPick.rarity === 'rare' ? 60 : relicPick.rarity === 'uncommon' ? 45 : 30;
         items.push({
-          id: `merchant-aug-${pick.id}`, type: 'augment', augment: { ...pick },
-          label: pick.name, desc: pick.description,
+          id: `merchant-relic-${relicPick.id}`, type: 'augment' as any, augment: { ...relicPick, condition: () => true } as any,
+          label: relicPick.name, desc: relicPick.description,
           basePrice, finalPrice: Math.floor(basePrice * priceMult), priceTag, sold: false,
         });
         break;
