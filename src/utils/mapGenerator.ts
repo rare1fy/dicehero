@@ -2,97 +2,96 @@ import { MapNode, NodeType } from '../types/game';
 import { MAP_CONFIG } from '../config';
 
 /**
- * \u6740\u622e\u5c16\u5854\u98ce\u683c\u5730\u56fe\u751f\u6210\u5668 v2
+ * 杀戮尖塔风格地图生成器 v3
  * 
- * \u6838\u5fc3\u6539\u8fdb\uff1a
- * - \u5c42\u6a21\u677f\u5206\u914d\uff1a\u540c\u5c42\u8282\u70b9\u7c7b\u578b\u4e0d\u96f7\u540c\uff0c\u81f3\u5c11\u5305\u542b2\u4e2a\u5927\u7c7b
- * - Boss\u552f\u4e00\u6c47\u805a\uff1a\u53ea\u6709Boss\u5c42\u5141\u8bb8\u5168\u56fe\u6536\u675f\uff0c\u7cbe\u82f1\u4e0d\u518d\u505a\u6c47\u805a\u7ec8\u70b9
- * - \u53d1\u6563\u5f0f\u8fde\u63a5\uff1a\u975eBoss\u5355\u70b9\u4e0d\u5141\u8bb8\u5165\u8fb9>2\uff0c\u907f\u514dDNA\u7ed3\u6784
- * - \u8def\u7ebf\u7b56\u7565\u6027\uff1a\u6bcf\u6b21\u5206\u53c9\u540e2-3\u5c42\u6709\u8def\u7ebf\u503e\u5411\uff08\u98ce\u9669/\u5e73\u8861/\u7ecf\u6d4e\uff09
+ * v3核心改进：
+ * - 保证每条路径上战斗节点密度：连续非战斗节点不超过1层
+ * - 模板战斗比例提升：每层至少50%节点是战斗(enemy/elite)
+ * - 路径验证：生成后验证所有路径，不满足最低战斗数则修正
+ * - Boss前保证至少经历过足够战斗
  */
 
 export interface MapNodeExt extends MapNode {
-  x: number; // 0-100 \u7684\u6c34\u5e73\u767e\u5206\u6bd4\u4f4d\u7f6e
+  x: number;
 }
-
-// ============================================================
-// \u5c42\u6a21\u677f\u7cfb\u7edf
-// ============================================================
 
 type LayerTemplate = NodeType[];
 
-/** \u524d\u534a\u7a0b3\u8282\u70b9\u6a21\u677f\uff08\u5c421~5\uff09 */
+// ============================================================
+// 层模板系统 — 保证每层至少50%是战斗节点
+// ============================================================
+
+/** 前半程3节点模板（层1~5）— 至少2个战斗 */
 const EARLY_3_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'event', 'enemy'],
   ['enemy', 'enemy', 'event'],
-  ['enemy', 'event', 'merchant'],
-  ['enemy', 'treasure', 'event'],
-  ['enemy', 'event', 'enemy'],
+  ['enemy', 'enemy', 'merchant'],
+  ['enemy', 'enemy', 'treasure'],
+  ['enemy', 'elite', 'event'],
   ['enemy', 'enemy', 'event'],
+  ['enemy', 'enemy', 'merchant'],
 ];
 
-/** \u524d\u534a\u7a0b\u542b\u7cbe\u82f1\u76843\u8282\u70b9\u6a21\u677f\uff08\u98ce\u9669\u5c42\uff09 */
+/** 前半程含精英的3节点模板（风险层）*/
 const EARLY_3_ELITE_TEMPLATES: LayerTemplate[] = [
-  ['elite', 'event', 'merchant'],
-  ['elite', 'treasure', 'enemy'],
-  ['elite', 'merchant', 'event'],
-  ['elite', 'enemy', 'merchant'],
-];
-
-/** \u524d\u534a\u7a0b4\u8282\u70b9\u6a21\u677f */
-const EARLY_4_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'event', 'enemy', 'enemy'],
-  ['enemy', 'enemy', 'event', 'merchant'],
-  ['enemy', 'enemy', 'event', 'enemy'],
-  ['enemy', 'event', 'enemy', 'treasure'],
-  ['enemy', 'enemy', 'merchant', 'event'],
-];
-
-/** 前半程5节点模板 */
-const EARLY_5_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'event', 'enemy', 'enemy', 'merchant'],
-  ['enemy', 'enemy', 'event', 'treasure', 'enemy'],
-  ['enemy', 'event', 'enemy', 'enemy', 'event'],
-  ['enemy', 'enemy', 'event', 'enemy', 'merchant'],
-];
-
-/** \u540e\u534a\u7a0b3\u8282\u70b9\u6a21\u677f\uff08\u5c428~12\uff09 */
-const LATE_3_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'event'],
-  ['enemy', 'treasure', 'merchant'],
-  ['enemy', 'merchant', 'merchant'],
-  ['enemy', 'event', 'treasure'],
-  ['enemy', 'merchant', 'event'],
-];
-
-/** \u540e\u534a\u7a0b\u542b\u7cbe\u82f1\u76843\u8282\u70b9\u6a21\u677f */
-const LATE_3_ELITE_TEMPLATES: LayerTemplate[] = [
   ['elite', 'enemy', 'event'],
-  ['elite', 'merchant', 'treasure'],
-  ['elite', 'merchant', 'event'],
+  ['elite', 'enemy', 'merchant'],
   ['elite', 'enemy', 'treasure'],
+  ['elite', 'enemy', 'event'],
 ];
 
-/** \u540e\u534a\u7a0b4\u8282\u70b9\u6a21\u677f */
+/** 前半程4节点模板 — 至少2个战斗 */
+const EARLY_4_TEMPLATES: LayerTemplate[] = [
+  ['enemy', 'enemy', 'event', 'merchant'],
+  ['enemy', 'enemy', 'enemy', 'event'],
+  ['enemy', 'enemy', 'event', 'treasure'],
+  ['enemy', 'enemy', 'merchant', 'enemy'],
+  ['enemy', 'elite', 'event', 'enemy'],
+];
+
+/** 前半程5节点模板 — 至少3个战斗 */
+const EARLY_5_TEMPLATES: LayerTemplate[] = [
+  ['enemy', 'enemy', 'enemy', 'event', 'merchant'],
+  ['enemy', 'enemy', 'elite', 'event', 'enemy'],
+  ['enemy', 'enemy', 'enemy', 'merchant', 'event'],
+  ['enemy', 'enemy', 'enemy', 'event', 'treasure'],
+];
+
+/** 后半程3节点模板（层8~12）— 至少2个战斗 */
+const LATE_3_TEMPLATES: LayerTemplate[] = [
+  ['enemy', 'enemy', 'merchant'],
+  ['enemy', 'enemy', 'event'],
+  ['enemy', 'enemy', 'treasure'],
+  ['enemy', 'enemy', 'merchant'],
+  ['enemy', 'enemy', 'event'],
+];
+
+/** 后半程含精英3节点模板 */
+const LATE_3_ELITE_TEMPLATES: LayerTemplate[] = [
+  ['elite', 'enemy', 'merchant'],
+  ['elite', 'enemy', 'event'],
+  ['elite', 'enemy', 'treasure'],
+  ['elite', 'enemy', 'event'],
+];
+
+/** 后半程4节点模板 */
 const LATE_4_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'enemy', 'merchant', 'event'],
-  ['enemy', 'elite', 'treasure', 'event'],
+  ['enemy', 'elite', 'enemy', 'event'],
   ['enemy', 'enemy', 'merchant', 'treasure'],
-  ['enemy', 'elite', 'merchant', 'merchant'],
-  ['enemy', 'event', 'treasure', 'merchant'],
+  ['enemy', 'elite', 'enemy', 'merchant'],
+  ['enemy', 'enemy', 'event', 'enemy'],
 ];
 
-/** 后半程5节点模板 */
+/** 后半程5节点模板 — 至少3个战斗 */
 const LATE_5_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'merchant', 'event', 'treasure'],
-  ['enemy', 'elite', 'treasure', 'event', 'merchant'],
-  ['enemy', 'enemy', 'merchant', 'treasure', 'event'],
-  ['enemy', 'elite', 'merchant', 'event', 'enemy'],
-  ['enemy', 'enemy', 'event', 'treasure', 'merchant'],
+  ['enemy', 'enemy', 'enemy', 'merchant', 'event'],
+  ['enemy', 'elite', 'enemy', 'event', 'merchant'],
+  ['enemy', 'enemy', 'enemy', 'treasure', 'event'],
+  ['enemy', 'elite', 'enemy', 'merchant', 'enemy'],
+  ['enemy', 'enemy', 'enemy', 'event', 'treasure'],
 ];
 
-
-/** 2\u8282\u70b9\u8425\u706b\u5c42\u6a21\u677f */
+/** 2节点营火层模板 */
 const CAMPFIRE_2_TEMPLATES: LayerTemplate[] = [
   ['campfire', 'campfire'],
 ];
@@ -110,11 +109,14 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function isCombatType(type: NodeType): boolean {
+  return type === 'enemy' || type === 'elite' || type === 'boss';
+}
+
 /**
- * \u6839\u636e\u5c42\u6df1\u5ea6\u548c\u8282\u70b9\u6570\u9009\u62e9\u6a21\u677f
+ * 根据层深度和节点数选择模板
  */
 function getLayerTemplate(depth: number, count: number, fixedType: string | null): NodeType[] {
-  // \u56fa\u5b9a\u7c7b\u578b\u5c42\uff08boss/campfire/enemy\u8d77\u70b9\uff09
   if (fixedType === 'boss') return ['boss'];
   if (fixedType === 'campfire') {
     if (count <= 2) return pickRandom(CAMPFIRE_2_TEMPLATES);
@@ -130,19 +132,16 @@ function getLayerTemplate(depth: number, count: number, fixedType: string | null
     return shuffle(pickRandom(pool));
   }
 
-
   if (count === 4) {
     const pool = isEarly ? EARLY_4_TEMPLATES : LATE_4_TEMPLATES;
     return shuffle(pickRandom(pool));
   }
 
   if (count === 3) {
-    // \u98ce\u9669\u5c42\u6709\u6982\u7387\u51fa\u7cbe\u82f1\u6a21\u677f
     if (isRiskLayer && Math.random() < 0.6) {
       const elitePool = isEarly ? EARLY_3_ELITE_TEMPLATES : LATE_3_ELITE_TEMPLATES;
       return shuffle(pickRandom(elitePool));
     }
-    // \u975e\u98ce\u9669\u5c42\u4e5f\u6709\u5c0f\u6982\u7387\u51fa\u7cbe\u82f1
     if (!isRiskLayer && Math.random() < 0.15) {
       const elitePool = isEarly ? EARLY_3_ELITE_TEMPLATES : LATE_3_ELITE_TEMPLATES;
       return shuffle(pickRandom(elitePool));
@@ -152,40 +151,36 @@ function getLayerTemplate(depth: number, count: number, fixedType: string | null
   }
 
   if (count === 2) {
-    // 2\u8282\u70b9\u5c42\uff1a\u4fdd\u8bc1\u4e0d\u540c\u7c7b\u578b
+    // 2节点层：保证至少1个战斗
     const pairs: LayerTemplate[] = [
       ['enemy', 'event'],
       ['enemy', 'merchant'],
       ['enemy', 'treasure'],
+      ['enemy', 'event'],
       ['enemy', 'merchant'],
-      ['merchant', 'event'],
-      ['treasure', 'event'],
     ];
     return shuffle(pickRandom(pairs));
   }
 
-  // count === 1 fallback
   return ['enemy'];
 }
 
 // ============================================================
-// \u5730\u56fe\u751f\u6210\u4e3b\u51fd\u6570
+// 地图生成主函数
 // ============================================================
 
 export const generateMap = (): MapNode[] => {
   const nodes: MapNodeExt[] = [];
   const layers = MAP_CONFIG.totalLayers;
 
-  // === \u7b2c\u4e00\u6b65\uff1a\u751f\u6210\u6240\u6709\u8282\u70b9 + \u57fa\u4e8e\u6a21\u677f\u5206\u914d\u7c7b\u578b ===
+  // === 第一步：生成所有节点 + 基于模板分配类型 ===
   for (let l = 0; l < layers; l++) {
     const fixed = MAP_CONFIG.fixedLayers[l];
     const count = fixed ? fixed.count : 3;
     const fixedType = fixed?.type ?? null;
 
-    // \u83b7\u53d6\u5c42\u6a21\u677f
     const template = getLayerTemplate(l, count, fixedType);
 
-    // \u8ba1\u7b97x\u5750\u6807 \u2014 \u53d1\u6563\u5f0f\u5206\u5e03
     const isPreBossLayer = MAP_CONFIG.fixedLayers[l + 1]?.type === 'boss';
     const isPostBossLayer = l > 0 && MAP_CONFIG.fixedLayers[l - 1]?.type === 'boss';
 
@@ -194,21 +189,18 @@ export const generateMap = (): MapNode[] => {
     if (count === 1) {
       positions.push(50);
     } else if (isPreBossLayer) {
-      // Boss\u524d\u4e00\u5c42\uff1a\u5411\u4e2d\u95f4\u6536\u62e2\uff0825-75\u8303\u56f4\uff09
       for (let i = 0; i < count; i++) {
         const baseX = 25 + (i + 1) / (count + 1) * 50;
         const jitter = (Math.random() - 0.5) * 8;
         positions.push(Math.max(20, Math.min(80, baseX + jitter)));
       }
     } else if (isPostBossLayer) {
-      // Boss\u540e\u4e00\u5c42\uff1a\u91cd\u65b0\u53d1\u6563\uff0810-90\u8303\u56f4\uff09
       for (let i = 0; i < count; i++) {
         const baseX = 10 + (i + 1) / (count + 1) * 80;
         const jitter = (Math.random() - 0.5) * 15;
         positions.push(Math.max(8, Math.min(92, baseX + jitter)));
       }
     } else {
-      // \u666e\u901a\u5c42\uff1a\u6700\u5927\u5316\u53d1\u6563\uff085-95\u8303\u56f4\uff09
       const minSpacing = 80 / (count + 1);
       for (let i = 0; i < count; i++) {
         const baseX = 5 + (i + 1) / (count + 1) * 90;
@@ -218,7 +210,6 @@ export const generateMap = (): MapNode[] => {
     }
     positions.sort((a, b) => a - b);
 
-    // \u786e\u4fdd\u76f8\u90bb\u8282\u70b9\u95f4\u8ddd\u4e0d\u5c0f\u4e8e12\uff08\u907f\u514d\u91cd\u53e0\uff09
     for (let i = 1; i < positions.length; i++) {
       if (positions[i] - positions[i - 1] < 12) {
         positions[i] = positions[i - 1] + 12;
@@ -239,38 +230,32 @@ export const generateMap = (): MapNode[] => {
     }
   }
 
-  // === \u7b2c\u4e8c\u6b65\uff1a\u751f\u6210\u8fde\u63a5\u5173\u7cfb \u2014 \u53d1\u6563\u5f0f\uff0c\u975eBoss\u4e0d\u6c47\u805a ===
+  // === 第二步：生成连接关系 ===
   for (let l = 0; l < layers - 1; l++) {
     const currentLayer = nodes.filter(n => n.depth === l);
     const nextLayer = nodes.filter(n => n.depth === l + 1);
 
     if (nextLayer.length === 1) {
-      // \u4e0b\u4e00\u5c42\u53ea\u67091\u4e2a\u8282\u70b9\uff08Boss\uff09\uff0c\u6240\u6709\u5f53\u524d\u5c42\u8282\u70b9\u90fd\u8fde\u5411\u5b83
       currentLayer.forEach(node => {
         node.connectedTo.push(nextLayer[0].id);
       });
     } else if (currentLayer.length === 1) {
-      // \u5f53\u524d\u5c42\u53ea\u67091\u4e2a\u8282\u70b9\uff08Boss\u540e\uff09\uff0c\u8fde\u5411\u4e0b\u4e00\u5c42\u6240\u6709\u8282\u70b9\uff08\u53d1\u6563\uff09
       nextLayer.forEach(next => {
         currentLayer[0].connectedTo.push(next.id);
       });
     } else {
-      // \u57fa\u4e8e\u4f4d\u7f6e\u8ddd\u79bb\u7684\u8fde\u63a5 \u2014 \u9650\u5236\u5165\u8fb9\u6570\uff0c\u907f\u514d\u6c47\u805a
       const inDegree: Record<string, number> = {};
       nextLayer.forEach(n => { inDegree[n.id] = 0; });
 
-      // \u5148\u4e3a\u6bcf\u4e2a\u5f53\u524d\u5c42\u8282\u70b9\u8fde\u6700\u8fd1\u76841\u4e2a
       currentLayer.forEach((node) => {
         const distances = nextLayer.map((next) => ({
           dist: Math.abs(node.x - next.x),
           id: next.id,
         })).sort((a, b) => a.dist - b.dist);
 
-        // \u5fc5\u8fde\u6700\u8fd1\u76841\u4e2a
         node.connectedTo.push(distances[0].id);
         inDegree[distances[0].id]++;
 
-        // 40%\u6982\u7387\u8fde\u7b2c\u4e8c\u8fd1\u7684\uff08\u4f46\u9650\u5236\u5165\u8fb9\u22642\uff09
         if (distances.length > 1 && Math.random() < 0.4) {
           if (inDegree[distances[1].id] < 2) {
             node.connectedTo.push(distances[1].id);
@@ -279,10 +264,8 @@ export const generateMap = (): MapNode[] => {
         }
       });
 
-      // \u786e\u4fdd\u6bcf\u4e2a\u4e0b\u4e00\u5c42\u8282\u70b9\u81f3\u5c11\u6709\u4e00\u4e2a\u7236\u8282\u70b9
       nextLayer.forEach((next) => {
         if (inDegree[next.id] === 0) {
-          // \u627e\u6700\u8fd1\u7684\u7236\u8282\u70b9\u8fde\u8fc7\u6765
           let closestParent = currentLayer[0];
           let minDist = Infinity;
           currentLayer.forEach(p => {
@@ -299,8 +282,8 @@ export const generateMap = (): MapNode[] => {
     }
   }
 
-  // === \u7b2c\u4e09\u6b65\uff1a\u8def\u5f84\u611f\u77e5\u4fee\u6b63 \u2014 \u907f\u514d\u8fde\u7eed\u540c\u7c7b\u578b\u975e\u6218\u6597\u8282\u70b9 ===
-  const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure', 'merchant'];
+  // === 第三步：路径感知修正 — 保证战斗密度 ===
+  const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure'];
   const fixedLayerIds = new Set(Object.keys(MAP_CONFIG.fixedLayers).map(Number));
 
   for (let l = 1; l < layers; l++) {
@@ -311,49 +294,49 @@ export const generateMap = (): MapNode[] => {
       const parentNodes = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
       if (parentNodes.length === 0) return;
 
-      // \u89c4\u5219\uff1a\u540c\u7c7b\u578b\u975e\u6218\u6597\u8282\u70b9\u4e0d\u80fd\u8fde\u7eed
+      // 规则1：同类型非战斗节点不能连续
       if (nonCombatTypes.includes(node.type)) {
         const hasSameTypeParent = parentNodes.some(p => p.type === node.type);
         if (hasSameTypeParent) {
-          node.type = getRandomNodeTypeExcluding(node.type, parentNodes.map(p => p.type));
+          node.type = 'enemy';
         }
       }
 
-      // \u89c4\u5219\uff1a\u6240\u6709\u7236\u8282\u70b9\u90fd\u662f\u975e\u6218\u6597\u65f6\uff0c\u5f53\u524d\u8282\u70b9\u5fc5\u987b\u662f\u6218\u6597
-
-      // 规则：经济类节点不能连续（shop→merchant、merchant→treasure等）
-      const economicTypes: NodeType[] = ['merchant', 'merchant', 'treasure'];
-      if (economicTypes.includes(node.type)) {
-        const hasEconomicParent = parentNodes.some(p => economicTypes.includes(p.type));
-        if (hasEconomicParent) {
-          node.type = getRandomNodeTypeExcluding(node.type, [...economicTypes]);
-        }
-      }
-
+      // 规则2：所有父节点都是非战斗时，当前节点必须是战斗
       if (nonCombatTypes.includes(node.type)) {
         const allParentsNonCombat = parentNodes.every(p => nonCombatTypes.includes(p.type));
         if (allParentsNonCombat) {
           node.type = 'enemy';
         }
       }
+
+      // 规则3：检查祖父节点 — 如果父节点和祖父节点都不是战斗，强制当前为战斗
+      // 这确保连续非战斗路径不超过1层
+      if (nonCombatTypes.includes(node.type) && l >= 2) {
+        const hasNonCombatChain = parentNodes.some(parent => {
+          if (!nonCombatTypes.includes(parent.type)) return false;
+          // 检查parent的父节点
+          const grandparents = nodes.filter(n => n.depth === l - 2 && n.connectedTo.includes(parent.id));
+          return grandparents.some(gp => nonCombatTypes.includes(gp.type));
+        });
+        if (hasNonCombatChain) {
+          node.type = 'enemy';
+        }
+      }
     });
   }
 
-  // \u53bb\u91cd\u8fde\u63a5
-
   // === Step 4: Economic node distribution fix ===
-  // Early layers (depth 0-2): no economic nodes
-  // Any layer: max 1 economic node
-  const economicNodeTypes: NodeType[] = ['merchant', 'merchant', 'treasure'];
+  const economicNodeTypes: NodeType[] = ['merchant', 'treasure'];
   for (let l = 0; l < layers; l++) {
     if (fixedLayerIds.has(l)) continue;
     const layerNodes = nodes.filter(n => n.depth === l);
 
-    // First 3 layers: no economic nodes
+    // First 2 layers (after start): no economic nodes
     if (l <= 2) {
       layerNodes.forEach(node => {
         if (economicNodeTypes.includes(node.type)) {
-          node.type = Math.random() < 0.5 ? 'enemy' : 'event';
+          node.type = Math.random() < 0.6 ? 'enemy' : 'event';
         }
       });
       continue;
@@ -365,12 +348,20 @@ export const generateMap = (): MapNode[] => {
       if (economicNodeTypes.includes(node.type)) {
         econCount++;
         if (econCount > 1) {
-          node.type = Math.random() < 0.5 ? 'enemy' : 'event';
+          node.type = Math.random() < 0.6 ? 'enemy' : 'event';
         }
       }
     });
   }
 
+  // === Step 5: 路径战斗密度验证 ===
+  // 验证从起点到每个Boss的所有路径，确保最低战斗数
+  // 中Boss(depth 7): 路径上至少3场战斗（不含Boss本身）
+  // 最终Boss(depth 14): 从中Boss后至少3场战斗
+  validateCombatDensity(nodes, 0, 7, 3);
+  validateCombatDensity(nodes, 8, 14, 3);
+
+  // 去重连接
   nodes.forEach(n => {
     n.connectedTo = [...new Set(n.connectedTo)];
   });
@@ -378,7 +369,131 @@ export const generateMap = (): MapNode[] => {
   return nodes;
 };
 
-// \u83b7\u53d6\u8282\u70b9\u7684x\u5750\u6807\uff08\u4eceid\u89e3\u6790\uff09
+/**
+ * 验证并修正指定范围内的战斗密度
+ * 从startDepth到endDepth的每条可能路径上，至少有minCombat场战斗
+ */
+function validateCombatDensity(
+  nodes: MapNodeExt[],
+  startDepth: number,
+  endDepth: number,
+  minCombat: number
+): void {
+  const fixedLayerIds = new Set(Object.keys(MAP_CONFIG.fixedLayers).map(Number));
+  const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure'];
+
+  // 找出所有从startDepth到endDepth的路径
+  const startNodes = nodes.filter(n => n.depth === startDepth);
+
+  function findMinCombatOnPaths(nodeId: string, targetDepth: number): number {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return 0;
+
+    const combatVal = isCombatType(node.type) ? 1 : 0;
+
+    if (node.depth === targetDepth) {
+      return combatVal;
+    }
+
+    const children = node.connectedTo
+      .map(cid => nodes.find(n => n.id === cid))
+      .filter((n): n is MapNodeExt => n !== undefined && n.depth <= targetDepth);
+
+    if (children.length === 0) return combatVal;
+
+    // 找最少战斗的路径（最差情况）
+    let minChildCombat = Infinity;
+    for (const child of children) {
+      const childMin = findMinCombatOnPaths(child.id, targetDepth);
+      if (childMin < minChildCombat) {
+        minChildCombat = childMin;
+      }
+    }
+
+    return combatVal + (minChildCombat === Infinity ? 0 : minChildCombat);
+  }
+
+  // 对每个起始节点检查
+  for (const startNode of startNodes) {
+    const minOnPath = findMinCombatOnPaths(startNode.id, endDepth);
+    if (minOnPath < minCombat) {
+      // 找出战斗最少的路径上的非战斗节点，强制改为enemy
+      forceMoreCombat(nodes, startNode.id, endDepth, minCombat, fixedLayerIds, nonCombatTypes);
+    }
+  }
+}
+
+/**
+ * 沿最弱路径强制增加战斗节点
+ */
+function forceMoreCombat(
+  nodes: MapNodeExt[],
+  startId: string,
+  targetDepth: number,
+  minCombat: number,
+  fixedLayerIds: Set<number>,
+  nonCombatTypes: NodeType[]
+): void {
+  // 找最弱路径
+  const path = findWeakestPath(nodes, startId, targetDepth);
+  if (!path) return;
+
+  // 统计路径上的战斗数
+  let combatCount = path.filter(n => isCombatType(n.type)).length;
+
+  // 将路径上的非战斗、非固定层节点改为enemy，直到满足最低战斗数
+  for (const node of path) {
+    if (combatCount >= minCombat) break;
+    if (fixedLayerIds.has(node.depth)) continue;
+    if (nonCombatTypes.includes(node.type)) {
+      node.type = 'enemy';
+      combatCount++;
+    }
+  }
+}
+
+/**
+ * 找战斗数最少的路径
+ */
+function findWeakestPath(
+  nodes: MapNodeExt[],
+  startId: string,
+  targetDepth: number
+): MapNodeExt[] | null {
+  const node = nodes.find(n => n.id === startId) as MapNodeExt | undefined;
+  if (!node) return null;
+
+  if (node.depth === targetDepth) {
+    return [node];
+  }
+
+  const children = node.connectedTo
+    .map(cid => nodes.find(n => n.id === cid))
+    .filter((n): n is MapNodeExt => n !== undefined && n.depth <= targetDepth);
+
+  if (children.length === 0) return [node];
+
+  let weakestSubPath: MapNodeExt[] | null = null;
+  let weakestCombat = Infinity;
+
+  for (const child of children) {
+    const subPath = findWeakestPath(nodes, child.id, targetDepth);
+    if (subPath) {
+      const combat = subPath.filter(n => isCombatType(n.type)).length;
+      if (combat < weakestCombat) {
+        weakestCombat = combat;
+        weakestSubPath = subPath;
+      }
+    }
+  }
+
+  if (weakestSubPath) {
+    return [node, ...weakestSubPath];
+  }
+  return [node];
+}
+
+// 获取节点的x坐标（从id解析）
 export const getNodeX = (node: MapNode, allNodes: MapNode[]): number => {
   if ('x' in node) return (node as MapNodeExt).x;
 
@@ -387,11 +502,3 @@ export const getNodeX = (node: MapNode, allNodes: MapNode[]): number => {
   const count = layerNodes.length;
   return (idx + 1) / (count + 1) * 100;
 };
-
-function getRandomNodeTypeExcluding(exclude: NodeType, alsoExclude: NodeType[] = []): NodeType {
-  const types: NodeType[] = ['enemy', 'elite', 'merchant', 'event', 'treasure', 'merchant'];
-  const excludeSet = new Set([exclude, ...alsoExclude]);
-  const filtered = types.filter(t => !excludeSet.has(t));
-  if (filtered.length === 0) return 'enemy';
-  return filtered[Math.floor(Math.random() * filtered.length)];
-}

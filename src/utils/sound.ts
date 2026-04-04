@@ -1,4 +1,4 @@
-﻿// === 增强版音效系统 ===
+// === 增强版音效系统 ===
 
 type SoundType = 
   | 'roll' | 'select' | 'hit' | 'armor' | 'heal' | 'enemy' 
@@ -16,6 +16,14 @@ let bgmPlaying = false;
 let masterVolume = 0.8;
 let sfxEnabled = true;
 let bgmEnabled = true;
+
+// MP3 BGM 播放器
+let mp3Audio: HTMLAudioElement | null = null;
+let mp3BgmPlaying = false;
+const MP3_BGM_MAP: Record<string, string> = {
+  battle: '/DiceBattle-Normal.mp3',
+  boss: '/DiceBattle-Boss.mp3',
+};
 
 const getCtx = (): AudioContext => {
   if (!audioCtx) {
@@ -818,10 +826,28 @@ let currentBgmType: string = '';
 
 export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
   if (!bgmEnabled) return;
-  if (currentBgmType === type && bgmPlaying) return;
+  if (currentBgmType === type && (bgmPlaying || mp3BgmPlaying)) return;
   
   stopBGM();
   
+  // MP3 BGM for battle and boss
+  const mp3Path = MP3_BGM_MAP[type];
+  if (mp3Path) {
+    currentBgmType = type;
+    mp3BgmPlaying = true;
+    try {
+      mp3Audio = new Audio(mp3Path);
+      mp3Audio.loop = true;
+      mp3Audio.volume = masterVolume * 0.35; // MP3 volume (0.35 as base, scaled by master, reduced 30%)
+      mp3Audio.play().catch(e => console.warn('MP3 BGM autoplay blocked:', e));
+    } catch (e) {
+      console.error('MP3 BGM error:', e);
+      mp3BgmPlaying = false;
+    }
+    return;
+  }
+  
+  // Programmatic BGM for explore
   const cfg = BGM_CONFIGS[type];
   if (!cfg) return;
   
@@ -946,14 +972,26 @@ export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
 export const stopBGM = () => {
   bgmPlaying = false;
   currentBgmType = '';
+  // Stop programmatic BGM
   if (bgmInterval) {
     clearInterval(bgmInterval);
     bgmInterval = null;
   }
+  // Stop MP3 BGM
+  if (mp3Audio) {
+    mp3Audio.pause();
+    mp3Audio.currentTime = 0;
+    mp3Audio = null;
+  }
+  mp3BgmPlaying = false;
 };
 
 export const setMasterVolume = (vol: number) => {
   masterVolume = Math.max(0, Math.min(1, vol));
+  // Sync MP3 BGM volume
+  if (mp3Audio) {
+    mp3Audio.volume = masterVolume * 0.35;
+  }
 };
 
 export const setSfxEnabled = (enabled: boolean) => {
