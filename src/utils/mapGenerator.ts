@@ -25,7 +25,7 @@ type LayerTemplate = NodeType[];
 const EARLY_3_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'event', 'enemy'],
   ['enemy', 'enemy', 'event'],
-  ['enemy', 'event', 'shop'],
+  ['enemy', 'event', 'merchant'],
   ['enemy', 'treasure', 'event'],
   ['enemy', 'event', 'enemy'],
   ['enemy', 'enemy', 'event'],
@@ -33,24 +33,24 @@ const EARLY_3_TEMPLATES: LayerTemplate[] = [
 
 /** \u524d\u534a\u7a0b\u542b\u7cbe\u82f1\u76843\u8282\u70b9\u6a21\u677f\uff08\u98ce\u9669\u5c42\uff09 */
 const EARLY_3_ELITE_TEMPLATES: LayerTemplate[] = [
-  ['elite', 'event', 'shop'],
+  ['elite', 'event', 'merchant'],
   ['elite', 'treasure', 'enemy'],
   ['elite', 'merchant', 'event'],
-  ['elite', 'enemy', 'shop'],
+  ['elite', 'enemy', 'merchant'],
 ];
 
 /** \u524d\u534a\u7a0b4\u8282\u70b9\u6a21\u677f */
 const EARLY_4_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'event', 'enemy', 'enemy'],
-  ['enemy', 'enemy', 'event', 'shop'],
+  ['enemy', 'enemy', 'event', 'merchant'],
   ['enemy', 'enemy', 'event', 'enemy'],
   ['enemy', 'event', 'enemy', 'treasure'],
-  ['enemy', 'enemy', 'shop', 'event'],
+  ['enemy', 'enemy', 'merchant', 'event'],
 ];
 
 /** 前半程5节点模板 */
 const EARLY_5_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'event', 'enemy', 'enemy', 'shop'],
+  ['enemy', 'event', 'enemy', 'enemy', 'merchant'],
   ['enemy', 'enemy', 'event', 'treasure', 'enemy'],
   ['enemy', 'event', 'enemy', 'enemy', 'event'],
   ['enemy', 'enemy', 'event', 'enemy', 'merchant'],
@@ -59,8 +59,8 @@ const EARLY_5_TEMPLATES: LayerTemplate[] = [
 /** \u540e\u534a\u7a0b3\u8282\u70b9\u6a21\u677f\uff08\u5c428~12\uff09 */
 const LATE_3_TEMPLATES: LayerTemplate[] = [
   ['enemy', 'enemy', 'event'],
-  ['enemy', 'treasure', 'shop'],
-  ['enemy', 'shop', 'merchant'],
+  ['enemy', 'treasure', 'merchant'],
+  ['enemy', 'merchant', 'merchant'],
   ['enemy', 'event', 'treasure'],
   ['enemy', 'merchant', 'event'],
 ];
@@ -69,26 +69,26 @@ const LATE_3_TEMPLATES: LayerTemplate[] = [
 const LATE_3_ELITE_TEMPLATES: LayerTemplate[] = [
   ['elite', 'enemy', 'event'],
   ['elite', 'merchant', 'treasure'],
-  ['elite', 'shop', 'event'],
+  ['elite', 'merchant', 'event'],
   ['elite', 'enemy', 'treasure'],
 ];
 
 /** \u540e\u534a\u7a0b4\u8282\u70b9\u6a21\u677f */
 const LATE_4_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'shop', 'event'],
+  ['enemy', 'enemy', 'merchant', 'event'],
   ['enemy', 'elite', 'treasure', 'event'],
   ['enemy', 'enemy', 'merchant', 'treasure'],
-  ['enemy', 'elite', 'shop', 'merchant'],
+  ['enemy', 'elite', 'merchant', 'merchant'],
   ['enemy', 'event', 'treasure', 'merchant'],
 ];
 
 /** 后半程5节点模板 */
 const LATE_5_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'shop', 'event', 'treasure'],
+  ['enemy', 'enemy', 'merchant', 'event', 'treasure'],
   ['enemy', 'elite', 'treasure', 'event', 'merchant'],
   ['enemy', 'enemy', 'merchant', 'treasure', 'event'],
-  ['enemy', 'elite', 'shop', 'event', 'enemy'],
-  ['enemy', 'enemy', 'event', 'treasure', 'shop'],
+  ['enemy', 'elite', 'merchant', 'event', 'enemy'],
+  ['enemy', 'enemy', 'event', 'treasure', 'merchant'],
 ];
 
 
@@ -155,10 +155,10 @@ function getLayerTemplate(depth: number, count: number, fixedType: string | null
     // 2\u8282\u70b9\u5c42\uff1a\u4fdd\u8bc1\u4e0d\u540c\u7c7b\u578b
     const pairs: LayerTemplate[] = [
       ['enemy', 'event'],
-      ['enemy', 'shop'],
+      ['enemy', 'merchant'],
       ['enemy', 'treasure'],
       ['enemy', 'merchant'],
-      ['shop', 'event'],
+      ['merchant', 'event'],
       ['treasure', 'event'],
     ];
     return shuffle(pickRandom(pairs));
@@ -300,7 +300,7 @@ export const generateMap = (): MapNode[] => {
   }
 
   // === \u7b2c\u4e09\u6b65\uff1a\u8def\u5f84\u611f\u77e5\u4fee\u6b63 \u2014 \u907f\u514d\u8fde\u7eed\u540c\u7c7b\u578b\u975e\u6218\u6597\u8282\u70b9 ===
-  const nonCombatTypes: NodeType[] = ['campfire', 'shop', 'event', 'treasure', 'merchant'];
+  const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure', 'merchant'];
   const fixedLayerIds = new Set(Object.keys(MAP_CONFIG.fixedLayers).map(Number));
 
   for (let l = 1; l < layers; l++) {
@@ -322,7 +322,7 @@ export const generateMap = (): MapNode[] => {
       // \u89c4\u5219\uff1a\u6240\u6709\u7236\u8282\u70b9\u90fd\u662f\u975e\u6218\u6597\u65f6\uff0c\u5f53\u524d\u8282\u70b9\u5fc5\u987b\u662f\u6218\u6597
 
       // 规则：经济类节点不能连续（shop→merchant、merchant→treasure等）
-      const economicTypes: NodeType[] = ['shop', 'merchant', 'treasure'];
+      const economicTypes: NodeType[] = ['merchant', 'merchant', 'treasure'];
       if (economicTypes.includes(node.type)) {
         const hasEconomicParent = parentNodes.some(p => economicTypes.includes(p.type));
         if (hasEconomicParent) {
@@ -344,7 +344,7 @@ export const generateMap = (): MapNode[] => {
   // === Step 4: Economic node distribution fix ===
   // Early layers (depth 0-2): no economic nodes
   // Any layer: max 1 economic node
-  const economicNodeTypes: NodeType[] = ['shop', 'merchant', 'treasure'];
+  const economicNodeTypes: NodeType[] = ['merchant', 'merchant', 'treasure'];
   for (let l = 0; l < layers; l++) {
     if (fixedLayerIds.has(l)) continue;
     const layerNodes = nodes.filter(n => n.depth === l);
@@ -389,7 +389,7 @@ export const getNodeX = (node: MapNode, allNodes: MapNode[]): number => {
 };
 
 function getRandomNodeTypeExcluding(exclude: NodeType, alsoExclude: NodeType[] = []): NodeType {
-  const types: NodeType[] = ['enemy', 'elite', 'shop', 'event', 'treasure', 'merchant'];
+  const types: NodeType[] = ['enemy', 'elite', 'merchant', 'event', 'treasure', 'merchant'];
   const excludeSet = new Set([exclude, ...alsoExclude]);
   const filtered = types.filter(t => !excludeSet.has(t));
   if (filtered.length === 0) return 'enemy';

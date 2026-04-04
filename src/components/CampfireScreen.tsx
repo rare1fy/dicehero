@@ -18,7 +18,7 @@ export const CampfireScreen: React.FC = () => {
       .map((d, i) => ({ ...d, index: i }))
       .filter(d => {
         const def = getDiceDef(d.defId);
-        return def.element !== 'normal' && d.level < 2; // 仅特殊骰子，最多升级一次到Lv2
+        return d.level < DICE_MAX_LEVEL; // 仅特殊骰子，最多升级一次到Lv2
       });
   }, [game.ownedDice]);
 

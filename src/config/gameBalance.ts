@@ -138,7 +138,7 @@ export const MAP_CONFIG = {
     { type: 'elite' as const, cumWeight: 0.10 },
     { type: 'campfire' as const, cumWeight: 0.22 },
     { type: 'treasure' as const, cumWeight: 0.32 },
-    { type: 'shop' as const, cumWeight: 0.44 },
+    { type: 'merchant' as const, cumWeight: 0.44 },
     { type: 'merchant' as const, cumWeight: 0.52 },
     { type: 'event' as const, cumWeight: 0.62 },
     // 剩余概率 = enemy

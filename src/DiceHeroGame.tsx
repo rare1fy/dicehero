@@ -115,7 +115,7 @@ export default function DiceHeroGame() {
       } else {
         startBGM('battle');
       }
-    } else if (game.phase === 'map' || game.phase === 'shop' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward') {
+    } else if (game.phase === 'map' || game.phase === 'merchant' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward') {
       startBGM('explore');
     } else if (game.phase === 'start' || game.phase === 'gameover' || game.phase === 'victory') {
       stopBGM();
@@ -364,37 +364,6 @@ export default function DiceHeroGame() {
       } else {
         startBattle(node);
       }
-    } else if (node.type === 'shop') {
-      // 游荡商人：随机3个商品，价格随机
-      const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
-      const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
-      // 构建候选商品池
-      const candidateItems: ShopItem[] = [];
-      // 候选：遗物
-      const shuffledAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
-      for (const aug of shuffledAugs.slice(0, 3)) {
-        candidateItems.push({
-          id: 'aug_' + aug.id, type: 'augment' as const, augment: aug,
-          label: aug.name, desc: aug.description, price: randPrice()
-        });
-      }
-      // 候选：骰子
-      const shuffledDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
-      for (const d of shuffledDice.slice(0, 2)) {
-        candidateItems.push({
-          id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id,
-          label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']',
-          price: d.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10
-        });
-      }
-      // 候选：重掷强化
-      candidateItems.push({
-        id: 'reroll_' + Math.random().toString(36).slice(2, 6), type: 'reroll' as const,
-        label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: randPrice()
-      });
-      // 从候选池随机抽3个
-      const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
-      setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'campfire') {
       playSound('campfire');
       setCampfireView('main');
@@ -429,7 +398,7 @@ export default function DiceHeroGame() {
       });
       // 从候选池随机抽3个
       const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
-      setGame(prev => ({ ...prev, phase: 'shop', currentNodeId: node.id, shopItems }));
+      setGame(prev => ({ ...prev, phase: 'merchant', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'treasure') {
       // Treasure: chest-only mode
       setGame(prev => ({ ...prev, phase: 'treasure' as any, currentNodeId: node.id }));
@@ -827,7 +796,10 @@ export default function DiceHeroGame() {
             break;
           case 'ice':
             // 冰：冻结1回合，点数结算减半
-            statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
+            // 检查目标是否有冰冻免疫
+            if (!targetEnemy?.statuses?.some(s => (s.type as string) === 'freeze_immune')) {
+              statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
+            }
             // 冰元素点数减半已在baseDamage计算前处理
             break;
           case 'thunder':
@@ -2231,7 +2203,7 @@ useEffect(() => {
       }
       candidates.push({ id: 'reroll_legacy', type: 'reroll' as const, label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: rp() });
       const shopItems: ShopItem[] = candidates.sort(() => Math.random() - 0.5).slice(0, 3);
-      setGame(prev => ({ ...prev, phase: 'shop', currentNode: next, shopItems }));
+      setGame(prev => ({ ...prev, phase: 'merchant', currentNode: next, shopItems }));
     } else if (next === 7) {
       setGame(prev => ({ ...prev, phase: 'event', currentNode: next }));
     } else {
@@ -2314,7 +2286,7 @@ useEffect(() => {
         {game.phase === 'map' && <MapScreen />}
         {game.phase === 'diceReward' && <DiceRewardScreen />}
         {game.phase === 'loot' && <LootScreen />}
-        {game.phase === 'shop' && <ShopScreen />}
+        {game.phase === 'merchant' && <ShopScreen />}
         {game.phase === 'treasure' && <ShopScreen treasureMode={true} />}
         {game.phase === 'campfire' && <CampfireScreen />}
         {game.phase === 'event' && <EventScreen />}

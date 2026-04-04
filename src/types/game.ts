@@ -110,7 +110,7 @@ export interface Augment {
 // 地图
 // ============================================================
 
-export type NodeType = 'enemy' | 'elite' | 'boss' | 'shop' | 'event' | 'campfire' | 'treasure' | 'merchant';
+export type NodeType = 'enemy' | 'elite' | 'boss' | 'event' | 'campfire' | 'treasure' | 'merchant';
 
 export interface MapNode {
   id: string;
@@ -361,7 +361,7 @@ export interface GameState {
   elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'shop' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure' | 'merchant';
+  phase: 'start' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target
