@@ -23,35 +23,37 @@ export const DiceRewardScreen: React.FC = () => {
     const t = node?.type; return (t === 'elite' || t === 'boss') ? t : 'enemy';
   }, [game.currentNodeId, game.map]);
 
-  // 3选1新骰子 - 优先刷新玩家已有的特殊骰子（构筑流派感）
+  // 3选1新骰子 - 已有骰子权重提高但不保证必出
   const diceOptions = useMemo(() => {
     const pool = getDiceRewardPool(battleType);
     const result: typeof pool = [];
     
-    // 找出玩家已有的特殊骰子类型（非standard/heavy/blade）
+    // 已有骰子权重提高（不保证必出，但概率更高）
     const ownedSpecialIds = new Set(
       game.ownedDice
         .map(d => d.defId)
         .filter(id => !['standard', 'heavy', 'blade', 'cursed', 'cracked'].includes(id))
     );
     
-    // 优先给一个位置放玩家已有的特殊骰子（强化构筑方向）
-    if (ownedSpecialIds.size > 0) {
-      const ownedInPool = pool.filter(d => ownedSpecialIds.has(d.id));
-      if (ownedInPool.length > 0) {
-        const pick = ownedInPool[Math.floor(Math.random() * ownedInPool.length)];
-        result.push(pick);
+    // 加权随机：已有骰子权重x3，其余权重x1
+    const weighted: typeof pool = [];
+    pool.forEach(d => {
+      const weight = ownedSpecialIds.has(d.id) ? 3 : 1;
+      for (let w = 0; w < weight; w++) weighted.push(d);
+    });
+    
+    // 从加权池中抽取3个不重复的
+    const shuffled = [...weighted].sort(() => Math.random() - 0.5);
+    const seen = new Set();
+    for (const d of shuffled) {
+      if (!seen.has(d.id)) {
+        seen.add(d.id);
+        result.push(d);
+        if (result.length >= 3) break;
       }
     }
     
-    // 剩余位置从池子中随机（排除已选的）
-    const remaining = pool.filter(d => !result.find(r => r.id === d.id));
-    const needed = 3 - result.length;
-    const shuffled = [...remaining].sort(() => Math.random() - 0.5);
-    result.push(...shuffled.slice(0, needed));
-    
-    // 随机打乱顺序，不要总是第一个是已有骰子
-    return result.sort(() => Math.random() - 0.5);
+    return result;
   }, [battleType, game.ownedDice]);
 
 

@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'motion/react';
 // --- Modular Imports ---
 import type { Die, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState , Relic } from './types/game';
 import { INITIAL_STATS } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './data/dice';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getUpgradedOnPlay, getElementLevelBonus } from './data/dice';
 import { drawFromBag, initDiceBag } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
@@ -158,6 +158,7 @@ export default function DiceHeroGame() {
   // === 结算演出状态 ===
   const [showDamageOverlay, setShowDamageOverlay] = useState<{damage: number, armor: number, heal: number} | null>(null);
   const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'mult' | 'effects' | 'damage'>(null);
+  const [selectedRelic, setSelectedRelic] = useState<Relic | null>(null);
   const [settlementData, setSettlementData] = useState<{
     bestHand: string;
     selectedDice: Die[];
@@ -228,6 +229,7 @@ export default function DiceHeroGame() {
     setGame(prev => ({
       ...prev,
       relics: [...prev.relics, relic],
+      hp: prev.hp - (relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15),
     }));
 
     addToast(`获得遗物「${relic.name}」!`, 'buff');
@@ -726,7 +728,7 @@ export default function DiceHeroGame() {
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
       if (details.length > 0) {
-        triggeredAugments.push({ name: '🔮' + relic.name, details: details.join(', ') });
+        triggeredAugments.push({ name: relic.name, details: details.join(', ') });
       }
     });
 
@@ -741,6 +743,9 @@ export default function DiceHeroGame() {
     selected.forEach(d => {
       if (skipOnPlay) return;
       const def = getDiceDef(d.diceDefId);
+      const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
+      const levelBonus = getElementLevelBonus(diceLevel);
+      const totalElementBonus = elementBonus * levelBonus;
       
       // 元素骰子：根据坍缩后的元素产生不同效果
       if (def.isElemental && d.collapsedElement) {
@@ -748,7 +753,7 @@ export default function DiceHeroGame() {
         switch (d.collapsedElement) {
           case 'fire':
             // 火：摧毁敌人所有护甲 + 基于点数的真实伤害
-            pierceDamage += Math.floor(diceValue * 3 * elementBonus);
+            pierceDamage += Math.floor(diceValue * 3 * totalElementBonus);
             // 护甲摧毁在实际结算时处理（标记）
             statusEffects.push({ type: 'burn', value: 99 }); // 99 = 特殊标记：摧毁护甲
             break;
@@ -762,11 +767,11 @@ export default function DiceHeroGame() {
             break;
           case 'thunder':
             // 雷：对其他敌人造成等量穿透伤害（AOE标记）
-            pierceDamage += Math.floor(diceValue * 2 * elementBonus);
+            pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
             break;
           case 'poison':
             // 毒：叠加毒层，跨回合持续掉血
-            const poisonStacks = Math.floor((diceValue + 2) * elementBonus);
+            const poisonStacks = Math.floor((diceValue + 2) * totalElementBonus);
             const existingPoison = statusEffects.find(es => es.type === 'poison');
             if (existingPoison) existingPoison.value += poisonStacks;
             else statusEffects.push({ type: 'poison', value: poisonStacks });
@@ -837,7 +842,8 @@ export default function DiceHeroGame() {
       const def = getDiceDef(d.diceDefId);
       return def.onPlay?.aoe;
     });
-    if (hasDiceAoe) return true;
+    const hasThunderDice = selected.some(d => d.element === 'thunder');
+    if (hasDiceAoe || hasThunderDice) return true;
       if (currentHands.activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h))) return true;
     const { activeHands } = currentHands;
     if (activeHands.some(h => h.includes('元素') || h.includes('皇家'))) return true;
@@ -949,7 +955,7 @@ export default function DiceHeroGame() {
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
         addLog(`分裂改变了牌型！${outcome.bestHand} → ${newBestHand}`);
-        addToast(`🎲 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
+        addToast(` 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
         playSound(newBestHand === '普通攻击' ? 'hit' : 'augment_activate');
       }
       // 重新计算伤害（用新的骰子列表和牌型）
@@ -1005,7 +1011,8 @@ export default function DiceHeroGame() {
     selected.forEach(d => {
       const def = getDiceDef(d.diceDefId);
       if (skipOnPlaySettlement || !def.onPlay) return;
-      const op = def.onPlay;
+      const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
+      const op = getUpgradedOnPlay(def, diceLevel) || def.onPlay;
       if (op.bonusDamage) allEffects.push({ name: def.name, rawValue: op.bonusDamage, detail: `伤害+${op.bonusDamage}`, type: 'damage' });
       if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `倍率×${op.bonusMult}`, type: 'mult' });
       if (op.heal) allEffects.push({ name: def.name, detail: `回复${op.heal}HP`, type: 'heal' });
@@ -1026,6 +1033,9 @@ export default function DiceHeroGame() {
       setSettlementData(prev => prev ? {
         ...prev,
         triggeredEffects: allEffects.slice(0, i + 1),
+        // 动态更新基础值和倍率显示
+        ...(allEffects[i].rawValue ? { currentBase: (prev?.currentBase || 0) + allEffects[i].rawValue } : {}),
+        ...(allEffects[i].rawMult ? { currentMult: (prev?.currentMult || 1) * allEffects[i].rawMult } : {}),
         currentEffectIdx: i,
       } : prev);
       playSound('augment_activate');
@@ -1062,7 +1072,8 @@ export default function DiceHeroGame() {
     // --- Apply damage to enemy (with AOE support) ---
     const targetUid = targetEnemy.uid;
     const selectedDefs = selected.map(d => getDiceDef(d.diceDefId));
-    const hasAoe = selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h));
+    const hasThunderElement = selected.some(d => d.element === 'thunder');
+    const hasAoe = hasThunderElement || selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h));
     // 同元素牌型的状态效果AOE（对所有敌人施加状态）
     const isElementalAoe = currentHands.activeHands.some(h => ['元素顺', '元素葫芦', '皇家元素顺'].includes(h));
     
@@ -1199,7 +1210,7 @@ export default function DiceHeroGame() {
             const res = relic.effect({ overkillDamage: overkill });
             if (res.heal && res.heal > 0) {
               setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + res.heal) }));
-              addToast(`🧛 ${relic.name}: +${res.heal}HP`, 'heal');
+              addToast(` ${relic.name}: +${res.heal}HP`, 'heal');
 
             }
           });
@@ -1215,7 +1226,7 @@ export default function DiceHeroGame() {
                 if (aliveOthers.length > 0) {
                   const target = aliveOthers[Math.floor(Math.random() * aliveOthers.length)];
                   setEnemies(prev => prev.map(e => e.uid === target.uid ? { ...e, hp: Math.max(0, e.hp - overkill) } : e));
-                  addLog('⚡ 溢出导管: ' + overkill + ' 点溢出伤害转移给 ' + target.name + '!');
+ addLog(' 溢出导管: ' + overkill + ' 点溢出伤害转移给 ' + target.name + '!');
                   addFloatingText('-' + overkill, 'text-orange-400', null, 'enemy');
                   playSound('hit');
                 }
@@ -1377,6 +1388,50 @@ export default function DiceHeroGame() {
       }
       handleVictory();
       return;
+
+    // --- 2.5. Pre-Action: process each enemy's poison ---
+    const enemyDeathsFromPoison: string[] = [];
+// --- 4. Enemy Turn End: process each enemy's poison ---
+    setEnemies(prev => prev.map(e => {
+      if (e.hp <= 0) return e;
+      let nextStatuses = [...e.statuses];
+      const poison = nextStatuses.find(s => s.type === 'poison');
+      if (poison && poison.value > 0) {
+        addLog(`${e.name} \u56e0\u4e2d\u6bd2\u53d7\u5230\u4e86 ${poison.value} \u70b9\u4f24\u5bb3\u3002`);
+        addFloatingText(`-${poison.value}`, 'text-purple-400', <PixelPoison size={2} />, 'enemy');
+        nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
+        const newHp = Math.max(0, e.hp - poison.value);
+        if (newHp <= 0) enemyDeathsFromPoison.push(e.uid);
+        nextStatuses = tickStatuses(nextStatuses);
+        return { ...e, hp: newHp, statuses: nextStatuses };
+      }
+      nextStatuses = tickStatuses(nextStatuses);
+      return { ...e, statuses: nextStatuses };
+    }));
+
+    await new Promise(r => setTimeout(r, 600));
+
+    // Check if all enemies died from poison
+    // Note: we need to re-read enemies after the state update, but since this is async
+    // we'll check based on the computed values
+    const aliveAfterPoison = enemies.filter(e => e.hp > 0 && !enemyDeathsFromPoison.includes(e.uid));
+    if (aliveAfterPoison.length === 0 && enemyDeathsFromPoison.length > 0) {
+      const nextWaveIdx = game.currentWaveIndex + 1;
+      if (nextWaveIdx < game.battleWaves.length) {
+        const nextWave = game.battleWaves[nextWaveIdx].enemies;
+        setEnemies(nextWave);
+        setEnemyEffects({}); setDyingEnemies(new Set());
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+        setRerollCount(0);
+          setWaveAnnouncement(nextWaveIdx + 1);
+        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
+        rollAllDice();
+        return;
+      }
+      handleVictory();
+      return;
+    }
+
     }
 
         // --- 3. Each alive enemy takes action ---
@@ -1654,48 +1709,6 @@ export default function DiceHeroGame() {
           }
         }
 
-    // --- 4. Enemy Turn End: process each enemy's poison ---
-    const enemyDeathsFromPoison: string[] = [];
-// --- 4. Enemy Turn End: process each enemy's poison ---
-    setEnemies(prev => prev.map(e => {
-      if (e.hp <= 0) return e;
-      let nextStatuses = [...e.statuses];
-      const poison = nextStatuses.find(s => s.type === 'poison');
-      if (poison && poison.value > 0) {
-        addLog(`${e.name} \u56e0\u4e2d\u6bd2\u53d7\u5230\u4e86 ${poison.value} \u70b9\u4f24\u5bb3\u3002`);
-        addFloatingText(`-${poison.value}`, 'text-purple-400', <PixelPoison size={2} />, 'enemy');
-        nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
-        const newHp = Math.max(0, e.hp - poison.value);
-        if (newHp <= 0) enemyDeathsFromPoison.push(e.uid);
-        nextStatuses = tickStatuses(nextStatuses);
-        return { ...e, hp: newHp, statuses: nextStatuses };
-      }
-      nextStatuses = tickStatuses(nextStatuses);
-      return { ...e, statuses: nextStatuses };
-    }));
-
-    await new Promise(r => setTimeout(r, 600));
-
-    // Check if all enemies died from poison
-    // Note: we need to re-read enemies after the state update, but since this is async
-    // we'll check based on the computed values
-    const aliveAfterPoison = enemies.filter(e => e.hp > 0 && !enemyDeathsFromPoison.includes(e.uid));
-    if (aliveAfterPoison.length === 0 && enemyDeathsFromPoison.length > 0) {
-      const nextWaveIdx = game.currentWaveIndex + 1;
-      if (nextWaveIdx < game.battleWaves.length) {
-        const nextWave = game.battleWaves[nextWaveIdx].enemies;
-        setEnemies(nextWave);
-        setEnemyEffects({}); setDyingEnemies(new Set());
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
-        setRerollCount(0);
-          setWaveAnnouncement(nextWaveIdx + 1);
-        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
-        rollAllDice();
-        return;
-      }
-      handleVictory();
-      return;
-    }
 
     // --- 5. Player Turn Start ---
     
@@ -1892,7 +1905,7 @@ useEffect(() => {
       });
       if (res.goldBonus && res.goldBonus > 0) {
         baseGold += res.goldBonus;
-        addToast(`♻️ ${relic.name}: +${res.goldBonus}金币`, 'gold');
+        addToast(` ${relic.name}: +${res.goldBonus}金币`, 'gold');
       }
     });
     const loot: LootItem[] = [
@@ -1941,7 +1954,7 @@ useEffect(() => {
             ...prev,
             relics: [...prev.relics, { ...newRelic }],
           }));
-          addToast('✦ 获得遗物: ' + newRelic.name + '!', 'buff');
+          addToast(' 获得遗物: ' + newRelic.name + '!', 'buff');
         }, 500);
       }
     }
@@ -3469,10 +3482,10 @@ useEffect(() => {
                   {game.relics.map((relic, i) => {
                     const isActive = relic.trigger === 'passive' || (relic.trigger === 'on_play' && game.phase === 'battle');
                     const iconMap: Record<string, string> = {
-                      blade: '⚔', flag: '⚑', weight: '⚓', pendulum: '☸',
-                      grail: '☕', gauge: '≡', prism: '◇', resonator: '☉',
-                      diamond: '♦', hourglass: '⌛', fangs: '☠', contract: '✉',
-                      recycle: '♻', hand: '✋', eye: '◉', infinity: '∞', bag: '☣',
+                      blade: '⚔', flag: '⚑', weight: '■', pendulum: '◈',
+                      grail: '☗', gauge: '◎', prism: '◇', resonator: '✦',
+                      diamond: '♦', hourglass: '⧗', fangs: '☠', contract: '✂',
+                      recycle: '♻', hand: '✋', eye: '◉', infinity: '∞', bag: '☖',
                     };
                     return (
                       <motion.div
@@ -3485,7 +3498,7 @@ useEffect(() => {
                             : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
                         }`}
                         style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}) }}
-                        title={`${relic.name}: ${relic.description}`}
+                        onClick={() => setSelectedRelic(relic)}
                       >
                         <span className={`text-[14px] leading-none ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
                           {iconMap[relic.icon] || '✦'}
@@ -3498,6 +3511,20 @@ useEffect(() => {
                       </motion.div>
                     );
                   })}
+                {/* 遗物详情弹窗 */}
+                {selectedRelic && (
+                  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70" onClick={() => setSelectedRelic(null)}>
+                    <div className="pixel-panel p-4 max-w-[280px] w-full mx-4" onClick={e => e.stopPropagation()}>
+                      <div className="text-center mb-2">
+                        <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{selectedRelic.name}</div>
+                        <div className="text-[8px] text-[var(--pixel-gold)] mt-0.5">{selectedRelic.rarity === 'common' ? '普通' : selectedRelic.rarity === 'uncommon' ? '精良' : selectedRelic.rarity === 'rare' ? '稀有' : '传说'}</div>
+                      </div>
+                      <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center">{selectedRelic.description}</div>
+                      <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">触发: {selectedRelic.trigger === 'on_play' ? '每次出牌' : selectedRelic.trigger === 'on_kill' ? '击杀时' : selectedRelic.trigger === 'on_reroll' ? '重 Roll时' : selectedRelic.trigger === 'on_battle_end' ? '战斗结束' : selectedRelic.trigger === 'on_fatal' ? '致命伤害时' : selectedRelic.trigger === 'on_turn_end' ? '回合结束' : '被动'}</div>
+                      <button onClick={() => setSelectedRelic(null)} className="w-full mt-3 py-1.5 pixel-btn pixel-btn-ghost text-[10px]">关闭</button>
+                    </div>
+                  </div>
+                )}
                   {game.augments.filter(Boolean).map((aug, i) => {
                     if (!aug) return null;
                     const isActive = activeAugments.some(a => a.id === aug.id);

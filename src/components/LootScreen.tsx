@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
+import { MiniDice } from './DiceBagPanel';
 import { getDiceDef } from '../data/dice';
 import { getAugmentIcon } from '../utils/uiHelpers';
 import { getConditionInfo } from './AugmentCard';
@@ -35,7 +36,7 @@ export const LootScreen: React.FC = () => {
           case 'reroll': return { icon: <PixelRefresh size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '重掷强化', borderColor: 'var(--pixel-purple)' };
           case 'maxPlays': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-red-light)]', label: '出牌次数', borderColor: 'var(--pixel-red)' };
           case 'diceCount': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-orange-light)]', label: '骰子数量', borderColor: 'var(--pixel-orange)' };
-          case 'specialDice': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-green-light)]', label: '特殊骰子', borderColor: 'var(--pixel-green)' };
+          case 'specialDice': return { icon: null, color: 'text-[var(--pixel-green-light)]', label: '特殊骰子', borderColor: 'var(--pixel-green)' };
           case 'relic': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '✨ 遗物', borderColor: 'var(--pixel-purple)' };
           default: return { icon: <PixelStar size={3} />, color: 'text-[var(--dungeon-text-dim)]', label: '物品', borderColor: 'var(--dungeon-panel-border)' };
         }
@@ -61,7 +62,7 @@ export const LootScreen: React.FC = () => {
             </div>
           )}
           <div className={`w-12 h-12 bg-[var(--dungeon-bg)] border-3 border-[var(--dungeon-panel-border)] flex items-center justify-center ${info.color} group-hover:border-[var(--dungeon-panel-highlight)] transition-colors`} style={{borderRadius:'2px'}}>
-            {info.icon}
+            {item.diceDefId ? <MiniDice defId={item.diceDefId} size={24} /> : info.icon}
           </div>
           <div className="flex-1">
             <div className={`text-[8px] font-bold ${info.color} tracking-[0.1em] mb-0.5 opacity-70`}>{info.label}</div>

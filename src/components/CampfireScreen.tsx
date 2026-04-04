@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { MiniDice } from './DiceBagPanel';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { getDiceDef, getUpgradedFaces, DICE_MAX_LEVEL } from '../data/dice';
+import { getDiceDef, getUpgradedFaces, getUpgradedOnPlay, DICE_MAX_LEVEL } from '../data/dice';
 import { playSound } from '../utils/sound';
 import { PixelCampfire, PixelHeart, PixelDice } from './PixelIcons';
 import { ElementBadge, getOnPlayDescription, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
@@ -12,6 +13,7 @@ export const CampfireScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
   const [campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
   const [selectedDiceIdx, setSelectedDiceIdx] = useState<number | null>(null);
+  const [campfireUsed, setCampfireUsed] = useState(false);
   
   const upgradableDice = useMemo(() => {
     return game.ownedDice
@@ -125,9 +127,23 @@ export const CampfireScreen: React.FC = () => {
                   <span className="text-[var(--pixel-gold)]">→</span>
                   <span className="text-[var(--pixel-cyan)]">Lv.{target.level + 1} [{nextFaces.join(',')}]</span>
                 </div>
+                <div className="text-[9px] text-[var(--pixel-gold)] text-center mt-1 font-bold">
+                  {canUpgrade ? `费用: ${upgradeCost} 金币` : <span className="text-[var(--pixel-red)]">{`金币不足 (需要 ${upgradeCost})`}</span>}
+                </div>
                 {onPlayDesc && (
                   <div className="text-[8px] text-[var(--pixel-cyan)] text-center mt-1">
                     出牌效果: {onPlayDesc} {target.level < DICE_MAX_LEVEL - 1 ? '(效果+50%)' : ''}
+                {(() => {
+                  const currentOp = getUpgradedOnPlay(def, target.level);
+                  const nextOp = getUpgradedOnPlay(def, target.level + 1);
+                  if (!currentOp || !nextOp) return null;
+                  const changes = [];
+                  if (currentOp.bonusDamage !== nextOp.bonusDamage) changes.push(`伤害: ${currentOp.bonusDamage} → ${nextOp.bonusDamage}`);
+                  if (currentOp.bonusMult !== nextOp.bonusMult) changes.push(`倍率: ${currentOp.bonusMult} → ${nextOp.bonusMult}`);
+                  if (currentOp.selfDamage !== nextOp.selfDamage) changes.push(`副作用: ${currentOp.selfDamage} → ${nextOp.selfDamage}`);
+                  if (changes.length === 0) return null;
+                  return <div className="text-[9px] text-[var(--pixel-cyan)] mt-0.5">特效升级: {changes.join(", ")}</div>;
+                })()}
                   </div>
                 )}
                 <button
@@ -148,10 +164,12 @@ export const CampfireScreen: React.FC = () => {
                     });
                     addLog(`${def.name} 已强化至 Lv.${target.level + 1}！`);
                     addToast(`▲ ${def.name} 升级到 Lv.${target.level + 1}!`, 'buff');
+                    setCampfireUsed(true);
+                    setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
                   }}
                   className="w-full py-2 mt-2 pixel-btn pixel-btn-primary text-[10px] disabled:opacity-30"
                 >
-                  {'免费升级'}
+                  {`升级 (${selectedDiceIdx !== null ? CAMPFIRE_CONFIG.upgradeCostPerLevel * (game.ownedDice[selectedDiceIdx]?.level || 1) : 0} 金币)`}
                 </button>
               </motion.div>
             );
@@ -181,6 +199,7 @@ export const CampfireScreen: React.FC = () => {
             onClick={() => {
               addToast('篑火休整 +' + CAMPFIRE_CONFIG.restHeal + ' HP', 'heal');
               playSound('heal');
+              setCampfireUsed(true);
               setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + CAMPFIRE_CONFIG.restHeal), phase: 'map' }));
             }}
             className="w-full p-4 pixel-panel flex items-center justify-between transition-all group"
@@ -188,7 +207,7 @@ export const CampfireScreen: React.FC = () => {
           >
             <div className="text-left">
               <div className="text-base font-bold text-[var(--pixel-orange)] pixel-text-shadow">休整</div>
-              <div className="text-[9px] text-[var(--dungeon-text-dim)]">回复 {CAMPFIRE_CONFIG.restHeal} 点生命值。</div>
+              <div className="text-[9px] text-[var(--dungeon-text-dim)]">回复 {CAMPFIRE_CONFIG.restHeal} 点生命值（回血后不可升级）。</div>
             </div>
             <PixelHeart size={4} />
           </button>
@@ -200,9 +219,9 @@ export const CampfireScreen: React.FC = () => {
           >
             <div className="text-left">
               <div className="text-base font-bold text-[var(--pixel-cyan)] pixel-text-shadow">强化骰子</div>
-              <div className="text-[9px] text-[var(--dungeon-text-dim)]">消耗金币升级骰子，提升点数和效果</div>
+              <div className="text-[9px] text-[var(--dungeon-text-dim)]">消耗金币升级骰子，提升点数和效果（升级后不可回血）</div>
             </div>
-            <PixelDice size={4} />
+            {selectedDiceIdx !== null ? <MiniDice defId={game.ownedDice[selectedDiceIdx]?.defId || "standard"} size={32} /> : <PixelDice size={4} />}
           </button>
 
         </div>

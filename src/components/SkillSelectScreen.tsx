@@ -97,14 +97,22 @@ export const SkillSelectScreen: React.FC = () => {
               style={{ borderRadius: '4px' }}
             >
               <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
-              <div className="text-2xl mb-1.5">{relic.icon === 'blade' ? '🗡️' : relic.icon === 'flag' ? '🚩' : relic.icon === 'weight' ? '⚖️' : relic.icon === 'pendulum' ? '🔮' : relic.icon === 'grail' ? '🏆' : relic.icon === 'gauge' ? '📐' : relic.icon === 'prism' ? '💎' : relic.icon === 'resonator' ? '🔊' : relic.icon === 'diamond' ? '♦️' : relic.icon === 'hourglass' ? '⏳' : relic.icon === 'fangs' ? '🦷' : relic.icon === 'contract' ? '📜' : relic.icon === 'recycle' ? '♻️' : relic.icon === 'eye' ? '👁️' : relic.icon === 'infinity' ? '♾️' : relic.icon === 'bag' ? '👜' : '📦'}</div>
+              <div className="text-2xl mb-1.5">{({
+                blade: '', flag: '', weight: '■', pendulum: '◈',
+                grail: '', gauge: '◎', prism: '◇', resonator: '',
+                diamond: '', hourglass: '⧗', fangs: '', contract: '',
+                recycle: '', eye: '◉', infinity: '∞', bag: '',
+              } as Record<string, string>)[relic.icon] || ''}</div>
               <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
                 {relic.name}
               </div>
               <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
                 {relic.description}
               </div>
-              <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1.5" />
+              <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1" />
+              <div className="text-[9px] text-[var(--pixel-red)] font-bold mb-1">
+                代价: -{relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15} HP
+              </div>
               <div className="text-[10px] font-bold flex items-center gap-0.5" style={{ color: RARITY_COLORS[relic.rarity] || 'white' }}>
                 {RARITY_LABELS[relic.rarity] || relic.rarity}
               </div>

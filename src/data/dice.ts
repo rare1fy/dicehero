@@ -185,6 +185,23 @@ export const getDiceLevelScale = (level: number): number => {
   return 1 + (level - 1) * 0.5;
 };
 
+
+/** 获取升级后的onPlay效果 */
+export const getUpgradedOnPlay = (def: DiceDef, level: number): DiceDef['onPlay'] => {
+  if (!def.onPlay || level <= 1) return def.onPlay;
+  const bonus = level - 1; // Lv2 = +1, Lv3 = +2
+  const op = { ...def.onPlay };
+  if (op.bonusDamage) op.bonusDamage = Math.floor(op.bonusDamage * (1 + bonus * 0.5));
+  if (op.bonusMult) op.bonusMult = Number((op.bonusMult + bonus * 0.25).toFixed(2));
+  if (op.selfDamage) op.selfDamage = Math.max(1, op.selfDamage - bonus); // 减少副作用
+  return op;
+};
+
+/** 获取升级后的元素效果倍率 */
+export const getElementLevelBonus = (level: number): number => {
+  return 1 + (level - 1) * 0.5; // Lv1=1x, Lv2=1.5x, Lv3=2x
+};
+
 export const DICE_MAX_LEVEL = 3;
 
 // ============================================================

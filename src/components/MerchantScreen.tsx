@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
+import { MiniDice } from './DiceBagPanel';
 import { PixelCoin, PixelDice } from './PixelIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
@@ -194,7 +195,7 @@ export const MerchantScreen: React.FC = () => {
                 >
                   <div className="w-10 h-10 flex items-center justify-center shrink-0 border"
                     style={{ borderColor: elemColor + '44', backgroundColor: elemColor + '22', borderRadius: '2px' }}>
-                    {item.type === 'dice' && <PixelDice size={2} />}
+                    {item.type === 'dice' && item.diceDefId ? <MiniDice defId={item.diceDefId} size={16} /> : item.type === 'dice' && <PixelDice size={2} />}
                     {item.type === 'augment' && <span className="text-lg">{'\u26A1'}</span>}
                     {item.type === 'heal' && <span className="text-lg">{'\u{1F48A}'}</span>}
                     {item.type === 'reroll' && <span className="text-lg">{'\u{1F504}'}</span>}
