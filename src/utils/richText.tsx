@@ -11,7 +11,7 @@ interface HighlightRule {
   className: string;
 }
 
-const HIGHLIGHT_RULES: HighlightRule[] = [
+const _HIGHLIGHT_RULES: HighlightRule[] = [
   // 数字+单位（如 "5 点护甲"、"20 HP"、"-15 HP"、"+3"、"x1.5"、"* 2.2"）
   { pattern: /([+\-×x*]\s*\d+(?:\.\d+)?(?:\s*%)?)/g, className: 'text-[var(--pixel-gold)] font-bold' },
   // 纯数字+单位词组合（如 "3 层灼烧"、"10 点伤害"、"50 金币"）
@@ -37,7 +37,7 @@ export const formatDescription = (text: string): React.ReactNode => {
   if (!text) return null;
 
   // 使用一个简化的方法：逐步替换为标记，最后渲染
-  const segments: { text: string; className?: string }[] = [];
+  const _segments: { text: string; className?: string }[] = [];
   
   // 先用正则把所有需要高亮的部分标记出来
   interface Marker {

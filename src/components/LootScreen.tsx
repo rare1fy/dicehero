@@ -1,13 +1,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { Augment } from '../types/game';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
 import { getDiceDef } from '../data/dice';
-import { ElementBadge } from './PixelDiceShapes';
-import { AugmentCard } from './AugmentCard';
 import { getAugmentIcon } from '../utils/uiHelpers';
-import { CONDITION_INFO, getConditionInfo } from './AugmentCard';
+import { getConditionInfo } from './AugmentCard';
 import { formatDescription } from '../utils/richText';
 
 export const LootScreen: React.FC = () => {

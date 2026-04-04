@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
-import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS, getOnPlayDescription } from './PixelDiceShapes';
-import { ELEMENT_NAMES, ELEMENT_COLORS } from '../utils/uiHelpers';
+import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { PixelDice } from './PixelIcons';
 
 /** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
@@ -110,7 +109,7 @@ export const DiceQueueThumbnail: React.FC<{
  * position='left': 骰子库 (蓝色)
  * position='right': 弃骰库 (红色)
  */
-export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, discardPile, position = 'left' }) => {
+export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDice, diceBag, discardPile, position = 'left' }) => {
   const [expanded, setExpanded] = useState(false);
   const isLeft = position === 'left';
 
@@ -190,7 +189,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice, diceBag, 
                 <div className="flex flex-wrap gap-1.5 justify-start">
                   {targetList.map((defId, idx) => {
                     const def = getDiceDef(defId);
-                    const colors = getDefColor(defId);
+                    const _colors = getDefColor(defId);
                     return (
                       <motion.div
                         key={`${defId}-${idx}`}

@@ -6,36 +6,35 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 // 像素图标组件 — 替代所有 lucide-react 和 emoji
 import { 
-  PixelHeart, PixelShield, PixelRefresh, PixelPlay, PixelCoin, PixelZap,
-  PixelSkull, PixelFlame, PixelShopBag, PixelSword, PixelBook, PixelCrown, 
-  PixelInfo, PixelTrophy, PixelAttackIntent, PixelArrowUp, 
-  PixelArrowDown, PixelClose, PixelStar, 
-  PixelDice, PixelMagic, PixelCampfire, PixelQuestion, PixelPoison
+  PixelHeart, PixelShield, PixelRefresh, PixelPlay, PixelZap,
+  PixelSkull, PixelFlame, PixelSword,
+  PixelAttackIntent, PixelArrowUp, 
+  PixelArrowDown, PixelClose, 
+  PixelMagic, PixelPoison
 } from './components/PixelIcons';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, DiceElement, HandType, StatusType, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState, HandResult, OwnedDie, RunStats } from './types/game';
+import type { Die, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState } from './types/game';
 import { INITIAL_STATS } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getDiceRewardPool, pickRandomDice, DICE_MAX_LEVEL, ALL_DICE, collapseElement, ELEMENTAL_COLLAPSE_ELEMENTS } from './data/dice';
-import { drawFromBag, discardDice, rerollUnselectedDice, initDiceBag, ownedDiceToIds } from './data/diceBag';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './data/dice';
+import { drawFromBag, initDiceBag } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
-import { ALL_RELICS, getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from './data/relics';
-import { AUGMENTS_POOL, INITIAL_AUGMENTS, getScale } from './data/augments';
-import { getEnemyForNode, getEnemiesForNode } from './data/enemies';
+import { getRelicRewardPool, pickRandomRelics } from './data/relics';
+import { AUGMENTS_POOL } from './data/augments';
+import { getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
 import { playSound } from './utils/sound';
 import { checkHands, canFormValidHand } from './utils/handEvaluator';
-import { generateMap, getNodeX } from './utils/mapGenerator';
+import { generateMap } from './utils/mapGenerator';
 import { StatusIcon } from './components/StatusIcon';
 import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES, ELEMENT_COLORS } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
 import { CSSParticles } from './components/ParticleEffects';
-import { TutorialOverlay, isTutorialCompleted } from './components/TutorialOverlay';
-import { SettingsPanel } from './components/SettingsPanel';
-import { GameContext, type SkillModule } from './contexts/GameContext';
+import { isTutorialCompleted } from './components/TutorialOverlay';
+import { GameContext } from './contexts/GameContext';
 import { StartScreen } from './components/StartScreen';
 import { GlobalTopBar } from './components/GlobalTopBar';
 import { MapScreen } from './components/MapScreen';
@@ -47,11 +46,11 @@ import { DiceRewardScreen } from './components/DiceRewardScreen';
 import { GameOverScreen } from './components/GameOverScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 import { generateSkillModules } from './data/skillModules';
-import { AugmentCard, CONDITION_INFO, getConditionInfo } from './components/AugmentCard';
+import { getConditionInfo } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
-import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG, CHAPTER_CONFIG } from './config';
+import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, CHAPTER_CONFIG } from './config';
 import { applyDiceSpecialEffects } from './logic/diceEffects';
 import { HandGuideModal } from './components/HandGuideModal';
 import { ChapterTransition } from './components/ChapterTransition';
@@ -131,8 +130,8 @@ export default function DiceHeroGame() {
   const [dice, setDice] = useState<Die[]>([]);
   const gameRef = useRef(game);
   gameRef.current = game;
-  const [diceDrawAnim, setDiceDrawAnim] = useState(false); // 抽骰子入场动画
-  const [diceDiscardAnim, setDiceDiscardAnim] = useState(false);
+  const [_diceDrawAnim, setDiceDrawAnim] = useState(false); // 抽骰子入场动画
+  const [diceDiscardAnim, _setDiceDiscardAnim] = useState(false);
   const [shuffleAnimating, setShuffleAnimating] = useState(false); // 洗牌动画状态 // 弃骰子退场动画
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [rerollCount, setRerollCount] = useState(0);
@@ -145,14 +144,14 @@ export default function DiceHeroGame() {
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
 
   const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
-  const [dyingEnemies, setDyingEnemies] = useState<Set<string>>(new Set());
+  const [_dyingEnemies, setDyingEnemies] = useState<Set<string>>(new Set());
   const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
 
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
   const [enemyInfoTarget, setEnemyInfoTarget] = useState<string | null>(null);
   const [screenShake, setScreenShake] = useState(false);
   const [hpGained, setHpGained] = useState(false);
-  const [armorGained, setArmorGained] = useState(false);
+  const [_armorGained, setArmorGained] = useState(false);
   const [rerollFlash, setRerollFlash] = useState(false);
 
   // === 结算演出状态 ===
@@ -173,7 +172,7 @@ export default function DiceHeroGame() {
     finalHeal: number;
     statusEffects: any[];
   } | null>(null);
-  const [toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
+  const [_toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
   const toastIdRef = useRef(0);
   const toastCdMap = useRef<Map<string, number>>(new Map());
 
@@ -192,8 +191,8 @@ export default function DiceHeroGame() {
   };
   const [floatingTexts, setFloatingTexts] = useState<{ id: string; text: string; x: number; y: number; color: string; icon?: React.ReactNode; target: 'player' | 'enemy' }[]>([]);
   const [selectedAugment, setSelectedAugment] = useState<Augment | null>(null);
-  const [campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
-  const [skillTriggerTexts, setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
+  const [_campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
+  const [skillTriggerTexts, _setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
   const [handLeftThrow, setHandLeftThrow] = useState(false);
   const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
   const [showWaveDetail, setShowWaveDetail] = useState(false);
@@ -594,7 +593,7 @@ export default function DiceHeroGame() {
     if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
     if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
     
-    const selectedCount = dice.filter(d => d.selected && !d.spent).length;
+    const _selectedCount = dice.filter(d => d.selected && !d.spent).length;
     const isCurrentlySelected = die.selected;
 
     // 不限制选择数量，只要能组成牌型即可
@@ -705,7 +704,7 @@ export default function DiceHeroGame() {
 
   const expectedOutcome = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
-    const { bestHand, allHands, activeHands } = currentHands;
+    const { bestHand, allHands: _allHands, activeHands } = currentHands;
     if (selected.length === 0) return null;
 
     const X = selected.reduce((sum, d) => sum + d.value, 0);
@@ -1630,7 +1629,7 @@ export default function DiceHeroGame() {
         }
 
     // 先计算谁会被毒死（在state更新之前）
-    const poisonSurvivors = enemies.filter(e => {
+    const _poisonSurvivors = enemies.filter(e => {
       if (e.hp <= 0) return false;
       const pois = e.statuses.find(s => s.type === 'poison');
       if (pois && pois.value > 0) return e.hp - pois.value > 0;
@@ -1679,9 +1678,9 @@ export default function DiceHeroGame() {
     // --- 5. Player Turn Start ---
     
       // 薛定谔的袋子：若上回合未使用重Roll，本回合额外抽1颗
-      let schrodingerBonus = 0;
+      let _schrodingerBonus = 0;
       if (game.relics.some(r => r.id === 'schrodinger_bag') && rerollCount === 0) {
-        schrodingerBonus = 1;
+        _schrodingerBonus = 1;
         addLog('薛定谔的袋子：未重Roll，下回合额外抽1颗骰子！');
       }
 setGame(prev => {
@@ -1944,7 +1943,7 @@ useEffect(() => {
   };
 
   // === 大关过渡：进入下一章 ===
-  const handleNextChapter = () => {
+  const _handleNextChapter = () => {
     setGame(prev => {
       const nextChapter = prev.chapter + 1;
       const healAmount = Math.floor(prev.maxHp * CHAPTER_CONFIG.chapterHealPercent);
@@ -2147,7 +2146,7 @@ useEffect(() => {
     priest: { name: '牧师', icon: '', color: 'var(--pixel-gold)', desc: '治疗类型，交替攻击和治疗友方。优先治疗血量最低的友方。' },
   };
 
-  const getEffectiveAttackDmg = (e: Enemy) => {
+  const _getEffectiveAttackDmg = (e: Enemy) => {
     let val = e.attackDmg;
     const weak = e.statuses.find(s => s.type === 'weak');
     if (weak) val = Math.floor(val * 0.75);
@@ -2389,7 +2388,7 @@ useEffect(() => {
                 const depthScale = dist === 0 ? 1.35 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
                   const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 25;
                   const depthOpacity = 1.0; // No opacity reduction - use brightness for depth
-                  const isAttackReady = dist === 0;
+                  const _isAttackReady = dist === 0;
                     const depthBrightness = dist >= 3 ? 0.82 : dist === 2 ? 0.9 : dist === 1 ? 0.95 : 1.0;
                   const depthZ = dist >= 3 ? 1 : dist === 2 ? 3 : dist === 1 ? 5 : 7;
                   const spriteSize = Math.max(4, Math.round(baseSpriteSize * depthScale));

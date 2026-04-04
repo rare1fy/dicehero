@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { PixelTrophy, PixelStar, PixelCrown, PixelCoin } from './PixelIcons';
+import { PixelTrophy } from './PixelIcons';
 import { CSSParticles } from './ParticleEffects';
 
 export const VictoryScreen: React.FC = () => {
-  const { game, setGame } = useGameContext();
+  const { game } = useGameContext();
 
   return (
       <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] p-6 text-center relative overflow-hidden sm:border-x-3 border-[var(--dungeon-panel-border)] scanlines">

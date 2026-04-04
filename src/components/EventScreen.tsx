@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import type { Augment } from '../types/game';
 import { AUGMENTS_POOL } from '../data/augments';
-import { HAND_TYPES } from '../data/handTypes';
-import { playSound } from '../utils/sound';
-import { CSSParticles } from './ParticleEffects';
-import { PixelQuestion, PixelHeart, PixelCoin, PixelSword, PixelSkull, PixelStar, PixelShield, PixelZap, PixelDice, PixelFlame, PixelMagic, PixelCrown, PixelArrowUp, PixelArrowDown, PixelPoison, PixelInfo, PixelShopBag, PixelRefresh } from './PixelIcons';
+import { PixelQuestion, PixelHeart, PixelSkull, PixelStar, PixelFlame, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
-import { getAugmentIcon } from '../utils/uiHelpers';
 import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
 
 /** 图标ID到组件的映射 */

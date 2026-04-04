@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  PixelSword, PixelPair, PixelLayers, PixelFlame, PixelHouse,
-  PixelArrowUp, PixelDroplet, PixelHeart, PixelStar
-} from '../components/PixelIcons';
+
 import { DiceElement } from '../types/game';
 
 /** 增幅模块图标 - 像素风SVG，形象直观 */

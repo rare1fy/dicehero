@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelRefresh, PixelPlay, PixelSword } from './PixelIcons';
 import { CHAPTER_CONFIG } from '../config';
@@ -7,7 +7,7 @@ import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
 
 export const GlobalTopBar: React.FC = () => {
-  const { game, setShowTutorial, setShowHandGuide, setShowDiceGuide, rerollFlash } = useGameContext();
+  const { game, setShowTutorial, setShowHandGuide, setShowDiceGuide } = useGameContext();
   const [showStats, setShowStats] = useState(false);
 
   return (

@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { getDiceDef, pickRandomDice, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
+import { getDiceDef, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
 import { ElementBadge, getOnPlayDescription, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
-import { PixelDice, PixelStar } from './PixelIcons';
+
 import { MiniDice } from './DiceBagPanel';
-import { ELEMENT_NAMES, ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
+import { ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
 
 type RewardTab = 'newDice';
@@ -87,8 +87,8 @@ export const DiceRewardScreen: React.FC = () => {
     const def = getDiceDef(defId);
     const faces = getUpgradedFaces(def, level);
     const avgVal = (faces.reduce((a, b) => a + b, 0) / faces.length).toFixed(1);
-    const elemColor = ELEMENT_COLORS[def.element] || '#888';
-    const rarityColor = RARITY_COLORS[def.rarity] || '#666';
+    const _elemColor = ELEMENT_COLORS[def.element] || '#888';
+    const _rarityColor = RARITY_COLORS[def.rarity] || '#666';
     const onPlayDesc = getOnPlayDescription(def.onPlay);
 
     return (

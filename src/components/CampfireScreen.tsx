@@ -5,7 +5,7 @@ import { getDiceDef, getUpgradedFaces, DICE_MAX_LEVEL } from '../data/dice';
 import { playSound } from '../utils/sound';
 import { PixelCampfire, PixelHeart, PixelDice } from './PixelIcons';
 import { ElementBadge, getOnPlayDescription, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
-import { ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
+import { getDiceElementClass } from '../utils/uiHelpers';
 import { CAMPFIRE_CONFIG } from '../config';
 
 export const CampfireScreen: React.FC = () => {

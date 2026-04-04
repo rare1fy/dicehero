@@ -1,8 +1,7 @@
 import React from 'react';
 import type { Augment } from '../types/game';
 import { AUGMENTS_POOL } from './augments';
-import { PixelSword, PixelShield, PixelZap, PixelHeart, PixelMagic, PixelFlame, PixelStar, PixelDice, PixelCrown, PixelSkull, PixelRefresh, PixelPoison } from '../components/PixelIcons';
-import { getAugmentIcon } from '../utils/uiHelpers';
+import { PixelSword, PixelZap, PixelMagic } from '../components/PixelIcons';
 import { SKILL_SELECT_CONFIG } from '../config';
 
 interface SkillModule {

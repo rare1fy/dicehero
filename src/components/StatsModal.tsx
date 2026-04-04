@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef } from '../data/dice';
-import { PixelSword, PixelHeart, PixelShield, PixelSkull, PixelCoin, PixelDice, PixelRefresh, PixelTrophy, PixelClose, PixelStar, PixelCampfire } from './PixelIcons';
+import { PixelSword, PixelHeart, PixelShield, PixelSkull, PixelCoin, PixelDice, PixelRefresh, PixelTrophy, PixelClose, PixelStar } from './PixelIcons';
 
 interface StatsModalProps {
   onClose: () => void;

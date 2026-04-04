@@ -1,16 +1,15 @@
 import { MapNode, Enemy, GameState, BattleWave } from '../types/game';
-import { BATTLE_SCALING, getDepthScaling } from '../config';
+import { getDepthScaling } from '../config';
 import { 
   NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES,
-  type EnemyConfig, type PatternAction 
-} from '../config';
+  type EnemyConfig } from '../config';
 
 /**
  * 根据配置表生成运行时 pattern 函数
  * 将纯数据的行为配置转换为可执行的 pattern 函数
  */
 const buildPattern = (config: EnemyConfig, dmgScale: number) => {
-  return (t: number, self: Enemy, player: GameState) => {
+  return (t: number, self: Enemy, _player: GameState) => {
     // 检查每个阶段（优先级从高到低）
     for (const phase of config.phases) {
       if (phase.hpThreshold && self.hp >= self.maxHp * phase.hpThreshold) {

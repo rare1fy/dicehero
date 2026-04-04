@@ -9,8 +9,8 @@ type SoundType =
   | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe';
 
 let audioCtx: AudioContext | null = null;
-let bgmOscillators: OscillatorNode[] = [];
-let bgmGains: GainNode[] = [];
+let _bgmOscillators: OscillatorNode[] = [];
+let _bgmGains: GainNode[] = [];
 let bgmPlaying = false;
 let masterVolume = 0.5;
 let sfxEnabled = true;
@@ -24,7 +24,7 @@ const getCtx = (): AudioContext => {
 };
 
 // 创建一个带有滤波器的振荡器
-const createFilteredOsc = (
+const _createFilteredOsc = (
   ctx: AudioContext, 
   type: OscillatorType, 
   freq: number, 

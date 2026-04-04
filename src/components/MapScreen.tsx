@@ -3,12 +3,10 @@ import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
 import { getNodeX } from '../utils/mapGenerator';
-import { playSound } from '../utils/sound';
-import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelInfo, PixelTreasure, PixelMerchant, PixelBook } from './PixelIcons';
-import { PixelSprite, hasSpriteData } from './PixelSprite';
+import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelTreasure, PixelMerchant, PixelBook } from './PixelIcons';
 
 export const MapScreen: React.FC = () => {
-  const { game, startNode, addLog, setShowDiceGuide } = useGameContext();
+  const { game, startNode, setShowDiceGuide } = useGameContext();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const currentNode = game.map.find(n => n.id === game.currentNodeId);
   const reachableNodes = !game.currentNodeId 

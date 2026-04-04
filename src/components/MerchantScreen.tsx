@@ -97,7 +97,7 @@ const PRICE_TAG_COLORS = {
 export const MerchantScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
   const [items, setItems] = useState<MerchantItem[]>(() => generateMerchantItems(game.chapter));
-  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [_buyingId, setBuyingId] = useState<string | null>(null);
 
   const buyItem = useCallback((item: MerchantItem) => {
     if (item.sold) return;

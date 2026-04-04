@@ -3,10 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { PixelCoin, PixelStar, PixelDice } from './PixelIcons';
-import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
+import { DICE_BY_RARITY } from '../data/dice';
 import { AUGMENTS_POOL } from '../data/augments';
-import { ELEMENT_COLORS } from '../utils/uiHelpers';
-import { ChestReward, Augment, ShopItem } from '../types/game';
+import { ChestReward, ShopItem } from '../types/game';
 
 // ============================================================
 // 宝箱配置（宝箱节点使用）

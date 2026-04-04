@@ -107,6 +107,6 @@ export const checkHands = (dice: Die[]): HandResult => {
   return { bestHand, allHands, activeHands };
 };
 
-export const canFormValidHand = (selected: Die[], candidate: Die, available: Die[]): boolean => {
+export const canFormValidHand = (_selected: Die[], _candidate: Die, _available: Die[]): boolean => {
   return true; // Any combination is valid: non-hand = 普通攻击
 };

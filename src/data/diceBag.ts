@@ -47,7 +47,7 @@ export const drawFromBag = (
   const drawnIds = bag.splice(0, drawCount);
 
   // 生成 Die 实例
-  const drawn: Die[] = drawnIds.map((defId, index) => {
+  const drawn: Die[] = drawnIds.map((defId) => {
     const def = getDiceDef(defId);
     const value = rollDiceDef(def);
     return {
