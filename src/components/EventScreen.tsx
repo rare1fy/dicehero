@@ -5,6 +5,7 @@ import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { PixelQuestion, PixelHeart, PixelSkull, PixelStar, PixelFlame, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
 import { playSound } from '../utils/sound';
+import { getDiceDef, getUpgradedFaces } from '../data/dice';
 import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
 
 /** 图标ID到组件的映射 */
@@ -22,6 +23,8 @@ export const EventScreen: React.FC = () => {
   const { game, setGame, addToast, addLog, startBattle, pickReward } = useGameContext();
 
   const [event, setEvent] = useState<{title: string, desc: string, icon: React.ReactNode, options: {label: string, sub: string, action: () => void, color: string, disabled?: boolean, goldCost?: number}[]}>();
+  const [removeDiceMode, setRemoveDiceMode] = useState(false);
+  const [removeDiceIdx, setRemoveDiceIdx] = useState<number | null>(null);
 
   useEffect(() => {
     playSound('event');
@@ -93,6 +96,7 @@ export const EventScreen: React.FC = () => {
             if (outcome.toast) addToast(outcome.toast, outcome.toastType || 'buff');
             // 执行子动作
             const hasBattle = outcome.actions.some(a => a.type === 'startBattle');
+            const hasRemoveDice = outcome.actions.some(a => a.type === 'removeDice');
             for (const subAction of outcome.actions) {
               executeAction({ ...subAction, toast: undefined, log: undefined }, handType);
             }
@@ -119,6 +123,11 @@ export const EventScreen: React.FC = () => {
         setGame(prev => ({ ...prev, phase: 'map' }));
         if (resolvedLog) addLog(resolvedLog);
         return;
+      }
+      case 'removeDice': {
+        // Enter removeDice selection mode
+        setRemoveDiceMode(true);
+        break;
       }
       case 'noop': {
         setGame(prev => ({ ...prev, phase: 'map' }));
@@ -170,6 +179,84 @@ export const EventScreen: React.FC = () => {
   };
 
   if (!event) return null;
+
+  // --- Remove Dice Selection Overlay (for event removeDice action) ---
+  if (removeDiceMode) {
+    const removableDice = game.ownedDice
+      .map((d: any, i: number) => ({ ...d, index: i }));
+    const canRemove = game.ownedDice.length > 6;
+    
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
+        <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
+        <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
+          <PixelFlame size={3} />
+          <h2 className="text-lg font-black pixel-text-shadow tracking-wide">{'✂'} 选择要投入熔炉的骰子</h2>
+        </div>
+        <p className="text-[var(--dungeon-text-dim)] mb-5 text-[9px] text-center relative z-10">
+          点击选择一颗骰子永久移除，最少保留6颗
+        </p>
+        <div className="flex justify-center gap-2.5 flex-wrap max-w-sm relative z-10">
+          {removableDice.map((d: any) => {
+            const def = getDiceDef(d.defId);
+            const faces = getUpgradedFaces(def, d.level);
+            const isSelected = removeDiceIdx === d.index;
+            return (
+              <motion.button
+                key={d.index}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setRemoveDiceIdx(isSelected ? null : d.index)}
+                className={`relative flex flex-col items-center p-3 border-2 transition-all min-w-[80px] ${
+                  isSelected
+                    ? 'border-[var(--pixel-red)] bg-[rgba(224,60,49,0.15)] shadow-[0_0_12px_rgba(224,60,49,0.4)]'
+                    : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
+                }`}
+                style={{ borderRadius: '4px' }}
+              >
+                <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-0.5">{def.name}</div>
+                <div className="text-[8px] text-[var(--dungeon-text-dim)]">Lv.{d.level} [{faces.join(',')}]</div>
+                {isSelected && (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] rounded-full flex items-center justify-center">
+                    <span className="text-[8px] text-white font-black">{'✖'}</span>
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+        {removeDiceIdx !== null && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 relative z-10">
+            {!canRemove && <div className="text-[9px] text-[var(--pixel-red)] text-center mb-2 font-bold">骰子库已达最少数量（6颗）</div>}
+            <button
+              disabled={!canRemove}
+              onClick={() => {
+                if (!canRemove) return;
+                const target = game.ownedDice[removeDiceIdx];
+                const def = getDiceDef(target.defId);
+                playSound('enemy_skill');
+                setGame(prev => ({
+                  ...prev,
+                  ownedDice: prev.ownedDice.filter((_: any, i: number) => i !== removeDiceIdx),
+                }));
+                addToast(`✖ ${def.name} 已被熔炼`, 'damage');
+                addLog(`${def.name} 已被投入熔炉移除。`);
+                setRemoveDiceMode(false);
+                setRemoveDiceIdx(null);
+                setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
+              }}
+              className={`pixel-btn text-[10px] px-6 py-2 ${!canRemove ? 'opacity-40 cursor-not-allowed' : ''}`}
+              style={{ background: 'var(--pixel-red)', color: 'white' }}
+            >
+              确认熔炼
+            </button>
+          </motion.div>
+        )}
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-5 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] relative overflow-hidden">

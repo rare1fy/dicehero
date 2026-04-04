@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -702,6 +702,7 @@ export default function DiceHeroGame() {
     let pierceDamage = 0;
     let armorBreak = false;
     let multiplier = 1;
+    let goldBonus = 0;
     const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number }[] = [];
 
     activeAugments.forEach(aug => {
@@ -713,7 +714,7 @@ export default function DiceHeroGame() {
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-      if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); addFloatingText(`+${res.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'); details.push(`\u91D1\u5E01+${res.goldBonus}`); }
+      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`\u91D1\u5E01+${res.goldBonus}`); }
       if (res.statusEffects) {
         res.statusEffects.forEach(s => {
           const existing = statusEffects.find(es => es.type === s.type);
@@ -758,8 +759,8 @@ export default function DiceHeroGame() {
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-      if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); addFloatingText(`+${res.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'); details.push(`金币+${res.goldBonus}`); }
-      if (res.goldBonus) { addToast(' ' + relic.name + ': +' + res.goldBonus + '金币', 'gold'); }
+      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`閲戝竵+${res.goldBonus}`); }
+      if (res.goldBonus) { /* toast will be shown in playHand */ }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
       }
@@ -868,7 +869,8 @@ export default function DiceHeroGame() {
       bestHand,
       statusEffects,
       X,
-      selectedValues: selected.map(d => d.value)
+      selectedValues: selected.map(d => d.value),
+      goldBonus,
     };
   }, [dice, activeAugments, currentHands]);
 
@@ -897,6 +899,11 @@ export default function DiceHeroGame() {
 
     const outcome = expectedOutcome;
     if (!outcome) return;
+    // --- Apply goldBonus from augments/relics (only on actual play, not preview) ---
+    if (outcome.goldBonus && outcome.goldBonus > 0) {
+      setGame(prev => ({ ...prev, souls: prev.souls + outcome.goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + outcome.goldBonus } }));
+      addFloatingText(`+${outcome.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player');
+    }
 
     const { bestHand } = currentHands;
 
@@ -1574,14 +1581,14 @@ export default function DiceHeroGame() {
             if (damagedAllies.length > 0) {
               // Priority 1: Heal the most damaged ally
               const lowestAlly = damagedAllies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
-              const healVal = Math.floor(e.attackDmg * 2.5);
+              const healVal = Math.floor(e.attackDmg * 4.0);
               setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
               addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
               addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
               playSound('enemy_heal');
             } else if (selfDamaged) {
               // Priority 2: Heal self if damaged
-              const healVal = Math.floor(e.attackDmg * 1.5);
+              const healVal = Math.floor(e.attackDmg * 3.0);
               setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
               addLog(`${e.name} 治疗自己 ${healVal} HP。`);
               playSound('enemy_heal');
@@ -1594,15 +1601,15 @@ export default function DiceHeroGame() {
                   if (en.uid !== target.uid) return en;
                   const existing = en.statuses.find(s => s.type === 'strength');
                   if (existing) {
-                    return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 2 } : s) };
+                    return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 3 } : s) };
                   }
-                  return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 2 }] };
+                  return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 3 }] };
                 }));
                 addLog(`${e.name} 为 ${target.name} 施加了力量强化！`);
-                addFloatingText('力量+2', 'text-red-400', undefined, 'enemy');
+                addFloatingText('力量+3', 'text-red-400', undefined, 'enemy');
               } else {
                 // Odd turns: give armor
-                const armorVal = Math.floor(e.attackDmg * 2);
+                const armorVal = Math.floor(e.attackDmg * 3);
                 setEnemies(prev => prev.map(en => en.uid === target.uid ? { ...en, armor: en.armor + armorVal } : en));
                 addLog(`${e.name} 为 ${target.name} 施加了护甲祝福（+${armorVal}护甲）！`);
                 addFloatingText(
@@ -1617,9 +1624,9 @@ export default function DiceHeroGame() {
                 setGame(prev => {
                   const weakStatus = prev.statuses.find(s => s.type === 'weak');
                   if (weakStatus) {
-                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 2 } : s) };
+                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 3 } : s) };
                   }
-                  return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 2 }] };
+                  return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 3 }] };
                 });
                 addLog(`${e.name} 对你施加了虚弱！`);
                 addFloatingText('虚弱', 'text-purple-400', undefined, 'player');
@@ -1628,9 +1635,9 @@ export default function DiceHeroGame() {
                 setGame(prev => {
                   const vulnStatus = prev.statuses.find(s => s.type === 'vulnerable');
                   if (vulnStatus) {
-                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'vulnerable' ? { ...s, value: s.value + 1, duration: 2 } : s) };
+                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'vulnerable' ? { ...s, value: s.value + 1, duration: 3 } : s) };
                   }
-                  return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 2 }] };
+                  return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 3 }] };
                 });
                 addLog(`${e.name} 对你施加了易伤！`);
                 addFloatingText('易伤', 'text-orange-400', undefined, 'player');
@@ -2515,33 +2522,33 @@ useEffect(() => {
               )}
             </AnimatePresence>
 
-            {/* === 玩家Debuff屏幕特效层 === */}
-            {game.statuses.some(s => s.type === 'burn') && (
-              <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-burn" />
-            )}
-            {game.statuses.some(s => s.type === 'poison') && (
-              <>
-                <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-poison" />
-                <div className="absolute inset-0 z-[5] pointer-events-none debuff-poison-bubbles">
-                  {Array.from({length: 8}).map((_, i) => (
-                    <div key={i} className="debuff-poison-bubble" style={{
-                      left: `${10 + Math.random() * 80}%`,
-                      animationDelay: `${Math.random() * 3}s`,
-                      animationDuration: `${2 + Math.random() * 2}s`,
-                    }} />
-                  ))}
-                </div>
-              </>
-            )}
-            {game.statuses.some(s => s.type === 'weak') && (
-              <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-weak" />
-            )}
-            {game.statuses.some(s => s.type === 'vulnerable') && (
-              <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-vulnerable" />
-            )}
             
             {/* ===== 上半区：3D立体敌人舞台 ===== */}
             <div className="flex-1 flex flex-col items-center justify-center relative z-[3] min-h-0">
+              {/* === 玩家Debuff屏幕特效层 === */}
+              {game.statuses.some(s => s.type === 'burn') && (
+                <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-burn" />
+              )}
+              {game.statuses.some(s => s.type === 'poison') && (
+                <>
+                  <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-poison" />
+                  <div className="absolute inset-0 z-[5] pointer-events-none debuff-poison-bubbles">
+                    {Array.from({length: 8}).map((_, i) => (
+                      <div key={i} className="debuff-poison-bubble" style={{
+                        left: `${10 + Math.random() * 80}%`,
+                        animationDelay: `${Math.random() * 3}s`,
+                        animationDuration: `${2 + Math.random() * 2}s`,
+                      }} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {game.statuses.some(s => s.type === 'weak') && (
+                <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-weak" />
+              )}
+              {game.statuses.some(s => s.type === 'vulnerable') && (
+                <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-vulnerable" />
+              )}
               {/* 透视地板 */}
               <div className="battle-floor-perspective" />
               
@@ -3282,10 +3289,7 @@ useEffect(() => {
                     <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
                   </motion.div>
                   <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)]" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
-                  <div className="flex flex-wrap gap-0.5">
-                    {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
-                    {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
-                  </div>
+
                 </div>
                 <div className={`pixel-hp-bar h-3 relative ${game.statuses.some(s => s.type === 'poison') ? 'animate-poison-pulse' : ''} ${game.statuses.some(s => s.type === 'burn') ? 'animate-burn-edge' : ''}`}>
                   <motion.div 
@@ -3300,6 +3304,13 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
+                {/* 玩家状态栏 — 独立一行 */}
+                {(game.armor > 0 || game.statuses.length > 0) && (
+                  <div className="flex flex-wrap gap-1 px-3 pb-1">
+                    {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
+                    {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
+                  </div>
+                )}
 
               {/* 骰子操作面板 */}
 

@@ -28,6 +28,7 @@ export interface EventOptionConfig {
       | 'modifyMaxHp'
       | 'grantRelic'
       | 'randomOutcome'
+      | 'removeDice'
       | 'noop';
     value?: number;
     /** 随机结果配置（仅 randomOutcome 类型使用） */
@@ -351,4 +352,30 @@ export const EVENTS_POOL: EventConfig[] = [
       },
     ],
   },
+  // ============================================================
+  // 神秘熔炉 — 删骰子事件（伴随代价）
+  // ============================================================
+  {
+    id: 'mystic_furnace',
+    title: '神秘熔炉',
+    desc: '你发现了一座燃烧着异火的古老熔炉。火焰似乎可以熔炼一切。你可以将一颗骰子投入其中，但熔炉的火焰会灼伤你。',
+    iconId: 'flame',
+    options: [
+      {
+        label: '投入骰子',
+        sub: '移除一颗非基础骰子，但 -12 HP',
+        color: 'bg-red-600 hover:bg-red-500',
+        action: { type: 'randomOutcome', outcomes: [
+          { weight: 1.0, actions: [{ type: 'removeDice' }, { type: 'modifyHp', value: -12 }], toast: '骰子已熔炼，-12HP', toastType: 'damage', log: '将一颗骰子投入熔炉，火焰灼伤了你 12 HP。' },
+        ]},
+      },
+      {
+        label: '离开',
+        sub: '不冒险，安全离开',
+        color: 'bg-zinc-700 hover:bg-zinc-600',
+        action: { type: 'noop', toast: '你谨慎地离开了熔炉。', log: '没有使用神秘熔炉。' },
+      },
+    ],
+  },
+
 ];

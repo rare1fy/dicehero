@@ -4,14 +4,14 @@ import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef, getUpgradedFaces, getUpgradedOnPlay, DICE_MAX_LEVEL } from '../data/dice';
 import { playSound } from '../utils/sound';
-import { PixelCampfire, PixelHeart, PixelDice } from './PixelIcons';
+import { PixelCampfire, PixelHeart, PixelDice, PixelFlame } from './PixelIcons';
 import { ElementBadge, getOnPlayDescription, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { CAMPFIRE_CONFIG } from '../config';
 
 export const CampfireScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
-  const [campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
+  const [campfireView, setCampfireView] = useState<'main' | 'upgrade' | 'purify'>('main');
   const [selectedDiceIdx, setSelectedDiceIdx] = useState<number | null>(null);
   const [campfireUsed, setCampfireUsed] = useState(false);
   
@@ -25,6 +25,151 @@ export const CampfireScreen: React.FC = () => {
   }, [game.ownedDice]);
 
   
+
+
+  const purifiableDice = useMemo(() => {
+    return game.ownedDice
+      .map((d, i) => ({ ...d, index: i }))
+      ; // all dice can be purified
+  }, [game.ownedDice]);
+
+  if (campfireView === 'purify') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
+        <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
+        <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
+          <PixelFlame size={3} />
+          <h2 className="text-lg font-black pixel-text-shadow tracking-wide">{'✦'} 净化骰子 {'✦'}</h2>
+        </div>
+        <p className="text-[var(--dungeon-text-dim)] mb-5 text-[9px] text-center relative z-10">
+          将一颗骰子投入篝火中净化，永久移除。骰子库最少保留 6 颗。
+        </p>
+        
+        <div className="space-y-3 w-full max-w-sm pb-6 relative z-10">
+          {purifiableDice.length === 0 ? (
+            <div className="text-center py-10 text-[var(--dungeon-text-dim)] text-xs">没有可移除的骰子</div>
+          ) : (
+            <div className="flex justify-center gap-2.5 flex-wrap">
+              {purifiableDice.map((d) => {
+                const def = getDiceDef(d.defId);
+                const currentFaces = getUpgradedFaces(def, d.level);
+                const isSelected = selectedDiceIdx === d.index;
+
+                return (
+                  <motion.button
+                    key={d.index}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedDiceIdx(isSelected ? null : d.index)}
+                    className={`relative flex flex-col items-center p-3 border-2 transition-all min-w-[90px] ${
+                      isSelected
+                        ? 'border-[var(--pixel-red)] bg-[rgba(224,60,49,0.15)] shadow-[0_0_12px_rgba(224,60,49,0.4)]'
+                        : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
+                    }`}
+                    style={{ borderRadius: '4px' }}
+                  >
+                    <div className="text-[8px] font-bold tracking-wider mb-1" style={{ color: RARITY_TEXT_COLORS[def.rarity] || '#888' }}>
+                      {RARITY_LABELS[def.rarity] || def.rarity}
+                    </div>
+                    <div className="relative mb-1.5">
+                      <div
+                        className={`${getDiceElementClass(def.element, isSelected, false, false, def.id)} relative flex items-center justify-center`}
+                        style={{ width: '36px', height: '36px', fontSize: '16px', lineHeight: '36px' }}
+                      >
+                        {'?'}
+                      </div>
+                      {def.element !== 'normal' && (
+                        <div className="absolute -top-1 -right-1 z-10">
+                          <ElementBadge element={def.element} size={12} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-0.5 text-center leading-tight">
+                      {def.name}
+                    </div>
+                    <div className={`text-[7px] font-bold mb-0.5 ${
+                      d.level >= 3 ? 'text-[var(--pixel-gold)]' : d.level >= 2 ? 'text-[var(--pixel-cyan)]' : 'text-[var(--dungeon-text-dim)]'
+                    }`}>
+                      Lv.{d.level}
+                    </div>
+                    <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-0.5">
+                      [{currentFaces.join(',')}]
+                    </div>
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] rounded-full flex items-center justify-center"
+                      >
+                        <span className="text-[8px] text-white font-black">{'✖'}</span>
+                      </motion.div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+
+          {selectedDiceIdx !== null && (() => {
+            const target = game.ownedDice[selectedDiceIdx];
+            if (!target) return null;
+            const def = getDiceDef(target.defId);
+            const currentFaces = getUpgradedFaces(def, target.level);
+            const onPlayDesc = getOnPlayDescription(def.onPlay);
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="pixel-panel p-3 mt-3"
+              >
+                <div className="text-center text-xs font-bold text-[var(--pixel-red)] mb-2 pixel-text-shadow">
+                  确认移除
+                </div>
+                <div className="text-center text-[10px] text-[var(--dungeon-text-bright)]">
+                  {def.name} Lv.{target.level} [{currentFaces.join(',')}]
+                </div>
+                {onPlayDesc && (
+                  <div className="text-[8px] text-[var(--pixel-cyan)] text-center mt-1">
+                    出牌效果: {onPlayDesc}
+                  </div>
+                )}
+                <div className="text-[9px] text-[var(--pixel-orange)] text-center mt-1 font-bold">
+                  {game.ownedDice.length <= 6 ? '骰子库已达最少数量（6颗），无法移除' : '免费移除（不可撤回）'}
+                </div>
+                <button
+                  disabled={game.ownedDice.length <= 6}
+                  onClick={() => {
+                    if (game.ownedDice.length <= 6) return;
+                    playSound('enemy_skill');
+                    setGame(prev => {
+                      const newOwned = prev.ownedDice.filter((_: any, i: number) => i !== selectedDiceIdx);
+                      return { ...prev, ownedDice: newOwned };
+                    });
+                    addLog(`${def.name} 已被净化移除。`);
+                    addToast(`✖ ${def.name} 已永久移除`, 'damage');
+                    setCampfireUsed(true);
+                    setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
+                  }}
+                  className="w-full py-2 mt-2 pixel-btn text-[10px]"
+                  style={{ background: 'var(--pixel-red)', color: 'white' }}
+                >
+                  确认净化
+                </button>
+              </motion.div>
+            );
+          })()}
+          
+          <button 
+            onClick={() => { setCampfireView('main'); setSelectedDiceIdx(null); }}
+            className="w-full py-2.5 mt-3 pixel-btn pixel-btn-ghost text-xs font-bold"
+          >
+            返回
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (campfireView === 'upgrade') {
     return (
@@ -222,6 +367,18 @@ export const CampfireScreen: React.FC = () => {
               <div className="text-[9px] text-[var(--dungeon-text-dim)]">消耗金币升级骰子，提升点数和效果（升级后不可回血）</div>
             </div>
             {selectedDiceIdx !== null ? <MiniDice defId={game.ownedDice[selectedDiceIdx]?.defId || "standard"} size={32} /> : <PixelDice size={4} />}
+          </button>
+
+          <button 
+            onClick={() => setCampfireView('purify')}
+            className="w-full p-4 pixel-panel flex items-center justify-between transition-all group"
+            style={{ borderColor: 'var(--pixel-red)' }}
+          >
+            <div className="text-left">
+              <div className="text-base font-bold text-[var(--pixel-red)] pixel-text-shadow">净化骰子</div>
+              <div className="text-[9px] text-[var(--dungeon-text-dim)]">免费移除一颗骰子，精简骰子库（净化后不可回血或升级）</div>
+            </div>
+            <PixelFlame size={4} />
           </button>
 
         </div>
