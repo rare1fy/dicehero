@@ -1,0 +1,122 @@
+/**
+ * 战前技能模组选择界面
+ */
+import React, { useContext } from 'react';
+import { motion } from 'motion/react';
+import { GameContext } from '../contexts/GameContext';
+import { PixelSkull } from './PixelIcons';
+
+/** 简单的增幅描述格式化 */
+const formatDescription = (desc: string): string => {
+  return desc.replace(/\{(\w+)\}/g, (_, key) => key);
+};
+
+export const SkillSelectScreen: React.FC = () => {
+  const { skillModuleOptions, handleSelectSkillModule, handleSkipSkillModule } = useContext(GameContext);
+
+  if (!skillModuleOptions || skillModuleOptions.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col h-full relative overflow-hidden"
+    >
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[rgba(20,10,30,0.9)] via-[rgba(10,8,18,0.95)] to-[rgba(5,5,10,1)]" />
+      <div className="absolute inset-0 dungeon-floor-cracks opacity-20" />
+      
+      {/* 标题区 */}
+      <div className="relative z-10 text-center pt-6 pb-3">
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="text-[11px] tracking-[0.2em] text-[var(--pixel-purple)] font-bold mb-1">◆ 战前准备 ◆</div>
+          <h2 className="text-lg font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1">选择技能模组</h2>
+          <p className="text-[11px] text-[var(--dungeon-text-dim)]">选择一个模组获得增幅，但需付出代价</p>
+        </motion.div>
+      </div>
+
+      {/* 分支路径视觉 */}
+      <div className="relative z-10 flex justify-center py-2">
+        <svg width="280" height="60" viewBox="0 0 280 60">
+          <circle cx="140" cy="8" r="5" fill="var(--pixel-cyan)" opacity="0.8" />
+          <circle cx="140" cy="8" r="3" fill="var(--dungeon-text-bright)" />
+          {skillModuleOptions.map((_, i) => {
+            const endX = 50 + i * 90;
+            return (
+              <motion.path
+                key={i}
+                d={`M 140 13 Q ${140 + (endX - 140) * 0.3} 30 ${endX} 52`}
+                stroke="var(--pixel-purple)"
+                strokeWidth="2"
+                fill="none"
+                opacity="0.5"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ delay: 0.3 + i * 0.15, duration: 0.5 }}
+              />
+            );
+          })}
+          {skillModuleOptions.map((_, i) => {
+            const cx = 50 + i * 90;
+            return (
+              <motion.g key={`node-${i}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6 + i * 0.15 }}>
+                <circle cx={cx} cy="52" r="6" fill="var(--dungeon-panel-bg)" stroke="var(--pixel-purple)" strokeWidth="2" />
+                <circle cx={cx} cy="52" r="3" fill="var(--pixel-purple)" opacity="0.6" />
+              </motion.g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* 3个技能模组卡片 */}
+      <div className="relative z-10 flex-1 px-3 overflow-y-auto pb-3">
+        <div className="grid grid-cols-3 gap-2">
+          {skillModuleOptions.map((module, i) => (
+            <motion.button
+              key={module.id}
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 + i * 0.15 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleSelectSkillModule(module)}
+              className="flex flex-col items-center p-2.5 bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] hover:border-[var(--pixel-purple)] transition-colors relative group"
+              style={{ borderRadius: '4px' }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
+              <div className="text-[var(--pixel-purple)] mb-1.5">{module.icon}</div>
+              <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
+                {module.name}
+              </div>
+              <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
+                {formatDescription(module.description)}
+              </div>
+              <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1.5" />
+              <div className="text-[10px] font-bold text-[var(--pixel-red)] flex items-center gap-0.5">
+                <PixelSkull size={1} />
+                {module.cost.label}
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* 跳过按钮 */}
+      <div className="relative z-10 px-4 pb-4 pt-2">
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          onClick={handleSkipSkillModule}
+          className="w-full py-2.5 pixel-btn pixel-btn-ghost text-[12px] font-bold opacity-70 hover:opacity-100 transition-opacity"
+        >
+          跳过，直接战斗
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+};

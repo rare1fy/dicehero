@@ -52,26 +52,14 @@ import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
 import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, SKILL_SELECT_CONFIG, CHAPTER_CONFIG } from './config';
+import { applyDiceSpecialEffects } from './logic/diceEffects';
+import { HandGuideModal } from './components/HandGuideModal';
+import { ChapterTransition } from './components/ChapterTransition';
+import { SkillSelectScreen } from './components/SkillSelectScreen';
+import { ReplacementModal } from './components/ReplacementModal';
+import { ToastDisplay } from './components/ToastDisplay';
 
 
-// 元素骰子坍缩 + 小丑骰子1-9随机
-const applyDiceSpecialEffects = (diceArr: Die[]): Die[] => {
-  // 元素骰子统一坍缩：同一批次所有元素骰子共享同一个元素
-  const hasElemental = diceArr.some(d => getDiceDef(d.diceDefId).isElemental);
-  const sharedElement = hasElemental ? collapseElement() : null;
-  return diceArr.map(d => {
-    const def = getDiceDef(d.diceDefId);
-    // 元素骰子：使用统一坍缩的元素
-    if (def.isElemental && sharedElement) {
-      return { ...d, element: sharedElement as DiceElement, collapsedElement: sharedElement as DiceElement };
-    }
-    // 小丑骰子：1-9随机（faces已包含1-9）
-    if (d.diceDefId === 'joker') {
-      return { ...d, value: def.faces[Math.floor(Math.random() * def.faces.length)] };
-    }
-    return d;
-  });
-};
 
 export default function DiceHeroGame() {
   const [game, setGame] = useState<GameState>({
@@ -2200,63 +2188,12 @@ useEffect(() => {
   }
 
   if (game.phase === 'chapterTransition') {
-    const chapterName = CHAPTER_CONFIG.chapterNames[game.chapter - 1] || '未知';
-    const nextChapterName = CHAPTER_CONFIG.chapterNames[game.chapter] || '未知';
-    const healAmount = Math.floor(game.maxHp * CHAPTER_CONFIG.chapterHealPercent);
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4"
-        style={{ background: 'linear-gradient(180deg, #080b0e 0%, #1a1520 50%, #0e1317 100%)' }}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center max-w-sm"
-        >
-          <div className="text-[var(--pixel-gold)] text-sm font-bold tracking-widest mb-2 pixel-text-shadow">
-            第{game.chapter}章
-          </div>
-          <div className="text-3xl font-black text-[var(--dungeon-text-bright)] pixel-text-shadow mb-4">
-            {chapterName}
-          </div>
-          <div className="text-[var(--pixel-green)] text-xl font-bold mb-6 pixel-text-shadow">
-            ◆ 通关成功 ◆
-          </div>
-          
-          <div className="bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] p-4 mb-6"
-            style={{ borderRadius: '2px' }}>
-            <div className="text-[var(--dungeon-text)] text-sm mb-3">通关奖励</div>
-            <div className="flex flex-col gap-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--dungeon-text-dim)]">回复生命</span>
-                <span className="text-[var(--pixel-green-light)] font-bold">+{healAmount} HP</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--dungeon-text-dim)]">奖励金币</span>
-                <span className="text-[var(--pixel-gold-light)] font-bold">+{CHAPTER_CONFIG.chapterBonusGold}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[var(--dungeon-text-dim)] text-xs mb-2">即将进入</div>
-          <div className="text-lg font-bold text-[var(--pixel-orange-light)] pixel-text-shadow mb-6">
-            第{game.chapter + 1}章: {nextChapterName}
-          </div>
-          
-          <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-4">
-            进度: {game.chapter}/{CHAPTER_CONFIG.totalChapters}
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleNextChapter}
-            className="px-8 py-3 bg-[var(--pixel-gold-dark)] border-2 border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] font-bold text-base tracking-wider pixel-text-shadow"
-            style={{ borderRadius: '2px' }}
-          >
-            继续冒险 →
-          </motion.button>
-        </motion.div>
-      </div>
+      <GameContext.Provider value={contextValue}>
+        <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #080b0e 0%, #1a1520 50%, #0e1317 100%)' }}>
+          <ChapterTransition />
+        </div>
+      </GameContext.Provider>
     );
   }
 
@@ -2281,129 +2218,8 @@ useEffect(() => {
         {game.phase === 'campfire' && <CampfireScreen />}
         {game.phase === 'event' && <EventScreen />}
 
-        {/* ===== 战前技能模组选择界面 ===== */}
-        {game.phase === 'skillSelect' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col h-full relative overflow-hidden"
-          >
-            {/* 背景装饰 */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[rgba(20,10,30,0.9)] via-[rgba(10,8,18,0.95)] to-[rgba(5,5,10,1)]" />
-            <div className="absolute inset-0 dungeon-floor-cracks opacity-20" />
-            
-            {/* 标题区 */}
-            <div className="relative z-10 text-center pt-6 pb-3">
-              <motion.div
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="text-[11px] tracking-[0.2em] text-[var(--pixel-purple)] font-bold mb-1">◆ 战前准备 ◆</div>
-                <h2 className="text-lg font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1">选择技能模组</h2>
-                <p className="text-[11px] text-[var(--dungeon-text-dim)]">选择一个模组获得增幅，但需付出代价</p>
-              </motion.div>
-            </div>
-
-
-            {/* 分支路径视觉 — 从中心点发散到3个节点 */}
-            <div className="relative z-10 flex justify-center py-2">
-              <svg width="280" height="60" viewBox="0 0 280 60">
-                {/* 起始节点 */}
-                <circle cx="140" cy="8" r="5" fill="var(--pixel-cyan)" opacity="0.8" />
-                <circle cx="140" cy="8" r="3" fill="var(--dungeon-text-bright)" />
-                
-                {/* 3条分支路径 */}
-                {skillModuleOptions.map((_, i) => {
-                  const endX = 50 + i * 90;
-                  return (
-                    <motion.path
-                      key={i}
-                      d={`M 140 13 Q ${140 + (endX - 140) * 0.3} 30 ${endX} 52`}
-                      stroke="var(--pixel-purple)"
-                      strokeWidth="2"
-                      fill="none"
-                      opacity="0.5"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ delay: 0.3 + i * 0.15, duration: 0.5 }}
-                    />
-                  );
-                })}
-                
-                {/* 3个目标节点 */}
-                {skillModuleOptions.map((_, i) => {
-                  const cx = 50 + i * 90;
-                  return (
-                    <motion.g key={`node-${i}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6 + i * 0.15 }}>
-                      <circle cx={cx} cy="52" r="6" fill="var(--dungeon-panel-bg)" stroke="var(--pixel-purple)" strokeWidth="2" />
-                      <circle cx={cx} cy="52" r="3" fill="var(--pixel-purple)" opacity="0.6" />
-                    </motion.g>
-                  );
-                })}
-              </svg>
-            </div>
-
-            {/* 3个技能模组卡片 */}
-            <div className="relative z-10 flex-1 px-3 overflow-y-auto pb-3">
-              <div className="grid grid-cols-3 gap-2">
-                {skillModuleOptions.map((module, i) => (
-                  <motion.button
-                    key={module.id}
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5 + i * 0.15 }}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleSelectSkillModule(module)}
-                    className="flex flex-col items-center p-2.5 bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] hover:border-[var(--pixel-purple)] transition-colors relative group"
-                    style={{ borderRadius: '4px' }}
-                  >
-                    {/* 发光效果 */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
-                    
-                    {/* 图标 */}
-                    <div className="text-[var(--pixel-purple)] mb-1.5">
-                      {module.icon}
-                    </div>
-                    
-                    {/* 名称 */}
-                    <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
-                      {module.name}
-                    </div>
-                    
-                    {/* 描述 */}
-                    <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
-                      {formatDescription(module.description)}
-                    </div>
-                    
-                    {/* 分隔线 */}
-                    <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1.5" />
-                    
-                    {/* 代价 */}
-                    <div className="text-[10px] font-bold text-[var(--pixel-red)] flex items-center gap-0.5">
-                      <PixelSkull size={1} />
-                      {module.cost.label}
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* 跳过按钮 */}
-            <div className="relative z-10 px-4 pb-4 pt-2">
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-                onClick={handleSkipSkillModule}
-                className="w-full py-2.5 pixel-btn pixel-btn-ghost text-[12px] font-bold opacity-70 hover:opacity-100 transition-opacity"
-              >
-                跳过，直接战斗
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
+        {/* 战前技能模块选择界面 - extracted to SkillSelectScreen */}
+        {game.phase === 'skillSelect' && <SkillSelectScreen />}
 
         {game.phase === 'battle' && enemies.length > 0 && (
           <motion.div 
@@ -3685,61 +3501,8 @@ useEffect(() => {
 
             {/* ===== 弹窗和模态框保持不变 ===== */}
 
-            {/* Hand Types Guide Modal */}
-            <AnimatePresence>
-              {showHandGuide && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
-                  onClick={() => setShowHandGuide(false)}
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, y: 20 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.9, y: 20 }}
-                    className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 牌型图鉴 ◆</h3>
-                      <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
-                      {HAND_TYPES.map(type => {
-                        const level = game.handLevels[type.name] || 1;
-                        const levelBonusMult = (level - 1) * 0.3;
-                        const currentBase = 0;
-                        const currentMult = type.mult + levelBonusMult;
-                        
-                        return (
-                          <div key={type.id} className="pixel-panel-dark p-2.5">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[var(--pixel-gold)]">{type.icon}</span>
-                                <span className="font-bold text-[var(--dungeon-text-bright)] text-xs pixel-text-shadow">{type.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] px-1.5 py-0.5 border border-[var(--dungeon-panel-border)] font-mono" style={{borderRadius:'2px'}}>
-                                  x{currentMult.toFixed(1)}
-                                </span>
-                                {level > 1 && (
-                                  <span className="text-[11px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1.5 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{level}</span>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-[11px] text-[var(--dungeon-text-dim)] leading-tight">
-                              {formatDescription(type.description.replace(/\(\d+ \+ (总)?点数\) \* \d+\.\d+/, `(${currentBase} + $1点数) * ${currentMult.toFixed(1)}`).replace(/点数 \* \d+\.\d+/, `点数 * ${currentMult.toFixed(1)}`))}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Hand Types Guide Modal - extracted to HandGuideModal component */}
+            <HandGuideModal />
 
             
 
@@ -3939,201 +3702,16 @@ useEffect(() => {
         </motion.div>
       )}
 
-      {/* Toasts — 像素风 */}
-      <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-xs px-4">
-        <AnimatePresence>
-          {toasts.map(t => {
-            const toastStyles: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
-              info: { bg: 'bg-[var(--dungeon-panel)]/85', border: 'border-[var(--pixel-gold)]', text: 'text-[var(--pixel-gold)]', icon: <PixelZap size={2} /> },
-              damage: { bg: 'bg-[#2e1010]/85', border: 'border-[var(--pixel-red)]', text: 'text-[var(--pixel-red-light)]', icon: <PixelHeart size={2} /> },
-              heal: { bg: 'bg-[#102e1a]/85', border: 'border-[var(--pixel-green)]', text: 'text-[var(--pixel-green-light)]', icon: <PixelHeart size={2} /> },
-              gold: { bg: 'bg-[#2e2810]/85', border: 'border-[var(--pixel-gold)]', text: 'text-[var(--pixel-gold-light)]', icon: <PixelCoin size={2} /> },
-              buff: { bg: 'bg-[#10102e]/85', border: 'border-[var(--pixel-blue)]', text: 'text-[var(--pixel-blue-light)]', icon: <PixelZap size={2} /> },
-            };
-            const style = toastStyles[t.type || 'info'] || toastStyles.info;
-            return (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, y: -20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                className={`${style.bg} border-3 ${style.border} ${style.text} px-3 py-2 flex items-center justify-center gap-2 backdrop-blur-sm`}
-                style={{ borderRadius: '2px' }}
-              >
-                {style.icon}
-                <span className="text-[12px] font-bold pixel-text-shadow text-center">{t.message}</span>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+      {/* Toasts */}
+      <ToastDisplay />
 
       {/* Replacement Modal */}
-      <AnimatePresence>
-        {game.pendingReplacementAugment && (
-          <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-5">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md w-full"
-            >
-              <div className="text-center mb-6">
-                <div className="inline-block px-3 py-1 bg-[var(--pixel-gold-dark)] border-2 border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] text-[11px] font-bold tracking-[0.15em] mb-3" style={{borderRadius:'2px'}}>
-                  ◆ 槽位已满 ◆
-                </div>
-                <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">选择要替换的模块</h3>
-                <p className="text-[var(--dungeon-text-dim)] text-[12px] mt-2">替换现有模块将返还大量金币</p>
-              </div>
-
-              <div className="pixel-panel p-4 mb-6 flex items-center gap-3">
-                <div className="w-14 h-14 bg-[var(--pixel-blue-dark)] border-3 border-[var(--pixel-blue)] flex items-center justify-center text-[var(--pixel-blue-light)]" style={{borderRadius:'2px'}}>
-                  <PixelZap size={4} />
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold text-[var(--pixel-blue)] tracking-[0.1em] mb-0.5">新模块</div>
-                  <div className="text-base font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{game.pendingReplacementAugment.name}</div>
-                  <div className="text-[12px] text-[var(--dungeon-text-dim)] mt-0.5">{formatDescription(game.pendingReplacementAugment.description)}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2.5">
-                {game.augments.map((aug, i) => aug && (
-                  <motion.button
-                    key={i}
-                    whileHover={{ scale: 1.02, x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => replaceAugment(game.pendingReplacementAugment!, i)}
-                    className="w-full pixel-panel p-3 flex items-center gap-3 transition-all group"
-                    style={{ borderColor: 'var(--dungeon-panel-border)' }}
-                  >
-                    <div className="w-9 h-9 bg-[var(--dungeon-bg)] border-2 border-[var(--dungeon-panel-border)] flex items-center justify-center text-[var(--dungeon-text-dim)] group-hover:border-[var(--pixel-red)] group-hover:text-[var(--pixel-red)] transition-colors" style={{borderRadius:'2px'}}>
-                      <PixelZap size={2} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em] mb-0.5">替换槽位 {i + 1}</div>
-                      <div className="text-xs font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{aug.name} (Lv.{aug.level})</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[11px] font-bold text-[var(--pixel-green)] tracking-[0.1em] mb-0.5">返还</div>
-                      <div className="text-xs font-bold text-[var(--pixel-green)] flex items-center gap-1">
-                        <PixelCoin size={2} />
-                        {(aug.level || 1) * 50}
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setGame(prev => ({ ...prev, pendingReplacementAugment: null }))}
-                className="w-full mt-6 py-3 text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.2em] hover:text-[var(--dungeon-text)] transition-colors"
-              >
-                放弃新模块
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ReplacementModal />
       </div>
     </div>
       {/* Dice Guide Modal - Global */}
-      <AnimatePresence>
-        {showDiceGuide && (
-          <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
-          onClick={() => setShowDiceGuide(false)}
-          >
-          <motion.div
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.9, y: 20 }}
-          className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-          onClick={e => e.stopPropagation()}
-          >
-          <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-          <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 骰子图鉴 ◆</h3>
-          <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]"><PixelClose size={2} /></button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[var(--dungeon-bg)]">
-          {Object.values(ALL_DICE).map(diceDef => {
-          const diceClass = getDiceElementClass(diceDef.element, false, false, false, diceDef.id);
-          return (
-          <div key={diceDef.id} className="flex items-center gap-3 p-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-          <div className={`${diceClass} flex-shrink-0 flex items-center justify-center relative`} style={{ width: '42px', height: '42px', fontSize: '18px', borderWidth: '3px', borderStyle: 'solid', borderRadius: '2px' }}>
-          {diceDef.faces[Math.floor(diceDef.faces.length / 2)]}
-          </div>
-          <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{diceDef.name}</span>
-          <span className="text-[9px] px-1 py-0.5 bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]" style={{borderRadius:'1px'}}>
-          {diceDef.rarity === 'common' ? '普通' : diceDef.rarity === 'uncommon' ? '稀有' : '史诗'}
-          </span>
-          </div>
-          <div className="text-[9px] text-[var(--dungeon-text-dim)] mb-0.5">{diceDef.description}</div>
-          <div className="text-[9px] text-[var(--dungeon-text)] font-mono">
-          面值: [{diceDef.faces.join(', ')}]
-          </div>
-          </div>
-          </div>
-          );
-          })}
-          </div>
-          </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-
-
-    
-      {/* 全局牌型图鉴模态框 - 在所有界面都可用 */}
-      <AnimatePresence>
-        {showHandGuide && game.phase !== 'battle' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
-            onClick={() => setShowHandGuide(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="pixel-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 牌型图鉴 ◆</h3>
-                <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-white text-xs">✕</button>
-              </div>
-              <div className="overflow-y-auto p-3 flex-1">
-                {HAND_TYPES.filter(h => !['同花顺','皇家同花顺','同花','满堂红','同元素对','同元素三条','同元素四条','同元素五条','同元素六骰'].includes(h.name)).map(ht => {
-                  const level = game.handLevels[ht.id] || 1;
-                  const baseDmg = ht.base + (level - 1) * 3;
-                  const mult = ht.mult + (level - 1) * 0.3;
-                  return (
-                    <div key={ht.id} className="flex items-center justify-between py-1.5 border-b border-[rgba(255,255,255,0.05)]">
-                      <div className="flex-1">
-                        <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{ht.name}</span>
-                        <span className="text-[8px] text-[var(--dungeon-text-dim)] ml-1">Lv.{level}</span>
-                      </div>
-                      <div className="text-[9px]">
-                        <span className="text-[var(--pixel-cyan)]">{baseDmg}</span>
-                        <span className="text-[var(--dungeon-text-dim)] mx-0.5">×</span>
-                        <span className="text-[var(--pixel-red)]">{mult.toFixed(1)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Global Hand Guide Modal */}
+      <HandGuideModal />
 </GameContext.Provider>
   );
 }
