@@ -2072,20 +2072,18 @@ setGame(prev => {
     const schrodingerBonus = _schrodingerBonus;
     // Use setTimeout to ensure previous state updates are flushed
     setTimeout(() => {
-      // Read latest game state from ref (avoids stale closure)
+      // Read latest game state from ref
       const g = gameRef.current;
       setRerollCount(0); // Reset reroll count for new turn
       const needDraw = Math.max(0, g.drawCount + schrodingerBonus - remainingCount);
       
-      let finalBag: string[] = [];
-      let finalDiscard: string[] = [];
+      // 用 setGame(prev=>) 内部读取最新 diceBag/discardPile，避免竞态覆盖
       let drawnDice: Die[] = [];
       let wasShuffled = false;
       
-      // 用setGame内部读取最新状态，避免竞态覆盖diceBag/discardPile
       setGame(prev => {
-        finalBag = [...prev.diceBag];
-        finalDiscard = [...prev.discardPile];
+        let finalBag = [...prev.diceBag];
+        let finalDiscard = [...prev.discardPile];
         if (needDraw > 0) {
           const result = drawFromBag(finalBag, finalDiscard, needDraw);
           drawnDice = result.drawn;
