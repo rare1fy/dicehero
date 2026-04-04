@@ -10,7 +10,7 @@ import {
   PixelSkull, PixelFlame, PixelSword,
   PixelAttackIntent, PixelArrowUp, 
   PixelArrowDown, PixelClose, 
-  PixelMagic, PixelPoison
+  PixelMagic, PixelPoison, PixelCoin
 } from './components/PixelIcons';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -448,6 +448,14 @@ export default function DiceHeroGame() {
         return { ...prev, hp: prev.hp - hpCost, souls: prev.souls + goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldBonus } };
       });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
+      // Show gold bonus floating text if any relic triggered on_reroll
+      const rerollGoldBonus = game.relics.filter(r => r.trigger === 'on_reroll').reduce((sum, relic) => {
+        const res = relic.effect({ hpLostThisTurn: hpCost });
+        return sum + (res.goldBonus || 0);
+      }, 0);
+      if (rerollGoldBonus > 0) {
+        setTimeout(() => addFloatingText(`+${rerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
+      }
       addLog(`重掷消耗 ${hpCost} HP`);
     }
     
@@ -691,7 +699,7 @@ export default function DiceHeroGame() {
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-      if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); details.push(`\u91D1\u5E01+${res.goldBonus}`); }
+      if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); addFloatingText(`+${res.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'); details.push(`\u91D1\u5E01+${res.goldBonus}`); }
       if (res.statusEffects) {
         res.statusEffects.forEach(s => {
           const existing = statusEffects.find(es => es.type === s.type);
