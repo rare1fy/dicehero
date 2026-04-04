@@ -744,6 +744,7 @@ export default function DiceHeroGame() {
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
+      if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); addFloatingText(`+${res.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'); details.push(`金币+${res.goldBonus}`); }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', ') });
       }
@@ -1144,6 +1145,7 @@ export default function DiceHeroGame() {
     }
 
     // Calculate and apply damage to enemies
+    let finalEnemyHp = targetEnemy.hp; // will be updated for single-target path
     if (hasAoe) {
       // AOE: damage all alive enemies
       setEnemies(prev => prev.map(e => {
@@ -1181,7 +1183,7 @@ export default function DiceHeroGame() {
         enemyArmor -= absorbed;
         remainingDamage -= absorbed;
       }
-      const finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
+      finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
       if (finalEnemyHp <= 0) setEnemyEffectForUid(targetUid, 'death');
       
       setEnemies(prev => prev.map(e => {
@@ -1228,12 +1230,28 @@ export default function DiceHeroGame() {
       setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + killCount }));
     }
     // on_kill 遗物效果：检查是否有敌人被击杀
+    // Pre-compute killed enemies data synchronously (avoid stale closure)
+    const killedEnemiesData: Array<{uid: string, overkill: number}> = [];
+    if (hasAoe) {
+      enemies.filter(e => e.hp > 0).forEach(e => {
+        let dmg = outcome.damage;
+        let arm = e.armor;
+        if (outcome.armorBreak) { arm = 0; }
+        if (arm > 0) { dmg = Math.max(0, dmg - arm); }
+        const newHp = e.hp - dmg;
+        if (newHp <= 0) { killedEnemiesData.push({ uid: e.uid, overkill: Math.abs(newHp) }); }
+      });
+    } else {
+      if (finalEnemyHp <= 0) {
+        killedEnemiesData.push({ uid: targetUid, overkill: Math.abs(finalEnemyHp) });
+      }
+    }
     setTimeout(() => {
-      const killedEnemies = enemies.filter(e => e.hp <= 0);
-      if (killedEnemies.length > 0) {
+      // Use pre-computed kill data instead of stale enemies closure
+      if (killedEnemiesData.length > 0) {
         game.relics.filter(r => r.trigger === 'on_kill').forEach(relic => {
-          killedEnemies.forEach(killed => {
-            const overkill = Math.abs(killed.hp);
+          killedEnemiesData.forEach(killedData => {
+            const overkill = killedData.overkill;
             const res = relic.effect({ overkillDamage: overkill });
             if (res.heal && res.heal > 0) {
               setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + res.heal) }));
@@ -1246,10 +1264,10 @@ export default function DiceHeroGame() {
           // 溢出导管: 溢出伤害转移给随机敌人
           const overflowRelic = game.relics.find(r => r.id === 'overflow_conduit');
           if (overflowRelic) {
-            killedEnemies.forEach(killed => {
-              const overkill = Math.abs(killed.hp);
+            killedEnemiesData.forEach(killedData => {
+              const overkill = killedData.overkill;
               if (overkill > 0) {
-                const aliveOthers = enemies.filter(e => e.hp > 0 && e.uid !== killed.uid);
+                const aliveOthers = enemies.filter(e => e.hp > 0 && e.uid !== killedData.uid);
                 if (aliveOthers.length > 0) {
                   const target = aliveOthers[Math.floor(Math.random() * aliveOthers.length)];
                   setEnemies(prev => prev.map(e => e.uid === target.uid ? { ...e, hp: Math.max(0, e.hp - overkill) } : e));
