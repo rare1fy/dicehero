@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState } from './types/game';
+import type { Die, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState , Relic } from './types/game';
 import { INITIAL_STATS } from './types/game';
 import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY } from './data/dice';
 import { drawFromBag, initDiceBag } from './data/diceBag';
@@ -45,7 +45,7 @@ import { LootScreen } from './components/LootScreen';
 import { DiceRewardScreen } from './components/DiceRewardScreen';
 import { GameOverScreen } from './components/GameOverScreen';
 import { VictoryScreen } from './components/VictoryScreen';
-import { generateSkillModules } from './data/skillModules';
+import { generateStartingRelicChoices } from './data/skillModules';
 import { getConditionInfo } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
@@ -199,16 +199,8 @@ export default function DiceHeroGame() {
   const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
   const [showWaveDetail, setShowWaveDetail] = useState(false);
 
-  // --- 战前技能模组选择 ---
-  interface SkillModule {
-    id: string;
-    name: string;
-    description: string;
-    icon: React.ReactNode;
-    augment: Augment;
-    cost: { type: 'maxHp' | 'reroll' | 'plays' | 'hp' | 'addNormalDice'; value: number; label: string };
-  }
-  const [skillModuleOptions, setSkillModuleOptions] = useState<SkillModule[]>([]);
+  // --- 战前遗物选择 ---
+  const [startingRelicChoices, setStartingRelicChoices] = useState<Relic[]>([]);
   const [pendingBattleNode, setPendingBattleNode] = useState<MapNode | null>(null);
 
   // --- Actions ---
@@ -227,60 +219,26 @@ export default function DiceHeroGame() {
     setGame(prev => ({ ...prev, logs: [msg, ...prev.logs].slice(0, 15) }));
   };
 
-  const handleSelectSkillModule = (module: SkillModule) => {
+  const handleSelectStartingRelic = (relic: Relic) => {
     playSound('select');
     const node = pendingBattleNode;
     if (!node) return;
 
-    // 应用代价 + 添加遗物（合并为一次setGame）
-    setGame(prev => {
-      let updated = { ...prev };
-      
-      // 应用代价
-      switch (module.cost.type) {
-        case 'maxHp':
-          updated.maxHp = Math.max(10, updated.maxHp - module.cost.value);
-          updated.hp = Math.min(updated.hp, updated.maxHp);
-          break;
-        case 'reroll':
-          updated.freeRerollsPerTurn = Math.max(0, updated.freeRerollsPerTurn - module.cost.value);
-          break;
-        case 'hp':
-          updated.hp = Math.max(1, updated.hp - module.cost.value);
-          break;
-        case 'plays':
-          updated.maxPlays = Math.max(1, updated.maxPlays - module.cost.value);
-          break;
-        case 'addNormalDice':
-          updated.ownedDice = [...updated.ownedDice, 'standard'];
-          break;
-      }
-      
-      // 添加遗物
-      
-      // Augment module: find empty slot or replace
-      const newAugments = [...updated.augments];
-      const emptyIdx = newAugments.findIndex(a => a === null);
-      if (emptyIdx !== -1) {
-        newAugments[emptyIdx] = module.augment;
-      } else {
-        // All slots full - store for replacement choice
-        updated.pendingReplacementAugment = module.augment;
-      }
-      updated.augments = newAugments;
-      
-      return updated;
-    });
+    // 添加遗物到遗物列表
+    setGame(prev => ({
+      ...prev,
+      relics: [...prev.relics, relic],
+    }));
 
-    addToast(`装备 ${module.name}，${module.cost.label}`, 'buff');
-    addLog(`战前选择了技能模组【${module.name}】，代价：${module.cost.label}`);
+    addToast(`获得遗物「${relic.name}」!`, 'buff');
+    addLog(`战前选择了遗物「${relic.name}」`);
 
     // 开始战斗
     setPendingBattleNode(null);
     startBattle(node);
   };
 
-  const handleSkipSkillModule = () => {
+  const handleSkipStartingRelic = () => {
     playSound('select');
     const node = pendingBattleNode;
     if (!node) return;
@@ -357,8 +315,8 @@ export default function DiceHeroGame() {
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
       if (node.depth === 0) {
         // 第一个节点：战前三选一强化
-        const modules = generateSkillModules();
-        setSkillModuleOptions(modules);
+        const relicChoices = generateStartingRelicChoices(game.relics.map(r => r.id));
+        setStartingRelicChoices(relicChoices);
         setPendingBattleNode(node);
         setGame(prev => ({ ...prev, phase: 'skillSelect', currentNodeId: node.id }));
       } else {
@@ -2241,7 +2199,7 @@ useEffect(() => {
     showDiceGuide, setShowDiceGuide,
     rerollFlash,
     pendingLootAugment, setPendingLootAugment,
-    skillModuleOptions,
+    startingRelicChoices,
     pendingBattleNode,
     startNode, startBattle,
     collectLoot, finishLoot,
@@ -2249,7 +2207,7 @@ useEffect(() => {
     pickReward, nextNode,
     toasts, addToast,
     addLog,
-    handleSelectSkillModule, handleSkipSkillModule,
+    handleSelectStartingRelic, handleSkipStartingRelic,
   };
 
   if (game.phase === 'start') {

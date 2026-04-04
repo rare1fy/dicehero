@@ -1,14 +1,5 @@
 import React from 'react';
-import type { Die, Augment, MapNode, Enemy, GameState } from '../types/game';
-
-interface SkillModule {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  augment: Augment;
-  cost: { type: 'maxHp' | 'reroll' | 'plays' | 'hp' | 'addNormalDice'; value: number; label: string };
-}
+import type { Die, Augment, MapNode, Enemy, GameState, Relic } from '../types/game';
 
 interface Toast {
   id: number;
@@ -33,7 +24,7 @@ export interface GameContextType {
   rerollFlash: boolean;
   pendingLootAugment: { id: string; options: Augment[] } | null;
   setPendingLootAugment: React.Dispatch<React.SetStateAction<{ id: string; options: Augment[] } | null>>;
-  skillModuleOptions: SkillModule[];
+  startingRelicChoices: Relic[];
   pendingBattleNode: MapNode | null;
   
   // Actions
@@ -47,8 +38,8 @@ export interface GameContextType {
   nextNode: () => void;
   addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff') => void;
   addLog: (msg: string) => void;
-  handleSelectSkillModule: (module: SkillModule) => void;
-  handleSkipSkillModule: () => void;
+  handleSelectStartingRelic: (relic: Relic) => void;
+  handleSkipStartingRelic: () => void;
 }
 
 export const GameContext = React.createContext<GameContextType>(null!);
@@ -59,4 +50,4 @@ export const useGameContext = () => {
   return ctx;
 };
 
-export type { SkillModule, Toast };
+export type { Toast };

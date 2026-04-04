@@ -1,20 +1,29 @@
 /**
- * 战前技能模组选择界面
+ * 战前遗物选择界面
  */
 import React, { useContext } from 'react';
 import { motion } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
-import { PixelSkull } from './PixelIcons';
 
-/** 简单的增幅描述格式化 */
-const formatDescription = (desc: string): string => {
-  return desc.replace(/\{(\w+)\}/g, (_, key) => key);
+/** 稀有度颜色映射 */
+const RARITY_COLORS: Record<string, string> = {
+  common: 'var(--dungeon-text-dim)',
+  uncommon: 'var(--pixel-cyan)',
+  rare: 'var(--pixel-purple)',
+  legendary: 'var(--pixel-gold)',
+};
+
+const RARITY_LABELS: Record<string, string> = {
+  common: '普通',
+  uncommon: '精良',
+  rare: '稀有',
+  legendary: '传说',
 };
 
 export const SkillSelectScreen: React.FC = () => {
-  const { skillModuleOptions, handleSelectSkillModule, handleSkipSkillModule } = useContext(GameContext);
+  const { startingRelicChoices, handleSelectStartingRelic, handleSkipStartingRelic } = useContext(GameContext);
 
-  if (!skillModuleOptions || skillModuleOptions.length === 0) return null;
+  if (!startingRelicChoices || startingRelicChoices.length === 0) return null;
 
   return (
     <motion.div
@@ -34,8 +43,8 @@ export const SkillSelectScreen: React.FC = () => {
           transition={{ delay: 0.2 }}
         >
           <div className="text-[11px] tracking-[0.2em] text-[var(--pixel-purple)] font-bold mb-1">◆ 战前准备 ◆</div>
-          <h2 className="text-lg font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1">选择技能模组</h2>
-          <p className="text-[11px] text-[var(--dungeon-text-dim)]">选择一个模组获得增幅，但需付出代价</p>
+          <h2 className="text-lg font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1">选择遗物</h2>
+          <p className="text-[11px] text-[var(--dungeon-text-dim)]">选择一件遗物伴你踏上征途</p>
         </motion.div>
       </div>
 
@@ -44,7 +53,7 @@ export const SkillSelectScreen: React.FC = () => {
         <svg width="280" height="60" viewBox="0 0 280 60">
           <circle cx="140" cy="8" r="5" fill="var(--pixel-cyan)" opacity="0.8" />
           <circle cx="140" cy="8" r="3" fill="var(--dungeon-text-bright)" />
-          {skillModuleOptions.map((_, i) => {
+          {startingRelicChoices.map((_, i) => {
             const endX = 50 + i * 90;
             return (
               <motion.path
@@ -60,7 +69,7 @@ export const SkillSelectScreen: React.FC = () => {
               />
             );
           })}
-          {skillModuleOptions.map((_, i) => {
+          {startingRelicChoices.map((_, i) => {
             const cx = 50 + i * 90;
             return (
               <motion.g key={`node-${i}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6 + i * 0.15 }}>
@@ -72,33 +81,32 @@ export const SkillSelectScreen: React.FC = () => {
         </svg>
       </div>
 
-      {/* 3个技能模组卡片 */}
+      {/* 3个遗物卡片 */}
       <div className="relative z-10 flex-1 px-3 overflow-y-auto pb-3">
         <div className="grid grid-cols-3 gap-2">
-          {skillModuleOptions.map((module, i) => (
+          {startingRelicChoices.map((relic, i) => (
             <motion.button
-              key={module.id}
+              key={relic.id}
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 + i * 0.15 }}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => handleSelectSkillModule(module)}
+              onClick={() => handleSelectStartingRelic(relic)}
               className="flex flex-col items-center p-2.5 bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] hover:border-[var(--pixel-purple)] transition-colors relative group"
               style={{ borderRadius: '4px' }}
             >
               <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
-              <div className="text-[var(--pixel-purple)] mb-1.5">{module.icon}</div>
+              <div className="text-2xl mb-1.5">{relic.icon === 'blade' ? '🗡️' : relic.icon === 'flag' ? '🚩' : relic.icon === 'weight' ? '⚖️' : relic.icon === 'pendulum' ? '🔮' : relic.icon === 'grail' ? '🏆' : relic.icon === 'gauge' ? '📐' : relic.icon === 'prism' ? '💎' : relic.icon === 'resonator' ? '🔊' : relic.icon === 'diamond' ? '♦️' : relic.icon === 'hourglass' ? '⏳' : relic.icon === 'fangs' ? '🦷' : relic.icon === 'contract' ? '📜' : relic.icon === 'recycle' ? '♻️' : relic.icon === 'eye' ? '👁️' : relic.icon === 'infinity' ? '♾️' : relic.icon === 'bag' ? '👜' : '📦'}</div>
               <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
-                {module.name}
+                {relic.name}
               </div>
               <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
-                {formatDescription(module.description)}
+                {relic.description}
               </div>
               <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1.5" />
-              <div className="text-[10px] font-bold text-[var(--pixel-red)] flex items-center gap-0.5">
-                <PixelSkull size={1} />
-                {module.cost.label}
+              <div className="text-[10px] font-bold flex items-center gap-0.5" style={{ color: RARITY_COLORS[relic.rarity] || 'white' }}>
+                {RARITY_LABELS[relic.rarity] || relic.rarity}
               </div>
             </motion.button>
           ))}
@@ -111,7 +119,7 @@ export const SkillSelectScreen: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          onClick={handleSkipSkillModule}
+          onClick={handleSkipStartingRelic}
           className="w-full py-2.5 pixel-btn pixel-btn-ghost text-[12px] font-bold opacity-70 hover:opacity-100 transition-opacity"
         >
           跳过，直接战斗
