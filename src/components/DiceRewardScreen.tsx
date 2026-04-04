@@ -7,6 +7,8 @@ import { ElementBadge, getOnPlayDescription, RARITY_COLORS, RARITY_LABELS, RARIT
 import { MiniDice } from './DiceBagPanel';
 import { ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
+import { DICE_REWARD_REFRESH } from '../config/gameBalance';
+import { PixelCoin } from './PixelIcons';
 
 type RewardTab = 'newDice';
 
@@ -14,8 +16,8 @@ export const DiceRewardScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
   const [activeTab, setActiveTab] = useState<RewardTab>('newDice');
   const [selectedNewDice, setSelectedNewDice] = useState<string | null>(null);
-  
-    const [confirmed, setConfirmed] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [confirmed, setConfirmed] = useState(false);
 
   // 根据战斗类型决定奖励池
   const battleType = useMemo(() => {
@@ -23,26 +25,23 @@ export const DiceRewardScreen: React.FC = () => {
     const t = node?.type; return (t === 'elite' || t === 'boss') ? t : 'enemy';
   }, [game.currentNodeId, game.map]);
 
-  // 3选1新骰子 - 已有骰子权重提高但不保证必出
-  const diceOptions = useMemo(() => {
+  // 生成骰子选项的函数
+  const generateDiceOptions = () => {
     const pool = getDiceRewardPool(battleType);
     const result: typeof pool = [];
     
-    // 已有骰子权重提高（不保证必出，但概率更高）
     const ownedSpecialIds = new Set(
       game.ownedDice
         .map(d => d.defId)
         .filter(id => !['standard', 'heavy', 'blade', 'cursed', 'cracked'].includes(id))
     );
     
-    // 加权随机：已有骰子权重x3，其余权重x1
     const weighted: typeof pool = [];
     pool.forEach(d => {
       const weight = ownedSpecialIds.has(d.id) ? 3 : 1;
       for (let w = 0; w < weight; w++) weighted.push(d);
     });
     
-    // 从加权池中抽取3个不重复的
     const shuffled = [...weighted].sort(() => Math.random() - 0.5);
     const seen = new Set();
     for (const d of shuffled) {
@@ -54,7 +53,40 @@ export const DiceRewardScreen: React.FC = () => {
     }
     
     return result;
-  }, [battleType, game.ownedDice]);
+  };
+
+  // 骰子选项状态（支持刷新）
+  const [diceOptions, setDiceOptions] = useState(() => generateDiceOptions());
+
+  // 刷新价格计算
+  const refreshPrice = refreshCount === 0 && DICE_REWARD_REFRESH.firstFree
+    ? 0
+    : DICE_REWARD_REFRESH.basePrice * Math.pow(DICE_REWARD_REFRESH.priceMultiplier, Math.max(0, refreshCount - (DICE_REWARD_REFRESH.firstFree ? 1 : 0)));
+  const canAffordRefresh = game.souls >= refreshPrice;
+
+  // 刷新骰子选项
+  const handleRefresh = () => {
+    if (confirmed) return;
+    if (refreshPrice > 0 && !canAffordRefresh) return;
+    
+    playSound('select');
+    
+    // 扣除金币
+    if (refreshPrice > 0) {
+      setGame(prev => ({
+        ...prev,
+        souls: prev.souls - refreshPrice,
+        stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + refreshPrice },
+      }));
+      addToast(`-${refreshPrice} 金币 刷新骰子`, 'gold');
+    } else {
+      addToast('免费刷新!', 'buff');
+    }
+    
+    setDiceOptions(generateDiceOptions());
+    setSelectedNewDice(null);
+    setRefreshCount(prev => prev + 1);
+  };
 
 
   // 可移除的骰子（至少保留4颗）
@@ -233,6 +265,42 @@ export const DiceRewardScreen: React.FC = () => {
 
           
         </AnimatePresence>
+
+        {/* 刷新按钮 */}
+        {activeTab === 'newDice' && !confirmed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex justify-center mt-3"
+          >
+            <button
+              onClick={handleRefresh}
+              disabled={refreshPrice > 0 && !canAffordRefresh}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-[9px] font-bold rounded transition-all ${
+                refreshPrice === 0
+                  ? 'bg-[rgba(48,216,208,0.15)] text-[var(--pixel-cyan)] border border-[var(--pixel-cyan)] hover:bg-[rgba(48,216,208,0.25)]'
+                  : canAffordRefresh
+                    ? 'bg-[rgba(212,160,48,0.1)] text-[var(--pixel-gold)] border border-[var(--pixel-gold-dark)] hover:bg-[rgba(212,160,48,0.2)]'
+                    : 'bg-[rgba(255,255,255,0.03)] text-[var(--dungeon-text-dim)] border border-[rgba(255,255,255,0.05)] cursor-not-allowed opacity-50'
+              }`}
+              style={{ borderRadius: '3px' }}
+            >
+              <span style={{ fontSize: '10px' }}>↻</span>
+              {refreshPrice === 0 ? (
+                <span>免费刷新</span>
+              ) : (
+                <span className="flex items-center gap-0.5">
+                  刷新 <PixelCoin size={2} /> {refreshPrice}
+                </span>
+              )}
+              {refreshCount > 0 && (
+                <span className="text-[7px] text-[var(--dungeon-text-dim)] ml-1">
+                  (已刷{refreshCount}次)
+                </span>
+              )}
+            </button>
+          </motion.div>
+        )}
       </div>
 
       {/* 底部操作栏 */}
