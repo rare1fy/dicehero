@@ -252,12 +252,12 @@ const scrapYard: Relic = {
 const merchantsEyeRelic: Relic = {
   id: 'merchants_eye_relic',
   name: '商人之眉',
-  description: '出牌触发非普通攻击牌型时，额外获得1金币',
+  description: '出牌触发非普通攻击牌型时，额外获得3金币',
   icon: 'bag',
   rarity: 'common',
   trigger: 'on_play',
   effect: (ctx) => {
-    if (ctx.handType && ctx.handType !== '普通攻击') return { goldBonus: 1 };
+    if (ctx.handType && ctx.handType !== '普通攻击') return { goldBonus: 3 };
     return {};
   },
 };

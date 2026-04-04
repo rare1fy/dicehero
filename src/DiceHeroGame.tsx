@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -759,6 +759,7 @@ export default function DiceHeroGame() {
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
       if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); addFloatingText(`+${res.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'); details.push(`金币+${res.goldBonus}`); }
+      if (res.goldBonus) { addToast(' ' + relic.name + ': +' + res.goldBonus + '金币', 'gold'); }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
       }
@@ -1584,22 +1585,35 @@ export default function DiceHeroGame() {
               setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
               addLog(`${e.name} 治疗自己 ${healVal} HP。`);
               playSound('enemy_heal');
-            } else if (allies.length > 0 && game.battleTurn % 2 === 0) {
-              // Priority 3: Buff ally with strength (everyone full HP)
+            } else if (allies.length > 0) {
+              // Priority 3: Buff ally - alternate between strength and armor
               const target = allies[Math.floor(Math.random() * allies.length)];
-              setEnemies(prev => prev.map(en => {
-                if (en.uid !== target.uid) return en;
-                const existing = en.statuses.find(s => s.type === 'strength');
-                if (existing) {
-                  return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 2 } : s) };
-                }
-                return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 2 }] };
-              }));
-              addLog(`${e.name} 为 ${target.name} 施加了力量强化！`);
+              if (game.battleTurn % 2 === 0) {
+                // Even turns: give strength
+                setEnemies(prev => prev.map(en => {
+                  if (en.uid !== target.uid) return en;
+                  const existing = en.statuses.find(s => s.type === 'strength');
+                  if (existing) {
+                    return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 2 } : s) };
+                  }
+                  return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 2 }] };
+                }));
+                addLog(`${e.name} 为 ${target.name} 施加了力量强化！`);
+                addFloatingText('力量+2', 'text-red-400', undefined, 'enemy');
+              } else {
+                // Odd turns: give armor
+                const armorVal = Math.floor(e.attackDmg * 2);
+                setEnemies(prev => prev.map(en => en.uid === target.uid ? { ...en, armor: en.armor + armorVal } : en));
+                addLog(`${e.name} 为 ${target.name} 施加了护甲祝福（+${armorVal}护甲）！`);
+                addFloatingText(
+`护甲+${armorVal}`
+, 'text-cyan-400', undefined, 'enemy');
+              }
             } else {
-              // Priority 4: Debuff player OR insert curse dice
-              const existing = game.statuses.find(s => s.type === 'weak');
-              if (!existing || existing.value < 3) {
+              // Priority 4: No allies - debuff player with various effects
+              const debuffRoll = Math.random();
+              if (debuffRoll < 0.35) {
+                // Weak
                 setGame(prev => {
                   const weakStatus = prev.statuses.find(s => s.type === 'weak');
                   if (weakStatus) {
@@ -1609,8 +1623,19 @@ export default function DiceHeroGame() {
                 });
                 addLog(`${e.name} 对你施加了虚弱！`);
                 addFloatingText('虚弱', 'text-purple-400', undefined, 'player');
+              } else if (debuffRoll < 0.6) {
+                // Vulnerable
+                setGame(prev => {
+                  const vulnStatus = prev.statuses.find(s => s.type === 'vulnerable');
+                  if (vulnStatus) {
+                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'vulnerable' ? { ...s, value: s.value + 1, duration: 2 } : s) };
+                  }
+                  return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 2 }] };
+                });
+                addLog(`${e.name} 对你施加了易伤！`);
+                addFloatingText('易伤', 'text-orange-400', undefined, 'player');
               } else {
-                // Insert a curse dice into player's dice bag!
+                // Insert curse dice
                 const curseDice = Math.random() < 0.5 ? 'cursed' : 'cracked';
                 const curseName = curseDice === 'cursed' ? '诅咒骰子' : '碎裂骰子';
                 setGame(prev => ({
@@ -1619,9 +1644,70 @@ export default function DiceHeroGame() {
                   diceBag: [...prev.diceBag, curseDice],
                 }));
                 addLog(`${e.name} 向你的骰子库塞入了一颗${curseName}！`);
-                addFloatingText(`+${curseName}`, 'text-red-400', undefined, 'player');
+                addFloatingText(
+`+${curseName}`
+, 'text-red-400', undefined, 'player');
                 playSound('enemy_skill');
               }
+            }
+            
+            await new Promise(r => setTimeout(r, 300));
+            setEnemyEffectForUid(e.uid, null);
+            continue;
+          }
+          
+          // Caster (ranged mage): never attacks directly, only applies DoT effects
+          if (e.combatType === 'caster') {
+            setEnemyEffectForUid(e.uid, 'skill');
+            playSound('enemy_skill');
+            
+            // Randomly choose a DoT: poison, burn, or both
+            const dotRoll = Math.random();
+            if (dotRoll < 0.4) {
+              // Apply poison
+              const poisonVal = Math.max(2, Math.floor(e.attackDmg * 0.4));
+              setGame(prev => {
+                const existing = prev.statuses.find(s => s.type === 'poison');
+                if (existing) {
+                  return { ...prev, statuses: prev.statuses.map(s => s.type === 'poison' ? { ...s, value: s.value + poisonVal } : s) };
+                }
+                return { ...prev, statuses: [...prev.statuses, { type: 'poison' as any, value: poisonVal }] };
+              });
+              addLog(`${e.name} 释放毒雾，施加了 ${poisonVal} 层毒素！`);
+              addFloatingText(`毒素+${poisonVal}`, 'text-emerald-400', undefined, 'player');
+            } else if (dotRoll < 0.7) {
+              // Apply burn
+              const burnVal = Math.max(1, Math.floor(e.attackDmg * 0.3));
+              setGame(prev => {
+                const existing = prev.statuses.find(s => s.type === 'burn');
+                if (existing) {
+                  return { ...prev, statuses: prev.statuses.map(s => s.type === 'burn' ? { ...s, value: s.value + burnVal, duration: 3 } : s) };
+                }
+                return { ...prev, statuses: [...prev.statuses, { type: 'burn' as any, value: burnVal, duration: 3 }] };
+              });
+              addLog(`${e.name} 释放火球，施加了灼烧！`);
+              addFloatingText(`灼烧+${burnVal}`, 'text-orange-400', undefined, 'player');
+            } else {
+              // Apply both poison + weak
+              const poisonVal = Math.max(1, Math.floor(e.attackDmg * 0.25));
+              setGame(prev => {
+                let newStatuses = [...prev.statuses];
+                const existingPoison = newStatuses.find(s => s.type === 'poison');
+                if (existingPoison) {
+                  newStatuses = newStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value + poisonVal } : s);
+                } else {
+                  newStatuses.push({ type: 'poison' as any, value: poisonVal });
+                }
+                const existingWeak = newStatuses.find(s => s.type === 'weak');
+                if (existingWeak) {
+                  newStatuses = newStatuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 2 } : s);
+                } else {
+                  newStatuses.push({ type: 'weak' as any, value: 1, duration: 2 });
+                }
+                return { ...prev, statuses: newStatuses };
+              });
+              addLog(`${e.name} 施放诅咒，施加了毒素和虚弱！`);
+              addFloatingText('毒素+虚弱', 'text-purple-400', undefined, 'player');
             }
             
             await new Promise(r => setTimeout(r, 300));
@@ -1644,30 +1730,15 @@ export default function DiceHeroGame() {
           }
           // Ranger: low per-hit damage but attacks twice (total ~0.80x)
           if (e.combatType === 'ranger') {
-            damage = Math.floor(damage * 0.40);
+            damage = Math.max(1, Math.floor(damage * 0.40));
             if (isSlowed) damage = Math.floor(damage * 0.5); // Slowed ranger even weaker
           }
-          // Caster: low damage but always applies debuff (annoying, not deadly)
-          if (e.combatType === 'caster') {
-            damage = Math.floor(damage * 0.65);
-            if (isSlowed) damage = Math.floor(damage * 0.5); // Slowed caster even weaker
-          }
+          // Caster: handled above (dot-only, no direct attack)
           const str = e.statuses.find(s => s.type === 'strength');
           if (str) damage += str.value;
           const weak = e.statuses.find(s => s.type === 'weak');
           if (weak) damage = Math.max(1, Math.floor(damage * 0.75));
           
-          // Caster: guaranteed debuff on every attack
-          if (e.combatType === 'caster') {
-            setGame(prev => {
-              const poisonStatus = prev.statuses.find(s => s.type === 'poison');
-              if (poisonStatus) {
-                return { ...prev, statuses: prev.statuses.map(s => s.type === 'poison' ? { ...s, value: s.value + 1 } : s) };
-              }
-              return { ...prev, statuses: [...prev.statuses, { type: 'poison' as any, value: 2 }] };
-            });
-            addLog(`${e.name} 的攻击附带了毒素！`);
-          }
           
           setGame(prev => {
             let newArmor = prev.armor;
@@ -1701,7 +1772,7 @@ export default function DiceHeroGame() {
           // Ranger: second hit after short delay
           if (e.combatType === 'ranger') {
             await new Promise(r => setTimeout(r, 250));
-            const secondHit = Math.floor(e.attackDmg * 0.40);
+            const secondHit = Math.max(1, Math.floor(e.attackDmg * 0.40));
             setGame(prev => {
               let newArmor = prev.armor;
               let newHp = prev.hp;
@@ -1772,6 +1843,36 @@ export default function DiceHeroGame() {
               playSound('enemy_skill');
               await new Promise(r => setTimeout(r, 400));
             }
+          }
+        }
+
+
+        // --- 3.6. Elite/Boss: 叠护甲 ---
+        // 部分精英每3回合叠一次护甲，Boss每2回合叠一次护甲
+        for (const e of currentEnemies.filter(en => en.hp > 0)) {
+          const isElite = e.maxHp > 80 && e.maxHp <= 200;
+          const isBoss = e.maxHp > 200;
+          
+          if (isElite && game.battleTurn % 3 === 0 && game.battleTurn > 0) {
+            const armorVal = Math.floor(e.attackDmg * 1.5);
+            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
+            addLog(`${e.name} 凝聚了护甲（+${armorVal}）！`);
+            addFloatingText(
+`护甲+${armorVal}`
+, 'text-cyan-400', undefined, 'enemy');
+            playSound('enemy_defend');
+            await new Promise(r => setTimeout(r, 300));
+          }
+          
+          if (isBoss && game.battleTurn % 2 === 0 && game.battleTurn > 0) {
+            const armorVal = Math.floor(e.attackDmg * 2.0);
+            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
+            addLog(`${e.name} 释放了护盾（+${armorVal}护甲）！`);
+            addFloatingText(
+`护盾+${armorVal}`
+, 'text-cyan-300', undefined, 'enemy');
+            playSound('enemy_defend');
+            await new Promise(r => setTimeout(r, 300));
           }
         }
 
@@ -2260,9 +2361,9 @@ useEffect(() => {
   const COMBAT_TYPE_DESC: Record<string, { name: string; icon: string; color: string; desc: string }> = {
     warrior: { name: '战士', icon: '', color: 'var(--pixel-red)', desc: '近战类型，需要接近后才能攻击。每回合逼近1步，到达后每回合普通攻击。' },
     guardian: { name: '守护者', icon: '', color: 'var(--pixel-blue)', desc: '重装近战类型，需要接近后才能攻击。交替攻击和举盾防御，获得额外护甲。' },
-    ranger: { name: '游侠', icon: '', color: 'var(--pixel-green)', desc: '远程类型，从远处就能发动攻击。伤害稳定但较低，持续输出。' },
-    caster: { name: '施法者', icon: '', color: 'var(--pixel-purple)', desc: '远程魔法类型，从远处就能发动攻击。会释放强力法术，可能附带特殊效果。' },
-    priest: { name: '牧师', icon: '', color: 'var(--pixel-gold)', desc: '治疗类型，交替攻击和治疗友方。优先治疗血量最低的友方。' },
+        ranger: { name: '游侠', icon: '', color: 'var(--pixel-green)', desc: '远程弓箭手，直接攻击两次。每次伤害较低但持续输出。' },
+        caster: { name: '术士', icon: '', color: 'var(--pixel-purple)', desc: '远程施法者，不会直接攻击。专注施加毒素、灼烧等持续伤害效果。' },
+        priest: { name: '牧师', icon: '', color: 'var(--pixel-gold)', desc: '支援型，不会攻击玩家。为队友治疗、加甲、加力量，或给玩家施加虚弱、易伤等减益。' },
   };
 
   const _getEffectiveAttackDmg = (e: Enemy) => {
