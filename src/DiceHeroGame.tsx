@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -702,7 +702,7 @@ export default function DiceHeroGame() {
     let pierceDamage = 0;
     let armorBreak = false;
     let multiplier = 1;
-    const triggeredAugments: { name: string, details: string }[] = [];
+    const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number }[] = [];
 
     activeAugments.forEach(aug => {
       const res = aug.effect(X, selected, aug.level || 1, { rerollsThisTurn: rerollCount, currentHp: game.hp, maxHp: game.maxHp, currentGold: game.souls });
@@ -728,7 +728,7 @@ export default function DiceHeroGame() {
       }
 
       if (details.length > 0) {
-        triggeredAugments.push({ name: aug.name, details: details.join(', ') });
+        triggeredAugments.push({ name: aug.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
       }
     });
 
@@ -760,7 +760,7 @@ export default function DiceHeroGame() {
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
       if (res.goldBonus) { setGame(prev => ({ ...prev, souls: prev.souls + res.goldBonus!, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + res.goldBonus! } })); addFloatingText(`+${res.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'); details.push(`金币+${res.goldBonus}`); }
       if (details.length > 0) {
-        triggeredAugments.push({ name: relic.name, details: details.join(', ') });
+        triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
       }
     });
 
@@ -1063,7 +1063,7 @@ export default function DiceHeroGame() {
     
     // 遗物效果
     outcome.triggeredAugments.forEach(aug => {
-      allEffects.push({ name: aug.name, detail: aug.details, type: 'damage' });
+      allEffects.push({ name: aug.name, detail: aug.details, type: aug.rawMult ? 'mult' : 'damage', rawValue: aug.rawDamage || undefined, rawMult: aug.rawMult || undefined });
     });
     
     // 逐个展示效果
@@ -2017,15 +2017,8 @@ useEffect(() => {
       const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
       if (newRelics.length > 0) {
         const newRelic = newRelics[0];
-        loot.push({ id: 'relic-' + newRelic.id, type: 'relic' as any, value: 0, collected: true, relicData: newRelic });
-        // 直接添加遗物到状态（在下面的setGame中处理）
-        setTimeout(() => {
-          setGame(prev => ({
-            ...prev,
-            relics: [...prev.relics, { ...newRelic }],
-          }));
-          addToast(' 获得遗物: ' + newRelic.name + '!', 'buff');
-        }, 500);
+        loot.push({ id: 'relic-' + newRelic.id, type: 'relic' as any, value: 0, collected: false, relicData: newRelic });
+        
       }
     }
     setGame(prev => {
@@ -2131,8 +2124,19 @@ useEffect(() => {
         addLog(`获得了 ${item.value} 颗骰子。`);
       }
 
+      // 閬楃墿鎷惧彇
+      if (item.type === 'relic' && item.relicData) {
+        nextState.relics = [...nextState.relics, { ...item.relicData }];
+        addLog(`获得遗物: ${item.relicData.name}`);
+      }
+
       return nextState;
     });
+
+    // 閬楃墿 toast
+    if (item.type === 'relic' && item.relicData) {
+      addToast(' 获得遗物: ' + item.relicData.name + '!', 'buff');
+    }
     
     // Dice gained toast — outside setGame to avoid StrictMode double-fire
     if (item.type === 'specialDice' && item.diceDefId) {
@@ -2941,11 +2945,11 @@ useEffect(() => {
                       
                       {/* 计分条 */}
                       <div className="flex items-center gap-3 mt-2 px-4 py-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius: '4px'}}>
-                        <span key={`base-${settlementData.currentBase}`} className="text-[var(--pixel-blue)] font-bold text-lg font-mono animate-mult-pop">
+                        <span key={`base-${settlementData.currentBase}-${settlementData.currentEffectIdx}`} className={`text-[var(--pixel-blue)] font-bold text-xl font-mono animate-value-pop ${settlementPhase === "effects" ? "settlement-value-glow-blue" : ""}`}>
                           {settlementData.currentBase}
                         </span>
                         <span key={`x-${settlementPhase === 'mult' ? 'flash' : 'idle'}`} className={`text-[var(--dungeon-text-dim)] text-lg font-bold ${settlementPhase === 'mult' || settlementPhase === 'effects' || settlementPhase === 'damage' ? 'animate-percent-flash' : ''}`}>×</span>
-                        <span key={`mult-${settlementPhase === 'mult' ? 'flash' : 'idle'}`} className={`text-[var(--pixel-red)] font-bold text-lg font-mono ${settlementPhase === 'mult' || settlementPhase === 'effects' || settlementPhase === 'damage' ? 'animate-percent-flash' : 'opacity-50'}`}>
+                        <span key={`mult-${Math.round(settlementData.currentMult * 100)}-${settlementData.currentEffectIdx}`} className={`text-[var(--pixel-red)] font-bold text-xl font-mono ${settlementPhase === "mult" || settlementPhase === "effects" || settlementPhase === "damage" ? "animate-value-pop settlement-value-glow-red" : "opacity-50"}`}>
                           {Math.round(settlementData.currentMult * 100)}%
                         </span>
                       </div>
@@ -2954,14 +2958,13 @@ useEffect(() => {
                       {settlementPhase === 'effects' && settlementData.triggeredEffects.length > 0 && (
                         <div className="flex flex-col items-center gap-1 mt-1">
                           {settlementData.triggeredEffects.map((eff, i) => (
-                            <div key={i} className="text-xs px-2 py-1 bg-[var(--pixel-green-dark)] border border-[var(--pixel-green)] text-[var(--pixel-green-light)] animate-fade-in"
-                              style={{borderRadius: '2px', animationDelay: `${i * 100}ms`}}>
-                              ◆ {eff.name}: {eff.detail}
+                            <div key={i} className={`text-xs px-3 py-1.5 border animate-effect-slide-in ${eff.type === "mult" ? "bg-[rgba(224,60,60,0.15)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]" : eff.type === "heal" ? "bg-[rgba(60,180,60,0.15)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]" : "bg-[rgba(60,120,224,0.15)] border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]"}`}
+                              style={{borderRadius: "2px", animationDelay: `${i * 100}ms`}}>
+                              {eff.type === "mult" ? "×" : "+"} {eff.name}: {eff.detail}
                             </div>
                           ))}
                         </div>
                       )}
-                      
                       {/* 最终伤害 */}
                       {settlementPhase === 'damage' && (
                         <div className="mt-2">
