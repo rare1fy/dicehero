@@ -4,6 +4,7 @@ import { useGameContext } from '../contexts/GameContext';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { PixelQuestion, PixelHeart, PixelSkull, PixelStar, PixelFlame, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
+import { playSound } from '../utils/sound';
 import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
 
 /** 图标ID到组件的映射 */
@@ -20,9 +21,10 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 export const EventScreen: React.FC = () => {
   const { game, setGame, addToast, addLog, startBattle, pickReward } = useGameContext();
 
-  const [event, setEvent] = useState<{title: string, desc: string, icon: React.ReactNode, options: {label: string, sub: string, action: () => void, color: string}[]}>();
+  const [event, setEvent] = useState<{title: string, desc: string, icon: React.ReactNode, options: {label: string, sub: string, action: () => void, color: string, disabled?: boolean, goldCost?: number}[]}>();
 
   useEffect(() => {
+    playSound('event');
     // 随机选择一个可升级牌型
     const randomHandType = UPGRADEABLE_HAND_TYPES[Math.floor(Math.random() * UPGRADEABLE_HAND_TYPES.length)];
     
@@ -130,16 +132,40 @@ export const EventScreen: React.FC = () => {
   const resolveEvent = (config: EventConfig, handType: string) => {
     const replacePlaceholder = (s: string) => s.replace(/{handType}/g, handType);
     
+    /** Check if an action requires gold the player can't afford */
+    const getGoldCost = (action: EventOptionConfig['action']): number => {
+      // Direct modifySouls with negative value
+      if (action.type === 'modifySouls' && (action.value || 0) < 0) return Math.abs(action.value || 0);
+      // randomOutcome - check if ALL outcomes cost gold (guaranteed cost)
+      if (action.type === 'randomOutcome' && action.outcomes) {
+        const costs = action.outcomes.map(o => {
+          let cost = 0;
+          for (const a of o.actions) {
+            if (a.type === 'modifySouls' && (a.value || 0) < 0) cost += Math.abs(a.value || 0);
+          }
+          return cost;
+        });
+        // If every outcome costs gold, the minimum cost is required
+        if (costs.length > 0 && costs.every(c => c > 0)) return Math.min(...costs);
+      }
+      return 0;
+    };
+
     return {
       title: config.title,
       desc: config.desc,
       icon: ICON_MAP[config.iconId] || ICON_MAP.question,
-      options: config.options.map(opt => ({
-        label: replacePlaceholder(opt.label),
-        sub: replacePlaceholder(opt.sub),
-        color: opt.color,
-        action: () => executeAction(opt.action, handType),
-      })),
+      options: config.options.map(opt => {
+        const goldCost = getGoldCost(opt.action);
+        return {
+          label: replacePlaceholder(opt.label),
+          sub: replacePlaceholder(opt.sub),
+          color: opt.color,
+          action: () => { playSound('select'); executeAction(opt.action, handType); },
+          disabled: goldCost > 0 && game.souls < goldCost,
+          goldCost,
+        };
+      }),
     };
   };
 
@@ -166,12 +192,14 @@ export const EventScreen: React.FC = () => {
           {event.options.map((opt, i) => (
             <button 
               key={i} 
-              onClick={opt.action} 
-              className="group w-full p-3.5 pixel-panel transition-all flex flex-col items-center gap-1 active:scale-95"
-              style={{ borderColor: opt.color.includes('red') ? 'var(--pixel-red)' : opt.color.includes('amber') ? 'var(--pixel-gold)' : opt.color.includes('blue') ? 'var(--pixel-blue)' : opt.color.includes('purple') ? 'var(--pixel-purple)' : opt.color.includes('emerald') ? 'var(--pixel-green)' : opt.color.includes('cyan') ? 'var(--pixel-blue)' : opt.color.includes('orange') ? 'var(--pixel-orange)' : opt.color.includes('pink') ? 'var(--pixel-red)' : 'var(--dungeon-panel-border)' }}
+              onClick={() => !opt.disabled && opt.action()} 
+              disabled={opt.disabled}
+              className={`group w-full p-3.5 pixel-panel transition-all flex flex-col items-center gap-1 ${opt.disabled ? 'opacity-40 grayscale cursor-not-allowed' : 'active:scale-95'}`}
+              style={{ borderColor: opt.disabled ? 'var(--dungeon-panel-border)' : opt.color.includes('red') ? 'var(--pixel-red)' : opt.color.includes('amber') ? 'var(--pixel-gold)' : opt.color.includes('blue') ? 'var(--pixel-blue)' : opt.color.includes('purple') ? 'var(--pixel-purple)' : opt.color.includes('emerald') ? 'var(--pixel-green)' : opt.color.includes('cyan') ? 'var(--pixel-blue)' : opt.color.includes('orange') ? 'var(--pixel-orange)' : opt.color.includes('pink') ? 'var(--pixel-red)' : 'var(--dungeon-panel-border)' }}
             >
-              <span className="font-bold tracking-[0.1em] text-xs text-[var(--dungeon-text-bright)] pixel-text-shadow">{opt.label}</span>
+              <span className={`font-bold tracking-[0.1em] text-xs pixel-text-shadow ${opt.disabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--dungeon-text-bright)]'}`}>{opt.label}</span>
               <span className="text-[9px] text-[var(--dungeon-text-dim)] font-medium">{formatDescription(opt.sub)}</span>
+              {opt.disabled && opt.goldCost > 0 && <span className="text-[8px] text-[var(--pixel-red)] font-bold mt-0.5">金币不足</span>}
             </button>
           ))}
         </div>

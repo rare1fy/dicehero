@@ -1,11 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { PixelCoin, PixelStar, PixelDice } from './PixelIcons';
-import { DICE_BY_RARITY } from '../data/dice';
+import { DICE_BY_RARITY, getDiceDef } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
+import { MiniDice } from './DiceBagPanel';
 
 // ============================================================
 // 宝箱配置（宝箱节点使用）
@@ -122,6 +123,8 @@ const MerchantScreen: React.FC = () => {
   const { game, setGame, pickReward, addToast, addLog } = useGameContext();
   const shopItems = game.shopItems || [];
 
+  useEffect(() => { playSound('event'); }, []);
+
   const buyItem = useCallback((item: ShopItem) => {
     if (game.souls < item.price) { addToast('金币不足！'); return; }
     playSound('shop_buy');
@@ -187,12 +190,12 @@ const MerchantScreen: React.FC = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className={`w-full pixel-panel p-3 flex items-center gap-3 transition-all ${canBuy ? 'cursor-pointer' : 'opacity-50'}`}
+              className={`w-full pixel-panel p-3 flex items-center gap-3 transition-all ${canBuy ? 'cursor-pointer' : 'opacity-40 grayscale pointer-events-none'}`}
               style={{ borderColor: canBuy ? typeColor + '80' : 'var(--dungeon-panel-border)' }}
             >
               <div className="w-10 h-10 bg-[var(--dungeon-bg)] border-2 flex items-center justify-center flex-shrink-0"
                 style={{ borderColor: typeColor + '60', borderRadius: '2px' }}>
-                {(item.type === 'dice' || item.type === 'specialDice') && <PixelDice size={3} />}
+                {(item.type === 'dice' || item.type === 'specialDice') && item.diceDefId ? <MiniDice defId={item.diceDefId} size={28} /> : (item.type === 'dice' || item.type === 'specialDice') && <PixelDice size={3} />}
                 {item.type === 'augment' && <PixelStar size={3} />}
                 {item.type === 'reroll' && <PixelDice size={3} />}
                 {item.type === 'removeDice' && <span className="text-[10px]">{'\u2702'}</span>}
@@ -234,6 +237,8 @@ const MerchantScreen: React.FC = () => {
 // ============================================================
 const TreasureScreen: React.FC = () => {
   const { game, setGame, pickReward, addToast, addLog } = useGameContext();
+
+  useEffect(() => { playSound('event'); }, []);
   const [openingChest, setOpeningChest] = useState(false);
   const [reward, setReward] = useState<ChestReward | null>(null);
   const [showReward, setShowReward] = useState(false);
@@ -402,7 +407,7 @@ const TreasureScreen: React.FC = () => {
                       style={{ borderColor: RARITY_COLORS[reward.rarity], boxShadow: '0 0 20px ' + RARITY_COLORS[reward.rarity] + '40' }}>
                       <div className="text-[8px] font-bold tracking-widest" style={{ color: RARITY_COLORS[reward.rarity] }}>{RARITY_LABELS[reward.rarity]}</div>
                       <div className="w-12 h-12 flex items-center justify-center">
-                        {reward.type === 'dice' && <PixelDice size={5} />}
+                        {reward.type === 'dice' && reward.diceDefId ? <MiniDice defId={reward.diceDefId} size={36} /> : reward.type === 'dice' && <PixelDice size={5} />}
                         {reward.type === 'augment' && <PixelStar size={5} />}
                         {reward.type === 'reroll' && <PixelDice size={5} />}
                         {reward.type === 'maxPlays' && <PixelStar size={5} />}
