@@ -42,7 +42,7 @@ export const GlobalTopBar: React.FC = () => {
         
         
         {/* Battle-specific: Plays & Free Rerolls */}
-        {game.phase === 'battle' && (
+        {true && (
           <>
             <div className="w-[2px] h-4 bg-[var(--dungeon-panel-border)]" />
             <div className="flex items-center gap-1 text-[var(--pixel-red)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-help" style={{borderRadius:'2px'}}>

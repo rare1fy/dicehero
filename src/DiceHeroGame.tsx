@@ -362,6 +362,14 @@ export default function DiceHeroGame() {
       });
       // 从候选池随机抽3个
       const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
+      // 始终添加删除骰子选项，价格随机
+      const [rmMin, rmMax] = SHOP_CONFIG.priceRange;
+      const removeDicePrice = Math.floor(Math.random() * (rmMax - rmMin + 1)) + rmMin;
+      shopItems.push({
+        id: 'removeDice_fixed', type: 'removeDice' as const,
+        label: '骰子净化', desc: '移除一颗骰子，瘦身构筑',
+        price: removeDicePrice
+      });
       setGame(prev => ({ ...prev, phase: 'merchant', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'treasure') {
       // Treasure: chest-only mode
@@ -374,11 +382,17 @@ export default function DiceHeroGame() {
 
   const rollAllDice = async () => {
     playSound('roll');
+    // 先把当前手牌中未使用的骰子放回弃骰库（防止骰子丢失）
+    const handDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
+    const currentDiscard = [...game.discardPile, ...handDefIds];
+    if (handDefIds.length > 0) {
+      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...handDefIds] }));
+    }
     const relicDrawBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
     const count = game.drawCount + relicDrawBonus;
     
-    // 从骰子库抽取
-    const { drawn, newBag, newDiscard, shuffled } = drawFromBag(game.diceBag, game.discardPile, count);
+    // 从骰子库抽取（包含刚放回的手牌骰子）
+    const { drawn, newBag, newDiscard, shuffled } = drawFromBag(game.diceBag, currentDiscard, count);
     
     // Shuffle notice
     if (shuffled) {
@@ -840,7 +854,16 @@ export default function DiceHeroGame() {
                     }
                     return true;
                   });
-                  return { ...prev, ownedDice: newOwned, diceBag: newBag };
+                  // 同时从弃骰库移除
+                  let removedFromDiscard = false;
+                  const newDiscard = prev.discardPile.filter(id => {
+                    if (!removedFromDiscard && id === cursedDefId) {
+                      removedFromDiscard = true;
+                      return false;
+                    }
+                    return true;
+                  });
+                  return { ...prev, ownedDice: newOwned, diceBag: newBag, discardPile: newDiscard };
                 });
                 addLog(`圣光净化！移除了 ${cursedDef.name}`);
                 addToast(`✦ 净化 ${cursedDef.name}`, 'heal');
@@ -1906,7 +1929,7 @@ export default function DiceHeroGame() {
           const isElite = e.maxHp > 80 && e.maxHp <= 200; // 精英怪HP范围
           const isBoss = e.maxHp > 200; // Boss HP范围
           
-          if (isElite && game.battleTurn % 2 === 0) {
+          if (isElite && game.battleTurn % 3 === 0) {
             // 精英每2回合塞一颗碎裂骰子
             setGame(prev => ({
               ...prev,
@@ -1921,7 +1944,7 @@ export default function DiceHeroGame() {
           
           if (isBoss) {
             const hpRatio = e.hp / e.maxHp;
-            if (hpRatio < 0.4) {
+            if (hpRatio < 0.4 && game.battleTurn % 2 === 0) {
               // Boss低血量：塞诅咒骰子
               setGame(prev => ({
                 ...prev,
@@ -1932,7 +1955,7 @@ export default function DiceHeroGame() {
               addFloatingText('+诅咒骰子', 'text-purple-400', undefined, 'player');
               playSound('enemy_skill');
               await new Promise(r => setTimeout(r, 400));
-            } else if (game.battleTurn % 2 === 0) {
+            } else if (game.battleTurn % 3 === 0) {
               // Boss正常：每2回合塞碎裂骰子
               setGame(prev => ({
                 ...prev,
@@ -2036,7 +2059,8 @@ setGame(prev => {
       armor: 0,
       playsLeft: prev.maxPlays,
       freeRerollsLeft: prev.freeRerollsPerTurn,
-      hpLostThisTurn: 0
+      hpLostThisTurn: 0,
+      consecutiveNormalAttacks: 0,
     }));
 
     // === 留手牌机制 ===
@@ -2053,18 +2077,24 @@ setGame(prev => {
       setRerollCount(0); // Reset reroll count for new turn
       const needDraw = Math.max(0, g.drawCount + schrodingerBonus - remainingCount);
       
-      let finalBag = [...g.diceBag];
-      let finalDiscard = [...g.discardPile];
+      let finalBag: string[] = [];
+      let finalDiscard: string[] = [];
       let drawnDice: Die[] = [];
       let wasShuffled = false;
       
-      if (needDraw > 0) {
-        const result = drawFromBag(finalBag, finalDiscard, needDraw);
-        drawnDice = result.drawn;
-        finalBag = result.newBag;
-        finalDiscard = result.newDiscard;
-        wasShuffled = result.shuffled;
-      }
+      // 用setGame内部读取最新状态，避免竞态覆盖diceBag/discardPile
+      setGame(prev => {
+        finalBag = [...prev.diceBag];
+        finalDiscard = [...prev.discardPile];
+        if (needDraw > 0) {
+          const result = drawFromBag(finalBag, finalDiscard, needDraw);
+          drawnDice = result.drawn;
+          finalBag = result.newBag;
+          finalDiscard = result.newDiscard;
+          wasShuffled = result.shuffled;
+        }
+        return { ...prev, diceBag: finalBag, discardPile: finalDiscard };
+      });
       
       if (wasShuffled) { setShuffleAnimating(true); setTimeout(() => setShuffleAnimating(false), 800); addToast('\u2728 \u5f03\u9ab0\u5e93\u5df2\u6d17\u56de\u9ab0\u5b50\u5e93!', 'buff'); }
       
@@ -2082,8 +2112,7 @@ setGame(prev => {
         value: Math.floor(Math.random() * 6) + 1,
       }));
       
-      // Update game state (pure, no side effects)
-      setGame(prev => ({ ...prev, diceBag: finalBag, discardPile: finalDiscard }));
+      // diceBag/discardPile already updated in setGame above
       
       // Side effects: animations and dice update
       setDiceDrawAnim(true);
@@ -2462,7 +2491,7 @@ useEffect(() => {
       shopItems.push({
         id: 'removeDice_fixed', type: 'removeDice' as const,
         label: '骰子净化', desc: '移除一颗骰子，瘦身构筑',
-        price: SHOP_CONFIG.removeDicePrice
+        price: Math.floor(Math.random() * 61) + 20 // 20-80随机
       });
       setGame(prev => ({ ...prev, phase: 'merchant', currentNode: next, shopItems }));
     } else if (next === 7) {
@@ -3413,7 +3442,7 @@ useEffect(() => {
                 </div>
               </div>
                 {/* 玩家状态栏 — 独立一行 */}
-                {(game.armor > 0 || game.statuses.length > 0) && (
+                {true && (
                   <div className="flex flex-wrap gap-1 px-3 pb-1">
                     {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
                     {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
@@ -4060,7 +4089,23 @@ useEffect(() => {
                     selectedAugment.condition === 'same_element' ? '同元素' :
                     selectedAugment.condition === 'element_count' ? '元素计数' : selectedAugment.condition
                   }</div>
-                  <div className="text-[var(--dungeon-text)] text-[13px] mb-5 relative z-10">{formatDescription(selectedAugment.description)}</div>
+                  <div className="text-[var(--dungeon-text)] text-[13px] mb-3 relative z-10">{formatDescription(selectedAugment.description)}</div>
+                  {/* 连招大师：显示当前数值加成 */}
+                  {selectedAugment.id === 'combo_master' && (
+                    <div className="text-[11px] mb-3 px-2 py-1.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] relative z-10" style={{borderRadius:'2px'}}>
+                      <div className="text-[var(--pixel-gold)] font-bold mb-1">当前连击加成</div>
+                      <div className="text-[var(--dungeon-text-dim)]">
+                        连续普攻次数: <span className="text-[var(--pixel-orange)] font-bold">{game.consecutiveNormalAttacks || 0}</span>
+                      </div>
+                      <div className="text-[var(--dungeon-text-dim)]">
+                        额外伤害: <span className="text-[var(--pixel-red)] font-bold">+{(game.consecutiveNormalAttacks || 0) * 4}</span>
+                      </div>
+                      <div className="text-[var(--dungeon-text-dim)]">
+                        倍率加成: <span className="text-[var(--pixel-cyan)] font-bold">+{((game.consecutiveNormalAttacks || 0) * 0.1).toFixed(1)}</span>
+                      </div>
+                      <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-1 opacity-60">※ 每回合结束时重置</div>
+                    </div>
+                  )}
                   <button 
                     onClick={() => setSelectedAugment(null)}
                     className="w-full py-2.5 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10"

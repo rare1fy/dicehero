@@ -243,7 +243,7 @@ export const AUGMENTS_POOL: Augment[] = [
       damage: Math.floor((context?.consecutiveNormalAttacks || 0) * 4),
       multiplier: 1 + (context?.consecutiveNormalAttacks || 0) * 0.1,
     }),
-    description: '普通攻击: 连续使用普攻，每次伤害 +4 且倍率 +0.1（重置于非普攻出牌）',
+    description: '普通攻击: 连续使用普攻，每次伤害 +4 且倍率 +0.1（每回合结束重置）',
   },
   {
     id: 'minimalist',
