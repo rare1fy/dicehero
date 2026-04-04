@@ -189,6 +189,12 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + 'pixel-dice-split ' + splitGlow;
   }
 
+  // Magnet dice - red-blue bicolor magnetic
+  if (diceDefId === 'magnet') {
+    const magnetGlow = selected && !invalid ? 'dice-glow-magnet' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-magnet ' + magnetGlow;
+  }
+
   // Joker dice - rainbow gradient with diamond pattern
   if (diceDefId === 'joker') {
     const jokerGlow = selected && !invalid ? 'dice-glow-joker' : '';

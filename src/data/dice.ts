@@ -84,6 +84,15 @@ const split: DiceDef = {
   rarity: 'rare',
 };
 
+
+const magnet: DiceDef = {
+  id: 'magnet',
+  name: '磁吸骰子',
+  element: 'normal',
+  faces: [1, 2, 3, 4, 5, 6],
+  description: '出牌时随机同化一颗同伴骰子的点数为自身点数，实时影响牌型',
+  rarity: 'rare',
+};
 const joker: DiceDef = {
   id: 'joker',
   name: '小丑骰子',
@@ -138,7 +147,7 @@ const cracked: DiceDef = {
 export const ALL_DICE: Record<string, DiceDef> = {
   standard,
   heavy, elemental,
-  blade, amplify, split, joker,
+  blade, amplify, split, magnet, joker,
   chaos,
   cursed, cracked,
 };
@@ -146,7 +155,7 @@ export const ALL_DICE: Record<string, DiceDef> = {
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
   common: [standard],
   uncommon: [heavy, elemental],
-  rare: [blade, amplify, split, joker],
+  rare: [blade, amplify, split, magnet, joker],
   legendary: [chaos],
   curse: [cursed, cracked],
 };
@@ -213,7 +222,7 @@ export const DICE_MAX_LEVEL = 3;
 export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
   switch (battleType) {
     case 'enemy':
-      return [...DICE_BY_RARITY.common, ...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare.slice(0, 2)];
+      return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare.slice(0, 2)];
     case 'elite':
       return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare];
     case 'boss':

@@ -813,6 +813,39 @@ export default function DiceHeroGame() {
           case 'holy':
             // 圣光：恢复等同点数的生命值
             extraHeal += Math.floor(diceValue * elementBonus);
+            // 圣光净化：清除玩家一个负面状态（包括从骰子库移除一颗诅咒骰子）
+            const negativeStatuses = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
+            if (negativeStatuses.length > 0) {
+              const purged = negativeStatuses[Math.floor(Math.random() * negativeStatuses.length)];
+              setGame(prev => ({
+                ...prev,
+                statuses: prev.statuses.filter(s => s !== purged),
+              }));
+              addLog(`圣光净化！清除了 ${purged.type} 效果`);
+              addToast(`✦ 净化 ${purged.type}`, 'heal');
+            } else {
+              // 没有负面状态，尝试移除一颗诅咒骰子
+              const cursedIdx = game.ownedDice.findIndex(d => d.defId === 'cursed' || d.defId === 'cracked');
+              if (cursedIdx >= 0) {
+                const cursedDefId = game.ownedDice[cursedIdx].defId;
+                const cursedDef = getDiceDef(cursedDefId);
+                setGame(prev => {
+                  const newOwned = [...prev.ownedDice];
+                  newOwned.splice(cursedIdx, 1);
+                  let removedFromBag = false;
+                  const newBag = prev.diceBag.filter(id => {
+                    if (!removedFromBag && id === cursedDefId) {
+                      removedFromBag = true;
+                      return false;
+                    }
+                    return true;
+                  });
+                  return { ...prev, ownedDice: newOwned, diceBag: newBag };
+                });
+                addLog(`圣光净化！移除了 ${cursedDef.name}`);
+                addToast(`✦ 净化 ${cursedDef.name}`, 'heal');
+              }
+            }
             break;
         }
         return; // 元素骰子不走普通onPlay
@@ -996,6 +1029,67 @@ export default function DiceHeroGame() {
     }
 
     // 如果发生了分裂，重新计算牌型和伤害
+
+    // 磁吸骰子：随机同化一颗同伴骰子的点数为自身点数
+    let magnetOccurred = false;
+    for (let i = 0; i < settleDice.length; i++) {
+      if (settleDice[i].diceDefId === 'magnet' && settleDice.length > 1) {
+        const magnetValue = settleDice[i].value;
+        // 找到所有非磁吸的同伴骰子
+        const targets = settleDice.filter((d, idx) => idx !== i && d.diceDefId !== 'magnet');
+        if (targets.length > 0) {
+          const target = targets[Math.floor(Math.random() * targets.length)];
+          const oldValue = target.value;
+          target.value = magnetValue;
+          magnetOccurred = true;
+          playSound('augment_activate');
+          setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice] } : prev);
+          await new Promise(r => setTimeout(r, 400));
+          const targetDef = getDiceDef(target.diceDefId);
+          addLog(`磁吸骰子同化！${targetDef.name}的点数 ${oldValue} → ${magnetValue}`);
+          addToast(`🧲 ${targetDef.name} ${oldValue}→${magnetValue}`, 'buff');
+        }
+      }
+    }
+
+    // 如果发生了磁吸，也需要重新计算牌型和伤害（和分裂一样的逻辑）
+    if (magnetOccurred && !splitOccurred) {
+      const newHandResult = checkHands(settleDice);
+      const newBestHand = newHandResult.bestHand;
+      if (newBestHand !== outcome.bestHand) {
+        addLog(`磁吸改变了牌型！${outcome.bestHand} → ${newBestHand}`);
+        addToast(` 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
+        playSound(newBestHand === '普通攻击' ? 'hit' : 'augment_activate');
+      }
+      const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
+      let newHandMult = 1;
+      newHandResult.activeHands.forEach(handName => {
+        const handDef = HAND_TYPES.find(h => h.name === handName);
+        if (handDef) {
+          const level = game.handLevels[handName] || 1;
+          const levelBonusMult = (level - 1) * 0.3;
+          newHandMult += (((handDef as any).mult || 1) - 1) + levelBonusMult;
+        }
+      });
+      const newBaseDamage = Math.floor(newX * newHandMult);
+      const newTotalDamage = Math.floor((newBaseDamage + (outcome.damage - Math.floor(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+      outcome.damage = Math.max(0, newTotalDamage);
+      outcome.bestHand = newBestHand;
+      outcome.X = newX;
+      outcome.handMultiplier = newHandMult;
+      runningBase = 0;
+      settleDice.forEach(d => runningBase += d.value);
+      runningBase += outcome.baseHandValue;
+      setSettlementData(prev => prev ? {
+        ...prev,
+        bestHand: newBestHand,
+        selectedDice: [...settleDice],
+        currentBase: runningBase,
+        currentMult: newHandMult,
+        finalDamage: outcome.damage,
+      } : prev);
+      await new Promise(r => setTimeout(r, 500));
+    }
     if (splitOccurred) {
       const newHandResult = checkHands(settleDice);
       const newBestHand = newHandResult.bestHand;

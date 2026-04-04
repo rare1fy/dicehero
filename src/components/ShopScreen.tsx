@@ -45,8 +45,8 @@ function generateReward(shopLevel: number): ChestReward {
       const pools = shopLevel >= 3
         ? [...(DICE_BY_RARITY.rare || []), ...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.common || [])]
         : shopLevel >= 2
-          ? [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.common || [])]
-          : [...(DICE_BY_RARITY.common || []), ...(DICE_BY_RARITY.uncommon || []).slice(0, 2)];
+          ? [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || []).slice(0, 2)]
+          : [...(DICE_BY_RARITY.uncommon || [])];
       if (pools.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
       const pick = pools[Math.floor(Math.random() * pools.length)];
       const rarity = (DICE_BY_RARITY.rare || []).includes(pick) ? 'rare' as const

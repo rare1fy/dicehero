@@ -97,6 +97,19 @@ const ShadowBadge: React.FC<{ s: number }> = ({ s }) => (
  * 元素标记组件 - 在骰子角落显示元素标识
  * normal 元素不显示标记
  */
+
+// 磁吸标记 - 蓝红相间磁铁
+const MagnetBadge: React.FC<{ s: number }> = ({ s }) => (
+  <svg width={s} height={s} viewBox="0 0 8 8" fill="none">
+    <rect x="1" y="1" width="3" height="2" fill="#c03048"/>
+    <rect x="4" y="1" width="3" height="2" fill="#3070c0"/>
+    <rect x="1" y="3" width="3" height="2" fill="#e04060"/>
+    <rect x="4" y="3" width="3" height="2" fill="#4088e0"/>
+    <rect x="0" y="5" width="2" height="2" fill="#c03048"/>
+    <rect x="6" y="5" width="2" height="2" fill="#3070c0"/>
+    <rect x="2" y="5" width="4" height="2" fill="#808890"/>
+  </svg>
+);
 export const ElementBadge: React.FC<ElementBadgeProps> = ({ element, size = 10 }) => {
   switch (element) {
     case 'fire': return <FireBadge s={size} />;

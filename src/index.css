@@ -2809,6 +2809,48 @@ input[type="range"]::-webkit-slider-runnable-track {
 .dice-glow-split {
   box-shadow: 0 0 12px rgba(72,184,154,0.5), 0 0 24px rgba(72,184,154,0.2) !important;
 }
+/* --- 磁吸骰子 (magnet) - 蓝红相间 + 磁力线纹理 --- */
+.pixel-dice-magnet {
+  background: linear-gradient(135deg, #8a2040 0%, #6a1838 25%, #404860 50%, #2050a0 75%, #1840a0 100%) !important;
+  border-color: #c03060 !important;
+  color: #e0d0f0 !important;
+  box-shadow:
+    inset -2px -2px 0 rgba(0,0,0,0.5),
+    inset 2px 2px 0 rgba(200,140,180,0.2),
+    0 3px 0 #1a0818,
+    0 0 8px rgba(192,48,96,0.3),
+    0 0 8px rgba(64,128,208,0.3);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8), 0 0 4px rgba(192,48,96,0.4);
+}
+.pixel-dice-magnet::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #c03060 0%, #808890 30%, #808890 70%, #3070c0 100%);
+  transform: translateY(-50%);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 1;
+}
+.pixel-dice-magnet::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  background:
+    radial-gradient(circle at 25% 50%, rgba(192,48,96,0.2) 0%, transparent 50%),
+    radial-gradient(circle at 75% 50%, rgba(48,112,192,0.2) 0%, transparent 50%);
+  animation: dice-magnet-pulse 2s steps(4) infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.dice-glow-magnet {
+  box-shadow: 0 0 12px rgba(192,48,96,0.4), 0 0 12px rgba(48,112,192,0.4), 0 0 24px rgba(160,80,160,0.2) !important;
+}
+@keyframes dice-magnet-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
 
 /* --- 小丑骰子 (joker) - 彩色渐变 + 菱形花纹 --- */
 .pixel-dice-joker {

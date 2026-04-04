@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
@@ -17,6 +17,7 @@ const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string
   blade:    { bg: '#707888', border: '#98a8b8', dot: '#e0e8f0' },
   amplify:  { bg: '#4030a0', border: '#7060d0', dot: '#c0b0ff' },
   split:    { bg: '#206858', border: '#30b898', dot: '#80ffd0' },
+  magnet:   { bg: '#602838', border: '#c03048', dot: '#4080d0' },
   joker:    { bg: '#a04080', border: '#e060b0', dot: '#ffe0f0' },
   chaos:    { bg: '#802020', border: '#c03030', dot: '#ffd040' },
   cursed:   { bg: '#402050', border: '#6030a0', dot: '#c080f0' },
@@ -71,7 +72,13 @@ export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: bool
       title={def.name}
     >
       {/* 骰子点 - 元素骰子用菱形多色标记 */}
-      {defId === 'elemental' ? (
+      {defId === 'magnet' ? (
+        <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
+          <rect x="0" y="0" width="4" height="8" fill="#c03048" />
+          <rect x="4" y="0" width="4" height="8" fill="#3070c0" />
+          <rect x="2" y="3" width="4" height="2" fill="#808890" />
+        </svg>
+      ) : defId === 'elemental' ? (
         <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
           {/* 菱形外框 */}
           <polygon points="4,0.5 7.5,4 4,7.5 0.5,4" fill="none" stroke="#b080e0" strokeWidth="0.8" />
