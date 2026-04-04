@@ -59,8 +59,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'augments',
-    title: '◆ 增幅模块 ◆',
-    content: '底部的增幅模块在你打出对应牌型时自动激活，提供额外伤害、护甲、回血等效果。',
+    title: '◆ 遗物 ◆',
+    content: '底部的遗物在你打出对应牌型时自动激活，提供额外伤害、护甲、回血等效果。',
     icon: <PixelZap size={4} />,
     position: 'bottom',
   },

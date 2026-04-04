@@ -232,7 +232,7 @@ export default function DiceHeroGame() {
     const node = pendingBattleNode;
     if (!node) return;
 
-    // 应用代价 + 添加增幅模块（合并为一次setGame）
+    // 应用代价 + 添加遗物（合并为一次setGame）
     setGame(prev => {
       let updated = { ...prev };
       
@@ -256,7 +256,7 @@ export default function DiceHeroGame() {
           break;
       }
       
-      // 添加增幅模块
+      // 添加遗物
       
       // Augment module: find empty slot or replace
       const newAugments = [...updated.augments];
@@ -370,7 +370,7 @@ export default function DiceHeroGame() {
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
       // 构建候选商品池
       const candidateItems: ShopItem[] = [];
-      // 候选：增幅模块
+      // 候选：遗物
       const shuffledAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
       for (const aug of shuffledAugs.slice(0, 3)) {
         candidateItems.push({
@@ -405,7 +405,7 @@ export default function DiceHeroGame() {
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
       // 构建候选商品池
       const candidateItems: ShopItem[] = [];
-      // 候选：增幅模块
+      // 候选：遗物
       const shuffledAugs = [...AUGMENTS_POOL].sort(() => Math.random() - 0.5);
       for (const aug of shuffledAugs.slice(0, 3)) {
         candidateItems.push({
@@ -502,17 +502,6 @@ export default function DiceHeroGame() {
       return;
     }
     
-    // 急救沙漏遗物：前N次卖血重Roll不扣血
-    const hourglassRelic = game.relics.find(r => r.id === 'emergency_hourglass');
-    if (hourglassRelic && hpCost > 0 && (hourglassRelic.counter || 0) < (hourglassRelic.maxCounter || 2)) {
-      // 消耗一次免费卖血机会
-      setGame(prev => ({
-        ...prev,
-        relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: (r.counter || 0) + 1 } : r)
-      }));
-      addToast('⌛ 急救沙漏: 免除卖血伤害!', 'buff');
-      hpCost = 0;
-    }
 
     // Apply HP cost
     if (hpCost > 0) {
@@ -1097,7 +1086,7 @@ export default function DiceHeroGame() {
       }
     });
     
-    // 增幅模块效果
+    // 遗物效果
     outcome.triggeredAugments.forEach(aug => {
       allEffects.push({ name: aug.name, detail: aug.details, type: 'damage' });
     });
@@ -1281,9 +1270,28 @@ export default function DiceHeroGame() {
             if (res.heal && res.heal > 0) {
               setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + res.heal) }));
               addToast(`🧛 ${relic.name}: +${res.heal}HP`, 'heal');
+
             }
           });
         });
+
+          // 溢出导管: 溢出伤害转移给随机敌人
+          const overflowRelic = game.relics.find(r => r.id === 'overflow_conduit');
+          if (overflowRelic) {
+            killedEnemies.forEach(killed => {
+              const overkill = Math.abs(killed.hp);
+              if (overkill > 0) {
+                const aliveOthers = enemies.filter(e => e.hp > 0 && e.uid !== killed.uid);
+                if (aliveOthers.length > 0) {
+                  const target = aliveOthers[Math.floor(Math.random() * aliveOthers.length)];
+                  setEnemies(prev => prev.map(e => e.uid === target.uid ? { ...e, hp: Math.max(0, e.hp - overkill) } : e));
+                  addLog('⚡ 溢出导管: ' + overkill + ' 点溢出伤害转移给 ' + target.name + '!');
+                  addFloatingText('-' + overkill, 'text-orange-400', null, 'enemy');
+                  playSound('hit');
+                }
+              }
+            });
+          }
       }
     }, 300);
 
@@ -1385,6 +1393,16 @@ export default function DiceHeroGame() {
         nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
       }
       currentPlayerHp = Math.max(0, prev.hp - poisonDamage);
+      // 急救沙漏: 毒伤致命保护
+      if (currentPlayerHp <= 0 && prev.hp > 0) {
+        const hgR = prev.relics.find(r => r.id === 'emergency_hourglass');
+        if (hgR && (hgR.counter || 0) === 0) {
+          currentPlayerHp = prev.hp;
+          return { ...prev, hp: currentPlayerHp,
+            relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
+          };
+        }
+      }
       return { ...prev, hp: currentPlayerHp, statuses: nextStatuses };
     });
 
@@ -1610,6 +1628,17 @@ export default function DiceHeroGame() {
             }
             const hpDmg = damage - absorbed;
             if (hpDmg > 0) newHp = Math.max(0, newHp - hpDmg);
+            // 急救沙漏: 免疫致命伤害
+            if (newHp <= 0 && prev.hp > 0) {
+              const hgRelic = prev.relics.find(r => r.id === 'emergency_hourglass');
+              if (hgRelic && (hgRelic.counter || 0) === 0) {
+                newHp = prev.hp; // 完全无视这次伤害
+                newArmor = prev.armor;
+                return { ...prev, hp: newHp, armor: newArmor,
+                  relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
+                };
+              }
+            }
             return { ...prev, hp: newHp, armor: newArmor };
           });
           
@@ -1760,6 +1789,16 @@ setGame(prev => {
       }
       nextStatuses = tickStatuses(nextStatuses);
       currentPlayerHp = Math.max(0, prev.hp - burnDamage);
+      // 急救沙漏: 火伤致命保护
+      if (currentPlayerHp <= 0 && prev.hp > 0) {
+        const hgR = prev.relics.find(r => r.id === 'emergency_hourglass');
+        if (hgR && (hgR.counter || 0) === 0) {
+          currentPlayerHp = prev.hp;
+          return { ...prev, hp: currentPlayerHp,
+            relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
+          };
+        }
+      }
 
       // Update all alive enemies' intents for next turn
       setEnemies(prevEnemies => prevEnemies.map(e => {
@@ -1958,9 +1997,9 @@ useEffect(() => {
     // 遗物掉落：精英战/Boss战必掉，普通战30%概率
     const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
                        allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
-    const relicDropChance = battleType === 'enemy' ? 0.3 : 1.0;
+    const relicDropChance = battleType === 'enemy' ? 0 : 1.0;
     if (Math.random() < relicDropChance) {
-      const relicPool = getRelicRewardPool(battleType);
+      const relicPool = getRelicRewardPool(battleType as 'elite' | 'boss');
       const ownedRelicIds = game.relics.map(r => r.id);
       const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
       if (newRelics.length > 0) {
@@ -2000,7 +2039,7 @@ useEffect(() => {
         phase: 'diceReward',
         lootItems: loot,
         isEnemyTurn: false,
-        relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 0 } : r)
+        relics: prev.relics.map(r => r.id === 'emergency_hourglass' && (r.counter || 0) > 0 ? { ...r, counter: (r.counter || 0) - 1 } : r)
       };
     });
   };
@@ -2980,7 +3019,7 @@ useEffect(() => {
                       )}
                     </div>
 
-                    {/* 触发的增幅模块 */}
+                    {/* 触发的遗物 */}
                     {activeAugments.length > 0 && (
                       <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[rgba(10,10,15,0.8)]" style={{ borderRadius: '2px' }}>
                         {activeAugments.map((aug, i) => (
@@ -3489,7 +3528,7 @@ useEffect(() => {
               </div>
 
 
-              {/* 遗物栏 - 无限遗物icon展示 + 增幅模块 */}
+              {/* 遗物栏 - 无限遗物icon展示 + 遗物 */}
               <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
                 <div className="flex flex-wrap gap-1 items-center min-h-[28px]">
                   {game.relics.length === 0 && game.augments.every(a => !a) && (

@@ -78,7 +78,7 @@ export interface StatusEffect {
 }
 
 // ============================================================
-// 增幅模块
+// 遗物
 // ============================================================
 
 export type AugmentCategory = 'transition' | 'economy' | 'endgame' | 'normal_attack' | 'self_harm';
@@ -272,6 +272,7 @@ export type RelicTrigger =
   | 'on_battle_start'  // 战斗开始时
   | 'on_battle_end'    // 战斗结束时
   | 'on_damage_taken'  // 受到伤害时
+  | 'on_fatal'         // 致命伤害时
   | 'passive';         // 被动持续生效
 
 export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
@@ -314,6 +315,8 @@ export interface RelicEffect {
   pierce?: number;
   goldBonus?: number;
   drawCountBonus?: number;
+    preventDeath?: boolean;
+    overflowDamage?: number;
   freeRerolls?: number;
   // 特殊标记
   canLockDice?: boolean;

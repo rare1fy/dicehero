@@ -2,7 +2,7 @@ import React from 'react';
 
 import { DiceElement } from '../types/game';
 
-/** 增幅模块图标 - 像素风SVG，形象直观 */
+/** 遗物图标 - 像素风SVG，形象直观 */
 export const getAugmentIcon = (condition: string, size = 12) => {
   const s = size;
   const sr = 'crispEdges';

@@ -15,7 +15,7 @@ const UPGRADE_COSTS = [0, 120, 250];
 
 const REWARD_TABLE = {
   dice:      { weight: 50, label: '骰子' },
-  augment:   { weight: 25, label: '增幅模块' },
+  augment:   { weight: 25, label: '遗物' },
   reroll:    { weight: 22, label: '重投机会' },
   drawCount: { weight: 0.5, label: '手牌上限+1' },
 };

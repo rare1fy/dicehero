@@ -144,14 +144,14 @@ const perfectionist: Relic = {
 const emergencyHourglass: Relic = {
   id: 'emergency_hourglass',
   name: '急救沙漏',
-  description: '每场战斗前2次卖血重Roll不扣血',
+  description: '免疫一次致命伤害，当你即将死亡时，完全无视这次伤害(15节点CD)',
   icon: 'hourglass',
-  rarity: 'uncommon',
-  trigger: 'passive',
+  rarity: 'rare',
+  trigger: 'on_fatal',
   counter: 0,
-  maxCounter: 2,
-  counterLabel: '次',
-  effect: () => ({ freeRerolls: 2 }),
+  maxCounter: 15,
+  counterLabel: '节点',
+  effect: () => ({ preventDeath: true }),
 };
 
 const vampireFangs: Relic = {
@@ -194,14 +194,16 @@ const scrapYard: Relic = {
 // 体系四：机制突变类
 // ============================================================
 
-const sixthFinger: Relic = {
-  id: 'sixth_finger',
-  name: '第六根手指',
-  description: '抽牌容量+1(4→5)',
-  icon: 'hand',
+const overflowConduit: Relic = {
+  id: 'overflow_conduit',
+  name: '溢出导管',
+  description: '击杀敌人时，溢出伤害转移给另一个随机敌人',
+  icon: 'prism',
   rarity: 'legendary',
-  trigger: 'passive',
-  effect: () => ({ drawCountBonus: 1 }),
+  trigger: 'on_kill',
+  effect: (ctx) => ({
+    overflowDamage: ctx.overkillDamage || 0,
+  }),
 };
 
 const quantumObserver: Relic = {
@@ -257,7 +259,7 @@ export const ALL_RELICS: Record<string, Relic> = {
   vampire_fangs: vampireFangs,
   black_market_contract: blackMarketContract,
   scrap_yard: scrapYard,
-  sixth_finger: sixthFinger,
+  overflow_conduit: overflowConduit,
   quantum_observer: quantumObserver,
   limit_breaker: limitBreaker,
   schrodinger_bag: schrodingerBag,
@@ -265,18 +267,19 @@ export const ALL_RELICS: Record<string, Relic> = {
 
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   common: [grindstone, heavyMetalCore, chaosPendulum],
-  uncommon: [ironBanner, emergencyHourglass, blackMarketContract, scrapYard],
-  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag],
-  legendary: [elementalResonator, perfectionist, sixthFinger, quantumObserver, limitBreaker],
+  uncommon: [ironBanner, blackMarketContract, scrapYard],
+  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass],
+  legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker],
 };
 
 /** 获取遗物奖励池 */
-export const getRelicRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): Relic[] => {
-  switch (battleType) {
-    case 'enemy':
-      return [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon];
+export const getRelicRewardPool = (source: 'elite' | 'boss' | 'treasure' | 'merchant' | 'event'): Relic[] => {
+  switch (source) {
     case 'elite':
-      return [...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+    case 'treasure':
+    case 'merchant':
+    case 'event':
+      return [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
     case 'boss':
       return [...RELICS_BY_RARITY.rare, ...RELICS_BY_RARITY.legendary];
   }

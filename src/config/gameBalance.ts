@@ -61,7 +61,7 @@ export const BATTLE_SCALING = {
 // 商店配置
 // ============================================================
 export const SHOP_CONFIG = {
-  /** 商店中增幅模块的数量 */
+  /** 商店中遗物的数量 */
   augmentCount: 2,
   /** 商品价格范围 [min, max] */
   priceRange: [20, 80] as [number, number],
@@ -161,7 +161,7 @@ export const SKILL_SELECT_CONFIG = {
 } as const;
 
 // ============================================================
-// 增幅模块缩放
+// 遗物缩放
 // ============================================================
 export const AUGMENT_SCALING = {
   /** 等级缩放公式: 1 + (level - 1) * scaleFactor */

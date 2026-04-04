@@ -424,7 +424,7 @@ export const playSound = (type: SoundType) => {
       }
       
       case 'augment_activate': {
-        // 增幅模块激活
+        // 遗物激活
         [659, 784, 988].forEach((f, i) => {
           const o = ctx.createOscillator();
           const g = ctx.createGain();
