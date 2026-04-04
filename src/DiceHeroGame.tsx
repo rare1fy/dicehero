@@ -172,7 +172,7 @@ export default function DiceHeroGame() {
     finalHeal: number;
     statusEffects: any[];
   } | null>(null);
-  const [_toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
+  const [toasts, setToasts] = useState<{ id: number, message: string, type?: string }[]>([]);
   const toastIdRef = useRef(0);
   const toastCdMap = useRef<Map<string, number>>(new Map());
 
@@ -2173,7 +2173,7 @@ useEffect(() => {
     collectLoot, finishLoot,
     selectLootAugment, replaceAugment,
     pickReward, nextNode,
-    addToast,
+    toasts, addToast,
     addLog,
     handleSelectSkillModule, handleSkipSkillModule,
   };
