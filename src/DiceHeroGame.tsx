@@ -412,13 +412,16 @@ export default function DiceHeroGame() {
     addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
 
-  // Calculate reroll HP cost: 0, 2, 4, 8, 16... (doubles each time after first free)
+  // Calculate reroll HP cost: first N rerolls free (N = freeRerollsPerTurn), then 2, 4, 8, 16...
   const getRerollHpCost = (count: number): number => {
-    if (count <= 0) return 0; // first reroll is free
-    return Math.pow(2, count); // 2, 4, 8, 16, 32...
+    const freeCount = game.freeRerollsPerTurn || 1;
+    if (count < freeCount) return 0; // free rerolls
+    const paidIndex = count - freeCount; // 0, 1, 2, 3...
+    return Math.pow(2, paidIndex + 1); // 2, 4, 8, 16, 32...
   };
   const currentRerollCost = getRerollHpCost(rerollCount);
   const canAffordReroll = game.hp > currentRerollCost;
+  const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) - rerollCount);
 
   const rerollUnselected = async () => {
     if (game.isEnemyTurn || game.playsLeft <= 0) return;
@@ -3451,7 +3454,7 @@ useEffect(() => {
                     )}
                     <PixelRefresh size={2} />
                     {currentRerollCost <= 0 ? (
-                      <span className="text-[11px] font-mono font-bold">FREE</span>
+                      <span className="text-[11px] font-mono font-bold flex items-center gap-0.5">{freeRerollsRemaining}<span className="text-[9px] opacity-70">×</span></span>
                     ) : (
                       <span className="text-[10px] font-mono font-bold flex items-center gap-0.5">
                         <span>-{currentRerollCost}</span>
