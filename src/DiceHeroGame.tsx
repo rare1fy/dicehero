@@ -1380,8 +1380,8 @@ export default function DiceHeroGame() {
         const dmg = burn.value;
         addLog(`${e.name} \u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${dmg} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${dmg}`, 'text-orange-500', <PixelFlame size={2} />, 'enemy');
-        const nextBurnValue = Math.floor(burn.value / 2);
-        const nextStatuses = e.statuses.map(s => s.type === 'burn' ? { ...s, value: nextBurnValue } : s).filter(s => s.value > 0);
+        // 灼烧只存在一回合，造成伤害后直接移除
+        const nextStatuses = e.statuses.filter(s => s.type !== 'burn');
         const newHp = Math.max(0, e.hp - dmg);
         if (newHp <= 0) enemyDeathsFromBurn.push(e.uid);
         return { ...e, hp: newHp, statuses: nextStatuses, armor: 0 };
@@ -1748,8 +1748,8 @@ setGame(prev => {
         burnDamage = burn.value;
         addLog(`\u4f60\u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${burnDamage} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${burnDamage}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
-        const nextBurnValue = Math.floor(burn.value / 2);
-        nextStatuses = nextStatuses.map(s => s.type === 'burn' ? { ...s, value: nextBurnValue } : s).filter(s => s.value > 0);
+        // 灼烧只存在一回合，造成伤害后直接移除
+        nextStatuses = nextStatuses.filter(s => s.type !== 'burn');
       }
       nextStatuses = tickStatuses(nextStatuses);
       currentPlayerHp = Math.max(0, prev.hp - burnDamage);
@@ -3660,7 +3660,7 @@ useEffect(() => {
                         {expectedOutcome.statusEffects?.filter(s => s.type === 'burn').length > 0 && (
                           <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)]">🔥 灼烧</span>
-                            <span className="text-orange-400">+{expectedOutcome.statusEffects.filter(s => s.type === 'burn').reduce((sum, s) => sum + s.value, 0)}/回合</span>
+                            <span className="text-orange-400">+{expectedOutcome.statusEffects.filter(s => s.type === 'burn').reduce((sum, s) => sum + s.value, 0)}</span>
                           </div>
                         )}
                         
