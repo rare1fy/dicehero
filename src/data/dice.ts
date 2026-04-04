@@ -60,9 +60,9 @@ const blade: DiceDef = {
   name: '锋刃骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时额外 +20 基础伤害，前期打工神器',
+  description: '出牌时额外 +5 基础伤害，随战斗阶段升级增加',
   rarity: 'rare',
-  onPlay: { bonusDamage: 15 },
+  onPlay: { bonusDamage: 5 },
 };
 
 const amplify: DiceDef = {
@@ -70,9 +70,9 @@ const amplify: DiceDef = {
   name: '倍增骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时总伤害 x1.5，中后期核心乘区',
+  description: '出牌时总伤害 x1.2，随战斗阶段升级增加',
   rarity: 'rare',
-  onPlay: { bonusMult: 1.5 },
+  onPlay: { bonusMult: 1.2 },
 };
 
 const split: DiceDef = {
@@ -186,13 +186,15 @@ export const getDiceLevelScale = (level: number): number => {
 };
 
 
-/** 获取升级后的onPlay效果 */
+/** 获取升级后的onPlay效果（温和缩放，避免超模） */
 export const getUpgradedOnPlay = (def: DiceDef, level: number): DiceDef['onPlay'] => {
   if (!def.onPlay || level <= 1) return def.onPlay;
   const bonus = level - 1; // Lv2 = +1, Lv3 = +2
   const op = { ...def.onPlay };
-  if (op.bonusDamage) op.bonusDamage = Math.floor(op.bonusDamage * (1 + bonus * 0.5));
-  if (op.bonusMult) op.bonusMult = Number((op.bonusMult + bonus * 0.25).toFixed(2));
+  // 锋刃骰子: Lv1=5, Lv2=7, Lv3=9（每级+2）
+  if (op.bonusDamage) op.bonusDamage = op.bonusDamage + bonus * 2;
+  // 倍增骰子: Lv1=1.2, Lv2=1.3, Lv3=1.4（每级+0.1）
+  if (op.bonusMult) op.bonusMult = Number((op.bonusMult + bonus * 0.1).toFixed(2));
   if (op.selfDamage) op.selfDamage = Math.max(1, op.selfDamage - bonus); // 减少副作用
   return op;
 };

@@ -305,7 +305,7 @@ export default function DiceHeroGame() {
     }
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     // 元素骰子坍缩 + 小丑骰子1-9随机
-    setDice(prev => applyDiceSpecialEffects(prev));
+    setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
     playSound('dice_lock');
     // Auto-sort dice by value ascending after roll
     await new Promise(r => setTimeout(r, 200));
@@ -480,7 +480,7 @@ export default function DiceHeroGame() {
     }
 
     // 落定：将未选中骰子弃置，从骰子库抽新的替换
-    const unselectedDice = dice.filter(d => !d.selected && !d.spent);
+    const unselectedDice = dice.filter(d => !d.selected && !d.spent && !d.locked);
     const unselectedDefIds = unselectedDice.map(d => d.diceDefId);
     const unselectedIds = new Set(unselectedDice.map(d => d.id));
 
@@ -508,7 +508,7 @@ export default function DiceHeroGame() {
       });
       // 通过闭包更新dice状态
       setTimeout(() => {
-        setDice(applyDiceSpecialEffects(newDice));
+        setDice(applyDiceSpecialEffects(newDice, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
         addLog(`重掷结果: ${newDice.filter(nd => unselectedIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
       }, 0);
 
@@ -525,6 +525,17 @@ export default function DiceHeroGame() {
     await new Promise(r => setTimeout(r, 200));
     setDice(prev => [...prev].sort((a, b) => a.value - b.value));
     setRerollCount(prev => prev + 1);
+  };
+
+  // quantum_observer: 双击锁定骰子，锁定的骰子在重掷时不会被替换
+  const hasQuantumObserver = game.relics.some(r => r.id === 'quantum_observer');
+  const toggleLock = (id: number) => {
+    if (!hasQuantumObserver) return;
+    const die = dice.find(d => d.id === id);
+    if (!die || die.spent) return;
+    playSound('select');
+    setDice(prev => prev.map(d => d.id === id ? { ...d, locked: !d.locked } : d));
+    addToast(die.locked ? '骰子已解锁' : '骰子已锁定 🔒', 'info');
   };
 
   const toggleSelect = (id: number) => {
@@ -811,9 +822,13 @@ export default function DiceHeroGame() {
       }
       
       if (!def.onPlay) return;
-      const op = def.onPlay;
-      if (op.bonusDamage) extraDamage += Math.floor(op.bonusDamage * elementBonus);
-      if (op.bonusMult) multiplier *= (1 + (op.bonusMult - 1) * elementBonus);
+      const upgradedOp = getUpgradedOnPlay(def, diceLevel);
+      const op = upgradedOp || def.onPlay;
+      // 深度缩放：根据战斗阶段提升骰子onPlay效果（每3层+15%基础伤害，每5层+0.05倍率）
+      const depthDmgBonus = 1 + Math.floor((game.depth || 0) / 3) * 0.15;
+      const depthMultBonus = Math.floor((game.depth || 0) / 5) * 0.05;
+      if (op.bonusDamage) extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
+      if (op.bonusMult) multiplier *= (1 + (op.bonusMult - 1 + depthMultBonus) * elementBonus);
       if (op.heal) extraHeal += Math.floor(op.heal * elementBonus);
       if (op.pierce) pierceDamage += Math.floor(op.pierce * elementBonus);
       if (op.statusToEnemy) {
@@ -1882,7 +1897,7 @@ setGame(prev => {
         }
         setDice(pd => pd.map(d => ({ ...d, rolling: false, kept: false })));
         // 元素骰子坍缩 + 小丑骰子1-9随机
-        setDice(prev => applyDiceSpecialEffects(prev));
+        setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
         playSound('dice_lock');
         // Auto-sort dice by value ascending after roll
         await new Promise(r => setTimeout(r, 200));
@@ -1955,6 +1970,7 @@ useEffect(() => {
       const res = relic.effect({
         cursedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCursed).length,
         crackedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCracked).length,
+        currentGold: game.souls,
       });
       if (res.goldBonus && res.goldBonus > 0) {
         baseGold += res.goldBonus;
@@ -3361,6 +3377,7 @@ useEffect(() => {
                         } : { rotate: 0, scale: 1, y: 0, opacity: 1 }}
                         transition={diceDiscardAnim && !die.spent ? { duration: 0.25, ease: 'easeIn' } : die.rolling ? { repeat: Infinity, duration: 0.15, ease: 'linear' } : die.playing ? { duration: 0.4, ease: 'easeOut' } : die.selected ? { duration: 0.12, type: 'spring', stiffness: 500, damping: 25 } : { duration: 0.06, ease: 'easeOut' }}
                         onClick={() => !die.rolling && !game.isEnemyTurn && game.playsLeft > 0 && toggleSelect(die.id)}
+                        onDoubleClick={(e) => { e.stopPropagation(); toggleLock(die.id); }}
                         className={`${getDiceElementClass(
                           isNormalAttackMulti && die.selected && die.element !== 'normal' ? 'normal' : die.element,
                           die.selected, die.rolling, invalidDiceIds.has(die.id),
@@ -3368,6 +3385,7 @@ useEffect(() => {
                         )} ${die.selected ? 'dice-selected-enhanced' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
                         style={{ 
                           fontSize: '26px', width: '56px', height: '56px',
+                          ...(die.locked ? { boxShadow: '0 0 6px rgba(234,179,8,0.6)', borderColor: '#eab308' } : {}),
                           ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
@@ -3377,6 +3395,14 @@ useEffect(() => {
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (
                           <div className="absolute top-0.5 right-0.5 pointer-events-none">
                             <ElementBadge element={die.element} size={8} />
+                          </div>
+                        )}
+                        {die.locked && (
+                          <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 pointer-events-none">
+                            <svg width="10" height="10" viewBox="0 0 10 10" className="drop-shadow-[0_0_2px_rgba(234,179,8,0.8)]">
+                              <rect x="1" y="5" width="8" height="5" rx="1" fill="#eab308"/>
+                              <path d="M3 5V3a2 2 0 0 1 4 0v2" fill="none" stroke="#eab308" strokeWidth="1.5"/>
+                            </svg>
                           </div>
                         )}
                       </motion.button>

@@ -76,12 +76,12 @@ const ironSkinRelic: Relic = {
 const scattershotRelic: Relic = {
   id: 'scattershot_relic',
   name: '散射弹幕',
-  description: '普通攻击时，每颗选中骰子额外+4伤害',
+  description: '普通攻击时，点数总和≥15后每颗骰子基础伤害+3',
   icon: 'blade',
   rarity: 'common',
   trigger: 'on_play',
   effect: (ctx) => ({
-    damage: (ctx.handType === '普通攻击') ? (ctx.diceCount || 0) * 4 : 0,
+    damage: (ctx.handType === '普通攻击' && (ctx.pointSum || 0) >= 15) ? (ctx.diceCount || 0) * 3 : 0,
   }),
 };
 
