@@ -841,7 +841,7 @@ export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
     try {
       mp3Audio = new Audio(mp3Path);
       mp3Audio.loop = true;
-      mp3Audio.volume = masterVolume * 0.175; // MP3 volume (0.175 as base, further reduced 50%)
+      mp3Audio.volume = masterVolume * 0.35; // MP3 volume (source files already reduced 50%)
       mp3Audio.play().catch(e => console.warn('MP3 BGM autoplay blocked:', e));
     } catch (e) {
       console.error('MP3 BGM error:', e);
@@ -993,7 +993,7 @@ export const setMasterVolume = (vol: number) => {
   masterVolume = Math.max(0, Math.min(1, vol));
   // Sync MP3 BGM volume
   if (mp3Audio) {
-    mp3Audio.volume = masterVolume * 0.175;
+    mp3Audio.volume = masterVolume * 0.35;
   }
 };
 
