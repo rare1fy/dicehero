@@ -49,19 +49,44 @@ export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: bool
       style={{
         width: s,
         height: s,
-        background: `linear-gradient(180deg, ${colors.bg}dd 0%, ${colors.bg}99 100%)`,
-        border: `${highlight ? 2 : 1}px solid ${colors.border}${highlight ? 'ff' : '88'}`,
-        borderRadius: '2px',
-        boxShadow: highlight
-          ? `0 0 4px ${colors.border}66, inset 1px 1px 0 rgba(255,255,255,0.15)`
-          : `inset 1px 1px 0 rgba(255,255,255,0.1)`,
+        ...(defId === 'elemental' ? {
+          background: 'linear-gradient(135deg, #c04020, #3a1858, #2080a8, #5040a0, #408020, #a08020)',
+          backgroundSize: '300% 300%',
+          animation: 'elemental-flow 4s steps(8) infinite',
+          border: `${highlight ? 2 : 1}px solid`,
+          borderImage: 'linear-gradient(135deg, #e07830, #50b8e0, #8060c0, #70c030, #d4a030) 1',
+          borderRadius: '0px',
+          boxShadow: highlight
+            ? '0 0 6px rgba(140,80,220,0.6), inset 1px 1px 0 rgba(255,255,255,0.15)'
+            : '0 0 3px rgba(140,80,220,0.3), inset 1px 1px 0 rgba(255,255,255,0.1)',
+        } : {
+          background: `linear-gradient(180deg, ${colors.bg}dd 0%, ${colors.bg}99 100%)`,
+          border: `${highlight ? 2 : 1}px solid ${colors.border}${highlight ? 'ff' : '88'}`,
+          borderRadius: '2px',
+          boxShadow: highlight
+            ? `0 0 4px ${colors.border}66, inset 1px 1px 0 rgba(255,255,255,0.15)`
+            : `inset 1px 1px 0 rgba(255,255,255,0.1)`,
+        }),
       }}
       title={def.name}
     >
-      {/* 骰子点 */}
-      <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
-        <circle cx="4" cy="4" r="2" fill={colors.dot} />
-      </svg>
+      {/* 骰子点 - 元素骰子用菱形多色标记 */}
+      {defId === 'elemental' ? (
+        <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
+          {/* 菱形外框 */}
+          <polygon points="4,0.5 7.5,4 4,7.5 0.5,4" fill="none" stroke="#b080e0" strokeWidth="0.8" />
+          {/* 五色元素点 */}
+          <rect x="3.2" y="1.2" width="1.6" height="1.6" fill="#e07830" /> {/* fire */}
+          <rect x="5.2" y="3.2" width="1.6" height="1.6" fill="#50b8e0" /> {/* ice */}
+          <rect x="3.2" y="5.2" width="1.6" height="1.6" fill="#8060c0" /> {/* thunder */}
+          <rect x="1.2" y="3.2" width="1.6" height="1.6" fill="#70c030" /> {/* poison */}
+          <rect x="3.2" y="3.2" width="1.6" height="1.6" fill="#d4a030" /> {/* holy center */}
+        </svg>
+      ) : (
+        <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
+          <circle cx="4" cy="4" r="2" fill={colors.dot} />
+        </svg>
+      )}
       {/* 元素标记 */}
       {hasElement && s >= 14 && (
         <div className="absolute -top-0.5 -right-0.5 pointer-events-none">

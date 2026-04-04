@@ -213,6 +213,12 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + 'pixel-dice-cracked ' + crackedGlow;
   }
 
+  // Elemental dice - multi-element energy flow
+  if (diceDefId === 'elemental') {
+    const elemGlow = selected && !invalid ? 'dice-glow-elemental' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-elemental ' + elemGlow;
+  }
+
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
   const glow = selected && !invalid ? style.glowClass : '';
   const effect = !rolling && !invalid ? style.effectClass : '';
