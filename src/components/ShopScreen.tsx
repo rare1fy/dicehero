@@ -128,7 +128,20 @@ const MerchantScreen: React.FC = () => {
   useEffect(() => { playSound('event'); }, []);
 
   const buyItem = useCallback((item: ShopItem) => {
-    if (game.souls < item.price) { addToast('金币不足！'); return; }
+    if (game.souls < item.price) { addToast('金币不足'); return; }
+    // removeDice: 扣金币后进入手动选择模式，不从商品列表移除
+    if (item.type === 'removeDice') {
+      playSound('shop_buy');
+      setGame(prev => ({
+        ...prev,
+        souls: prev.souls - item.price,
+        stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + item.price },
+      }));
+      addToast('✂ 选择要移除的骰子', 'gold');
+      addLog('购买了骰子净化 (-' + item.price + 'g)');
+      setRemoveDiceMode(true);
+      return;
+    }
     playSound('shop_buy');
     setGame(prev => {
       const newState: any = {
@@ -143,19 +156,13 @@ const MerchantScreen: React.FC = () => {
       if (item.type === 'dice' || item.type === 'specialDice') {
         newState.ownedDice = [...prev.ownedDice, { defId: item.diceDefId!, level: 1 }];
       }
-      if (item.type === 'removeDice') {
-        const removeIdx = prev.ownedDice.findLastIndex(d => d.defId !== 'basic');
-        if (removeIdx >= 0) {
-          newState.ownedDice = prev.ownedDice.filter((_: any, i: number) => i !== removeIdx);
-        }
-      }
       return newState;
     });
     if (item.type === 'augment' && item.augment) {
       pickReward(item.augment);
     }
-    addToast('\u2705 购买了 ' + item.label, 'gold');
-    addLog('商人购买: ' + item.label + ' (-' + item.price + 'g)');
+    addToast('\u2705 购买成功: ' + item.label, 'gold');
+    addLog('购买商品: ' + item.label + ' (-' + item.price + 'g)');
   }, [game.souls, setGame, pickReward, addToast, addLog]);
 
   // --- Remove Dice Selection Overlay ---

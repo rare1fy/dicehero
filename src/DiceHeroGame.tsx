@@ -2123,6 +2123,14 @@ setGame(prev => {
     }
   }, [enemies, game.phase, game.targetEnemyUid]);
 
+// 全局安全网：战斗中HP<=0时强制进入gameover
+useEffect(() => {
+    if (game.phase === 'battle' && game.hp <= 0) {
+      playSound('player_death');
+      setGame(prev => ({ ...prev, hp: 0, phase: 'gameover' }));
+    }
+  }, [game.phase, game.hp]);
+
 useEffect(() => {
     if (
       game.phase === 'battle' && 
@@ -2450,6 +2458,12 @@ useEffect(() => {
       }
       candidates.push({ id: 'reroll_legacy', type: 'reroll' as const, label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: rp() });
       const shopItems: ShopItem[] = candidates.sort(() => Math.random() - 0.5).slice(0, 3);
+      // 始终添加删除骰子选项
+      shopItems.push({
+        id: 'removeDice_fixed', type: 'removeDice' as const,
+        label: '骰子净化', desc: '移除一颗骰子，瘦身构筑',
+        price: SHOP_CONFIG.removeDicePrice
+      });
       setGame(prev => ({ ...prev, phase: 'merchant', currentNode: next, shopItems }));
     } else if (next === 7) {
       setGame(prev => ({ ...prev, phase: 'event', currentNode: next }));
