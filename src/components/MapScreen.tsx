@@ -23,7 +23,8 @@ export const MapScreen: React.FC = () => {
           if (nodeElement) {
             nodeElement.scrollIntoView({ 
               behavior: isInitialMount.current ? 'auto' : 'smooth', 
-              block: 'center' 
+              block: 'center',
+              inline: 'center'
             });
           }
         } else {
@@ -40,7 +41,7 @@ export const MapScreen: React.FC = () => {
       }
     };
     requestAnimationFrame(() => { requestAnimationFrame(scroll); });
-  }, [currentNode]);
+  }, [currentNode, game.currentNodeId]);
 
   const maxDepth = Math.max(...game.map.map(n => n.depth));
   const layerHeight = 140;

@@ -964,8 +964,9 @@ export default function DiceHeroGame() {
       await new Promise(r => setTimeout(r, 300));
 
       // 分裂骰子：播放到它时额外弹出一颗随机点数骰子
-      if (settleDice[i].diceDefId === 'split') {
-        const splitValue = settleDice[i].value; // 复制相同点数
+      if (settleDice[i].diceDefId === 'split' && bestHand !== '普通攻击') {
+        const splitFaces = [1, 2, 3, 4, 5, 6];
+        const splitValue = splitFaces[Math.floor(Math.random() * splitFaces.length)]; // 复制相同点数
         const splitDie: Die = {
           id: settleDice[i].id + 9000,
           diceDefId: 'standard',
