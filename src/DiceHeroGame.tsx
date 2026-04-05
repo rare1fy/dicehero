@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -58,6 +58,8 @@ import { ChapterTransition } from './components/ChapterTransition';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ReplacementModal } from './components/ReplacementModal';
 import { ToastDisplay } from './components/ToastDisplay';
+import { EnemyQuoteBubble } from './components/EnemyQuoteBubble';
+import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from './config/enemies';
 
 
 
@@ -158,6 +160,34 @@ export default function DiceHeroGame() {
   const [hpGained, setHpGained] = useState(false);
   const [_armorGained, setArmorGained] = useState(false);
   const [rerollFlash, setRerollFlash] = useState(false);
+
+  // === 敌人台词气泡 ===
+  const [enemyQuotes, setEnemyQuotes] = useState<Record<string, string>>({});
+  const [enemyQuotedLowHp, setEnemyQuotedLowHp] = useState<Set<string>>(new Set());
+
+  /** 显示某个敌人的台词气泡，duration ms 后自动清除 */
+  const showEnemyQuote = (uid: string, text: string, duration = 2500) => {
+    setEnemyQuotes(prev => ({ ...prev, [uid]: text }));
+    setTimeout(() => {
+      setEnemyQuotes(prev => {
+        const next = { ...prev };
+        if (next[uid] === text) delete next[uid];
+        return next;
+      });
+    }, duration);
+  };
+
+  /** 从台词数组随机取一条 */
+  const pickQuote = (arr?: string[]): string | null => {
+    if (!arr || arr.length === 0) return null;
+    return arr[Math.floor(Math.random() * arr.length)];
+  };
+
+  /** 根据敌人 id 查找台词配置 */
+  const getEnemyQuotes = (enemyId: string) => {
+    const all = [...NORMAL_ENEMIES, ...ELITE_ENEMIES, ...BOSS_ENEMIES];
+    return all.find(e => e.id === enemyId)?.quotes;
+  };
 
   // === 结算演出状态 ===
   const [showDamageOverlay, setShowDamageOverlay] = useState<{damage: number, armor: number, heal: number} | null>(null);
@@ -261,6 +291,18 @@ export default function DiceHeroGame() {
     const firstWave = waves[0]?.enemies || [];
     setEnemies(firstWave);
     setEnemyEffects({}); setDyingEnemies(new Set());
+    // 出场台词
+    setEnemyQuotes({});
+    setEnemyQuotedLowHp(new Set());
+    setTimeout(() => {
+      firstWave.forEach((e, idx) => {
+        const q = getEnemyQuotes(e.configId);
+        const line = pickQuote(q?.enter);
+        if (line) {
+          setTimeout(() => showEnemyQuote(e.uid, line, 3000), idx * 400);
+        }
+      });
+    }, 300);
     setPlayerEffect(null);
     // Boss出场音效
     if (node.type === 'boss') {
@@ -1274,7 +1316,12 @@ export default function DiceHeroGame() {
             else { newStatuses.push({ ...s }); }
           });
         }
-        if (newHp <= 0) { setEnemyEffectForUid(e.uid, 'death'); playSound('enemy_death'); }
+        if (newHp <= 0) {
+          setEnemyEffectForUid(e.uid, 'death'); playSound('enemy_death');
+          const dq2 = getEnemyQuotes(e.configId);
+          const dl2 = pickQuote(dq2?.death);
+          if (dl2) showEnemyQuote(e.uid, dl2, 2000);
+        }
         return { ...e, hp: newHp, armor: arm, statuses: newStatuses };
       }));
     } else {
@@ -1289,7 +1336,19 @@ export default function DiceHeroGame() {
         remainingDamage -= absorbed;
       }
       finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
-      if (finalEnemyHp <= 0) { setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death'); }
+      if (finalEnemyHp <= 0) {
+      setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death');
+      const dq = getEnemyQuotes(targetEnemy.configId);
+      const dl = pickQuote(dq?.death);
+      if (dl) showEnemyQuote(targetUid, dl, 2000);
+    } else if (finalEnemyHp / targetEnemy.maxHp < 0.3 && !enemyQuotedLowHp.has(targetUid)) {
+        const lqc = getEnemyQuotes(targetEnemy.configId);
+        const ll = pickQuote(lqc?.lowHp);
+        if (ll) {
+          showEnemyQuote(targetUid, ll, 3000);
+          setEnemyQuotedLowHp(prev => new Set([...prev, targetUid]));
+        }
+      }
       
       setEnemies(prev => prev.map(e => {
         if (e.uid !== targetUid) return e;
@@ -1481,6 +1540,17 @@ export default function DiceHeroGame() {
           const nextWave = game.battleWaves[nextWaveIdx].enemies;
           setEnemies(nextWave);
           setEnemyEffects({}); setDyingEnemies(new Set());
+          setEnemyQuotes({});
+          setEnemyQuotedLowHp(new Set());
+          setTimeout(() => {
+            nextWave.forEach((e, idx) => {
+              const q = getEnemyQuotes(e.configId);
+              const line = pickQuote(q?.enter);
+              if (line) {
+                setTimeout(() => showEnemyQuote(e.uid, line, 3000), idx * 400);
+              }
+            });
+          }, 300);
           setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
           setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
@@ -1896,6 +1966,18 @@ export default function DiceHeroGame() {
           setPlayerEffect('flash');
           addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
           playSound('enemy');
+          // 30% 概率触发攻击台词
+          if (Math.random() < 0.3) {
+            const aqc = getEnemyQuotes(e.configId);
+            const al = pickQuote(aqc?.attack);
+            if (al) showEnemyQuote(e.uid, al, 1800);
+          }
+          // 受重击台词（单次伤害超过 15）
+          if (damage >= 15) {
+            const hqc = getEnemyQuotes(e.configId);
+            const hl = pickQuote(hqc?.hurt);
+            if (hl) setTimeout(() => showEnemyQuote(e.uid, hl, 2000), 600);
+          }
           
           // Ranger: second hit after short delay
           if (e.combatType === 'ranger') {
@@ -2864,6 +2946,12 @@ useEffect(() => {
                         {enemy.armor > 0 && <StatusIcon status={{ type: 'armor', value: enemy.armor }} align="center" />}
                         {enemy.statuses.map((s, i) => <StatusIcon key={i} status={s} align="center" />)}
                       </div>
+
+                      {/* Enemy quote bubble */}
+                      <EnemyQuoteBubble
+                        text={enemyQuotes[enemy.uid] || null}
+                        category={enemy.category}
+                      />
 
                       {/* Enemy sprite */}
                       <div className="animate-enemy-breathe relative">

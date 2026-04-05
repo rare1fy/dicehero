@@ -42,6 +42,7 @@ let uidCounter = 0;
 const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Enemy => {
   return {
     uid: `enemy_${++uidCounter}_${Date.now()}`,
+    configId: config.id,
     name: config.name,
     emoji: config.emoji,
     hp: Math.floor(config.baseHp * hpScale),

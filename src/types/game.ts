@@ -130,6 +130,7 @@ export type EnemyCombatType = 'warrior' | 'guardian' | 'ranger' | 'caster' | 'pr
 
 export interface Enemy {
   uid: string;  // runtime unique id for multi-enemy targeting
+  configId: string;  // links back to EnemyConfig.id for quotes lookup
   name: string;
   hp: number;
   maxHp: number;
