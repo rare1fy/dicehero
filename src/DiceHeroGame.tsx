@@ -772,7 +772,7 @@ export default function DiceHeroGame() {
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
       if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`閲戝竵+${res.goldBonus}`); }
+      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`金币+${res.goldBonus}`); }
       if (res.goldBonus) { /* toast will be shown in playHand */ }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
@@ -2359,7 +2359,7 @@ useEffect(() => {
         addLog(`获得了 ${item.value} 颗骰子。`);
       }
 
-      // 閬楃墿鎷惧彇
+      // 遗物拾取
       if (item.type === 'relic' && item.relicData) {
         nextState.relics = [...nextState.relics, { ...item.relicData }];
         addLog(`获得遗物: ${item.relicData.name}`);
