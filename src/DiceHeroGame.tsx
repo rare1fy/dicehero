@@ -712,6 +712,7 @@ export default function DiceHeroGame() {
     let extraDamage = 0;
     let extraArmor = 0;
     let extraHeal = 0;
+    let holyPurify = false;
     let pierceDamage = 0;
     let armorBreak = false;
     let multiplier = 1;
@@ -826,48 +827,8 @@ export default function DiceHeroGame() {
           case 'holy':
             // 圣光：恢复等同点数的生命值
             extraHeal += Math.floor(diceValue * elementBonus);
-            // 圣光净化：清除玩家一个负面状态（包括从骰子库移除一颗诅咒骰子）
-            const negativeStatuses = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
-            if (negativeStatuses.length > 0) {
-              const purged = negativeStatuses[Math.floor(Math.random() * negativeStatuses.length)];
-              setGame(prev => ({
-                ...prev,
-                statuses: prev.statuses.filter(s => s !== purged),
-              }));
-              addLog(`圣光净化！清除了 ${purged.type} 效果`);
-              addToast(`✦ 净化 ${purged.type}`, 'heal');
-            } else {
-              // 没有负面状态，尝试移除一颗诅咒骰子
-              const cursedIdx = game.ownedDice.findIndex(d => d.defId === 'cursed' || d.defId === 'cracked');
-              if (cursedIdx >= 0) {
-                const cursedDefId = game.ownedDice[cursedIdx].defId;
-                const cursedDef = getDiceDef(cursedDefId);
-                setGame(prev => {
-                  const newOwned = [...prev.ownedDice];
-                  newOwned.splice(cursedIdx, 1);
-                  let removedFromBag = false;
-                  const newBag = prev.diceBag.filter(id => {
-                    if (!removedFromBag && id === cursedDefId) {
-                      removedFromBag = true;
-                      return false;
-                    }
-                    return true;
-                  });
-                  // 同时从弃骰库移除
-                  let removedFromDiscard = false;
-                  const newDiscard = prev.discardPile.filter(id => {
-                    if (!removedFromDiscard && id === cursedDefId) {
-                      removedFromDiscard = true;
-                      return false;
-                    }
-                    return true;
-                  });
-                  return { ...prev, ownedDice: newOwned, diceBag: newBag, discardPile: newDiscard };
-                });
-                addLog(`圣光净化！移除了 ${cursedDef.name}`);
-                addToast(`✦ 净化 ${cursedDef.name}`, 'heal');
-              }
-            }
+            // 标记需要圣光净化（副作用延迟到 playHand 中执行）
+            holyPurify = true;
             break;
         }
         return; // 元素骰子不走普通onPlay
@@ -926,6 +887,7 @@ export default function DiceHeroGame() {
       X,
       selectedValues: selected.map(d => d.value),
       goldBonus,
+      holyPurify,
     };
   }, [dice, activeAugments, currentHands]);
 
@@ -1437,6 +1399,49 @@ export default function DiceHeroGame() {
     if (outcome.triggeredAugments.length > 0) {
       const augDetails = outcome.triggeredAugments.map(a => `${a.name}(${a.details})`).join(', ');
       logMsg += ` (触发: ${augDetails})`;
+    }
+
+    // 圣光净化：出牌后才执行副作用（清除负面状态或移除诅咒骰子）
+    if (outcome.holyPurify) {
+      const negativeStatuses = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
+      if (negativeStatuses.length > 0) {
+        const purged = negativeStatuses[Math.floor(Math.random() * negativeStatuses.length)];
+        setGame(prev => ({
+          ...prev,
+          statuses: prev.statuses.filter(s => s !== purged),
+        }));
+        addLog(`圣光净化！清除了 ${purged.type} 效果`);
+        addToast(`✨ 净化 ${purged.type}`, 'heal');
+      } else {
+        const cursedIdx = game.ownedDice.findIndex(d => d.defId === 'cursed' || d.defId === 'cracked');
+        if (cursedIdx >= 0) {
+          const cursedDefId = game.ownedDice[cursedIdx].defId;
+          const cursedDef = getDiceDef(cursedDefId);
+          setGame(prev => {
+            const newOwned = [...prev.ownedDice];
+            newOwned.splice(cursedIdx, 1);
+            let removedFromBag = false;
+            const newBag = prev.diceBag.filter(id => {
+              if (!removedFromBag && id === cursedDefId) {
+                removedFromBag = true;
+                return false;
+              }
+              return true;
+            });
+            let removedFromDiscard = false;
+            const newDiscard = prev.discardPile.filter(id => {
+              if (!removedFromDiscard && id === cursedDefId) {
+                removedFromDiscard = true;
+                return false;
+              }
+              return true;
+            });
+            return { ...prev, ownedDice: newOwned, diceBag: newBag, discardPile: newDiscard };
+          });
+          addLog(`圣光净化！移除了 ${cursedDef.name}`);
+          addToast(`✨ 净化 ${cursedDef.name}`, 'heal');
+        }
+      }
     }
     logMsg += `。`;
     addLog(logMsg);
