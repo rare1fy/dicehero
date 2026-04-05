@@ -382,17 +382,16 @@ export default function DiceHeroGame() {
 
   const rollAllDice = async () => {
     playSound('roll');
+    // 使用 gameRef.current 读取最新状态，避免闭包中 game 的过期值
+    const g = gameRef.current;
     // 先把当前手牌中未使用的骰子放回弃骰库（防止骰子丢失）
     const handDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
-    const currentDiscard = [...game.discardPile, ...handDefIds];
-    if (handDefIds.length > 0) {
-      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...handDefIds] }));
-    }
-    const relicDrawBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
-    const count = game.drawCount + relicDrawBonus;
+    const currentDiscard = [...g.discardPile, ...handDefIds];
+    const relicDrawBonus = g.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
+    const count = g.drawCount + relicDrawBonus;
     
     // 从骰子库抽取（包含刚放回的手牌骰子）
-    const { drawn, newBag, newDiscard, shuffled } = drawFromBag(game.diceBag, currentDiscard, count);
+    const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, currentDiscard, count);
     
     // Shuffle notice
     if (shuffled) {
@@ -401,7 +400,7 @@ export default function DiceHeroGame() {
       addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
     }
     
-    // 更新骰子库状态
+    // 原子更新骰子库状态
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
 
     // 设置rolling状态（动画）
@@ -2072,27 +2071,28 @@ setGame(prev => {
     const schrodingerBonus = _schrodingerBonus;
     // Use setTimeout to ensure previous state updates are flushed
     setTimeout(() => {
-      // Read latest game state from ref
+      // Read latest game state from ref (setTimeout ensures prior setGame calls are flushed)
       const g = gameRef.current;
       setRerollCount(0); // Reset reroll count for new turn
       const needDraw = Math.max(0, g.drawCount + schrodingerBonus - remainingCount);
       
-      // 用 setGame(prev=>) 内部读取最新 diceBag/discardPile，避免竞态覆盖
+      // 直接从 gameRef.current 读取最新状态进行抽牌计算
+      // setTimeout 保证之前的 setGame 已 flush，gameRef.current 是最新值
+      let finalBag = [...g.diceBag];
+      let finalDiscard = [...g.discardPile];
       let drawnDice: Die[] = [];
       let wasShuffled = false;
       
-      setGame(prev => {
-        let finalBag = [...prev.diceBag];
-        let finalDiscard = [...prev.discardPile];
-        if (needDraw > 0) {
-          const result = drawFromBag(finalBag, finalDiscard, needDraw);
-          drawnDice = result.drawn;
-          finalBag = result.newBag;
-          finalDiscard = result.newDiscard;
-          wasShuffled = result.shuffled;
-        }
-        return { ...prev, diceBag: finalBag, discardPile: finalDiscard };
-      });
+      if (needDraw > 0) {
+        const result = drawFromBag(finalBag, finalDiscard, needDraw);
+        drawnDice = result.drawn;
+        finalBag = result.newBag;
+        finalDiscard = result.newDiscard;
+        wasShuffled = result.shuffled;
+      }
+      
+      // 原子更新骰子库状态
+      setGame(prev => ({ ...prev, diceBag: finalBag, discardPile: finalDiscard }));
       
       if (wasShuffled) { setShuffleAnimating(true); setTimeout(() => setShuffleAnimating(false), 800); addToast('\u2728 \u5f03\u9ab0\u5e93\u5df2\u6d17\u56de\u9ab0\u5b50\u5e93!', 'buff'); }
       
@@ -2102,15 +2102,13 @@ setGame(prev => {
         selected: false,
         kept: true,
       }));
-      // drawnDice already have unique ids from drawFromBag
+      // drawnDice is computed synchronously above, guaranteed to have values
       const freshDice: Die[] = drawnDice.map((d) => ({
         ...d,
         rolling: true,
         kept: false,
         value: Math.floor(Math.random() * 6) + 1,
       }));
-      
-      // diceBag/discardPile already updated in setGame above
       
       // Side effects: animations and dice update
       setDiceDrawAnim(true);
