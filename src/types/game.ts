@@ -110,6 +110,62 @@ export interface Augment {
 // 地图
 // ============================================================
 
+
+// ============================================================
+// Loop Floor Map System
+// ============================================================
+
+export type MapMode = 'branching' | 'loop_floor';
+
+export type LoopFloorTheme = 'forge' | 'bazaar' | 'sanctum' | 'boss';
+
+export type LoopTileType =
+  | 'entry'
+  | 'battle'
+  | 'boss_battle'
+  | 'event'
+  | 'shop'
+  | 'campfire'
+  | 'theme'
+  | 'risk'
+  | 'exit';
+
+export type FloorObjectiveType = 'battles_won';
+
+export type FloorRewardType = 'heal' | 'gold' | 'upgrade_die' | 'free_reroll' | 'max_hp' | 'draw_count';
+
+export interface LoopFloorTile {
+  id: string;
+  index: number;
+  type: LoopTileType;
+  resolved: boolean;
+  visitCount: number;
+  battleSeed?: number;
+  themeTag?: string;
+}
+
+export interface FloorObjective {
+  type: FloorObjectiveType;
+  target: number;
+  current: number;
+  description: string;
+}
+
+export interface LoopFloor {
+  id: string;
+  floorIndex: number;
+  theme: LoopFloorTheme;
+  tiles: LoopFloorTile[];
+  entryTileIndex: number;
+  exitTileIndex: number;
+  objective: FloorObjective;
+  isExitOpen: boolean;
+  completed: boolean;
+  totalMovePoints: number;
+  battleCount: number;
+  settlementSeed: number;
+}
+
 export type NodeType = 'enemy' | 'elite' | 'boss' | 'event' | 'campfire' | 'treasure' | 'merchant';
 
 export interface MapNode {
@@ -364,7 +420,7 @@ export interface GameState {
   elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure';
+  phase: 'start' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure' | 'loopMap' | 'floorSettlement' | 'floorReward';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target
@@ -377,7 +433,15 @@ export interface GameState {
   statuses: StatusEffect[];
   lootItems: LootItem[];
   enemyHpMultiplier: number;
-  chapter: number;          // 当前大关 (1-5)
+  chapter: number;
+  // --- Loop Floor Map System ---
+  mapMode: MapMode;
+  loopFloors: LoopFloor[];
+  currentFloorIndex: number;
+  currentTileIndex: number;
+  pendingMoveRoll: number | null;
+  floorRewardOptions: string[];
+  currentFloorTheme: LoopFloorTheme | null;          // 当前大关 (1-5)
   stats: RunStats;
   pendingReplacementAugment: Augment | null;
 }
