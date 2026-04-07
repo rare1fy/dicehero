@@ -8,6 +8,7 @@ import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
 import type { Augment } from '../types/game';
+import { getMapPhase } from '../utils/mapPhaseHelper';
 
 interface MerchantItem {
   id: string;
@@ -153,7 +154,7 @@ export const MerchantScreen: React.FC = () => {
 
   const leave = useCallback(() => {
     playSound('select');
-    setGame(prev => ({ ...prev, phase: 'map' }));
+    setGame(prev => ({ ...prev, phase: getMapPhase(prev) }));
   }, [setGame]);
 
   return (

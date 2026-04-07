@@ -7,6 +7,7 @@ import { formatDescription } from '../utils/richText';
 import { playSound } from '../utils/sound';
 import { getDiceDef, getUpgradedFaces } from '../data/dice';
 import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
+import { getMapPhase } from '../utils/mapPhaseHelper';
 
 /** 图标ID到组件的映射 */
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -53,14 +54,14 @@ export const EventScreen: React.FC = () => {
       case 'modifyHp': {
         const val = action.value || 0;
         if (resolvedToast) addToast(resolvedToast, action.toastType || (val < 0 ? 'damage' : 'heal'));
-        setGame(prev => ({ ...prev, hp: Math.max(1, Math.min(prev.maxHp, prev.hp + val)), phase: 'map' }));
+        setGame(prev => ({ ...prev, hp: Math.max(1, Math.min(prev.maxHp, prev.hp + val)), phase: getMapPhase(prev) }));
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
       case 'modifySouls': {
         const val = action.value || 0;
         if (resolvedToast) addToast(resolvedToast, action.toastType || 'gold');
-        setGame(prev => ({ ...prev, souls: Math.max(0, prev.souls + val), phase: 'map' }));
+        setGame(prev => ({ ...prev, souls: Math.max(0, prev.souls + val), phase: getMapPhase(prev) }));
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
@@ -73,7 +74,7 @@ export const EventScreen: React.FC = () => {
             ...prev,
             hp: Math.max(1, prev.hp + hpCost),
             handLevels: { ...prev.handLevels, [handType]: currentLevel + 1 },
-            phase: 'map'
+            phase: getMapPhase(prev)
           };
         });
         if (resolvedLog) addLog(resolvedLog);
@@ -81,7 +82,7 @@ export const EventScreen: React.FC = () => {
       }
       case 'modifyMaxHp': {
         const val = action.value || 0;
-        setGame(prev => ({ ...prev, maxHp: prev.maxHp + val, hp: Math.min(prev.maxHp + val, prev.hp + (val > 0 ? val : 0)), phase: 'map' }));
+        setGame(prev => ({ ...prev, maxHp: prev.maxHp + val, hp: Math.min(prev.maxHp + val, prev.hp + (val > 0 ? val : 0)), phase: getMapPhase(prev) }));
         if (resolvedToast) addToast(resolvedToast, action.toastType || 'buff');
         if (resolvedLog) addLog(resolvedLog);
         return;
@@ -102,7 +103,7 @@ export const EventScreen: React.FC = () => {
             }
             // Only return to map if no battle was started (startBattle sets phase itself)
             if (!hasBattle) {
-              setGame(prev => ({ ...prev, phase: 'map' }));
+              setGame(prev => ({ ...prev, phase: getMapPhase(prev) }));
             }
             if (outcome.log) addLog(outcome.log);
             return;
@@ -120,7 +121,7 @@ export const EventScreen: React.FC = () => {
           addToast(`获得遗物「${relic.name}」!`, 'buff');
           addLog(`获得了遗物「${relic.name}」`);
         }
-        setGame(prev => ({ ...prev, phase: 'map' }));
+        setGame(prev => ({ ...prev, phase: getMapPhase(prev) }));
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
@@ -130,7 +131,7 @@ export const EventScreen: React.FC = () => {
         break;
       }
       case 'noop': {
-        setGame(prev => ({ ...prev, phase: 'map' }));
+        setGame(prev => ({ ...prev, phase: getMapPhase(prev) }));
         if (resolvedLog) addLog(resolvedLog);
         return;
       }
@@ -244,7 +245,7 @@ export const EventScreen: React.FC = () => {
                 addLog(`${def.name} 已被投入熔炉移除。`);
                 setRemoveDiceMode(false);
                 setRemoveDiceIdx(null);
-                setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
+                setTimeout(() => setGame(prev => ({ ...prev, phase: getMapPhase(prev) })), 800);
               }}
               className={`pixel-btn text-[10px] px-6 py-2 ${!canRemove ? 'opacity-40 cursor-not-allowed' : ''}`}
               style={{ background: 'var(--pixel-red)', color: 'white' }}

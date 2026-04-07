@@ -8,6 +8,7 @@ import { PixelCampfire, PixelHeart, PixelDice, PixelFlame } from './PixelIcons';
 import { ElementBadge, getOnPlayDescription, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { CAMPFIRE_CONFIG } from '../config';
+import { getMapPhase } from '../utils/mapPhaseHelper';
 
 export const CampfireScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
@@ -149,7 +150,7 @@ export const CampfireScreen: React.FC = () => {
                     addLog(`${def.name} 已被净化移除。`);
                     addToast(`✖ ${def.name} 已永久移除`, 'damage');
                     setCampfireUsed(true);
-                    setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
+                    setTimeout(() => setGame(prev => ({ ...prev, phase: getMapPhase(prev) })), 800);
                   }}
                   className="w-full py-2 mt-2 pixel-btn text-[10px]"
                   style={{ background: 'var(--pixel-red)', color: 'white' }}
@@ -310,7 +311,7 @@ export const CampfireScreen: React.FC = () => {
                     addLog(`${def.name} 已强化至 Lv.${target.level + 1}！`);
                     addToast(`▲ ${def.name} 升级到 Lv.${target.level + 1}!`, 'buff');
                     setCampfireUsed(true);
-                    setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
+                    setTimeout(() => setGame(prev => ({ ...prev, phase: getMapPhase(prev) })), 800);
                   }}
                   className="w-full py-2 mt-2 pixel-btn pixel-btn-primary text-[10px] disabled:opacity-30"
                 >
@@ -345,7 +346,7 @@ export const CampfireScreen: React.FC = () => {
               addToast('篑火休整 +' + CAMPFIRE_CONFIG.restHeal + ' HP', 'heal');
               playSound('heal');
               setCampfireUsed(true);
-              setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + CAMPFIRE_CONFIG.restHeal), phase: 'map' }));
+              setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + CAMPFIRE_CONFIG.restHeal), phase: getMapPhase(prev) }));
             }}
             className="w-full p-4 pixel-panel flex items-center justify-between transition-all group"
             style={{ borderColor: 'var(--pixel-orange)' }}

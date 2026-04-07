@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Die, Augment, MapNode, Enemy, GameState, Relic } from '../types/game';
+import type { Die, Augment, MapNode, Enemy, GameState, Relic, LoopFloorTile } from '../types/game';
 
 interface Toast {
   id: number;
@@ -40,6 +40,10 @@ export interface GameContextType {
   addLog: (msg: string) => void;
   handleSelectStartingRelic: (relic: Relic) => void;
   handleSkipStartingRelic: () => void;
+
+  // Loop Floor Map actions
+  rollAndMoveOnFloor: () => void;
+  enterLoopTile: (tile: LoopFloorTile) => void;
 }
 
 export const GameContext = React.createContext<GameContextType>(null!);

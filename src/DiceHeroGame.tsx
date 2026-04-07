@@ -59,6 +59,8 @@ import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ReplacementModal } from './components/ReplacementModal';
 import { ToastDisplay } from './components/ToastDisplay';
 import { EnemyQuoteBubble } from './components/EnemyQuoteBubble';
+import { LoopFloorMap } from './components/LoopFloorMap';
+import { generateLoopFloors, rollMoveDice, getTargetTileIndex, checkExitCondition } from './utils/loopFloorGenerator';
 import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from './config/enemies';
 
 
@@ -99,6 +101,14 @@ export default function DiceHeroGame() {
     battleWaves: [],
     currentWaveIndex: 0,
     relics: [],
+    // --- Loop Floor Map System ---
+    mapMode: 'loop_floor' as const,
+    loopFloors: [],
+    currentFloorIndex: 0,
+    currentTileIndex: 0,
+    pendingMoveRoll: null,
+    floorRewardOptions: [],
+    currentFloorTheme: null,
     elementsUsedThisBattle: [],
     consecutiveNormalAttacks: 0,
     enemiesKilledThisBattle: 0,
@@ -121,7 +131,7 @@ export default function DiceHeroGame() {
       } else {
         startBGM('battle');
       }
-    } else if (game.phase === 'map' || game.phase === 'merchant' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward') {
+    } else if (game.phase === 'map' || game.phase === 'loopMap' || game.phase === 'merchant' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward' || game.phase === 'floorSettlement' || game.phase === 'floorReward') {
       startBGM('explore');
     } else if (game.phase === 'start' || game.phase === 'gameover' || game.phase === 'victory') {
       stopBGM();
@@ -129,7 +139,7 @@ export default function DiceHeroGame() {
   }, [game.phase]);
 
   useEffect(() => {
-    if (game.phase === 'reward' || game.phase === 'map') {
+    if (game.phase === 'reward' || game.phase === 'map' || game.phase === 'loopMap') {
       setEnemies([]);
     }
   }, [game.phase]);
@@ -2387,7 +2397,7 @@ useEffect(() => {
         chapter: nextChapter,
         map: newMap,
         currentNodeId: null,
-        phase: 'map' as const,
+        phase: prev.mapMode === 'loop_floor' ? 'loopMap' as const : 'map' as const,
         hp: newHp,
         armor: 0,
         souls: prev.souls + bonusGold,
@@ -2530,10 +2540,34 @@ useEffect(() => {
 
   const finishLoot = () => {
     playSound('select');
-    setGame(prev => ({
-      ...prev,
-      phase: 'map'
-    }));
+    setGame(prev => {
+      if (prev.mapMode === 'loop_floor') {
+        const floor = prev.loopFloors[prev.currentFloorIndex];
+        if (floor) {
+          const tile = floor.tiles[prev.currentTileIndex];
+          const isBattleTile = tile?.type === 'battle' || tile?.type === 'boss_battle';
+          const newObjective = {
+            ...floor.objective,
+            current: isBattleTile ? floor.objective.current + 1 : floor.objective.current,
+          };
+          const updatedTile = tile ? { ...tile, resolved: true } : tile;
+          const updatedTiles = [...floor.tiles];
+          if (updatedTile) updatedTiles[prev.currentTileIndex] = updatedTile;
+          const updatedFloor = {
+            ...floor,
+            tiles: updatedTiles,
+            battleCount: isBattleTile ? floor.battleCount + 1 : floor.battleCount,
+            objective: newObjective,
+            isExitOpen: newObjective.current >= newObjective.target,
+          };
+          const updatedFloors = [...prev.loopFloors];
+          updatedFloors[prev.currentFloorIndex] = updatedFloor;
+          return { ...prev, phase: 'loopMap' as const, loopFloors: updatedFloors };
+        }
+        return { ...prev, phase: 'loopMap' as const };
+      }
+      return { ...prev, phase: 'map' as const };
+    });
   };
 
   const pickReward = (aug: Augment) => {
@@ -2543,7 +2577,7 @@ useEffect(() => {
       if (emptyIdx !== -1) {
         newAugments[emptyIdx] = { ...aug, level: 1 };
         addLog(`\u83B7\u5F97\u4E86\u65B0\u6A21\u5757: ${aug.name}`);
-        return { ...prev, augments: newAugments, phase: 'map' };
+        return { ...prev, augments: newAugments, phase: prev.mapMode === 'loop_floor' ? 'loopMap' as const : 'map' as const };
       } else {
         // All 5 slots full, need to replace
         return { ...prev, pendingReplacementAugment: { ...aug, level: 1 } };
@@ -2605,6 +2639,107 @@ useEffect(() => {
   };
 
   // --- GameContext Provider Value ---
+
+  // ============================================================
+  // Loop Floor Map Functions
+  // ============================================================
+
+  const rollAndMoveOnFloor = () => {
+    setGame(prev => {
+      const floor = prev.loopFloors[prev.currentFloorIndex];
+      if (!floor) return prev;
+
+      const roll = rollMoveDice();
+      const targetIdx = getTargetTileIndex(prev.currentTileIndex, roll, floor.tiles.length);
+
+      const updatedFloor = {
+        ...floor,
+        totalMovePoints: floor.totalMovePoints + roll,
+      };
+
+      const updatedFloors = [...prev.loopFloors];
+      updatedFloors[prev.currentFloorIndex] = updatedFloor;
+
+      return {
+        ...prev,
+        currentTileIndex: targetIdx,
+        pendingMoveRoll: roll,
+        loopFloors: updatedFloors,
+      };
+    });
+
+    // After state update, trigger tile resolution
+    setTimeout(() => {
+      setGame(prev => {
+        const floor = prev.loopFloors[prev.currentFloorIndex];
+        if (!floor) return prev;
+
+        const tile = floor.tiles[prev.currentTileIndex];
+        if (!tile) return prev;
+
+        // If tile already resolved, give revisit reward
+        if (tile.resolved) {
+          return {
+            ...prev,
+            souls: prev.souls + 1,
+            logs: [...prev.logs, `践过已探索的格子，+1 金币`],
+          };
+        }
+
+        // Mark tile as visited
+        const updatedTile = { ...tile, visitCount: tile.visitCount + 1 };
+        const updatedTiles = [...floor.tiles];
+        updatedTiles[prev.currentTileIndex] = updatedTile;
+
+        const updatedFloor = { ...floor, tiles: updatedTiles };
+        const updatedFloors = [...prev.loopFloors];
+        updatedFloors[prev.currentFloorIndex] = updatedFloor;
+
+        // Route to appropriate phase based on tile type
+        let nextPhase = prev.phase;
+        switch (tile.type) {
+          case 'battle':
+          case 'boss_battle':
+            nextPhase = 'battle';
+            break;
+          case 'event':
+            nextPhase = 'event';
+            break;
+          case 'shop':
+            nextPhase = 'merchant';
+            break;
+          case 'campfire':
+            nextPhase = 'campfire';
+            break;
+          case 'theme':
+            nextPhase = 'event'; // Theme tiles use event system for now
+            break;
+          case 'risk':
+            nextPhase = 'event'; // Risk tiles use event system for now
+            break;
+          case 'exit':
+            if (floor.isExitOpen) {
+              nextPhase = 'floorSettlement';
+            }
+            break;
+          case 'entry':
+            // Entry tile - no action needed
+            break;
+        }
+
+        return {
+          ...prev,
+          phase: nextPhase,
+          loopFloors: updatedFloors,
+        };
+      });
+    }, 100);
+  };
+
+  const enterLoopTile = (_tile: any) => {
+    // Placeholder - tile entry is handled by rollAndMoveOnFloor
+  };
+
   const contextValue = {
     game, setGame,
     enemies, setEnemies, targetEnemy,
@@ -2623,6 +2758,7 @@ useEffect(() => {
     toasts, addToast,
     addLog,
     handleSelectStartingRelic, handleSkipStartingRelic,
+    rollAndMoveOnFloor, enterLoopTile,
   };
 
   if (game.phase === 'start') {
@@ -2657,6 +2793,7 @@ useEffect(() => {
 
       <div className="flex-1 overflow-hidden relative">
         {game.phase === 'map' && <MapScreen />}
+        {game.phase === 'loopMap' && <LoopFloorMap />}
         {game.phase === 'diceReward' && <DiceRewardScreen />}
         {game.phase === 'loot' && <LootScreen />}
         {game.phase === 'merchant' && <ShopScreen />}
