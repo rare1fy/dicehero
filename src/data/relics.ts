@@ -92,14 +92,14 @@ const scattershotRelic: Relic = {
 const crimsonGrail: Relic = {
   id: 'crimson_grail',
   name: '猩红圣杯',
-  description: '损失HP比例转化为最终伤害倍率(最高x2.5)',
+  description: '损失HP比例转化为最终伤害倍率(最高x1.8)',
   icon: 'grail',
   rarity: 'rare',
   trigger: 'on_play',
   effect: (ctx) => {
     const hpPercent = (ctx.currentHp || 100) / (ctx.maxHp || 100);
     const lostPercent = 1 - hpPercent;
-    const mult = 1 + Math.min(1.5, lostPercent * 2.5);
+    const mult = 1 + Math.min(0.8, lostPercent * 1.5);
     return { multiplier: mult };
   },
 };
