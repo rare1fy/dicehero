@@ -3531,12 +3531,11 @@ useEffect(() => {
                 </div>
               </div>
                 {/* 玩家状态栏 — 独立一行 */}
-                {true && (
-                  <div className="flex flex-wrap gap-1 px-3 pb-1">
-                    {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
-                    {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
-                  </div>
-                )}
+                {/* 状态图标栏 - 固定高度，不换行，避免底部跳动 */}
+                <div className="h-7 flex items-center gap-1 px-3 pb-1 overflow-x-auto overflow-y-hidden no-scrollbar">
+                  {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
+                  {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
+                </div>
 
               {/* 骰子操作面板 */}
 
