@@ -329,7 +329,9 @@ export type RelicTrigger =
   | 'on_battle_start'  // 战斗开始时
   | 'on_battle_end'    // 战斗结束时
   | 'on_damage_taken'  // 受到伤害时
-  | 'on_fatal'         // 致命伤害时
+  | 'on_fatal'
+  | 'on_floor_clear'
+  | 'on_move'         // 致命伤害时
   | 'passive';         // 被动持续生效
 
 export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
@@ -420,7 +422,7 @@ export interface GameState {
   elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure' | 'loopMap' | 'floorSettlement' | 'floorReward';
+  phase: 'start' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure' | 'loopMap' | 'floorSettlement' | 'floorReward' | 'themeTile';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target

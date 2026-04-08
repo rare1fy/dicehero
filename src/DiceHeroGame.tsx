@@ -61,6 +61,7 @@ import { ToastDisplay } from './components/ToastDisplay';
 import { EnemyQuoteBubble } from './components/EnemyQuoteBubble';
 import { LoopFloorMap } from './components/LoopFloorMap';
 import { FloorSettlementScreen } from './components/FloorSettlementScreen';
+import { ThemeTileScreen } from './components/ThemeTileScreen';
 import { FLOOR_REWARD_POOL, FLOOR_REWARD_CHOICES, FLOOR_POST_EVENTS } from './config/loopFloors';
 import { generateLoopFloors, rollMoveDice, getTargetTileIndex, checkExitCondition } from './utils/loopFloorGenerator';
 import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from './config/enemies';
@@ -2663,11 +2664,32 @@ useEffect(() => {
       const updatedFloors = [...prev.loopFloors];
       updatedFloors[prev.currentFloorIndex] = updatedFloor;
 
+      // Trigger on_move relics
+      let bonusSouls = prev.souls;
+      let newRelics = prev.relics;
+
+      // navigator_compass: +1 gold per step moved
+      if (prev.relics.some(r => r.id === 'navigator_compass')) {
+        bonusSouls += roll;
+      }
+
+      // point_accumulator: track total move points
+      if (prev.relics.some(r => r.id === 'point_accumulator')) {
+        newRelics = prev.relics.map(r => {
+          if (r.id === 'point_accumulator') {
+            return { ...r, counter: Math.min((r.counter || 0) + roll, r.maxCounter || 10) };
+          }
+          return r;
+        });
+      }
+
       return {
         ...prev,
         currentTileIndex: targetIdx,
         pendingMoveRoll: roll,
         loopFloors: updatedFloors,
+        souls: bonusSouls,
+        relics: newRelics,
       };
     });
 
@@ -2721,7 +2743,7 @@ useEffect(() => {
             nextPhase = 'campfire';
             break;
           case 'theme':
-            nextPhase = 'event'; // Theme tiles use event system for now
+            nextPhase = 'themeTile';
             break;
           case 'risk':
             nextPhase = 'event'; // Risk tiles use event system for now
@@ -2901,11 +2923,20 @@ useEffect(() => {
 
       const nextFloorIndex = prev.currentFloorIndex + 1;
 
+      // Trigger on_floor_clear relics (floor_conqueror: +1 counter per floor cleared)
+      const clearedRelics = prev.relics.map(r => {
+        if (r.id === 'floor_conqueror') {
+          return { ...r, counter: (r.counter || 0) + 1 };
+        }
+        return r;
+      });
+
       // Check if all floors completed
       if (nextFloorIndex >= prev.loopFloors.length) {
         // Chapter complete - go to chapter transition
         return {
           ...prev,
+          relics: clearedRelics,
           loopFloors: updatedFloors,
           phase: 'chapterTransition' as const,
           logs: [...prev.logs, '\u7ae0\u8282\u5b8c\u6210!'],
@@ -2916,6 +2947,7 @@ useEffect(() => {
       const nextFloor = updatedFloors[nextFloorIndex];
       return {
         ...prev,
+        relics: clearedRelics,
         loopFloors: updatedFloors,
         currentFloorIndex: nextFloorIndex,
         currentTileIndex: nextFloor ? nextFloor.entryTileIndex : 0,
@@ -2985,6 +3017,7 @@ useEffect(() => {
         {game.phase === 'map' && <MapScreen />}
         {game.phase === 'loopMap' && <LoopFloorMap />}
         {game.phase === 'floorSettlement' && <FloorSettlementScreen />}
+        {game.phase === 'themeTile' && <ThemeTileScreen />}
         {game.phase === 'diceReward' && <DiceRewardScreen />}
         {game.phase === 'loot' && <LootScreen />}
         {game.phase === 'merchant' && <ShopScreen />}

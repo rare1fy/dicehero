@@ -414,10 +414,53 @@ export const ALL_RELICS: Record<string, Relic> = {
   combo_master_relic: comboMasterRelic,
 };
 
+
+// ============================================================
+// 体系五：环层塔地图类
+// ============================================================
+
+/** 导航罗盘 - 每步移动获得 1 金币 */
+const navigatorCompass: Relic = {
+  id: 'navigator_compass',
+  name: '导航罗盘',
+  description: '每步移动获得 1 金币',
+  icon: 'gear',
+  rarity: 'common',
+  trigger: 'on_move',
+  effect: () => ({ goldBonus: 1 }),
+};
+
+/** 点数统计器 - 每层移动点数≥ 10 时，下场战斗 +3 护甲 */
+const pointAccumulator: Relic = {
+  id: 'point_accumulator',
+  name: '点数统计器',
+  description: '每层移动点数≥ 10 时，下场战斗 +3 护甲',
+  icon: 'layers',
+  rarity: 'uncommon',
+  trigger: 'on_battle_start',
+  effect: () => ({ armor: 3 }),
+  counter: 0,
+  maxCounter: 10,
+  counterLabel: '点',
+};
+
+/** 层厅征服者 - 每完成一层，永久 +2 基础伤害 */
+const floorConqueror: Relic = {
+  id: 'floor_conqueror',
+  name: '层厅征服者',
+  description: '每完成一层，永久 +2 基础伤害',
+  icon: 'crown',
+  rarity: 'rare',
+  trigger: 'on_play',
+  effect: (_ctx) => ({ damage: 2 }),
+  counter: 0,
+  counterLabel: '层',
+};
+
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
-  common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic],
-  uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic],
-  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic],
+  common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic, navigatorCompass],
+  uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator],
+  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror],
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker],
 };
 
