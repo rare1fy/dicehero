@@ -78,10 +78,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'void_wanderer',
     name: '虚空巡游者',
     emoji: '',
-    baseHp: 28, baseDmg: 3,
+    baseHp: 20, baseDmg: 3,
     category: 'normal',
     combatType: 'caster',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -103,10 +103,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'rotten_beetle',
     name: '腐化甲虫',
     emoji: '',
-    baseHp: 50, baseDmg: 3,
+    baseHp: 38, baseDmg: 3,
     category: 'normal',
     combatType: 'guardian',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -127,10 +127,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'scarlet_sprite',
     name: '猩红异灵',
     emoji: '',
-    baseHp: 25, baseDmg: 3,
+    baseHp: 18, baseDmg: 4,
     category: 'normal',
     combatType: 'caster',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -152,10 +152,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'forgotten_shadow',
     name: '遗忘之影',
     emoji: '',
-    baseHp: 40, baseDmg: 8,
+    baseHp: 32, baseDmg: 9,
     category: 'normal',
     combatType: 'warrior',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -176,10 +176,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'dark_spider_swarm',
     name: '暗棘蛛群',
     emoji: '',
-    baseHp: 24, baseDmg: 3,
+    baseHp: 18, baseDmg: 3,
     category: 'normal',
     combatType: 'ranger',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -202,10 +202,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'cracked_watcher',
     name: '裂隙守望者',
     emoji: '',
-    baseHp: 48, baseDmg: 4,
+    baseHp: 38, baseDmg: 5,
     category: 'normal',
     combatType: 'guardian',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -227,10 +227,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'soul_jellyfish',
     name: '噬魂水母',
     emoji: '',
-    baseHp: 22, baseDmg: 2,
+    baseHp: 16, baseDmg: 2,
     category: 'normal',
     combatType: 'priest',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -252,10 +252,10 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     id: 'iron_puppet',
     name: '铁链傀儡',
     emoji: '',
-    baseHp: 42, baseDmg: 9,
+    baseHp: 34, baseDmg: 10,
     category: 'normal',
     combatType: 'warrior',
-    drops: { gold: 15, augment: false },
+    drops: { gold: 20, augment: false },
     phases: [
       {
         actions: [
@@ -283,10 +283,10 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     id: 'chaos_aggregate',
     name: '混沌聚合体',
     emoji: '',
-    baseHp: 100, baseDmg: 9,
+    baseHp: 90, baseDmg: 11,
     category: 'elite',
     combatType: 'caster',
-    drops: { gold: 35, augment: true, rerollReward: 2 },
+    drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
         hpThreshold: 0.4,
@@ -315,10 +315,10 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     id: 'void_warden',
     name: '虚空公英雄长',
     emoji: '',
-    baseHp: 120, baseDmg: 5,
+    baseHp: 110, baseDmg: 6,
     category: 'elite',
     combatType: 'guardian',
-    drops: { gold: 35, augment: true, rerollReward: 2 },
+    drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
         actions: [
@@ -342,10 +342,10 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     id: 'abyss_prophet',
     name: '深渊预言者',
     emoji: '',
-    baseHp: 85, baseDmg: 8,
+    baseHp: 80, baseDmg: 10,
     category: 'elite',
     combatType: 'caster',
-    drops: { gold: 35, augment: true, rerollReward: 2 },
+    drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
         hpThreshold: 0.3,
@@ -376,10 +376,10 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     id: 'eternal_clocksmith',
     name: '永恒钟表匠',
     emoji: '',
-    baseHp: 90, baseDmg: 10,
+    baseHp: 85, baseDmg: 12,
     category: 'elite',
     combatType: 'warrior',
-    drops: { gold: 35, augment: true, rerollReward: 2 },
+    drops: { gold: 50, augment: true, rerollReward: 2 },
     phases: [
       {
         actions: [
@@ -408,7 +408,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'dream_weaver',
     name: '虚空织梦者',
     emoji: '',
-    baseHp: 180, baseDmg: 10,
+    baseHp: 220, baseDmg: 12,
     category: 'boss',
     combatType: 'caster',
     drops: { gold: 60, augment: true },
@@ -453,7 +453,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'eternal_lord',
     name: '永恒主宰',
     emoji: '',
-    baseHp: 300, baseDmg: 12,
+    baseHp: 380, baseDmg: 15,
     category: 'boss',
     combatType: 'caster',
     drops: { gold: 0, augment: false },

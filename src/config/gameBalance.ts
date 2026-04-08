@@ -1,4 +1,4 @@
-/**
+﻿/**
  * gameBalance.ts - 游戏平衡数值配置表
  * 
  * 所有关于影响游戏平衡的数值配置。
@@ -12,7 +12,7 @@ export const PLAYER_INITIAL = {
   hp: 100,
   maxHp: 100,
   armor: 0,
-  freeRerollsPerTurn: 1,
+  freeRerollsPerTurn: 1,  // 2次免费重投
   globalRerolls: 0,
   playsPerTurn: 1,
   souls: 0,
@@ -27,21 +27,21 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数，精确控制每层的倍率，确保精准的每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 0.65, dmgMult: 0.50 },  // depth 0: 教学关，低数值让玩家熟悉机制
-  { hpMult: 0.75, dmgMult: 0.60 },  // depth 1: 轻微提升，仍然轻松
-  { hpMult: 0.95, dmgMult: 0.80 },  // depth 2: 开始有点压力
-  { hpMult: 1.05, dmgMult: 0.90 },  // depth 3: 精英层（偏高HP低伤害限制）
-  { hpMult: 0.95, dmgMult: 0.85 },  // depth 4: 精英后休息
-  { hpMult: 1.15, dmgMult: 1.00 },  // depth 5: 热身完毕
-  { hpMult: 1.00, dmgMult: 0.90 },  // depth 6: 营火前缓冲
-  { hpMult: 1.50, dmgMult: 1.10 },  // depth 7: 中期Boss（大战前的考验）
-  { hpMult: 0.80, dmgMult: 0.75 },  // depth 8: Boss后过渡性恢复期
-  { hpMult: 1.20, dmgMult: 1.00 },  // depth 9: 重新热身
-  { hpMult: 1.50, dmgMult: 1.15 },  // depth 10: 后期开始
+  { hpMult: 0.45, dmgMult: 0.35 },  // depth 0: 教学关，低数值让玩家熟悉机制
+  { hpMult: 0.55, dmgMult: 0.45 },  // depth 1: 轻微提升，仍然轻松
+  { hpMult: 0.70, dmgMult: 0.60 },  // depth 2: 开始有点压力
+  { hpMult: 0.90, dmgMult: 0.75 },  // depth 3: 精英层（偏高HP低伤害限制）
+  { hpMult: 0.75, dmgMult: 0.70 },  // depth 4: 精英后休息
+  { hpMult: 1.00, dmgMult: 0.85 },  // depth 5: 热身完毕
+  { hpMult: 0.85, dmgMult: 0.75 },  // depth 6: 营火前缓冲
+  { hpMult: 1.60, dmgMult: 1.20 },  // depth 7: 中期Boss（大战前的考验）
+  { hpMult: 0.70, dmgMult: 0.60 },  // depth 8: Boss后过渡性恢复期
+  { hpMult: 1.10, dmgMult: 0.90 },  // depth 9: 重新热身
+  { hpMult: 1.40, dmgMult: 1.10 },  // depth 10: 后期开始
   { hpMult: 1.80, dmgMult: 1.30 },  // depth 11: 后期巅峰
-  { hpMult: 2.10, dmgMult: 1.45 },  // depth 12: pre-boss精英层
+  { hpMult: 2.20, dmgMult: 1.50 },  // depth 12: pre-boss精英层
   { hpMult: 1.20, dmgMult: 1.00 },  // depth 13: 营火前缓冲
-  { hpMult: 2.30, dmgMult: 1.50 },  // depth 14: 最终Boss（史诗级大战）
+  { hpMult: 2.80, dmgMult: 1.80 },  // depth 14: 最终Boss（史诗级大战）
 ];
 
 /** 获取指定层级的缩放系数 */
@@ -92,7 +92,7 @@ export const DICE_REWARD_REFRESH = {
 // ============================================================
 export const CAMPFIRE_CONFIG = {
   /** 休息恢复量 */
-  restHeal: 30,
+  restHeal: 40,
   /** 模块强化费用系数: cost = level * costPerLevel */
   upgradeCostPerLevel: 20,
   /** 模块最大等级 */
@@ -200,7 +200,7 @@ export const CHAPTER_CONFIG = {
     { hpMult: 2.30, dmgMult: 1.70 },  // 第5章: +130% HP, +70% DMG（最终决花战）
   ],
   /** 每章通关时恢复的HP比例 */
-  chapterHealPercent: 0.5,
+  chapterHealPercent: 0.6,
   /** 每章通关时获得的金币 */
-  chapterBonusGold: 50,
+  chapterBonusGold: 75,
 } as const;

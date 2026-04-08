@@ -20,8 +20,8 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     category: 'transition',
     condition: 'always',
-    effect: (_x, _dice, level) => ({ armor: Math.floor(5 * getScale(level)) }),
-    description: '每次出牌: 获得 4 点护甲',
+    effect: (_x, _dice, level) => ({ armor: Math.floor(7 * getScale(level)) }),
+    description: '每次出牌: 获得 7 点护甲',
   },
   {
     id: 'minor_heal',
@@ -38,8 +38,8 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     category: 'transition',
     condition: 'always',
-    effect: (_x, _dice, level) => ({ damage: Math.floor(5 * getScale(level)) }),
-    description: '每次出牌: 额外造成 5 点伤害',
+    effect: (_x, _dice, level) => ({ damage: Math.floor(8 * getScale(level)) }),
+    description: '每次出牌: 额外造成 8 点伤害',
   },
   {
     id: 'lucky_coin',
@@ -136,7 +136,7 @@ export const AUGMENTS_POOL: Augment[] = [
     level: 1,
     category: 'endgame',
     condition: 'pair',
-    effect: (_x, _dice, level) => ({ multiplier: 1 + (0.5 * getScale(level)) }),
+    effect: (_x, _dice, level) => ({ multiplier: 1 + (0.8 * getScale(level)) }),
     description: '对子: 最终伤害 ×1.5',
   },
   {
@@ -314,7 +314,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'self_harm',
     condition: 'always',
     effect: (_x, _dice, _level, context) => ({
-      damage: (context?.rerollsThisTurn || 0) * 8,
+      damage: (context?.rerollsThisTurn || 0) * 12,
     }),
     description: '每次出牌: 本回合每次重掷，额外 +8 伤害',
   },
@@ -337,10 +337,10 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'self_harm',
     condition: 'always',
     effect: (_x, _dice, level) => ({
-      multiplier: 1 + (1.5 * getScale(level)),
-      heal: -5,
+      multiplier: 1 + (0.8 * getScale(level)),
+      heal: -8,
     }),
-    description: '每次出牌: 伤害 ×2.5，但损失 5 HP',
+    description: '每次出牌: 伤害 ×1.8，但损失 8 HP',
   },
 ];
 

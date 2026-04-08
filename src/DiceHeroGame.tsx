@@ -263,7 +263,8 @@ export default function DiceHeroGame() {
     setGame(prev => ({
       ...prev,
       relics: [...prev.relics, relic],
-      hp: prev.hp - (relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15),
+      hp: Math.max(1, prev.hp - (relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15)),
+      maxHp: prev.maxHp - (relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15),
     }));
 
     addToast(`获得遗物「${relic.name}」!`, 'buff');
@@ -1031,7 +1032,7 @@ export default function DiceHeroGame() {
       await new Promise(r => setTimeout(r, 300));
 
       // 分裂骰子：播放到它时额外弹出一颗随机点数骰子
-      if (settleDice[i].diceDefId === 'split' && bestHand !== '普通攻击') {
+      if (settleDice[i].diceDefId === 'split') {
         const splitFaces = [1, 2, 3, 4, 5, 6];
         const splitValue = splitFaces[Math.floor(Math.random() * splitFaces.length)]; // 复制相同点数
         const splitDie: Die = {
@@ -1047,10 +1048,14 @@ export default function DiceHeroGame() {
         settleDice.splice(i + 1, 0, splitDie);
         splitOccurred = true;
         playSound('augment_activate');
-        // 更新显示 — 新骰子弹出
-        setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice] } : prev);
+        // 更新显示 — 新骰子弹出，同时把新骰子的值也加入计分并点亮
+        runningBase += splitValue;
+        const splitRunning = runningBase;
+        i++; // 跳过新插入的骰子，避免循环重复处理
+        setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice], currentBase: splitRunning, currentEffectIdx: i } : prev);
         await new Promise(r => setTimeout(r, 400));
         addLog(`分裂骰子分裂！额外弹出点数 ${splitValue}`);
+        addToast(`分裂! 弹出点数 ${splitValue}`, 'buff');
       }
     }
 

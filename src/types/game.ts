@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 // ============================================================
 // 骰子元素与稀有度
@@ -310,6 +310,7 @@ export interface RelicContext {
   consecutiveNormalAttacks?: number;
   // 免费重Roll追踪
   freeRerollsUsed?: number;
+  selectedDiceCount?: number;
 }
 
 export interface RelicEffect {
@@ -320,6 +321,8 @@ export interface RelicEffect {
   pierce?: number;
   goldBonus?: number;
   drawCountBonus?: number;
+  shopDiscount?: number;
+  statusEffects?: StatusEffect[];
     preventDeath?: boolean;
     overflowDamage?: number;
   freeRerolls?: number;
