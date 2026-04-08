@@ -1,0 +1,176 @@
+﻿import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { PixelSoulCrystal } from './PixelIcons';
+import { ALL_RELICS } from '../data/relics';
+
+const META_KEY = 'dicehero_meta';
+
+interface MetaProgress {
+  permanentQuota: number;
+  unlockedStartRelics: string[];
+  highestOverkill: number;
+  totalRuns: number;
+  totalWins: number;
+}
+
+const loadMeta = (): MetaProgress => {
+  try {
+    const raw = localStorage.getItem(META_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { permanentQuota: 0, unlockedStartRelics: [], highestOverkill: 0, totalRuns: 0, totalWins: 0 };
+};
+
+const saveMeta = (meta: MetaProgress) => {
+  try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch { /* ignore */ }
+};
+
+/** 魂晶商店可购买的常驻遗物列表 */
+const SHOP_ITEMS: { relicId: string; cost: number; desc: string }[] = [
+  { relicId: 'grindstone', cost: 30, desc: '每次出牌额外+2伤害' },
+  { relicId: 'iron_banner', cost: 25, desc: '每场战斗开始获得3护甲' },
+  { relicId: 'fate_coin', cost: 40, desc: '每回合额外1次免费重投' },
+  { relicId: 'greedy_hand', cost: 50, desc: '每回合额外抽1颗骰子' },
+  { relicId: 'iron_skin_relic', cost: 20, desc: '受到伤害-1（最低1）' },
+  { relicId: 'crimson_grail', cost: 35, desc: '击杀敌人时回复2HP' },
+  { relicId: 'schrodinger_bag', cost: 45, desc: '骰子库耗尽时不洗牌，直接重新填充' },
+  { relicId: 'treasure_sense_relic', cost: 30, desc: '战利品中额外出现一个选项' },
+  { relicId: 'warm_ember_relic', cost: 25, desc: '营火回复量+50%' },
+  { relicId: 'symmetry_seeker', cost: 35, desc: '所有骰子同点数时额外x1.5' },
+];
+
+const iconMap: Record<string, string> = {
+  blade: '\u2694\uFE0F', flag: '\uD83D\uDEA9', weight: '\uD83C\uDFCB\uFE0F', pendulum: '\uD83D\uDCCD',
+  grail: '\uD83C\uDFC6', gauge: '\uD83D\uDCCA', prism: '\uD83D\uDC8E', resonator: '\u2728',
+  diamond: '\uD83D\uDC8E', hourglass: '\u23F3', fangs: '\uD83E\uDDB7', contract: '\uD83D\uDCDC',
+  hand: '\u270B', eye: '\uD83D\uDC41\uFE0F', bag: '\uD83D\uDC5C', compress: '\uD83D\uDD3B',
+  shield: '\uD83D\uDEE1\uFE0F', fire: '\uD83D\uDD25', coin: '\uD83E\uDE99',
+  skull: '\uD83D\uDC80', heart: '\u2764\uFE0F', star: '\u2B50', bolt: '\u26A1',
+  crystal: '\uD83D\uDCA0', crown: '\uD83D\uDC51', dice: '\uD83C\uDFB2', potion: '\uD83E\uDDEA',
+  armor: '\uD83D\uDEE1\uFE0F', ember: '\uD83D\uDD25', compass: '\uD83E\uDDED', treasure: '\uD83D\uDCB0',
+};
+
+export const SoulShop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [meta, setMeta] = useState<MetaProgress>(loadMeta());
+  const [purchased, setPurchased] = useState<string[]>([]);
+  const [flashMsg, setFlashMsg] = useState<string | null>(null);
+
+  const handlePurchase = (item: typeof SHOP_ITEMS[0]) => {
+    if (meta.permanentQuota < item.cost) {
+      setFlashMsg('\u274C \u9B42\u6676\u4E0D\u8DB3\uFF01');
+      setTimeout(() => setFlashMsg(null), 1500);
+      return;
+    }
+    if (meta.unlockedStartRelics.includes(item.relicId)) {
+      setFlashMsg('\u5DF2\u62E5\u6709\u6B64\u9057\u7269\uFF01');
+      setTimeout(() => setFlashMsg(null), 1500);
+      return;
+    }
+    const newMeta = {
+      ...meta,
+      permanentQuota: meta.permanentQuota - item.cost,
+      unlockedStartRelics: [...meta.unlockedStartRelics, item.relicId],
+    };
+    setMeta(newMeta);
+    saveMeta(newMeta);
+    setPurchased(prev => [...prev, item.relicId]);
+    setFlashMsg('\u2726 \u83B7\u5F97 ' + (ALL_RELICS[item.relicId]?.name || item.relicId) + '\uFF01');
+    setTimeout(() => setFlashMsg(null), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="w-full max-w-md mx-4 bg-[var(--dungeon-panel)] border-3 border-purple-500/60 p-4 max-h-[85vh] overflow-y-auto"
+        style={{ borderRadius: '4px' }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <PixelSoulCrystal size={3} />
+            <h2 className="text-lg font-black text-purple-300 pixel-text-shadow">{'\u9B42\u6676\u5546\u5E97'}</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-purple-400 text-sm font-mono">
+              <PixelSoulCrystal size={2} />
+              <span className="font-bold">{meta.permanentQuota}</span>
+            </div>
+            <button onClick={onClose} className="text-[var(--dungeon-text-dim)] hover:text-[var(--pixel-red)] text-lg transition-colors">{'\u2715'}</button>
+          </div>
+        </div>
+
+        <p className="text-[8px] text-[var(--dungeon-text-dim)] mb-3 leading-relaxed">
+          {'\u6D88\u8017\u9B42\u6676\u8D2D\u4E70\u5E38\u9A7B\u9057\u7269\uFF0C\u8D2D\u4E70\u540E\u6BCF\u6B21\u5F00\u5C40\u81EA\u52A8\u643A\u5E26\u3002\u9B42\u6676\u901A\u8FC7\u6EA2\u51FA\u4F24\u5BB3\u83B7\u53D6\uFF0C\u8425\u706B\u53EF\u64A4\u79BB\u4FDD\u5B58\u3002'}
+        </p>
+
+        <AnimatePresence>
+          {flashMsg && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="text-center text-sm font-bold text-purple-300 mb-3 pixel-text-shadow">
+              {flashMsg}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="flex flex-col gap-2">
+          {SHOP_ITEMS.map((item) => {
+            const relic = ALL_RELICS[item.relicId];
+            if (!relic) return null;
+            const owned = meta.unlockedStartRelics.includes(item.relicId);
+            const justBought = purchased.includes(item.relicId);
+            const canAfford = meta.permanentQuota >= item.cost;
+            const icon = relic.icon ? (iconMap[relic.icon] || '\u2726') : '\u2726';
+
+            return (
+              <motion.button
+                key={item.relicId}
+                onClick={() => handlePurchase(item)}
+                disabled={owned}
+                whileTap={!owned ? { scale: 0.97 } : undefined}
+                className={`flex items-center gap-3 p-3 border-2 text-left transition-all ${
+                  owned
+                    ? 'border-green-700/40 bg-green-900/10 opacity-60 cursor-default'
+                    : canAfford
+                    ? 'border-purple-500/40 bg-purple-900/10 hover:border-purple-400 hover:bg-purple-900/20 cursor-pointer'
+                    : 'border-[var(--dungeon-panel-border)] bg-[var(--dungeon-bg)] opacity-50 cursor-not-allowed'
+                }`}
+                style={{ borderRadius: '3px' }}
+              >
+                <div className="text-xl shrink-0 w-8 text-center">{icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${owned ? 'text-green-400' : 'text-[var(--dungeon-text-bright)]'}`}>
+                      {relic.name}
+                    </span>
+                    {owned && <span className="text-[8px] text-green-500 font-bold">{'\u5DF2\u62E5\u6709'}</span>}
+                    {justBought && <span className="text-[8px] text-purple-400 font-bold animate-pulse">{'\u521A\u8D2D\u4E70'}</span>}
+                  </div>
+                  <p className="text-[9px] text-[var(--dungeon-text-dim)] mt-0.5 leading-relaxed">{item.desc}</p>
+                </div>
+                {!owned && (
+                  <div className={`flex items-center gap-1 shrink-0 text-xs font-mono font-bold ${canAfford ? 'text-purple-400' : 'text-red-400'}`}>
+                    <PixelSoulCrystal size={1.5} />
+                    <span>{item.cost}</span>
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-[var(--dungeon-panel-border)] text-[8px] text-[var(--dungeon-text-dim)] flex gap-4">
+          <span>{'\u603B\u5C40\u6570'}: {meta.totalRuns}</span>
+          <span>{'\u6700\u9AD8\u6EA2\u51FA'}: {meta.highestOverkill}</span>
+          <span>{'\u5DF2\u89E3\u9501'}: {meta.unlockedStartRelics.length}/{SHOP_ITEMS.length}</span>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};

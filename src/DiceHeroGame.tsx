@@ -1230,6 +1230,9 @@ export default function DiceHeroGame() {
     }
     if (allEffects.length > 0) await new Promise(r => setTimeout(r, 200));
 
+    // 璁╃帺瀹剁湅瀹岃绠楄繃绋嬶紝澶氬仠鐣�1绉掑啀鏀句激瀹虫枃瀛�
+    await new Promise(r => setTimeout(r, 1000));
+
     // ========================================
     // Phase 4: 最终伤害飞出 (0.8s)
     // ========================================
@@ -3294,7 +3297,7 @@ useEffect(() => {
 
                 {/* === 结算演出覆盖层 === */}
                 {settlementPhase && settlementData && (
-                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.82)'}}>
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.93)'}}>
                     <div className="flex flex-col items-center gap-3 animate-fade-in">
                       {/* 牌型名称 */}
                       <div className="text-2xl font-bold text-[var(--pixel-gold)] pixel-text-shadow animate-bounce-in"
