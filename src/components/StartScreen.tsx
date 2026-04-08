@@ -4,7 +4,6 @@ import { useGameContext } from '../contexts/GameContext';
 import { PixelDice, PixelBook, PixelHeart, PixelRefresh, PixelPlay } from './PixelIcons';
 import { CSSParticles } from './ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './TutorialOverlay';
-import { generateLoopFloors } from '../utils/loopFloorGenerator';
 
 export const StartScreen: React.FC = () => {
   const { game, setGame, showTutorial, setShowTutorial } = useGameContext();
@@ -46,20 +45,7 @@ export const StartScreen: React.FC = () => {
             if (!isTutorialCompleted()) {
               setShowTutorial(true);
             } else {
-              setGame(prev => {
-              if (prev.mapMode === 'loop_floor') {
-                const floors = generateLoopFloors(prev.chapter);
-                return {
-                  ...prev,
-                  phase: 'loopMap' as const,
-                  loopFloors: floors,
-                  currentFloorIndex: 0,
-                  currentTileIndex: 0,
-                  currentFloorTheme: floors[0]?.theme || null,
-                };
-              }
-              return { ...prev, phase: 'map' as const };
-            });
+              setGame(prev => ({ ...prev, phase: 'map' }));
             }
           }}
           className="group relative w-full max-w-[220px] mx-auto py-3 pixel-btn pixel-btn-primary text-sm block mb-5"
@@ -88,20 +74,7 @@ export const StartScreen: React.FC = () => {
         {showTutorial && (
           <TutorialOverlay onComplete={() => {
             setShowTutorial(false);
-            setGame(prev => {
-              if (prev.mapMode === 'loop_floor') {
-                const floors = generateLoopFloors(prev.chapter);
-                return {
-                  ...prev,
-                  phase: 'loopMap' as const,
-                  loopFloors: floors,
-                  currentFloorIndex: 0,
-                  currentTileIndex: 0,
-                  currentFloorTheme: floors[0]?.theme || null,
-                };
-              }
-              return { ...prev, phase: 'map' as const };
-            });
+            setGame(prev => ({ ...prev, phase: 'map' }));
           }} />
         )}
       </AnimatePresence>

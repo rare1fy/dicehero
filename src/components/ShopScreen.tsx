@@ -7,7 +7,6 @@ import { DICE_BY_RARITY, getDiceDef, getUpgradedFaces } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
 import { MiniDice } from './DiceBagPanel';
-import { getMapPhase } from '../utils/mapPhaseHelper';
 
 // ============================================================
 // 宝箱配置（宝箱节点使用）
@@ -318,7 +317,7 @@ const MerchantScreen: React.FC = () => {
       </div>
 
       <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        onClick={() => setGame(prev => ({ ...prev, phase: getMapPhase(prev) }))}
+        onClick={() => setGame(prev => ({ ...prev, phase: 'map' }))}
         className="w-full max-w-xs py-3 mt-6 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10">
         离开商人
       </motion.button>
@@ -521,7 +520,7 @@ const TreasureScreen: React.FC = () => {
       </AnimatePresence>
 
       <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        onClick={() => setGame(prev => ({ ...prev, phase: getMapPhase(prev) }))}
+        onClick={() => setGame(prev => ({ ...prev, phase: 'map' }))}
         className="w-full max-w-xs py-3 mt-4 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10">
         离开宝箱
       </motion.button>
