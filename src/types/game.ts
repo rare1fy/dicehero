@@ -399,6 +399,8 @@ export interface GameState {
   totalOverkillThisRun: number;       // 本局总溢出伤害（统计用）
   consecutiveNormalAttacks?: number;  // 连续普通攻击计数
   enemiesKilledThisBattle?: number;   // 本场战斗击杀数
+  hpLostThisBattle?: number;          // 本场战斗已损失的HP
+  hpLostThisTurn?: number;            // 本回合已损失的HP
 }
 
 // ============================================================

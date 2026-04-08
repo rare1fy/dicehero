@@ -64,6 +64,52 @@ import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from './config/enemies';
 
 
 export default function DiceHeroGame() {
+  const createInitialGameState = (): GameState => ({
+    hp: PLAYER_INITIAL.hp,
+    maxHp: PLAYER_INITIAL.maxHp,
+    armor: PLAYER_INITIAL.armor,
+    freeRerollsLeft: PLAYER_INITIAL.freeRerollsPerTurn,
+    freeRerollsPerTurn: PLAYER_INITIAL.freeRerollsPerTurn,
+    globalRerolls: PLAYER_INITIAL.globalRerolls,
+    playsLeft: PLAYER_INITIAL.playsPerTurn,
+    maxPlays: PLAYER_INITIAL.playsPerTurn,
+    souls: PLAYER_INITIAL.souls,
+    slots: PLAYER_INITIAL.augmentSlots,
+    ownedDice: INITIAL_DICE_BAG.map(id => ({ defId: id, level: 1 })),
+    diceBag: initDiceBag(INITIAL_DICE_BAG),
+    discardPile: [],
+    drawCount: PLAYER_INITIAL.drawCount,
+    handLevels: {},
+    augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
+    currentNodeId: null,
+    map: generateMap(),
+    phase: 'start',
+    battleTurn: 0,
+    isEnemyTurn: false,
+    logs: ['\u6B22\u8FCE\u6765\u5230 DICE BATTLE\u3002'],
+    shopItems: [],
+    merchantItems: [],
+    shopLevel: 1,
+    statuses: [],
+    lootItems: [],
+    enemyHpMultiplier: 1.0,
+    chapter: 1,
+    stats: { ...INITIAL_STATS },
+    pendingReplacementAugment: null,
+    targetEnemyUid: null,
+    battleWaves: [],
+    currentWaveIndex: 0,
+    relics: [],
+    elementsUsedThisBattle: [],
+    consecutiveNormalAttacks: 0,
+    enemiesKilledThisBattle: 0,
+    hpLostThisBattle: 0,
+    hpLostThisTurn: 0,
+    blackMarketQuota: 0,
+    evacuatedQuota: 0,
+    totalOverkillThisRun: 0,
+  });
+
   const [game, setGame] = useState<GameState>({
     hp: PLAYER_INITIAL.hp,
     maxHp: PLAYER_INITIAL.maxHp,
@@ -88,6 +134,7 @@ export default function DiceHeroGame() {
     isEnemyTurn: false,
     logs: ['欢迎来到 DICE BATTLE。'],
     shopItems: [],
+    merchantItems: [],
     shopLevel: 1,
     statuses: [],
     lootItems: [],
@@ -1231,7 +1278,7 @@ export default function DiceHeroGame() {
     if (allEffects.length > 0) await new Promise(r => setTimeout(r, 200));
 
     // 璁╃帺瀹剁湅瀹岃绠楄繃绋嬶紝澶氬仠鐣�1绉掑啀鏀句激瀹虫枃瀛�
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 2000));
 
     // ========================================
     // Phase 4: 最终伤害飞出 (0.8s)
@@ -1489,7 +1536,7 @@ export default function DiceHeroGame() {
         // 溢出伤害→黑市配额转化 (50:1汇率)
         const totalOverkill = killedEnemiesData.reduce((sum, k) => sum + k.overkill, 0);
         if (totalOverkill > 0) {
-          const quotaGain = Math.floor(totalOverkill / 50);
+          const quotaGain = totalOverkill;  // 1:1 - any overkill gives soul crystals
           if (quotaGain > 0) {
             setGame(prev => ({
               ...prev,
@@ -2661,6 +2708,12 @@ useEffect(() => {
     return val;
   };
 
+  const resetGame = () => {
+    setGame(createInitialGameState());
+    setDice([]);
+    setEnemies([]);
+  };
+
   // --- GameContext Provider Value ---
   const contextValue = {
     game, setGame,
@@ -2680,6 +2733,7 @@ useEffect(() => {
     toasts, addToast,
     addLog,
     handleSelectStartingRelic, handleSkipStartingRelic,
+    resetGame,
   };
 
   if (game.phase === 'start') {
@@ -3297,7 +3351,7 @@ useEffect(() => {
 
                 {/* === 结算演出覆盖层 === */}
                 {settlementPhase && settlementData && (
-                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.93)'}}>
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.96)'}}>
                     <div className="flex flex-col items-center gap-3 animate-fade-in">
                       {/* 牌型名称 */}
                       <div className="text-2xl font-bold text-[var(--pixel-gold)] pixel-text-shadow animate-bounce-in"

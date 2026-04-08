@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import type { Die, Augment, MapNode, Enemy, GameState, Relic } from '../types/game';
 
 interface Toast {
@@ -40,6 +40,7 @@ export interface GameContextType {
   addLog: (msg: string) => void;
   handleSelectStartingRelic: (relic: Relic) => void;
   handleSkipStartingRelic: () => void;
+  resetGame: () => void;
 }
 
 export const GameContext = React.createContext<GameContextType>(null!);

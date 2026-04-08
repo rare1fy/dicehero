@@ -27,8 +27,8 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数，精确控制每层的倍率，确保精准的每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 1.10, dmgMult: 0.40 },  // depth 0: 教学关，需要凑牌型，三条可秒小怪
-  { hpMult: 1.25, dmgMult: 0.50 },  // depth 1: 稍有肉感
+  { hpMult: 1.60, dmgMult: 0.45 },  // depth 0: 教学关，需要凑牌型，三条可秒小怪
+  { hpMult: 1.70, dmgMult: 0.55 },  // depth 1: 稍有肉感
   { hpMult: 1.45, dmgMult: 0.65 },  // depth 2: 开始有压力
   { hpMult: 1.70, dmgMult: 0.80 },  // depth 3: 精英层（高HP低伤害）
   { hpMult: 1.30, dmgMult: 0.70 },  // depth 4: 精英后休息

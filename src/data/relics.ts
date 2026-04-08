@@ -732,23 +732,34 @@ const rerollFrenzyRelic: Relic = {
 /** 骰子大师 - 每回合额外抽1颗骰子 */
 const diceMasterRelic: Relic = {
   id: 'dice_master_relic',
-  name: '骰子大师',
-  description: '每回合额外抽取1颗骰子',
+  name: 'u{9AB0}u{5B50}u{5927}u{5E08}',
+  description: 'u{6253}u{51FA}u{2265}3u{9897}u{9AB0}u{5B50}u{7684}u{724C}u{578B}u{65F6}u{FF0C}u{57FA}u{7840}u{4F24}u{5BB3}+15u{FF0C}u{500D}u{7387}x1.3',
   icon: 'eye',
   rarity: 'legendary',
-  trigger: 'on_turn_start',
-  effect: () => ({ drawCountBonus: 1 }),
+  trigger: 'on_play',
+  effect: (ctx) => {
+    if ((ctx.diceCount || 0) >= 3) {
+      return { damage: 15, multiplier: 1.3 };
+    }
+    return {};
+  },
 };
 
 /** 命运之轮 - 每回合额外1次免费重Roll */
 const fortuneWheelRelic: Relic = {
   id: 'fortune_wheel_relic',
-  name: '命运之轮',
-  description: '每回合额外获得1次免费重Roll',
+  name: 'u{547D}u{8FD0}u{4E4B}u{8F6E}',
+  description: 'u{6BCF}u{6B21}u{51FA}u{724C}u{65F6}u{FF0C}u{672C}u{56DE}u{5408}u{6BCF}u{6B21}u{91CD}Rollu{989D}u{5916}+8u{4F24}u{5BB3}(u{53EF}u{53E0}u{52A0})',
   icon: 'gear',
   rarity: 'legendary',
-  trigger: 'on_turn_start',
-  effect: () => ({ freeRerolls: 1 }),
+  trigger: 'on_play',
+  effect: (ctx) => {
+    const rerolls = ctx.rerollsThisTurn || 0;
+    if (rerolls > 0) {
+      return { damage: rerolls * 8 };
+    }
+    return {};
+  },
 };
 
 /** 战场急救 - 击杀敌人时回复8HP */
@@ -824,10 +835,15 @@ const greedyHand: Relic = {
   id: 'greedy_hand',
   name: '贪婪之手',
   icon: 'hand',
-  description: '每回合额外抽取1颗骰子',
+  description: 'u{6253}u{51FA}u{2265}4u{9897}u{9AB0}u{5B50}u{7684}u{724C}u{578B}u{65F6}u{FF0C}u{57FA}u{7840}u{4F24}u{5BB3}+20',
   rarity: 'rare',
-  trigger: 'passive',
-  effect: () => ({ extraDraw: 1 }),
+  trigger: 'on_play',
+  effect: (ctx) => {
+    if ((ctx.diceCount || 0) >= 4) {
+      return { damage: 20 };
+    }
+    return {};
+  },
 };
 
 /** 双重打击 - 每回合额外1次出牌机会 (规则改变型) */
@@ -846,10 +862,15 @@ const fateCoin: Relic = {
   id: 'fate_coin',
   name: '命运硬币',
   icon: 'coin',
-  description: '每回合额外获得1次免费重投',
+  description: 'u{672C}u{56DE}u{5408}u{91CD}u{6295}u{2265}2u{6B21}u{540E}u{51FA}u{724C}u{FF0C}u{500D}u{7387}x1.5',
   rarity: 'rare',
-  trigger: 'passive',
-  effect: () => ({ extraReroll: 1 }),
+  trigger: 'on_play',
+  effect: (ctx) => {
+    if ((ctx.rerollsThisTurn || 0) >= 2) {
+      return { multiplier: 1.5 };
+    }
+    return {};
+  },
 };
 
 /** 元素亲和 - 普通骰子有30%概率获得随机元素 (规则改变型) */

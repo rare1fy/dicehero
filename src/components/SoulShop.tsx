@@ -29,8 +29,8 @@ const saveMeta = (meta: MetaProgress) => {
 const SHOP_ITEMS: { relicId: string; cost: number; desc: string }[] = [
   { relicId: 'grindstone', cost: 30, desc: '每次出牌额外+2伤害' },
   { relicId: 'iron_banner', cost: 25, desc: '每场战斗开始获得3护甲' },
-  { relicId: 'fate_coin', cost: 40, desc: '每回合额外1次免费重投' },
-  { relicId: 'greedy_hand', cost: 50, desc: '每回合额外抽1颗骰子' },
+  { relicId: 'fate_coin', cost: 40, desc: '本回合重投≥2次后出牌，倍率x1.5' },
+  { relicId: 'greedy_hand', cost: 50, desc: '打出≥4颗骰子的牌型时，基础伤害+20' },
   { relicId: 'iron_skin_relic', cost: 20, desc: '受到伤害-1（最低1）' },
   { relicId: 'crimson_grail', cost: 35, desc: '击杀敌人时回复2HP' },
   { relicId: 'schrodinger_bag', cost: 45, desc: '骰子库耗尽时不洗牌，直接重新填充' },
