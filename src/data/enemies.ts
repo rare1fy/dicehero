@@ -1,4 +1,4 @@
-import { MapNode, Enemy, GameState, BattleWave } from '../types/game';
+﻿import { MapNode, Enemy, GameState, BattleWave } from '../types/game';
 import { getDepthScaling } from '../config';
 import { 
   NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES,
@@ -140,11 +140,11 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
   }
 
   // Normal: 1-2 waves, each with 1-3 enemies
-  const multiWaveChance = depth >= 9 ? 0.75 : depth >= 5 ? 0.60 : depth >= 3 ? 0.45 : depth >= 1 ? 0.20 : 0;
+  const multiWaveChance = depth >= 9 ? 0.85 : depth >= 5 ? 0.70 : depth >= 3 ? 0.50 : depth >= 1 ? 0.25 : 0;
   const waveCount = Math.random() < multiWaveChance ? 2 : 1;
   const waves: BattleWave[] = [];
   for (let w = 0; w < waveCount; w++) {
-    const enemyCount = depth === 0 ? 1 : depth <= 1 ? (Math.random() < 0.5 ? 1 : 2) : depth <= 4 ? (Math.random() < 0.6 ? 2 : 3) : Math.min(3, 2 + Math.floor(Math.random() * 2));
+    const enemyCount = depth === 0 ? 1 : depth <= 1 ? (Math.random() < 0.4 ? 1 : 2) : depth <= 4 ? (Math.random() < 0.5 ? 2 : 3) : depth <= 9 ? (Math.random() < 0.3 ? 2 : 3) : Math.min(4, 3 + Math.floor(Math.random() * 2));
     const waveEnemies: Enemy[] = [];
     for (let i = 0; i < enemyCount; i++) {
       const pool = getAvailableEnemies(depth);

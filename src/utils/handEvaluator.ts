@@ -1,6 +1,7 @@
-import { Die, HandType, HandResult } from '../types/game';
+﻿import { Die, HandType, HandResult } from '../types/game';
 
-export const checkHands = (dice: Die[]): HandResult => {
+export const checkHands = (dice: Die[], options?: { straightReduction?: number }): HandResult => {
+  const straightReduction = options?.straightReduction || 0;
   if (dice.length === 0) return { bestHand: '普通攻击', allHands: [], activeHands: ['普通攻击'] };
 
   const values = dice.map(d => d.value).sort((a, b) => a - b);
@@ -21,7 +22,9 @@ export const checkHands = (dice: Die[]): HandResult => {
   const uniqueValues = Array.from(new Set(values)).sort((a, b) => a - b);
   let isStraight = false;
   let straightLen = 0;
-  if (uniqueValues.length === dice.length && dice.length >= 3) {
+  // 降维打击：顺子所需骰子数-straightReduction (最低2)
+  const straightMinLen = Math.max(2, 3 - straightReduction);
+  if (uniqueValues.length === dice.length && dice.length >= straightMinLen) {
     if (uniqueValues[uniqueValues.length - 1] - uniqueValues[0] === dice.length - 1) {
       isStraight = true;
       straightLen = dice.length;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,7 +26,7 @@ import { getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from './data/r
 import { getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
-import { playSound } from './utils/sound';
+import { playSound, playSettlementTick, playMultiplierTick, playHeavyImpact } from './utils/sound';
 import { checkHands, canFormValidHand } from './utils/handEvaluator';
 import { generateMap } from './utils/mapGenerator';
 import { StatusIcon } from './components/StatusIcon';
@@ -104,6 +104,9 @@ export default function DiceHeroGame() {
     enemiesKilledThisBattle: 0,
     hpLostThisBattle: 0,
     hpLostThisTurn: 0,
+    blackMarketQuota: 0,
+    evacuatedQuota: 0,
+    totalOverkillThisRun: 0,
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
@@ -616,7 +619,7 @@ export default function DiceHeroGame() {
         return def.element !== 'normal' || !!def.onPlay;
       });
       if (!isCurrentlySelected && newSelected.length > 1 && hasSpecial) {
-        const handResult = checkHands(newSelected);
+        const handResult = checkHands(newSelected, { straightReduction: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
         if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
           setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
         }
@@ -625,11 +628,16 @@ export default function DiceHeroGame() {
     });
   };
 
+  // 降维打击遗物：顺子所需骰子数-1
+  const straightReduction = useMemo(() => {
+    return game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0;
+  }, [game.relics]);
+
   const currentHands = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
     // 分裂骰子：手牌中当普通骰子，结算演出时才分裂
-    return checkHands(selected);
-  }, [dice]);
+    return checkHands(selected, { straightReduction });
+  }, [dice, straightReduction]);
 
   // 多选普通攻击检测：选了多颗骰子但不成牌型
   const isNormalAttackMulti = useMemo(() => {
@@ -1085,7 +1093,7 @@ export default function DiceHeroGame() {
 
     // 如果发生了磁吸，也需要重新计算牌型和伤害（和分裂一样的逻辑）
     if (magnetOccurred && !splitOccurred) {
-      const newHandResult = checkHands(settleDice);
+      const newHandResult = checkHands(settleDice, { straightReduction });
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
         addLog(`磁吸改变了牌型！${outcome.bestHand} → ${newBestHand}`);
@@ -1122,7 +1130,7 @@ export default function DiceHeroGame() {
       await new Promise(r => setTimeout(r, 500));
     }
     if (splitOccurred) {
-      const newHandResult = checkHands(settleDice);
+      const newHandResult = checkHands(settleDice, { straightReduction });
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
         addLog(`分裂改变了牌型！${outcome.bestHand} → ${newBestHand}`);
@@ -1218,21 +1226,39 @@ export default function DiceHeroGame() {
     // Phase 4: 最终伤害飞出 (0.8s)
     // ========================================
     setSettlementPhase('damage');
-    // 根据伤害大小播放分层音效
-    if (outcome.damage >= 40) {
+    // 卡肉顿帧：大伤害时冻结画面+重击音效+强烈震动
+    const maxEnemyHp = enemies.reduce((max, e) => Math.max(max, e.maxHp || e.hp), 1);
+    const damageRatio = outcome.damage / maxEnemyHp;
+    const isHeavyHit = damageRatio >= 0.5 || outcome.damage >= 60;
+    const isMassiveHit = damageRatio >= 1.0 || outcome.damage >= 120;
+
+    if (isMassiveHit) {
+      // 毁灭级：重击音效 + 长顿帧 + 强震
+      playHeavyImpact(1.0);
+      setScreenShake(true);
+      await new Promise(r => setTimeout(r, 150)); // 卡肉冻结
+      playSound('critical');
+      setTimeout(() => playSound('critical'), 120);
+      setTimeout(() => playSound('critical'), 250);
+    } else if (isHeavyHit) {
+      // 重击：双重暴击 + 中等顿帧
+      playHeavyImpact(0.6);
+      setScreenShake(true);
+      await new Promise(r => setTimeout(r, 100)); // 卡肉冻结
       playSound('critical');
       setTimeout(() => playSound('critical'), 150);
     } else if (outcome.damage >= 20) {
       playSound('critical');
+      setScreenShake(true);
     } else if (outcome.damage > 0) {
       playSound('hit');
+      setScreenShake(true);
     }
-          setShowDamageOverlay({ damage: outcome.damage, armor: outcome.armor, heal: outcome.heal || 0 });
-          setTimeout(() => setShowDamageOverlay(null), 1800);
-    setScreenShake(true);
-    setTimeout(() => setScreenShake(false), 300);
+    setShowDamageOverlay({ damage: outcome.damage, armor: outcome.armor, heal: outcome.heal || 0 });
+    setTimeout(() => setShowDamageOverlay(null), isMassiveHit ? 2500 : 1800);
+    setTimeout(() => setScreenShake(false), isMassiveHit ? 500 : isHeavyHit ? 400 : 300);
     
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, isMassiveHit ? 1200 : isHeavyHit ? 1000 : 800));
 
     // ========================================
     // 清理结算演出，应用实际效果
@@ -1448,6 +1474,21 @@ export default function DiceHeroGame() {
             });
           }
       }
+
+        // 溢出伤害→黑市配额转化 (50:1汇率)
+        const totalOverkill = killedEnemiesData.reduce((sum, k) => sum + k.overkill, 0);
+        if (totalOverkill > 0) {
+          const quotaGain = Math.floor(totalOverkill / 50);
+          if (quotaGain > 0) {
+            setGame(prev => ({
+              ...prev,
+              blackMarketQuota: (prev.blackMarketQuota || 0) + quotaGain,
+              totalOverkillThisRun: (prev.totalOverkillThisRun || 0) + totalOverkill,
+            }));
+            addToast('⬛ +' + quotaGain + ' 黑市配额 (溢出' + totalOverkill + ')', 'gold');
+            addFloatingText('+' + quotaGain + '⬛', 'text-purple-400', null, 'player');
+          }
+        }
     }, 300);
 
     // Mark dice as spent & add to discard pile

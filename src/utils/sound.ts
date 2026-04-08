@@ -1,4 +1,4 @@
-import battleNormalMp3 from '../assets/DiceBattle-Normal.mp3';
+﻿import battleNormalMp3 from '../assets/DiceBattle-Normal.mp3';
 import battleBossMp3 from '../assets/DiceBattle-Boss.mp3';
 
 // === 增强版音效系统 ===
@@ -59,6 +59,147 @@ const _createFilteredOsc = (
   g.connect(dest);
   
   return { osc, gain: g, filter };
+};
+
+/**
+ * 递进音调结算音效 - 每颗骰子计分时音调升半阶
+ * @param step 当前骰子序号(0-based)，决定音高
+ */
+export const playSettlementTick = (step: number) => {
+  if (!sfxEnabled) return;
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = masterVolume;
+    master.connect(ctx.destination);
+
+    // C5起步，每步升半音 (半音比 = 2^(1/12))
+    const baseFreq = 523.25; // C5
+    const freq = baseFreq * Math.pow(2, step / 12);
+    const harmFreq = freq * 1.5; // 五度泛音
+
+    // 主音
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.2, now + 0.06);
+    g.gain.setValueAtTime(0.18, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(g); g.connect(master);
+    osc.start(now); osc.stop(now + 0.12);
+
+    // 泛音层（清脆感）
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.value = harmFreq;
+    g2.gain.setValueAtTime(0.08, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc2.connect(g2); g2.connect(master);
+    osc2.start(now); osc2.stop(now + 0.08);
+
+    // 金币碰撞感（高频点击）
+    const click = ctx.createOscillator();
+    const cg = ctx.createGain();
+    click.type = 'square';
+    click.frequency.value = freq * 3;
+    cg.gain.setValueAtTime(0.04, now);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    click.connect(cg); cg.connect(master);
+    click.start(now); click.stop(now + 0.03);
+  } catch (e) { /* silent */ }
+};
+
+/**
+ * 乘区触发音效 - 比普通tick更有力度的"倍率叠加"感
+ * @param step 当前效果序号
+ */
+export const playMultiplierTick = (step: number) => {
+  if (!sfxEnabled) return;
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = masterVolume;
+    master.connect(ctx.destination);
+
+    const baseFreq = 392; // G4
+    const freq = baseFreq * Math.pow(2, step / 8); // 更大步进
+
+    // 力量感低音
+    const bass = ctx.createOscillator();
+    const bg = ctx.createGain();
+    bass.type = 'sawtooth';
+    bass.frequency.setValueAtTime(freq * 0.5, now);
+    bass.frequency.exponentialRampToValueAtTime(freq * 0.3, now + 0.15);
+    bg.gain.setValueAtTime(0.12, now);
+    bg.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    bass.connect(bg); bg.connect(master);
+    bass.start(now); bass.stop(now + 0.2);
+
+    // 高亮音
+    const hi = ctx.createOscillator();
+    const hg = ctx.createGain();
+    hi.type = 'sine';
+    hi.frequency.setValueAtTime(freq * 2, now);
+    hi.frequency.exponentialRampToValueAtTime(freq * 2.5, now + 0.1);
+    hg.gain.setValueAtTime(0.15, now);
+    hg.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    hi.connect(hg); hg.connect(master);
+    hi.start(now); hi.stop(now + 0.12);
+  } catch (e) { /* silent */ }
+};
+
+/**
+ * 大伤害重击音效 - 用于卡肉顿帧时播放
+ * @param intensity 0-1 伤害强度
+ */
+export const playHeavyImpact = (intensity: number = 1) => {
+  if (!sfxEnabled) return;
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = masterVolume * Math.min(1, 0.7 + intensity * 0.3);
+    master.connect(ctx.destination);
+
+    // 超低频冲击
+    const sub = ctx.createOscillator();
+    const sg = ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(60, now);
+    sub.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+    sg.gain.setValueAtTime(0.3, now);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    sub.connect(sg); sg.connect(master);
+    sub.start(now); sub.stop(now + 0.5);
+
+    // 金属撞击
+    [80, 160, 320].forEach((f, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = i === 0 ? 'sawtooth' : 'square';
+      o.frequency.setValueAtTime(f, now);
+      o.frequency.exponentialRampToValueAtTime(f * 0.2, now + 0.35);
+      g.gain.setValueAtTime(0.2, now + i * 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      o.connect(g); g.connect(master);
+      o.start(now + i * 0.015); o.stop(now + 0.4);
+    });
+
+    // 碎裂高频
+    const crack = ctx.createOscillator();
+    const cg = ctx.createGain();
+    crack.type = 'sawtooth';
+    crack.frequency.setValueAtTime(2000, now + 0.05);
+    crack.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+    cg.gain.setValueAtTime(0.1 * intensity, now + 0.05);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    crack.connect(cg); cg.connect(master);
+    crack.start(now + 0.05); crack.stop(now + 0.2);
+  } catch (e) { /* silent */ }
 };
 
 export const playSound = (type: SoundType) => {

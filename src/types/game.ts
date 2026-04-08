@@ -329,6 +329,7 @@ export interface RelicEffect {
   // 特殊标记
   canLockDice?: boolean;
   maxPointsUnlocked?: boolean;
+  straightReduction?: number;    // 顺子所需骰子数减少量
 }
 
 export interface Relic {
@@ -385,6 +386,13 @@ export interface GameState {
   chapter: number;          // 当前大关 (1-5)
   stats: RunStats;
   pendingReplacementAugment: Augment | null;
+
+  // 黑市配额系统（塔科夫式溢出伤害提现）
+  blackMarketQuota: number;           // 局内未撤离的黑市配额
+  evacuatedQuota: number;             // 已撤离（安全）的配额
+  totalOverkillThisRun: number;       // 本局总溢出伤害（统计用）
+  consecutiveNormalAttacks?: number;  // 连续普通攻击计数
+  enemiesKilledThisBattle?: number;   // 本场战斗击杀数
 }
 
 // ============================================================
@@ -403,5 +411,31 @@ export interface HandTypeDef {
   icon: React.ReactNode;
   base: number;
   mult: number;
+  description: string;
+}
+
+// ============================================================
+// Meta-Progression（跨局永久进度）
+// ============================================================
+
+/** 黑市配额永久存储 */
+export interface MetaProgression {
+  /** 永久黑市配额（已撤离的安全资产） */
+  permanentQuota: number;
+  /** 已解锁的开局遗物ID列表 */
+  unlockedStartRelics: string[];
+  /** 历史最高单次溢出伤害 */
+  highestOverkill: number;
+  /** 总游戏局数 */
+  totalRuns: number;
+  /** 总胜利局数 */
+  totalWins: number;
+}
+
+/** 开局遗物解锁配置 */
+export interface StartRelicUnlock {
+  relicId: string;
+  cost: number;           // 永久配额花费
+  name: string;
   description: string;
 }

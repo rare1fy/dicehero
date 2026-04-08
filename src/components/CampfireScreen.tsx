@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { MiniDice } from './DiceBagPanel';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
@@ -380,6 +380,34 @@ export const CampfireScreen: React.FC = () => {
             </div>
             <PixelFlame size={4} />
           </button>
+
+          {/* 黑市配额撤离 */}
+          {(game.blackMarketQuota || 0) > 0 && (
+            <button 
+              onClick={() => {
+                const quota = game.blackMarketQuota || 0;
+                if (quota <= 0) return;
+                playSound('coin');
+                setGame(prev => ({
+                  ...prev,
+                  blackMarketQuota: 0,
+                  evacuatedQuota: (prev.evacuatedQuota || 0) + quota,
+                }));
+                addToast('⬛ ' + quota + ' 黑市配额已安全撤离！', 'gold');
+                addLog('营火撤离: ' + quota + ' 黑市配额已转移至安全区');
+              }}
+              className="w-full p-4 pixel-panel flex items-center justify-between transition-all group"
+              style={{ borderColor: '#a855f7' }}
+            >
+              <div className="text-left">
+                <div className="text-base font-bold text-purple-400 pixel-text-shadow">资产撤离</div>
+                <div className="text-[9px] text-[var(--dungeon-text-dim)]">
+                  将 <span className="text-purple-300 font-bold">{game.blackMarketQuota || 0}</span> 黑市配额转移至安全区（死亡不丢失）
+                </div>
+              </div>
+              <div className="text-2xl">⬛</div>
+            </button>
+          )}
 
         </div>
       </div>

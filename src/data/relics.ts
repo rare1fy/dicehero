@@ -785,6 +785,17 @@ const treasureMapRelic: Relic = {
 };
 
 
+/** 降维打击 - 构成顺子所需的骰子数量-1（规则改变型遗物） */
+const dimensionCrush: Relic = {
+  id: 'dimension_crush',
+  name: '降维打击',
+  icon: 'compress',
+  description: '构成顺子所需的骰子数量-1（2颗连续即可触发顺子）',
+  rarity: 'legendary',
+  trigger: 'passive',
+  effect: () => ({ straightReduction: 1 }),
+};
+
 export const ALL_RELICS: Record<string, Relic> = {
   // 基础打工
   grindstone,
@@ -845,13 +856,14 @@ export const ALL_RELICS: Record<string, Relic> = {
   battle_medic_relic: battleMedicRelic,
   rage_fire_relic: rageFireRelic,
   treasure_map_relic: treasureMapRelic,
+  dimension_crush: dimensionCrush,
 };
 
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic, navigatorCompass, healingBreeze, sharpEdgeRelic, luckyCoinRelic, thickHideRelic, basicInstinctRelic, treasureMapRelic],
   uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator, warmEmberRelic, treasureSenseRelic, goldenTouchRelic, hagglerRelic, rapidStrikesRelic, bloodPactRelic, bloodDiceRelic, rerollFrenzyRelic, battleMedicRelic, rageFireRelic],
   rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic],
-  legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic],
+  legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush],
 };
 
 /** 获取遗物奖励池 */
