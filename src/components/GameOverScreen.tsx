@@ -48,7 +48,7 @@ export const GameOverScreen: React.FC = () => {
           <h1 className="text-3xl font-black mb-3 text-[var(--pixel-red)] pixel-text-shadow tracking-wide">◆ 意识消散 ◆</h1>
           <p className="text-[var(--dungeon-text-dim)] mb-4 max-w-xs mx-auto leading-relaxed text-[11px]">你在永夜的深处迷失了方向，所有的记忆与意志都化为了虚无...</p>
           
-          {/* 黑市配额结算 */}
+          {/* 魂晶结算 */}
           {(lostQuota > 0 || savedQuota > 0) && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -57,7 +57,7 @@ export const GameOverScreen: React.FC = () => {
               className="mb-6 p-3 border border-purple-500/30 bg-purple-900/20 max-w-xs mx-auto"
               style={{ borderRadius: '4px' }}
             >
-              <div className="text-[10px] text-purple-300 font-bold mb-2">⬛ 黑市配额结算</div>
+              <div className="text-[10px] text-purple-300 font-bold mb-2">💠 魂晶结算</div>
               {lostQuota > 0 && (
                 <div className="text-[9px] text-red-400">
                   未撤离配额: <span className="font-bold">-{lostQuota}</span> (已清零)

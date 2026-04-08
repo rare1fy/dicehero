@@ -790,12 +790,92 @@ const dimensionCrush: Relic = {
   id: 'dimension_crush',
   name: '降维打击',
   icon: 'compress',
-  description: '构成顺子所需的骰子数量-1（2颗连续即可触发顺子）',
+  description: '\u89E6\u53D1\u987A\u5B50\u65F6\uFF0C\u987A\u5B50\u6570\u91CF+1\uFF083\u987A\u53D84\u987A\uFF0C\u4EE5\u6B64\u7C7B\u63A8\uFF09',
   rarity: 'legendary',
   trigger: 'passive',
-  effect: () => ({ straightReduction: 1 }),
+  effect: () => ({ straightUpgrade: 1 }),
 };
 
+
+/** 万象归一 - 所有对子视为三条 (规则改变型) */
+const universalPair: Relic = {
+  id: 'universal_pair',
+  name: '万象归一',
+  icon: 'prism',
+  description: '对子视为三条结算（倍率按三条计算）',
+  rarity: 'legendary',
+  trigger: 'passive',
+  effect: () => ({ pairAsTriplet: true }),
+};
+
+/** 混沌骰面 - 每回合第一次重投时，所有骰子+1点 (规则改变型) */
+const chaosFace: Relic = {
+  id: 'chaos_face',
+  name: '混沌骰面',
+  icon: 'dice',
+  description: '每回合第一次重投时，所有手中骰子点数+1（6不变）',
+  rarity: 'rare',
+  trigger: 'passive',
+  effect: () => ({ rerollPointBoost: 1 }),
+};
+
+/** 贪婪之手 - 每回合额外抽1颗骰子 (规则改变型) */
+const greedyHand: Relic = {
+  id: 'greedy_hand',
+  name: '贪婪之手',
+  icon: 'hand',
+  description: '每回合额外抽取1颗骰子',
+  rarity: 'rare',
+  trigger: 'passive',
+  effect: () => ({ extraDraw: 1 }),
+};
+
+/** 双重打击 - 每回合额外1次出牌机会 (规则改变型) */
+const doubleStrike: Relic = {
+  id: 'double_strike',
+  name: '双重打击',
+  icon: 'bolt',
+  description: '每回合额外获得1次出牌机会',
+  rarity: 'legendary',
+  trigger: 'passive',
+  effect: () => ({ extraPlay: 1 }),
+};
+
+/** 命运硬币 - 每回合额外1次免费重投 (规则改变型) */
+const fateCoin: Relic = {
+  id: 'fate_coin',
+  name: '命运硬币',
+  icon: 'coin',
+  description: '每回合额外获得1次免费重投',
+  rarity: 'rare',
+  trigger: 'passive',
+  effect: () => ({ extraReroll: 1 }),
+};
+
+/** 元素亲和 - 普通骰子有30%概率获得随机元素 (规则改变型) */
+const elementAffinity: Relic = {
+  id: 'element_affinity',
+  name: '元素亲和',
+  icon: 'crystal',
+  description: '普通骰子抽取时有30%概率获得随机元素',
+  rarity: 'rare',
+  trigger: 'passive',
+  effect: () => ({ normalElementChance: 0.3 }),
+};
+
+/** 完美主义者改 - 全部相同点数时额外x1.5 (规则改变型) */
+const symmetrySeeker: Relic = {
+  id: 'symmetry_seeker',
+  name: '对称追求者',
+  icon: 'diamond',
+  description: '出牌时若所有骰子点数相同，额外x1.5倍率',
+  rarity: 'rare',
+  trigger: 'on_play',
+  effect: (ctx: any) => {
+    if (!ctx) return {};
+    return {};
+  },
+};
 export const ALL_RELICS: Record<string, Relic> = {
   // 基础打工
   grindstone,
@@ -857,13 +937,20 @@ export const ALL_RELICS: Record<string, Relic> = {
   rage_fire_relic: rageFireRelic,
   treasure_map_relic: treasureMapRelic,
   dimension_crush: dimensionCrush,
+  universal_pair: universalPair,
+  chaos_face: chaosFace,
+  greedy_hand: greedyHand,
+  double_strike: doubleStrike,
+  fate_coin: fateCoin,
+  element_affinity: elementAffinity,
+  symmetry_seeker: symmetrySeeker,
 };
 
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic, navigatorCompass, healingBreeze, sharpEdgeRelic, luckyCoinRelic, thickHideRelic, basicInstinctRelic, treasureMapRelic],
   uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator, warmEmberRelic, treasureSenseRelic, goldenTouchRelic, hagglerRelic, rapidStrikesRelic, bloodPactRelic, bloodDiceRelic, rerollFrenzyRelic, battleMedicRelic, rageFireRelic],
-  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic],
-  legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush],
+  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity],
+  legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush, universalPair, doubleStrike],
 };
 
 /** 获取遗物奖励池 */

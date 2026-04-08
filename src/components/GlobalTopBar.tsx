@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { PixelCoin, PixelRefresh, PixelPlay, PixelSword } from './PixelIcons';
+import { PixelCoin, PixelRefresh, PixelPlay, PixelSword, PixelSoulCrystal } from './PixelIcons';
 import { CHAPTER_CONFIG } from '../config';
 import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
@@ -13,9 +13,12 @@ export const GlobalTopBar: React.FC = () => {
   return (
     <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0">
       <div className="flex items-center gap-1.5">
-        {/* Chapter */}
-        <div className="flex items-center gap-1 text-[var(--pixel-orange-light)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-          <span className="font-bold">{game.chapter}-{CHAPTER_CONFIG.chapterNames[(game.chapter || 1) - 1]}</span>
+        {/* 魂晶 */}
+        <div className="flex items-center gap-1 text-purple-400 font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-help" style={{borderRadius:'2px'}}>
+          <PixelSoulCrystal size={2} /> <span className="font-bold">{game.blackMarketQuota || 0}</span>
+          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-[var(--dungeon-panel)] border-2 border-purple-500 px-2 py-1 text-[8px] text-purple-300 whitespace-nowrap z-50 pixel-text-shadow" style={{borderRadius:'2px'}}>
+            魂晶 — 溢出伤害转化，营火可撤离
+          </div>
         </div>
         <div className="w-[2px] h-4 bg-[var(--dungeon-panel-border)]" />
         {/* Gold */}

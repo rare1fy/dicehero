@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 /**
  * 像素图标系统 — 用纯CSS box-shadow绘制8-bit风格图标
@@ -667,6 +667,42 @@ export const PixelMerchant: React.FC<{ size?: number; className?: string }> = ({
       {/* 脚 */}
       <rect x="2" y="7" width="2" height="1" fill="#5C3317" />
       <rect x="4" y="7" width="2" height="1" fill="#5C3317" />
+    </svg>
+  );
+};
+
+/** 魂晶 - 紫色水晶形状的像素icon */
+export const PixelSoulCrystal: React.FC<{ size?: number; className?: string }> = ({ size = 2, className }) => {
+  const s = size;
+  return (
+    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated' }}>
+      {/* 外框 - 深紫色 */}
+      <rect x="3" y="0" width="2" height="1" fill="#4a1a6b" />
+      <rect x="2" y="1" width="1" height="1" fill="#4a1a6b" />
+      <rect x="5" y="1" width="1" height="1" fill="#4a1a6b" />
+      <rect x="1" y="2" width="1" height="1" fill="#4a1a6b" />
+      <rect x="6" y="2" width="1" height="1" fill="#4a1a6b" />
+      <rect x="1" y="3" width="1" height="1" fill="#4a1a6b" />
+      <rect x="6" y="3" width="1" height="1" fill="#4a1a6b" />
+      <rect x="1" y="4" width="1" height="1" fill="#4a1a6b" />
+      <rect x="6" y="4" width="1" height="1" fill="#4a1a6b" />
+      <rect x="2" y="5" width="1" height="1" fill="#4a1a6b" />
+      <rect x="5" y="5" width="1" height="1" fill="#4a1a6b" />
+      <rect x="3" y="6" width="1" height="1" fill="#4a1a6b" />
+      <rect x="4" y="6" width="1" height="1" fill="#4a1a6b" />
+      <rect x="3" y="7" width="2" height="1" fill="#3a1055" />
+      {/* 主体 - 紫色渐变 */}
+      <rect x="3" y="1" width="2" height="1" fill="#9b59b6" />
+      <rect x="2" y="2" width="4" height="1" fill="#8e44ad" />
+      <rect x="2" y="3" width="4" height="1" fill="#7d3c98" />
+      <rect x="2" y="4" width="4" height="1" fill="#6c3483" />
+      <rect x="3" y="5" width="2" height="1" fill="#5b2c6f" />
+      {/* 高光 */}
+      <rect x="3" y="2" width="1" height="1" fill="#d2b4de" />
+      <rect x="3" y="3" width="1" height="1" fill="#bb8fce" />
+      <rect x="4" y="2" width="1" height="1" fill="#c39bd3" />
+      {/* 底部反光 */}
+      <rect x="4" y="5" width="1" height="1" fill="#7d3c98" />
     </svg>
   );
 };

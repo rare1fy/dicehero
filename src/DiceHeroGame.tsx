@@ -195,6 +195,7 @@ export default function DiceHeroGame() {
   // === 结算演出状态 ===
   const [showDamageOverlay, setShowDamageOverlay] = useState<{damage: number, armor: number, heal: number} | null>(null);
   const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'mult' | 'effects' | 'damage'>(null);
+  const [flashingRelicIds, setFlashingRelicIds] = useState<string[]>([]);
   const [selectedRelic, setSelectedRelic] = useState<Relic | null>(null);
   const [settlementData, setSettlementData] = useState<{
     bestHand: string;
@@ -324,13 +325,13 @@ export default function DiceHeroGame() {
       targetEnemyUid: (firstWave.find(e => e.combatType === 'guardian') || firstWave[0])?.uid || null,
       diceBag: initDiceBag(prev.ownedDice),
       discardPile: [], // 新战斗开始时清空所有状态效果
-      freeRerollsLeft: prev.freeRerollsPerTurn,
-      playsLeft: prev.maxPlays,
+      freeRerollsLeft: prev.freeRerollsPerTurn + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0),
+      playsLeft: prev.maxPlays + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraPlay || 0), 0),
       isEnemyTurn: false 
     }));
     // 直接用新bag抽取（避免闭包旧值问题）
     const freshBag = initDiceBag(game.ownedDice);
-    const drawCountBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
+    const drawCountBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
     const freshCount = game.drawCount + drawCountBonus;
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
     if (fShuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
@@ -433,7 +434,7 @@ export default function DiceHeroGame() {
     // 先把当前手牌中未使用的骰子放回弃骰库（防止骰子丢失）
     const handDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
     const currentDiscard = [...g.discardPile, ...handDefIds];
-    const relicDrawBonus = g.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).drawCountBonus || 0), 0);
+    const relicDrawBonus = g.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
     const count = g.drawCount + relicDrawBonus;
     
     // 从骰子库抽取（包含刚放回的手牌骰子）
@@ -473,14 +474,16 @@ export default function DiceHeroGame() {
 
   // Calculate reroll HP cost: first N rerolls free (N = freeRerollsPerTurn), then 2, 4, 8, 16...
   const getRerollHpCost = (count: number): number => {
-    const freeCount = game.freeRerollsPerTurn || 1;
+    const extraFreeRerolls = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
+    const freeCount = (game.freeRerollsPerTurn || 1) + extraFreeRerolls;
     if (count < freeCount) return 0; // free rerolls
     const paidIndex = count - freeCount; // 0, 1, 2, 3...
     return Math.pow(2, paidIndex + 1); // 2, 4, 8, 16, 32...
   };
   const currentRerollCost = getRerollHpCost(rerollCount);
   const canAffordReroll = game.hp > currentRerollCost;
-  const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) - rerollCount);
+  const extraFreeRerollsForDisplay = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
+  const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) + extraFreeRerollsForDisplay - rerollCount);
 
   const rerollUnselected = async () => {
     if (game.isEnemyTurn || game.playsLeft <= 0) return;
@@ -619,7 +622,7 @@ export default function DiceHeroGame() {
         return def.element !== 'normal' || !!def.onPlay;
       });
       if (!isCurrentlySelected && newSelected.length > 1 && hasSpecial) {
-        const handResult = checkHands(newSelected, { straightReduction: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
+        const handResult = checkHands(newSelected, { straightUpgrade: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
         if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
           setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
         }
@@ -629,15 +632,15 @@ export default function DiceHeroGame() {
   };
 
   // 降维打击遗物：顺子所需骰子数-1
-  const straightReduction = useMemo(() => {
+  const straightUpgrade = useMemo(() => {
     return game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0;
   }, [game.relics]);
 
   const currentHands = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
     // 分裂骰子：手牌中当普通骰子，结算演出时才分裂
-    return checkHands(selected, { straightReduction });
-  }, [dice, straightReduction]);
+    return checkHands(selected, { straightUpgrade });
+  }, [dice, straightUpgrade]);
 
   // 多选普通攻击检测：选了多颗骰子但不成牌型
   const isNormalAttackMulti = useMemo(() => {
@@ -768,7 +771,7 @@ export default function DiceHeroGame() {
     let armorBreak = false;
     let multiplier = 1;
     let goldBonus = 0;
-    const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number }[] = [];
+    const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number, relicId?: string, icon?: string }[] = [];
 
     activeAugments.forEach(aug => {
       const res = aug.effect(X, selected, aug.level || 1, { rerollsThisTurn: rerollCount, currentHp: game.hp, maxHp: game.maxHp, currentGold: game.souls });
@@ -827,7 +830,7 @@ export default function DiceHeroGame() {
       if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`金币+${res.goldBonus}`); }
       if (res.goldBonus) { /* toast will be shown in playHand */ }
       if (details.length > 0) {
-        triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
+        triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined, relicId: relic.id, icon: relic.icon });
       }
     });
 
@@ -1036,8 +1039,8 @@ export default function DiceHeroGame() {
       runningBase += settleDice[i].value;
       const currentRunning = runningBase;
       setSettlementData(prev => prev ? { ...prev, currentBase: currentRunning, currentEffectIdx: i, selectedDice: [...settleDice] } : prev);
-      playSound('select');
-      await new Promise(r => setTimeout(r, 300));
+      playSettlementTick(i);
+      await new Promise(r => setTimeout(r, 280));
 
       // 分裂骰子：播放到它时额外弹出一颗随机点数骰子
       if (settleDice[i].diceDefId === 'split') {
@@ -1093,7 +1096,7 @@ export default function DiceHeroGame() {
 
     // 如果发生了磁吸，也需要重新计算牌型和伤害（和分裂一样的逻辑）
     if (magnetOccurred && !splitOccurred) {
-      const newHandResult = checkHands(settleDice, { straightReduction });
+      const newHandResult = checkHands(settleDice, { straightUpgrade });
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
         addLog(`磁吸改变了牌型！${outcome.bestHand} → ${newBestHand}`);
@@ -1130,7 +1133,7 @@ export default function DiceHeroGame() {
       await new Promise(r => setTimeout(r, 500));
     }
     if (splitOccurred) {
-      const newHandResult = checkHands(settleDice, { straightReduction });
+      const newHandResult = checkHands(settleDice, { straightUpgrade });
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
         addLog(`分裂改变了牌型！${outcome.bestHand} → ${newBestHand}`);
@@ -1173,7 +1176,7 @@ export default function DiceHeroGame() {
     // Phase 2.5: 倍率强调动画 (0.5s)
     // ========================================
     setSettlementPhase('mult');
-    playSound('augment_activate');
+    playMultiplierTick(0);
     await new Promise(r => setTimeout(r, 500));
 
 
@@ -1183,7 +1186,7 @@ export default function DiceHeroGame() {
     setSettlementPhase('effects');
     
     // 收集所有触发效果
-    const allEffects: { name: string; detail: string; type: 'damage' | 'mult' | 'status' | 'heal' | 'armor'; rawValue?: number; rawMult?: number }[] = [];
+    const allEffects: { name: string; detail: string; type: 'damage' | 'mult' | 'status' | 'heal' | 'armor'; rawValue?: number; rawMult?: number; relicId?: string; icon?: string }[] = [];
     
     // 骰子onPlay效果
     const skipOnPlaySettlement = selected.length > 1 && currentHands.activeHands.includes('普通攻击') && currentHands.activeHands.length === 1;
@@ -1204,7 +1207,7 @@ export default function DiceHeroGame() {
     
     // 遗物效果
     outcome.triggeredAugments.forEach(aug => {
-      allEffects.push({ name: aug.name, detail: aug.details, type: aug.rawMult ? 'mult' : 'damage', rawValue: aug.rawDamage || undefined, rawMult: aug.rawMult || undefined });
+      allEffects.push({ name: aug.name, detail: aug.details, type: aug.rawMult ? 'mult' : 'damage', rawValue: aug.rawDamage || undefined, rawMult: aug.rawMult || undefined, relicId: aug.relicId, icon: aug.icon });
     });
     
     // 逐个展示效果
@@ -1217,8 +1220,13 @@ export default function DiceHeroGame() {
         ...(allEffects[i].rawMult ? { currentMult: (prev?.currentMult || 1) * allEffects[i].rawMult } : {}),
         currentEffectIdx: i,
       } : prev);
-      playSound('augment_activate');
-      await new Promise(r => setTimeout(r, 400));
+      playMultiplierTick(i + 1);
+      // 遗物icon刷光
+      if (allEffects[i].relicId) {
+        setFlashingRelicIds(prev => [...prev, allEffects[i].relicId!]);
+        setTimeout(() => setFlashingRelicIds(prev => prev.filter(id => id !== allEffects[i].relicId)), 800);
+      }
+      await new Promise(r => setTimeout(r, 350));
     }
     if (allEffects.length > 0) await new Promise(r => setTimeout(r, 200));
 
@@ -1485,8 +1493,8 @@ export default function DiceHeroGame() {
               blackMarketQuota: (prev.blackMarketQuota || 0) + quotaGain,
               totalOverkillThisRun: (prev.totalOverkillThisRun || 0) + totalOverkill,
             }));
-            addToast('⬛ +' + quotaGain + ' 黑市配额 (溢出' + totalOverkill + ')', 'gold');
-            addFloatingText('+' + quotaGain + '⬛', 'text-purple-400', null, 'player');
+            addToast('💠 +' + quotaGain + ' 魂晶 (溢出' + totalOverkill + ')', 'buff');
+            addFloatingText('+' + quotaGain + ' 💠', 'text-purple-400', null, 'player');
           }
         }
     }, 300);
@@ -3337,20 +3345,55 @@ useEffect(() => {
                       {/* 触发效果列表 */}
                       {settlementPhase === 'effects' && settlementData.triggeredEffects.length > 0 && (
                         <div className="flex flex-col items-center gap-1 mt-1">
-                          {settlementData.triggeredEffects.map((eff, i) => (
-                            <div key={i} className={`text-xs px-3 py-1.5 border animate-effect-slide-in ${eff.type === "mult" ? "bg-[rgba(224,60,60,0.15)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]" : eff.type === "heal" ? "bg-[rgba(60,180,60,0.15)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]" : "bg-[rgba(60,120,224,0.15)] border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]"}`}
-                              style={{borderRadius: "2px", animationDelay: `${i * 100}ms`}}>
-                              {eff.type === "mult" ? "×" : "+"} {eff.name}: {eff.detail}
-                            </div>
-                          ))}
+                          {settlementData.triggeredEffects.map((eff, i) => {
+                            const effIconMap: Record<string, string> = {
+                              blade: '⚔️', flag: '🚩', weight: '🏋️', pendulum: '📍',
+                              grail: '🏆', gauge: '📊', prism: '💎', resonator: '✨',
+                              diamond: '💎', hourglass: '⏳', fangs: '🦷', contract: '📜',
+                              recycle: '♻️', hand: '✋', eye: '👁️', infinity: '♾️', bag: '👜',
+                              compress: '🔻', shield: '🛡️', fire: '🔥', coin: '🪙',
+                              skull: '💀', heart: '❤️', star: '⭐', bolt: '⚡',
+                              crystal: '💠', crown: '👑', dice: '🎲', potion: '🧪',
+                            };
+                            const effIcon = eff.icon ? (effIconMap[eff.icon] || '✦') : '';
+                            return (
+                              <div key={i} className={`text-xs px-3 py-1.5 border animate-effect-slide-in flex items-center gap-1.5 ${eff.type === "mult" ? "bg-[rgba(224,60,60,0.15)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]" : eff.type === "heal" ? "bg-[rgba(60,180,60,0.15)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]" : "bg-[rgba(60,120,224,0.15)] border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]"}`}
+                                style={{borderRadius: "2px", animationDelay: `${i * 100}ms`}}>
+                                {effIcon && <span className="text-sm">{effIcon}</span>}
+                                <span>{eff.type === "mult" ? "×" : "+"} {eff.name}: {eff.detail}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
-                      {/* 最终伤害 */}
+                      {/* 最终伤害 - 根据数额缩放 */}
                       {settlementPhase === 'damage' && (
-                        <div className="mt-2">
-                          <span className="text-lg font-bold text-[var(--dungeon-text-dim)]">
+                        <div className="mt-2 flex flex-col items-center">
+                          <span className="text-xs font-bold text-[var(--dungeon-text-dim)] mb-1">
                             {settlementData.finalDamage > 0 ? 'DAMAGE' : 'EFFECT'}
                           </span>
+                          {settlementData.finalDamage > 0 && (
+                            <span
+                              className={`font-black font-mono animate-value-pop pixel-text-shadow ${settlementData.finalDamage >= 120 ? 'text-[var(--pixel-red)] settlement-value-glow-red' : settlementData.finalDamage >= 60 ? 'text-[var(--pixel-orange)]' : settlementData.finalDamage >= 30 ? 'text-[var(--pixel-gold)]' : 'text-[var(--dungeon-text)]'}`}
+                              style={{
+                                fontSize: settlementData.finalDamage >= 200 ? '56px'
+                                  : settlementData.finalDamage >= 120 ? '48px'
+                                  : settlementData.finalDamage >= 60 ? '40px'
+                                  : settlementData.finalDamage >= 30 ? '32px' : '24px',
+                                textShadow: settlementData.finalDamage >= 120
+                                  ? '0 0 30px rgba(224,60,60,0.9), 0 0 60px rgba(224,60,60,0.5), 0 4px 8px rgba(0,0,0,0.8)'
+                                  : settlementData.finalDamage >= 60
+                                  ? '0 0 20px rgba(255,160,60,0.8), 0 2px 4px rgba(0,0,0,0.8)'
+                                  : '0 2px 4px rgba(0,0,0,0.6)',
+                                letterSpacing: '2px',
+                              }}
+                            >
+                              {settlementData.finalDamage}
+                            </span>
+                          )}
+                          {(settlementData.finalDamage || 0) >= 120 && (
+                            <span className="text-[9px] text-[var(--pixel-red-light)] animate-pulse mt-1">OVERKILL!</span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -3947,6 +3990,7 @@ useEffect(() => {
                   )}
                   {game.relics.map((relic, i) => {
                     const isActive = relic.trigger === 'passive' || (relic.trigger === 'on_play' && game.phase === 'battle');
+                    const isFlashing = flashingRelicIds.includes(relic.id);
                     const iconMap: Record<string, string> = {
                       blade: '⚔️', flag: '🚩', weight: '🏋️', pendulum: '📍',
                       grail: '🏆', gauge: '📊', prism: '💎', resonator: '✨',
@@ -3963,7 +4007,7 @@ useEffect(() => {
                             ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.35)] to-[rgba(180,120,30,0.15)]"
                             : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
                         }`}
-                        style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}) }}
+                        style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}), ...(isFlashing ? { boxShadow: '0 0 16px rgba(255,255,255,0.9), 0 0 30px rgba(212,160,48,0.8)', animation: 'relic-flash 0.6s ease-out' } : {}) }}
                         onClick={() => setSelectedRelic(relic)}
                       >
                         <span className={`text-[14px] leading-none ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>

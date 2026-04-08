@@ -329,7 +329,13 @@ export interface RelicEffect {
   // 特殊标记
   canLockDice?: boolean;
   maxPointsUnlocked?: boolean;
-  straightReduction?: number;    // 顺子所需骰子数减少量
+  straightUpgrade?: number;      // 顺子触发时升级量（3顺变4顺）
+  pairAsTriplet?: boolean;       // 对子视为三条结算
+  rerollPointBoost?: number;     // 重掷时骰子点数+N
+  extraDraw?: number;            // 每回合额外抽骰子数量
+  extraPlay?: number;            // 每回合额外出牌次数
+  extraReroll?: number;          // 每回合额外免费重投次数
+  normalElementChance?: number;  // 普通骰子获得元素概率
 }
 
 export interface Relic {
