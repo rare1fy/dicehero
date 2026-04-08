@@ -732,8 +732,8 @@ const rerollFrenzyRelic: Relic = {
 /** 骰子大师 - 每回合额外抽1颗骰子 */
 const diceMasterRelic: Relic = {
   id: 'dice_master_relic',
-  name: 'u{9AB0}u{5B50}u{5927}u{5E08}',
-  description: 'u{6253}u{51FA}u{2265}3u{9897}u{9AB0}u{5B50}u{7684}u{724C}u{578B}u{65F6}u{FF0C}u{57FA}u{7840}u{4F24}u{5BB3}+15u{FF0C}u{500D}u{7387}x1.3',
+  name: '骰子大师',
+  description: '打出≥3颗骰子的牌型时，基础伤害+15，倍率x1.3',
   icon: 'eye',
   rarity: 'legendary',
   trigger: 'on_play',
@@ -748,8 +748,8 @@ const diceMasterRelic: Relic = {
 /** 命运之轮 - 每回合额外1次免费重Roll */
 const fortuneWheelRelic: Relic = {
   id: 'fortune_wheel_relic',
-  name: 'u{547D}u{8FD0}u{4E4B}u{8F6E}',
-  description: 'u{6BCF}u{6B21}u{51FA}u{724C}u{65F6}u{FF0C}u{672C}u{56DE}u{5408}u{6BCF}u{6B21}u{91CD}Rollu{989D}u{5916}+8u{4F24}u{5BB3}(u{53EF}u{53E0}u{52A0})',
+  name: '命运之轮',
+  description: '每次出牌时，本回合每次重Roll额外+8伤害(可叠加)',
   icon: 'gear',
   rarity: 'legendary',
   trigger: 'on_play',
@@ -835,7 +835,7 @@ const greedyHand: Relic = {
   id: 'greedy_hand',
   name: '贪婪之手',
   icon: 'hand',
-  description: 'u{6253}u{51FA}u{2265}4u{9897}u{9AB0}u{5B50}u{7684}u{724C}u{578B}u{65F6}u{FF0C}u{57FA}u{7840}u{4F24}u{5BB3}+20',
+  description: '打出≥4颗骰子的牌型时，基础伤害+20',
   rarity: 'rare',
   trigger: 'on_play',
   effect: (ctx) => {
@@ -862,7 +862,7 @@ const fateCoin: Relic = {
   id: 'fate_coin',
   name: '命运硬币',
   icon: 'coin',
-  description: 'u{672C}u{56DE}u{5408}u{91CD}u{6295}u{2265}2u{6B21}u{540E}u{51FA}u{724C}u{FF0C}u{500D}u{7387}x1.5',
+  description: '本回合重投≥2次后出牌，倍率x1.5',
   rarity: 'rare',
   trigger: 'on_play',
   effect: (ctx) => {
