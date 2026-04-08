@@ -44,6 +44,11 @@ export interface GameContextType {
   // Loop Floor Map actions
   rollAndMoveOnFloor: () => void;
   enterLoopTile: (tile: LoopFloorTile) => void;
+
+  // Floor Settlement actions
+  applyFloorReward: (rewardId: string) => void;
+  resolveFloorPostEvent: () => void;
+  advanceToNextFloor: () => void;
 }
 
 export const GameContext = React.createContext<GameContextType>(null!);

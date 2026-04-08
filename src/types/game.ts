@@ -441,6 +441,7 @@ export interface GameState {
   currentTileIndex: number;
   pendingMoveRoll: number | null;
   floorRewardOptions: string[];
+  currentPostEvent: { id: string; label: string; description: string; type: string } | null;
   currentFloorTheme: LoopFloorTheme | null;          // 当前大关 (1-5)
   stats: RunStats;
   pendingReplacementAugment: Augment | null;

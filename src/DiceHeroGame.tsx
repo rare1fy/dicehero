@@ -60,6 +60,8 @@ import { ReplacementModal } from './components/ReplacementModal';
 import { ToastDisplay } from './components/ToastDisplay';
 import { EnemyQuoteBubble } from './components/EnemyQuoteBubble';
 import { LoopFloorMap } from './components/LoopFloorMap';
+import { FloorSettlementScreen } from './components/FloorSettlementScreen';
+import { FLOOR_REWARD_POOL, FLOOR_REWARD_CHOICES, FLOOR_POST_EVENTS } from './config/loopFloors';
 import { generateLoopFloors, rollMoveDice, getTargetTileIndex, checkExitCondition } from './utils/loopFloorGenerator';
 import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from './config/enemies';
 
@@ -108,6 +110,7 @@ export default function DiceHeroGame() {
     currentTileIndex: 0,
     pendingMoveRoll: null,
     floorRewardOptions: [],
+    currentPostEvent: null,
     currentFloorTheme: null,
     elementsUsedThisBattle: [],
     consecutiveNormalAttacks: 0,
@@ -2697,10 +2700,16 @@ useEffect(() => {
 
         // Route to appropriate phase based on tile type
         let nextPhase = prev.phase;
+        let shouldStartBattle = false;
+        let battleNodeType: 'enemy' | 'boss' = 'enemy';
         switch (tile.type) {
           case 'battle':
+            shouldStartBattle = true;
+            battleNodeType = 'enemy';
+            break;
           case 'boss_battle':
-            nextPhase = 'battle';
+            shouldStartBattle = true;
+            battleNodeType = 'boss';
             break;
           case 'event':
             nextPhase = 'event';
@@ -2727,10 +2736,52 @@ useEffect(() => {
             break;
         }
 
+        // If battle tile, create synthetic MapNode and start battle
+        if (shouldStartBattle) {
+          const syntheticNode = {
+            id: tile.id,
+            type: battleNodeType as any,
+            depth: prev.currentFloorIndex + 1 + (prev.chapter - 1) * 4,
+            connectedTo: [],
+            x: 0,
+            y: 0,
+          };
+          // We need to return state first, then trigger startBattle outside setState
+          setTimeout(() => {
+            startBattle(syntheticNode as any);
+          }, 50);
+          return {
+            ...prev,
+            loopFloors: updatedFloors,
+          };
+        }
+
+        // Generate settlement data if entering floor settlement
+        const extraState: Record<string, any> = {};
+        if (nextPhase === 'floorSettlement') {
+          const shuffled = [...FLOOR_REWARD_POOL].sort(() => Math.random() - 0.5);
+          extraState.floorRewardOptions = shuffled.slice(0, FLOOR_REWARD_CHOICES).map(r => r.id);
+          // Generate post event
+          const totalWeight = FLOOR_POST_EVENTS.reduce((sum, e) => sum + e.weight, 0);
+          let roll = Math.random() * totalWeight;
+          for (const evt of FLOOR_POST_EVENTS) {
+            roll -= evt.weight;
+            if (roll <= 0) {
+              extraState.currentPostEvent = { id: evt.id, label: evt.label, description: evt.description, type: evt.type };
+              break;
+            }
+          }
+          if (!extraState.currentPostEvent) {
+            const last = FLOOR_POST_EVENTS[FLOOR_POST_EVENTS.length - 1];
+            extraState.currentPostEvent = { id: last.id, label: last.label, description: last.description, type: last.type };
+          }
+        }
+
         return {
           ...prev,
           phase: nextPhase,
           loopFloors: updatedFloors,
+          ...extraState,
         };
       });
     }, 100);
@@ -2738,6 +2789,144 @@ useEffect(() => {
 
   const enterLoopTile = (_tile: any) => {
     // Placeholder - tile entry is handled by rollAndMoveOnFloor
+  };
+
+
+  // ============================================================
+  // Floor Settlement Functions
+  // ============================================================
+
+  const generateFloorRewards = (): string[] => {
+    // Shuffle and pick FLOOR_REWARD_CHOICES unique rewards
+    const shuffled = [...FLOOR_REWARD_POOL].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, FLOOR_REWARD_CHOICES).map(r => r.id);
+  };
+
+  const generatePostEvent = () => {
+    const totalWeight = FLOOR_POST_EVENTS.reduce((sum, e) => sum + e.weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const evt of FLOOR_POST_EVENTS) {
+      roll -= evt.weight;
+      if (roll <= 0) return { id: evt.id, label: evt.label, description: evt.description, type: evt.type };
+    }
+    const last = FLOOR_POST_EVENTS[FLOOR_POST_EVENTS.length - 1];
+    return { id: last.id, label: last.label, description: last.description, type: last.type };
+  };
+
+  const applyFloorReward = (rewardId: string) => {
+    const reward = FLOOR_REWARD_POOL.find(r => r.id === rewardId);
+    if (!reward) return;
+
+    playSound('levelup');
+    setGame(prev => {
+      let newState = { ...prev };
+      switch (reward.type) {
+        case 'heal':
+          newState.hp = Math.min(prev.hp + (reward.value || 20), prev.maxHp);
+          newState.logs = [...prev.logs, '\u6cbb\u7597\u4e4b\u6cc9: \u6062\u590d ' + (reward.value || 20) + ' HP'];
+          break;
+        case 'gold':
+          newState.souls = prev.souls + (reward.value || 30);
+          newState.logs = [...prev.logs, '\u5b9d\u7bb1: \u83b7\u5f97 ' + (reward.value || 30) + ' \u91d1\u5e01'];
+          break;
+        case 'max_hp':
+          newState.maxHp = prev.maxHp + (reward.value || 8);
+          newState.hp = prev.hp + (reward.value || 8);
+          newState.logs = [...prev.logs, '\u751f\u547d\u7ed3\u6676: \u6700\u5927 HP +' + (reward.value || 8)];
+          break;
+        case 'free_reroll':
+          newState.freeRerolls = (prev.freeRerolls || 0) + (reward.value || 1);
+          newState.logs = [...prev.logs, '\u547d\u8fd0\u4e4b\u8f6e: +' + (reward.value || 1) + ' \u514d\u8d39\u91cd\u6295'];
+          break;
+        case 'draw_count':
+          newState.drawCount = (prev.drawCount || 3) + (reward.value || 1);
+          newState.logs = [...prev.logs, '\u9ab0\u5b50\u888b\u6269\u5c55: \u4e0b\u5c42\u9996\u6218\u591a\u62bd ' + (reward.value || 1) + ' \u9897'];
+          break;
+        case 'upgrade_die':
+          // For now just give gold as placeholder; proper die upgrade needs UI
+          newState.souls = prev.souls + 15;
+          newState.logs = [...prev.logs, '\u9ab0\u5b50\u5f3a\u5316: \u83b7\u5f97 15 \u91d1\u5e01 (\u5f85\u5b9e\u73b0)'];
+          break;
+      }
+      return newState;
+    });
+  };
+
+  const resolveFloorPostEvent = () => {
+    setGame(prev => {
+      const evt = prev.currentPostEvent;
+      if (!evt) return prev;
+
+      let newState = { ...prev };
+      switch (evt.type) {
+        case 'merchant':
+          // Give a small gold bonus for now
+          newState.souls = prev.souls + 10;
+          newState.logs = [...prev.logs, '\u65c5\u5546: \u83b7\u5f97 10 \u91d1\u5e01\u7684\u4ea4\u6613\u62a5\u916c'];
+          break;
+        case 'gamble':
+          // 50/50 gamble
+          if (Math.random() > 0.5) {
+            newState.souls = prev.souls + 30;
+            newState.logs = [...prev.logs, '\u8d4c\u535a\u53f0: \u8d62\u4e86! +30 \u91d1\u5e01'];
+          } else {
+            newState.souls = Math.max(0, prev.souls - 15);
+            newState.logs = [...prev.logs, '\u8d4c\u535a\u53f0: \u8f93\u4e86... -15 \u91d1\u5e01'];
+          }
+          break;
+        case 'shrine':
+          // Trade HP for power
+          newState.hp = Math.max(1, prev.hp - 8);
+          newState.souls = prev.souls + 20;
+          newState.logs = [...prev.logs, '\u796d\u575b: \u727a\u7272 8 HP, \u83b7\u5f97 20 \u91d1\u5e01'];
+          break;
+        case 'nothing':
+          newState.logs = [...prev.logs, '\u5e73\u9759: \u4ec0\u4e48\u4e5f\u6ca1\u53d1\u751f'];
+          break;
+      }
+      return newState;
+    });
+  };
+
+  const advanceToNextFloor = () => {
+    playSound('select');
+    setGame(prev => {
+      const currentFloor = prev.loopFloors[prev.currentFloorIndex];
+      if (!currentFloor) return prev;
+
+      // Mark current floor as completed
+      const updatedFloor = { ...currentFloor, completed: true };
+      const updatedFloors = [...prev.loopFloors];
+      updatedFloors[prev.currentFloorIndex] = updatedFloor;
+
+      const nextFloorIndex = prev.currentFloorIndex + 1;
+
+      // Check if all floors completed
+      if (nextFloorIndex >= prev.loopFloors.length) {
+        // Chapter complete - go to chapter transition
+        return {
+          ...prev,
+          loopFloors: updatedFloors,
+          phase: 'chapterTransition' as const,
+          logs: [...prev.logs, '\u7ae0\u8282\u5b8c\u6210!'],
+        };
+      }
+
+      // Advance to next floor
+      const nextFloor = updatedFloors[nextFloorIndex];
+      return {
+        ...prev,
+        loopFloors: updatedFloors,
+        currentFloorIndex: nextFloorIndex,
+        currentTileIndex: nextFloor ? nextFloor.entryTileIndex : 0,
+        currentFloorTheme: nextFloor ? nextFloor.theme : null,
+        pendingMoveRoll: null,
+        floorRewardOptions: [],
+        currentPostEvent: null,
+        phase: 'loopMap' as const,
+        logs: [...prev.logs, '\u8fdb\u5165\u7b2c ' + (nextFloorIndex + 1) + ' \u5c42: ' + (nextFloor ? nextFloor.theme : '')],
+      };
+    });
   };
 
   const contextValue = {
@@ -2759,6 +2948,7 @@ useEffect(() => {
     addLog,
     handleSelectStartingRelic, handleSkipStartingRelic,
     rollAndMoveOnFloor, enterLoopTile,
+    applyFloorReward, resolveFloorPostEvent, advanceToNextFloor,
   };
 
   if (game.phase === 'start') {
@@ -2794,6 +2984,7 @@ useEffect(() => {
       <div className="flex-1 overflow-hidden relative">
         {game.phase === 'map' && <MapScreen />}
         {game.phase === 'loopMap' && <LoopFloorMap />}
+        {game.phase === 'floorSettlement' && <FloorSettlementScreen />}
         {game.phase === 'diceReward' && <DiceRewardScreen />}
         {game.phase === 'loot' && <LootScreen />}
         {game.phase === 'merchant' && <ShopScreen />}
