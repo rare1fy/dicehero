@@ -27,16 +27,16 @@ const saveMeta = (meta: MetaProgress) => {
 
 /** 魂晶商店可购买的常驻遗物列表 */
 const SHOP_ITEMS: { relicId: string; cost: number; desc: string }[] = [
-  { relicId: 'grindstone', cost: 30, desc: '每次出牌额外+2伤害' },
-  { relicId: 'iron_banner', cost: 25, desc: '每场战斗开始获得3护甲' },
-  { relicId: 'fate_coin', cost: 40, desc: '本回合重投≥2次后出牌，倍率x1.5' },
-  { relicId: 'greedy_hand', cost: 50, desc: '打出≥4颗骰子的牌型时，基础伤害+20' },
-  { relicId: 'iron_skin_relic', cost: 20, desc: '受到伤害-1（最低1）' },
-  { relicId: 'crimson_grail', cost: 35, desc: '击杀敌人时回复2HP' },
-  { relicId: 'schrodinger_bag', cost: 45, desc: '骰子库耗尽时不洗牌，直接重新填充' },
-  { relicId: 'treasure_sense_relic', cost: 30, desc: '战利品中额外出现一个选项' },
-  { relicId: 'warm_ember_relic', cost: 25, desc: '营火回复量+50%' },
-  { relicId: 'symmetry_seeker', cost: 35, desc: '所有骰子同点数时额外x1.5' },
+  { relicId: 'grindstone', cost: 60, desc: '每次出牌额外+2伤害' },
+  { relicId: 'iron_banner', cost: 45, desc: '每场战斗开始获得3护甲' },
+  { relicId: 'fate_coin', cost: 75, desc: '本回合重投≥2次后出牌，倍率x1.5' },
+  { relicId: 'greedy_hand', cost: 90, desc: '打出≥4颗骰子的牌型时，基础伤害+20' },
+  { relicId: 'iron_skin_relic', cost: 40, desc: '受到伤害-1（最低1）' },
+  { relicId: 'crimson_grail', cost: 65, desc: '击杀敌人时回复2HP' },
+  { relicId: 'schrodinger_bag', cost: 80, desc: '骰子库耗尽时不洗牌，直接重新填充' },
+  { relicId: 'treasure_sense_relic', cost: 60, desc: '战利品中额外出现一个选项' },
+  { relicId: 'warm_ember_relic', cost: 50, desc: '营火回复量+50%' },
+  { relicId: 'symmetry_seeker', cost: 65, desc: '所有骰子同点数时额外x1.5' },
 ];
 
 const iconMap: Record<string, string> = {
