@@ -2,11 +2,14 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
-import { PixelCoin, PixelStar, PixelDice, PixelFlame } from './PixelIcons';
+import { PixelCoin, PixelStar, PixelDice, PixelFlame, PixelClose } from './PixelIcons';
 import { DICE_BY_RARITY, getDiceDef, getUpgradedFaces } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
 import { MiniDice } from './DiceBagPanel';
+import { getDiceElementClass } from '../utils/uiHelpers';
+import { ElementBadge } from './PixelDiceShapes';
+import { RARITY_COLORS as DICE_RARITY_COLORS } from './PixelDiceShapes';
 
 // ============================================================
 // 宝箱配置（宝箱节点使用）
@@ -70,10 +73,10 @@ function generateReward(shopLevel: number): ChestReward {
 }
 
 const RARITY_COLORS: Record<string, string> = {
-  common: '#9ca3af', uncommon: '#34d399', rare: '#60a5fa', legendary: '#f59e0b',
+  common: '#34d399', uncommon: '#60a5fa', rare: '#a855f7', legendary: '#f97316',
 };
 const RARITY_LABELS: Record<string, string> = {
-  common: '普通', uncommon: '稀有', rare: '史诗', legendary: '传说',
+  common: '普通', uncommon: '精良', rare: '稀有', legendary: '传说',
 };
 
 // ============================================================
@@ -172,50 +175,66 @@ const MerchantScreen: React.FC = () => {
       ; // all dice can be removed
     
     return (
-      <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
+      <div className="flex flex-col items-center justify-start h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] overflow-y-auto relative">
         <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
         <div className="flex items-center gap-2 mb-1 mt-4 relative z-10">
           <PixelFlame size={3} />
-          <h2 className="text-lg font-black pixel-text-shadow tracking-wide">{'✂'} 选择要移除的骰子</h2>
+          <h2 className="text-lg font-black pixel-text-shadow tracking-wide">选择要移除的骰子</h2>
         </div>
-        <p className="text-[var(--dungeon-text-dim)] mb-5 text-[9px] text-center relative z-10">
+        <p className="text-[var(--dungeon-text-dim)] mb-4 text-[9px] text-center relative z-10">
           点击选择一颗骰子永久移除，最少保留6颗
         </p>
-        <div className="flex justify-center gap-2.5 flex-wrap max-w-sm relative z-10">
+        <div className="flex justify-center gap-3 flex-wrap max-w-sm relative z-10">
           {removableDice.length === 0 ? (
             <div className="text-center py-10 text-[var(--dungeon-text-dim)] text-xs">没有可移除的骰子</div>
           ) : removableDice.map((d) => {
             const def = getDiceDef(d.defId);
             const faces = getUpgradedFaces(def, d.level);
             const isSelected = removeDiceIdx === d.index;
+            const avgVal = (faces.reduce((a, b) => a + b, 0) / faces.length).toFixed(1);
             return (
               <motion.button
                 key={d.index}
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setRemoveDiceIdx(isSelected ? null : d.index)}
-                className={`relative flex flex-col items-center p-3 border-2 transition-all min-w-[80px] ${
-                  isSelected
-                    ? 'border-[var(--pixel-red)] bg-[rgba(224,60,49,0.15)] shadow-[0_0_12px_rgba(224,60,49,0.4)]'
-                    : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
-                }`}
-                style={{ borderRadius: '4px' }}
+                className={`relative flex flex-col items-center ${getDiceElementClass(def.element, isSelected, false, false, def.id)}`}
+                style={{
+                  width: '64px', height: '72px', fontSize: '18px',
+                  borderColor: isSelected ? 'var(--pixel-red)' : undefined,
+                  boxShadow: isSelected ? '0 0 14px rgba(224,60,49,0.5)' : undefined,
+                }}
               >
-                <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-0.5">{def.name}</div>
-                <div className="text-[8px] text-[var(--dungeon-text-dim)]">Lv.{d.level} [{faces.join(',')}]</div>
+                <span className="font-bold">{avgVal}</span>
+                <span className="text-[7px] text-[var(--dungeon-text-dim)] mt-0.5">{def.name}</span>
+                <span className="text-[6px] text-[var(--dungeon-text-dim)]">Lv.{d.level}</span>
+                {def.element !== 'normal' && (
+                  <div className="absolute top-0.5 right-0.5 pointer-events-none">
+                    <ElementBadge element={def.element} size={7} />
+                  </div>
+                )}
                 {isSelected && (
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] rounded-full flex items-center justify-center">
-                    <span className="text-[8px] text-white font-black">{'✖'}</span>
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] flex items-center justify-center" style={{ borderRadius: '2px' }}>
+                    <PixelClose size={1.5} />
                   </motion.div>
                 )}
               </motion.button>
             );
           })}
         </div>
-        {removeDiceIdx !== null && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 relative z-10">
-            <button
+        {/* 操作按钮区 */}
+        <div className="flex gap-3 mt-5 relative z-10">
+          <button
+            onClick={() => { setRemoveDiceMode(false); setRemoveDiceIdx(null); }}
+            className="pixel-btn pixel-btn-ghost text-[10px] px-5 py-2"
+          >
+            返回
+          </button>
+          {removeDiceIdx !== null && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
               disabled={game.ownedDice.length <= 6}
               onClick={() => {
                 if (game.ownedDice.length <= 6) return;
@@ -226,24 +245,18 @@ const MerchantScreen: React.FC = () => {
                   ...prev,
                   ownedDice: prev.ownedDice.filter((_: any, i: number) => i !== removeDiceIdx),
                 }));
-                addToast(`✖ ${def.name} 已移除`, 'damage');
+                addToast(`${def.name} 已移除`, 'damage');
                 addLog(`商人净化: ${def.name} 已被移除`);
                 setRemoveDiceMode(false);
                 setRemoveDiceIdx(null);
               }}
-              className="pixel-btn text-[10px] px-6 py-2"
-              style={{ background: 'var(--pixel-red)', color: 'white' }}
+              className="pixel-btn text-[10px] px-5 py-2"
+              style={{ background: 'var(--pixel-red)', color: 'white', borderColor: 'var(--pixel-red)' }}
             >
               确认移除
-            </button>
-          </motion.div>
-        )}
-        {removableDice.length === 0 && (
-          <button
-            onClick={() => { setRemoveDiceMode(false); }}
-            className="mt-4 pixel-btn pixel-btn-ghost text-xs relative z-10"
-          >返回</button>
-        )}
+            </motion.button>
+          )}
+        </div>
       </div>
     );
   }

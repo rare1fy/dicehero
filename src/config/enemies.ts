@@ -44,6 +44,12 @@ export interface EnemyQuotes {
   hurt?: string[];
   /** 低血量台词（首次触发一次） */
   lowHp?: string[];
+  /** 防御时台词 */
+  defend?: string[];
+  /** 释放技能时台词（法师/牧师） */
+  skill?: string[];
+  /** 治疗时台词（牧师） */
+  heal?: string[];
 }
 
 export interface EnemyConfig {

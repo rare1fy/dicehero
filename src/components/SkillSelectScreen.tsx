@@ -4,13 +4,14 @@
 import React, { useContext } from 'react';
 import { motion } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
+import { RelicPixelIcon } from './PixelRelicIcons';
 
 /** 稀有度颜色映射 */
 const RARITY_COLORS: Record<string, string> = {
-  common: 'var(--dungeon-text-dim)',
-  uncommon: 'var(--pixel-cyan)',
-  rare: 'var(--pixel-purple)',
-  legendary: 'var(--pixel-gold)',
+  common: '#34d399',
+  uncommon: '#60a5fa',
+  rare: '#a855f7',
+  legendary: '#f97316',
 };
 
 const RARITY_LABELS: Record<string, string> = {
@@ -90,19 +91,15 @@ export const SkillSelectScreen: React.FC = () => {
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 + i * 0.15 }}
-              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleSelectStartingRelic(relic)}
               className="flex flex-col items-center p-2.5 bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] hover:border-[var(--pixel-purple)] transition-colors relative group"
               style={{ borderRadius: '4px' }}
             >
               <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
-              <div className="text-2xl mb-1.5">{({
-                blade: '⚔️', flag: '🚩', weight: '🏋️', pendulum: '📍',
-                grail: '🏆', gauge: '📊', prism: '💎', resonator: '✨',
-                diamond: '💎', hourglass: '⌛', fangs: '🧛', contract: '📜',
-                recycle: '♻️', eye: '👁️', infinity: '♾️', bag: '👜',
-              } as Record<string, string>)[relic.icon] || '✨'}</div>
+              <div className="mb-1.5 flex items-center justify-center w-10 h-10 border-2 border-[var(--dungeon-panel-border)] bg-[var(--dungeon-bg)]" style={{ borderRadius: '2px' }}>
+                <RelicPixelIcon relicId={relic.id} size={3} />
+              </div>
               <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow mb-1 text-center leading-tight">
                 {relic.name}
               </div>

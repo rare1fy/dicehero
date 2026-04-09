@@ -2,99 +2,23 @@ import { MapNode, NodeType } from '../types/game';
 import { MAP_CONFIG } from '../config';
 
 /**
- * 杀戮尖塔风格地图生成器 v3
- * 
- * v3核心改进：
- * - 保证每条路径上战斗节点密度：连续非战斗节点不超过1层
- * - 模板战斗比例提升：每层至少50%节点是战斗(enemy/elite)
- * - 路径验证：生成后验证所有路径，不满足最低战斗数则修正
- * - Boss前保证至少经历过足够战斗
+ * 杀戮尖塔风格地图生成器 v4
+ *
+ * 参照 Slay the Spire 规则重写：
+ * 1. 先生成节点网格 + 路径连接
+ * 2. 再按概率权重随机分配节点类型
+ * 3. 约束修正：特殊节点不连续、精英/营火不过早出现、Boss前不出精英
+ * 4. Boss前保证≥2个营火且分布在不同路径上
+ * 5. 路径战斗密度兜底
  */
 
 export interface MapNodeExt extends MapNode {
   x: number;
 }
 
-type LayerTemplate = NodeType[];
-
 // ============================================================
-// 层模板系统 — 保证每层至少50%是战斗节点
+// 工具函数
 // ============================================================
-
-/** 前半程3节点模板（层1~5）— 至少2个战斗 */
-const EARLY_3_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'event'],
-  ['enemy', 'enemy', 'merchant'],
-  ['enemy', 'enemy', 'treasure'],
-  ['enemy', 'elite', 'event'],
-  ['enemy', 'enemy', 'event'],
-  ['enemy', 'enemy', 'merchant'],
-];
-
-/** 前半程含精英的3节点模板（风险层）*/
-const EARLY_3_ELITE_TEMPLATES: LayerTemplate[] = [
-  ['elite', 'enemy', 'event'],
-  ['elite', 'enemy', 'merchant'],
-  ['elite', 'enemy', 'treasure'],
-  ['elite', 'enemy', 'event'],
-];
-
-/** 前半程4节点模板 — 至少2个战斗 */
-const EARLY_4_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'event', 'merchant'],
-  ['enemy', 'enemy', 'enemy', 'event'],
-  ['enemy', 'enemy', 'event', 'treasure'],
-  ['enemy', 'enemy', 'merchant', 'enemy'],
-  ['enemy', 'elite', 'event', 'enemy'],
-];
-
-/** 前半程5节点模板 — 至少3个战斗 */
-const EARLY_5_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'enemy', 'event', 'merchant'],
-  ['enemy', 'enemy', 'elite', 'event', 'enemy'],
-  ['enemy', 'enemy', 'enemy', 'merchant', 'event'],
-  ['enemy', 'enemy', 'enemy', 'event', 'treasure'],
-];
-
-/** 后半程3节点模板（层8~12）— 至少2个战斗 */
-const LATE_3_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'merchant'],
-  ['enemy', 'enemy', 'event'],
-  ['enemy', 'enemy', 'treasure'],
-  ['enemy', 'enemy', 'merchant'],
-  ['enemy', 'enemy', 'event'],
-];
-
-/** 后半程含精英3节点模板 */
-const LATE_3_ELITE_TEMPLATES: LayerTemplate[] = [
-  ['elite', 'enemy', 'merchant'],
-  ['elite', 'enemy', 'event'],
-  ['elite', 'enemy', 'treasure'],
-  ['elite', 'enemy', 'event'],
-];
-
-/** 后半程4节点模板 */
-const LATE_4_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'merchant', 'event'],
-  ['enemy', 'elite', 'enemy', 'event'],
-  ['enemy', 'enemy', 'merchant', 'treasure'],
-  ['enemy', 'elite', 'enemy', 'merchant'],
-  ['enemy', 'enemy', 'event', 'enemy'],
-];
-
-/** 后半程5节点模板 — 至少3个战斗 */
-const LATE_5_TEMPLATES: LayerTemplate[] = [
-  ['enemy', 'enemy', 'enemy', 'merchant', 'event'],
-  ['enemy', 'elite', 'enemy', 'event', 'merchant'],
-  ['enemy', 'enemy', 'enemy', 'treasure', 'event'],
-  ['enemy', 'elite', 'enemy', 'merchant', 'enemy'],
-  ['enemy', 'enemy', 'enemy', 'event', 'treasure'],
-];
-
-/** 2节点营火层模板 */
-const CAMPFIRE_2_TEMPLATES: LayerTemplate[] = [
-  ['campfire', 'campfire'],
-];
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -113,56 +37,40 @@ function isCombatType(type: NodeType): boolean {
   return type === 'enemy' || type === 'elite' || type === 'boss';
 }
 
-/**
- * 根据层深度和节点数选择模板
- */
-function getLayerTemplate(depth: number, count: number, fixedType: string | null): NodeType[] {
-  if (fixedType === 'boss') return ['boss'];
-  if (fixedType === 'campfire') {
-    if (count <= 2) return pickRandom(CAMPFIRE_2_TEMPLATES);
-    return Array(count).fill('campfire') as NodeType[];
+/** 特殊节点 — 不能与同类或彼此连续 */
+const SPECIAL_TYPES: NodeType[] = ['elite', 'campfire', 'merchant'];
+
+// ============================================================
+// 概率权重配置 — 参照杀戮尖塔
+// ============================================================
+
+interface NodeWeight {
+  type: NodeType;
+  weight: number;
+}
+
+/** 标准概率权重（杀戮尖塔风格） */
+const STANDARD_WEIGHTS: NodeWeight[] = [
+  { type: 'enemy',    weight: 45 },
+  { type: 'event',    weight: 20 },
+  { type: 'elite',    weight: 12 },
+  { type: 'campfire', weight: 12 },
+  { type: 'merchant', weight: 6 },
+  { type: 'treasure', weight: 5 },
+];
+
+/** 从权重池中按概率抽取一个类型，可排除某些类型 */
+function weightedRandomType(weights: NodeWeight[], excluded?: Set<NodeType>): NodeType {
+  const filtered = excluded
+    ? weights.filter(w => !excluded.has(w.type))
+    : weights;
+  const totalWeight = filtered.reduce((s, w) => s + w.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const w of filtered) {
+    r -= w.weight;
+    if (r <= 0) return w.type;
   }
-  if (fixedType === 'enemy') return Array(count).fill('enemy') as NodeType[];
-
-  const isEarly = depth <= 5;
-  const isRiskLayer = depth === 3 || depth === 10 || depth === 12;
-
-  if (count === 5) {
-    const pool = isEarly ? EARLY_5_TEMPLATES : LATE_5_TEMPLATES;
-    return shuffle(pickRandom(pool));
-  }
-
-  if (count === 4) {
-    const pool = isEarly ? EARLY_4_TEMPLATES : LATE_4_TEMPLATES;
-    return shuffle(pickRandom(pool));
-  }
-
-  if (count === 3) {
-    if (isRiskLayer && Math.random() < 0.6) {
-      const elitePool = isEarly ? EARLY_3_ELITE_TEMPLATES : LATE_3_ELITE_TEMPLATES;
-      return shuffle(pickRandom(elitePool));
-    }
-    if (!isRiskLayer && Math.random() < 0.15) {
-      const elitePool = isEarly ? EARLY_3_ELITE_TEMPLATES : LATE_3_ELITE_TEMPLATES;
-      return shuffle(pickRandom(elitePool));
-    }
-    const pool = isEarly ? EARLY_3_TEMPLATES : LATE_3_TEMPLATES;
-    return shuffle(pickRandom(pool));
-  }
-
-  if (count === 2) {
-    // 2节点层：保证至少1个战斗
-    const pairs: LayerTemplate[] = [
-      ['enemy', 'event'],
-      ['enemy', 'merchant'],
-      ['enemy', 'treasure'],
-      ['enemy', 'event'],
-      ['enemy', 'merchant'],
-    ];
-    return shuffle(pickRandom(pairs));
-  }
-
-  return ['enemy'];
+  return 'enemy';
 }
 
 // ============================================================
@@ -170,31 +78,48 @@ function getLayerTemplate(depth: number, count: number, fixedType: string | null
 // ============================================================
 
 export const generateMap = (): MapNode[] => {
-  const nodes: MapNodeExt[] = [];
   const layers = MAP_CONFIG.totalLayers;
 
-  // === 第一步：生成所有节点 + 基于模板分配类型 ===
+  // --- 计算Boss前层 ---
+  const bossDepths: number[] = [];
+  const preBossLayers = new Set<number>();
+  for (const [k, v] of Object.entries(MAP_CONFIG.fixedLayers)) {
+    if (v.type === 'boss') {
+      bossDepths.push(Number(k));
+      preBossLayers.add(Number(k) - 1);
+    }
+  }
+  // 只有 boss/enemy 固定层才跳过类型分配
+  const trulyFixedLayers = new Set(
+    Object.entries(MAP_CONFIG.fixedLayers)
+      .filter(([, v]) => v.type !== null)
+      .map(([k]) => Number(k))
+  );
+
+  // ================================================================
+  // 第一步：生成所有节点（只分配位置，暂不分配类型）
+  // ================================================================
+  const nodes: MapNodeExt[] = [];
+
   for (let l = 0; l < layers; l++) {
     const fixed = MAP_CONFIG.fixedLayers[l];
     const count = fixed ? fixed.count : 3;
-    const fixedType = fixed?.type ?? null;
-
-    const template = getLayerTemplate(l, count, fixedType);
-
-    const isPreBossLayer = MAP_CONFIG.fixedLayers[l + 1]?.type === 'boss';
-    const isPostBossLayer = l > 0 && MAP_CONFIG.fixedLayers[l - 1]?.type === 'boss';
 
     const positions: number[] = [];
+    const isPreBossLayer = preBossLayers.has(l);
+    const isPostBossLayer = l > 0 && bossDepths.includes(l - 1);
 
     if (count === 1) {
       positions.push(50);
     } else if (isPreBossLayer) {
+      // Boss前层稍收拢
       for (let i = 0; i < count; i++) {
-        const baseX = 25 + (i + 1) / (count + 1) * 50;
+        const baseX = 20 + (i + 1) / (count + 1) * 60;
         const jitter = (Math.random() - 0.5) * 8;
-        positions.push(Math.max(20, Math.min(80, baseX + jitter)));
+        positions.push(Math.max(15, Math.min(85, baseX + jitter)));
       }
     } else if (isPostBossLayer) {
+      // Boss后层展开
       for (let i = 0; i < count; i++) {
         const baseX = 10 + (i + 1) / (count + 1) * 80;
         const jitter = (Math.random() - 0.5) * 15;
@@ -210,6 +135,7 @@ export const generateMap = (): MapNode[] => {
     }
     positions.sort((a, b) => a - b);
 
+    // 最小间距保障
     for (let i = 1; i < positions.length; i++) {
       if (positions[i] - positions[i - 1] < 12) {
         positions[i] = positions[i - 1] + 12;
@@ -218,10 +144,9 @@ export const generateMap = (): MapNode[] => {
     }
 
     for (let i = 0; i < count; i++) {
-      const id = `node-${l}-${i}`;
       nodes.push({
-        id,
-        type: template[i] || 'enemy',
+        id: `node-${l}-${i}`,
+        type: 'enemy', // 占位，后面再分配
         depth: l,
         connectedTo: [],
         completed: false,
@@ -230,7 +155,9 @@ export const generateMap = (): MapNode[] => {
     }
   }
 
-  // === 第二步：生成连接关系 ===
+  // ================================================================
+  // 第二步：生成连接关系（同之前，基于最近距离+随机分叉）
+  // ================================================================
   for (let l = 0; l < layers - 1; l++) {
     const currentLayer = nodes.filter(n => n.depth === l);
     const nextLayer = nodes.filter(n => n.depth === l + 1);
@@ -248,7 +175,7 @@ export const generateMap = (): MapNode[] => {
       nextLayer.forEach(n => { inDegree[n.id] = 0; });
 
       currentLayer.forEach((node) => {
-        const distances = nextLayer.map((next) => ({
+        const distances = nextLayer.map(next => ({
           dist: Math.abs(node.x - next.x),
           id: next.id,
         })).sort((a, b) => a.dist - b.dist);
@@ -256,6 +183,7 @@ export const generateMap = (): MapNode[] => {
         node.connectedTo.push(distances[0].id);
         inDegree[distances[0].id]++;
 
+        // 40%概率连第二近节点（增加分叉）
         if (distances.length > 1 && Math.random() < 0.4) {
           if (inDegree[distances[1].id] < 2) {
             node.connectedTo.push(distances[1].id);
@@ -264,7 +192,8 @@ export const generateMap = (): MapNode[] => {
         }
       });
 
-      nextLayer.forEach((next) => {
+      // 孤立节点补连
+      nextLayer.forEach(next => {
         if (inDegree[next.id] === 0) {
           let closestParent = currentLayer[0];
           let minDist = Infinity;
@@ -276,46 +205,113 @@ export const generateMap = (): MapNode[] => {
             }
           });
           closestParent.connectedTo.push(next.id);
-          inDegree[next.id]++;
         }
       });
     }
   }
 
-  // === 第三步：路径感知修正 — 保证战斗密度 ===
+  // 去重连接
+  nodes.forEach(n => {
+    n.connectedTo = [...new Set(n.connectedTo)];
+  });
+
+  // ================================================================
+  // 第三步：分配节点类型（杀戮尖塔式概率 + 约束）
+  // ================================================================
+
+  // 3a. 固定层先设置
+  for (const node of nodes) {
+    const fixed = MAP_CONFIG.fixedLayers[node.depth];
+    if (fixed?.type === 'boss') {
+      node.type = 'boss';
+    } else if (fixed?.type === 'enemy' && trulyFixedLayers.has(node.depth)) {
+      node.type = 'enemy';
+    }
+  }
+
+  // 3b. 按层逐个分配非固定层的节点类型
+  for (let l = 0; l < layers; l++) {
+    if (trulyFixedLayers.has(l)) continue;
+
+    const layerNodes = nodes.filter(n => n.depth === l);
+
+    // 构建本层排除集合
+    const layerExcluded = new Set<NodeType>();
+
+    // 规则A：前3层不出精英和营火（杀戮尖塔前5层不出，我们缩短到前3层因为只有15层）
+    if (l <= 2) {
+      layerExcluded.add('elite');
+      layerExcluded.add('campfire');
+    }
+
+    // 规则B：Boss前一层不出精英
+    if (preBossLayers.has(l)) {
+      layerExcluded.add('elite');
+    }
+
+    // 规则C：Boss后第一层不出精英/营火（给玩家缓冲）
+    if (l > 0 && bossDepths.includes(l - 1)) {
+      layerExcluded.add('elite');
+    }
+
+    // 同层已用类型跟踪（杀戮尖塔规则：分叉出去的节点类型尽量不同）
+    const usedInLayer = new Set<NodeType>();
+
+    for (const node of shuffle(layerNodes)) {
+      if (trulyFixedLayers.has(l)) continue;
+
+      // 本节点的排除集 = 层排除 + 父节点约束
+      const nodeExcluded = new Set(layerExcluded);
+
+      // 获取父节点
+      const parents = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
+
+      // 规则D：特殊节点不能与父节点同类型连续
+      // 精英、商店、营火不能连续出现
+      for (const p of parents) {
+        if (SPECIAL_TYPES.includes(p.type)) {
+          nodeExcluded.add(p.type);
+        }
+      }
+
+      // 规则E：分叉多样性 — 同一个父节点指向的多个子节点类型尽量不同
+      // 如果同层已经有了某个特殊类型，降低再次出现概率（通过排除）
+      for (const used of usedInLayer) {
+        if (SPECIAL_TYPES.includes(used)) {
+          nodeExcluded.add(used);
+        }
+      }
+
+      const assignedType = weightedRandomType(STANDARD_WEIGHTS, nodeExcluded);
+      node.type = assignedType;
+      usedInLayer.add(assignedType);
+    }
+  }
+
+  // ================================================================
+  // 第四步：约束修正 — 逐节点检查路径连续性
+  // ================================================================
   const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure'];
-  const fixedLayerIds = new Set(Object.keys(MAP_CONFIG.fixedLayers).map(Number));
 
   for (let l = 1; l < layers; l++) {
-    if (fixedLayerIds.has(l)) continue;
+    if (trulyFixedLayers.has(l)) continue;
+    const layerNodes = nodes.filter(n => n.depth === l);
 
-    const currentLayer = nodes.filter(n => n.depth === l);
-    currentLayer.forEach(node => {
-      const parentNodes = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
-      if (parentNodes.length === 0) return;
+    for (const node of layerNodes) {
+      const parents = nodes.filter(n => n.depth === l - 1 && n.connectedTo.includes(node.id));
+      if (parents.length === 0) continue;
 
-      // 规则1：同类型非战斗节点不能连续
-      if (nonCombatTypes.includes(node.type)) {
-        const hasSameTypeParent = parentNodes.some(p => p.type === node.type);
-        if (hasSameTypeParent) {
+      // 修正1：特殊节点不能与同类父节点连续
+      if (SPECIAL_TYPES.includes(node.type)) {
+        if (parents.some(p => p.type === node.type)) {
           node.type = 'enemy';
         }
       }
 
-      // 规则2：所有父节点都是非战斗时，当前节点必须是战斗
-      if (nonCombatTypes.includes(node.type)) {
-        const allParentsNonCombat = parentNodes.every(p => nonCombatTypes.includes(p.type));
-        if (allParentsNonCombat) {
-          node.type = 'enemy';
-        }
-      }
-
-      // 规则3：检查祖父节点 — 如果父节点和祖父节点都不是战斗，强制当前为战斗
-      // 这确保连续非战斗路径不超过1层
+      // 修正2：连续2层非战斗 → 强制战斗
       if (nonCombatTypes.includes(node.type) && l >= 2) {
-        const hasNonCombatChain = parentNodes.some(parent => {
+        const hasNonCombatChain = parents.some(parent => {
           if (!nonCombatTypes.includes(parent.type)) return false;
-          // 检查parent的父节点
           const grandparents = nodes.filter(n => n.depth === l - 2 && n.connectedTo.includes(parent.id));
           return grandparents.some(gp => nonCombatTypes.includes(gp.type));
         });
@@ -323,77 +319,153 @@ export const generateMap = (): MapNode[] => {
           node.type = 'enemy';
         }
       }
-    });
+    }
   }
 
-  // === Step 4: Economic node distribution fix ===
-  const economicNodeTypes: NodeType[] = ['merchant', 'treasure'];
+  // ================================================================
+  // 第五步：经济节点管控
+  // ================================================================
+  const economicTypes: NodeType[] = ['merchant', 'treasure'];
   for (let l = 0; l < layers; l++) {
-    if (fixedLayerIds.has(l)) continue;
+    if (trulyFixedLayers.has(l)) continue;
     const layerNodes = nodes.filter(n => n.depth === l);
 
-    // First 2 layers (after start): no economic nodes
-    if (l <= 2) {
-      layerNodes.forEach(node => {
-        if (economicNodeTypes.includes(node.type)) {
-          node.type = Math.random() < 0.6 ? 'enemy' : 'event';
+    // 前2层无经济节点
+    if (l <= 1) {
+      layerNodes.forEach(n => {
+        if (economicTypes.includes(n.type)) {
+          n.type = Math.random() < 0.6 ? 'enemy' : 'event';
         }
       });
       continue;
     }
 
-    // Any layer: max 1 economic node
+    // 每层最多1个经济节点
     let econCount = 0;
-    layerNodes.forEach(node => {
-      if (economicNodeTypes.includes(node.type)) {
+    layerNodes.forEach(n => {
+      if (economicTypes.includes(n.type)) {
         econCount++;
         if (econCount > 1) {
-          node.type = Math.random() < 0.6 ? 'enemy' : 'event';
+          n.type = Math.random() < 0.6 ? 'enemy' : 'event';
         }
       }
     });
   }
 
-  // === Step 5: 路径战斗密度验证 ===
-  // 验证从起点到每个Boss的所有路径，确保最低战斗数
-  // 中Boss(depth 7): 路径上至少3场战斗（不含Boss本身）
-  // 最终Boss(depth 14): 从中Boss后至少3场战斗
-  validateCombatDensity(nodes, 0, 7, 3);
-  validateCombatDensity(nodes, 8, 14, 3);
+  // ================================================================
+  // 第六步：路径战斗密度兜底
+  // ================================================================
+  validateCombatDensity(nodes, 0, bossDepths[0] ?? 7, 3, trulyFixedLayers);
+  if (bossDepths.length > 1) {
+    validateCombatDensity(nodes, bossDepths[0] + 1, bossDepths[1], 3, trulyFixedLayers);
+  }
 
-  // 去重连接
-  nodes.forEach(n => {
-    n.connectedTo = [...new Set(n.connectedTo)];
-  });
+  // ================================================================
+  // 第七步：Boss前营火保障 — 每个Boss前至少2个campfire，分布不同路径
+  // ================================================================
+  for (const bossDepth of bossDepths) {
+    ensureCampfiresBeforeBoss(nodes, bossDepth, 2);
+  }
 
   return nodes;
 };
 
+// ============================================================
+// Boss前营火保障
+// ============================================================
+
 /**
- * 验证并修正指定范围内的战斗密度
- * 从startDepth到endDepth的每条可能路径上，至少有minCombat场战斗
+ * 确保Boss前的节点中至少有 minCount 个 campfire，
+ * 且尽量分布在不同的路径上（不相邻位置）。
+ *
+ * 搜索范围：Boss前2层（preBoss层和preBoss-1层）
  */
+function ensureCampfiresBeforeBoss(
+  nodes: MapNodeExt[],
+  bossDepth: number,
+  minCount: number
+): void {
+  const preBossDepth = bossDepth - 1;
+  const preBoss2Depth = bossDepth - 2;
+
+  // 收集Boss前2层所有节点
+  const candidates = nodes.filter(n =>
+    n.depth === preBossDepth || n.depth === preBoss2Depth
+  );
+
+  // 已有的营火
+  const existingCampfires = candidates.filter(n => n.type === 'campfire');
+
+  let needed = minCount - existingCampfires.length;
+  if (needed <= 0) return;
+
+  // 找Boss前一层（preBossDepth）的可替换节点
+  const preBossNodes = nodes.filter(n => n.depth === preBossDepth);
+  // 找Boss前两层（preBoss2Depth）的可替换节点
+  const preBoss2Nodes = nodes.filter(n => n.depth === preBoss2Depth);
+
+  // 已有营火的x坐标集合（用于保证分散）
+  const campfireXPositions = existingCampfires.map(n => n.x);
+
+  // 优先在preBossDepth层放置，其次preBoss2Depth层
+  const allCandidates = [
+    ...shuffle(preBossNodes.filter(n => n.type !== 'campfire' && n.type !== 'boss')),
+    ...shuffle(preBoss2Nodes.filter(n => n.type !== 'campfire' && n.type !== 'boss')),
+  ];
+
+  // 按距离已有营火的最远优先排序（确保分散）
+  allCandidates.sort((a, b) => {
+    const aMinDist = campfireXPositions.length > 0
+      ? Math.min(...campfireXPositions.map(cx => Math.abs(a.x - cx)))
+      : Infinity;
+    const bMinDist = campfireXPositions.length > 0
+      ? Math.min(...campfireXPositions.map(cx => Math.abs(b.x - cx)))
+      : Infinity;
+    return bMinDist - aMinDist; // 距离远的优先
+  });
+
+  for (const candidate of allCandidates) {
+    if (needed <= 0) break;
+
+    // 检查是否与已有营火在不同路径上（x距离>15表示不同路径区域）
+    const tooClose = campfireXPositions.some(cx => Math.abs(candidate.x - cx) < 15);
+    if (tooClose && allCandidates.length > needed) continue; // 有更好选择时跳过
+
+    candidate.type = 'campfire';
+    campfireXPositions.push(candidate.x);
+    needed--;
+  }
+
+  // 如果分散放置后仍不够，强制放置
+  if (needed > 0) {
+    for (const candidate of allCandidates) {
+      if (needed <= 0) break;
+      if (candidate.type === 'campfire') continue;
+      candidate.type = 'campfire';
+      needed--;
+    }
+  }
+}
+
+// ============================================================
+// 路径战斗密度验证
+// ============================================================
+
 function validateCombatDensity(
   nodes: MapNodeExt[],
   startDepth: number,
   endDepth: number,
-  minCombat: number
+  minCombat: number,
+  fixedLayerIds: Set<number>
 ): void {
-  const fixedLayerIds = new Set(Object.keys(MAP_CONFIG.fixedLayers).map(Number));
   const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure'];
-
-  // 找出所有从startDepth到endDepth的路径
   const startNodes = nodes.filter(n => n.depth === startDepth);
 
   function findMinCombatOnPaths(nodeId: string, targetDepth: number): number {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return 0;
-
     const combatVal = isCombatType(node.type) ? 1 : 0;
-
-    if (node.depth === targetDepth) {
-      return combatVal;
-    }
+    if (node.depth === targetDepth) return combatVal;
 
     const children = node.connectedTo
       .map(cid => nodes.find(n => n.id === cid))
@@ -401,31 +473,22 @@ function validateCombatDensity(
 
     if (children.length === 0) return combatVal;
 
-    // 找最少战斗的路径（最差情况）
     let minChildCombat = Infinity;
     for (const child of children) {
       const childMin = findMinCombatOnPaths(child.id, targetDepth);
-      if (childMin < minChildCombat) {
-        minChildCombat = childMin;
-      }
+      if (childMin < minChildCombat) minChildCombat = childMin;
     }
-
     return combatVal + (minChildCombat === Infinity ? 0 : minChildCombat);
   }
 
-  // 对每个起始节点检查
   for (const startNode of startNodes) {
     const minOnPath = findMinCombatOnPaths(startNode.id, endDepth);
     if (minOnPath < minCombat) {
-      // 找出战斗最少的路径上的非战斗节点，强制改为enemy
       forceMoreCombat(nodes, startNode.id, endDepth, minCombat, fixedLayerIds, nonCombatTypes);
     }
   }
 }
 
-/**
- * 沿最弱路径强制增加战斗节点
- */
 function forceMoreCombat(
   nodes: MapNodeExt[],
   startId: string,
@@ -434,17 +497,15 @@ function forceMoreCombat(
   fixedLayerIds: Set<number>,
   nonCombatTypes: NodeType[]
 ): void {
-  // 找最弱路径
   const path = findWeakestPath(nodes, startId, targetDepth);
   if (!path) return;
 
-  // 统计路径上的战斗数
   let combatCount = path.filter(n => isCombatType(n.type)).length;
-
-  // 将路径上的非战斗、非固定层节点改为enemy，直到满足最低战斗数
   for (const node of path) {
     if (combatCount >= minCombat) break;
     if (fixedLayerIds.has(node.depth)) continue;
+    // 不把营火改掉（保护Boss前的营火）
+    if (node.type === 'campfire') continue;
     if (nonCombatTypes.includes(node.type)) {
       node.type = 'enemy';
       combatCount++;
@@ -452,9 +513,6 @@ function forceMoreCombat(
   }
 }
 
-/**
- * 找战斗数最少的路径
- */
 function findWeakestPath(
   nodes: MapNodeExt[],
   startId: string,
@@ -462,10 +520,7 @@ function findWeakestPath(
 ): MapNodeExt[] | null {
   const node = nodes.find(n => n.id === startId) as MapNodeExt | undefined;
   if (!node) return null;
-
-  if (node.depth === targetDepth) {
-    return [node];
-  }
+  if (node.depth === targetDepth) return [node];
 
   const children = node.connectedTo
     .map(cid => nodes.find(n => n.id === cid))
@@ -487,16 +542,15 @@ function findWeakestPath(
     }
   }
 
-  if (weakestSubPath) {
-    return [node, ...weakestSubPath];
-  }
-  return [node];
+  return weakestSubPath ? [node, ...weakestSubPath] : [node];
 }
 
-// 获取节点的x坐标（从id解析）
+// ============================================================
+// 导出辅助
+// ============================================================
+
 export const getNodeX = (node: MapNode, allNodes: MapNode[]): number => {
   if ('x' in node) return (node as MapNodeExt).x;
-
   const layerNodes = allNodes.filter(n => n.depth === node.depth);
   const idx = layerNodes.findIndex(n => n.id === node.id);
   const count = layerNodes.length;

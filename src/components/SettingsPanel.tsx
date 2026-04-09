@@ -12,9 +12,10 @@ interface SettingsPanelProps {
   onResetTutorial?: () => void;
   onOpenHandGuide?: () => void;
   onOpenDiceGuide?: () => void;
+  onOpenRelicGuide?: () => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, onOpenHandGuide, onOpenDiceGuide }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, onOpenHandGuide, onOpenDiceGuide, onOpenRelicGuide }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [volume, setVolume] = useState(getMasterVolume());
   const [sfx, setSfx] = useState(isSfxEnabled());
@@ -162,6 +163,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, o
                     className="w-full py-2 pixel-btn pixel-btn-ghost text-[10px] flex items-center justify-center gap-2"
                   >
                     <PixelBook size={2} /> 骰子图鉴
+                  </button>
+                )}
+
+                {/* 遗物图鉴 */}
+                {onOpenRelicGuide && (
+                  <button
+                    onClick={() => {
+                      onOpenRelicGuide();
+                      setIsOpen(false);
+                    }}
+                    className="w-full py-2 pixel-btn pixel-btn-ghost text-[10px] flex items-center justify-center gap-2"
+                  >
+                    <PixelBook size={2} /> 遗物一览
                   </button>
                 )}
 

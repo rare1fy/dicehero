@@ -4,19 +4,25 @@ import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelSword, PixelSoulCrystal } from './PixelIcons';
 import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
+import { RelicGuideModal } from './RelicGuideModal';
 
 export const GlobalTopBar: React.FC = () => {
   const { game, setShowTutorial, setShowHandGuide, setShowDiceGuide } = useGameContext();
   const [showStats, setShowStats] = useState(false);
+  const [showRelicGuide, setShowRelicGuide] = useState(false);
 
   return (
     <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0">
       <div className="flex items-center gap-1.5">
-        {/* 魂晶 */}
+        {/* 魂晶数量 + 倍率（图标底部绝对定位） */}
         <div className="flex items-center gap-1 text-purple-400 font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative group cursor-help" style={{borderRadius:'2px'}}>
-          <PixelSoulCrystal size={2} /> <span className="font-bold">{game.blackMarketQuota || 0}</span>
-          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-[var(--dungeon-panel)] border-2 border-purple-500 px-2 py-1 text-[8px] text-purple-300 whitespace-nowrap z-[200] pixel-text-shadow" style={{borderRadius:'2px'}}>
-            {'\u9B42\u6676'} {'\u2014'} {'\u6EA2\u51FA\u4F24\u5BB3\u8F6C\u5316\uFF0C\u53EF\u5728\u9B42\u6676\u5546\u5E97\u6D88\u8D39'}
+          <span className="relative">
+            <PixelSoulCrystal size={2} />
+            <span className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 text-[8px] text-purple-200 whitespace-nowrap leading-none font-bold" style={{textShadow:'0 0 2px #000, 0 0 2px #000'}}>×{(game.soulCrystalMultiplier || 1).toFixed(1)}</span>
+          </span>
+          <span className="font-bold">{game.blackMarketQuota || 0}</span>
+          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-[var(--dungeon-panel)] border-2 border-purple-500 px-2 py-1 text-[8px] text-purple-300 z-[200] pixel-text-shadow min-w-[180px]" style={{borderRadius:'2px', whiteSpace:'normal'}}>
+            魂晶 — 首次出牌秒杀时获得（溢出伤害×倍率）。撤离转移后倍率归1，不撤离可贪更高倍率，死亡全丢。
           </div>
         </div>
         <div className="w-[2px] h-4 bg-[var(--dungeon-panel-border)]" />
@@ -42,11 +48,14 @@ export const GlobalTopBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} onOpenDiceGuide={() => setShowDiceGuide(true)} />
+        <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} onOpenDiceGuide={() => setShowDiceGuide(true)} onOpenRelicGuide={() => setShowRelicGuide(true)} />
       </div>
       <AnimatePresence>
         {showStats && <StatsModal onClose={() => setShowStats(false)} />}
       </AnimatePresence>
+      {showRelicGuide && (
+        <RelicGuideModal isOpen={showRelicGuide} onClose={() => setShowRelicGuide(false)} ownedRelicIds={game.relics.map(r => r.id)} />
+      )}
     </div>
   );
 };

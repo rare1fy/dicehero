@@ -38,10 +38,15 @@ export const EnemyQuoteBubble: React.FC<EnemyQuoteBubbleProps> = ({ text, catego
       {text && (
         <motion.div
           key={text}
-          initial={{ opacity: 0, y: 6, scale: 0.85 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -4, scale: 0.9 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
+          initial={{ opacity: 0, y: 8, scale: 0.7 }}
+          animate={{ opacity: 1, y: [0, -3, 0], scale: [1, 1.05, 1] }}
+          exit={{ opacity: 0, y: -6, scale: 0.85 }}
+          transition={{ 
+            duration: 0.35, 
+            ease: 'easeOut',
+            y: { duration: 0.4, times: [0, 0.6, 1] },
+            scale: { duration: 0.4, times: [0, 0.5, 1] },
+          }}
           className="absolute pointer-events-none"
           style={{
             bottom: '100%',

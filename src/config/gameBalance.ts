@@ -27,9 +27,9 @@ export const PLAYER_INITIAL = {
 
 /** 层级难度系数，精确控制每层的倍率，确保精准的每层难度 */
 export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
-  { hpMult: 1.60, dmgMult: 0.45 },  // depth 0: 教学关，需要凑牌型，三条可秒小怪
-  { hpMult: 1.70, dmgMult: 0.55 },  // depth 1: 稍有肉感
-  { hpMult: 1.45, dmgMult: 0.65 },  // depth 2: 开始有压力
+  { hpMult: 0.90, dmgMult: 0.40 },  // depth 0: 教学关，轻松过
+  { hpMult: 1.10, dmgMult: 0.50 },  // depth 1: 稍有肉感
+  { hpMult: 1.25, dmgMult: 0.60 },  // depth 2: 开始有压力
   { hpMult: 1.70, dmgMult: 0.80 },  // depth 3: 精英层（高HP低伤害）
   { hpMult: 1.30, dmgMult: 0.70 },  // depth 4: 精英后休息
   { hpMult: 1.60, dmgMult: 0.85 },  // depth 5: 热身完毕
@@ -126,7 +126,7 @@ export const MAP_CONFIG = {
   totalLayers: 15,
   /** 中期Boss所在层 */
   midBossLayer: 7,
-  /** Boss前休息层 */
+  /** Boss前休息层（已融入发散节点，此字段保留兼容） */
   restBeforeBossLayers: [6, 13],
   /** 固定层配置 */
   fixedLayers: {
@@ -134,16 +134,16 @@ export const MAP_CONFIG = {
     1: { type: null, count: 3 },                // 初期分路
     2: { type: null, count: 5 },                // 扩散层
     3: { type: null, count: 3 },                // 风险层（可出精英，不强制）
-    4: { type: null, count: 5 },                // 扩散层
+    4: { type: null, count: 4 },                // 中期发散（可随机出营火）
     5: { type: null, count: 5 },                // 扩散层
-    6: { type: 'campfire' as const, count: 2 }, // 营火休息
+    6: { type: null, count: 4 },                // Boss前发散（保证含营火）
     7: { type: 'boss' as const, count: 1 },     // 中Boss
     8: { type: null, count: 3 },                // Boss后再分路
     9: { type: null, count: 5 },                // 扩散层
     10: { type: null, count: 5 },               // 中后期风险层
-    11: { type: null, count: 3 },               // 高难度收窄层
+    11: { type: null, count: 4 },               // 后期发散（可随机出营火）
     12: { type: null, count: 5 },               // 压力层
-    13: { type: 'campfire' as const, count: 2 },// 最终营火
+    13: { type: null, count: 4 },               // Boss前发散（保证含营火）
     14: { type: 'boss' as const, count: 1 },    // 最终Boss
   } as Record<number, { type: string | null; count: number }>,
   /** 随机层节点数范围 [min, max]（仅fallback） */
@@ -204,3 +204,22 @@ export const CHAPTER_CONFIG = {
   /** 每章通关时获得的金币 */
   chapterBonusGold: 75,
 } as const;
+
+// ============================================================
+// 魂晶系统配置
+// ============================================================
+export const SOUL_CRYSTAL_CONFIG = {
+  /** 基础倍率 */
+  baseMult: 1.0,
+  /** 每层增加的倍率 */
+  multPerDepth: 0.2,
+  /** 获取魂晶的条件描述 */
+  description: '首次出牌秒杀敌人时，溢出伤害×当前倍率=魂晶',
+} as const;
+
+/** 计算当前层的魂晶倍率 */
+export const getSoulCrystalMult = (depth: number, currentMult: number): number => {
+  // 层数成长：基础倍率 + 每层+0.2
+  const depthBonus = depth * SOUL_CRYSTAL_CONFIG.multPerDepth;
+  return currentMult + depthBonus;
+};

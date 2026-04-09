@@ -4,14 +4,16 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-// ÏñËØÍ¼±ê×é¼ş ¡ª Ìæ´úËùÓĞ lucide-react ºÍ emoji
+// åƒç´ å›¾æ ‡ç»„ä»¶ â€” æ›¿ä»£æ‰€æœ‰ lucide-react å’Œ emoji
 import { 
   PixelHeart, PixelShield, PixelRefresh, PixelPlay, PixelZap,
   PixelSkull, PixelFlame, PixelSword,
   PixelAttackIntent, PixelArrowUp, 
   PixelArrowDown, PixelClose, 
-  PixelMagic, PixelPoison, PixelCoin
+  PixelMagic, PixelPoison, PixelCoin, PixelDice, PixelSoulCrystal,
+  PIXEL_ICON_MAP, PixelQuestion, PixelArrowRight
 } from './components/PixelIcons';
+import { RelicPixelIcon } from './components/PixelRelicIcons';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
@@ -108,6 +110,8 @@ export default function DiceHeroGame() {
     blackMarketQuota: 0,
     evacuatedQuota: 0,
     totalOverkillThisRun: 0,
+    soulCrystalMultiplier: 1.0,
+    playsPerEnemy: {},
   });
 
   const [game, setGame] = useState<GameState>({
@@ -132,7 +136,7 @@ export default function DiceHeroGame() {
     phase: 'start',
     battleTurn: 0,
     isEnemyTurn: false,
-    logs: ['»¶Ó­À´µ½ DICE BATTLE¡£'],
+    logs: ['æ¬¢è¿æ¥åˆ° DICE BATTLEã€‚'],
     shopItems: [],
     merchantItems: [],
     shopLevel: 1,
@@ -154,15 +158,19 @@ export default function DiceHeroGame() {
     blackMarketQuota: 0,
     evacuatedQuota: 0,
     totalOverkillThisRun: 0,
+    soulCrystalMultiplier: 1.0,
+    playsPerEnemy: {},
+    rageFireBonus: 0,
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
   const [showDiceGuide, setShowDiceGuide] = useState(false);
   const [showCalcModal, setShowCalcModal] = useState(false);
+  const [battleTransition, setBattleTransition] = useState<'none' | 'fadeIn' | 'hold' | 'fadeOut'>('none');
   const [pendingLootAugment, setPendingLootAugment] = useState<{id: string, options: Augment[] } | null>(null);
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());
 
-  // BGM ¹ÜÀí
+  // BGM ç®¡ç†
   useEffect(() => {
     if (game.phase === 'battle') {
       const currentNode = game.map.find(n => n.id === game.currentNodeId);
@@ -187,22 +195,20 @@ export default function DiceHeroGame() {
   const [dice, setDice] = useState<Die[]>([]);
   const gameRef = useRef(game);
   gameRef.current = game;
-  const [_diceDrawAnim, setDiceDrawAnim] = useState(false); // ³é÷»×ÓÈë³¡¶¯»­
+  const [_diceDrawAnim, setDiceDrawAnim] = useState(false); // æŠ½éª°å­å…¥åœºåŠ¨ç”»
   const [diceDiscardAnim, _setDiceDiscardAnim] = useState(false);
-  const [shuffleAnimating, setShuffleAnimating] = useState(false); // Ï´ÅÆ¶¯»­×´Ì¬ // Æú÷»×ÓÍË³¡¶¯»­
+  const [shuffleAnimating, setShuffleAnimating] = useState(false); // æ´—ç‰ŒåŠ¨ç”»çŠ¶æ€ // å¼ƒéª°å­é€€åœºåŠ¨ç”»
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [rerollCount, setRerollCount] = useState(0);
   const targetEnemyUid = game.targetEnemyUid;
   const targetEnemy = (() => {
-    const aliveGuardian = enemies.find(e => e.hp > 0 && e.combatType === 'guardian');
-    if (aliveGuardian) return aliveGuardian; // Guardian taunt: always target guardian first
     return enemies.find(e => e.uid === targetEnemyUid && e.hp > 0) || enemies.find(e => e.hp > 0) || null;
   })();
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
 
-  const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null>>({});
+  const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | null>>({});
   const [_dyingEnemies, setDyingEnemies] = useState<Set<string>>(new Set());
-  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
+  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
 
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
   const [enemyInfoTarget, setEnemyInfoTarget] = useState<string | null>(null);
@@ -211,11 +217,11 @@ export default function DiceHeroGame() {
   const [_armorGained, setArmorGained] = useState(false);
   const [rerollFlash, setRerollFlash] = useState(false);
 
-  // === µĞÈËÌ¨´ÊÆøÅİ ===
+  // === æ•Œäººå°è¯æ°”æ³¡ ===
   const [enemyQuotes, setEnemyQuotes] = useState<Record<string, string>>({});
   const [enemyQuotedLowHp, setEnemyQuotedLowHp] = useState<Set<string>>(new Set());
 
-  /** ÏÔÊ¾Ä³¸öµĞÈËµÄÌ¨´ÊÆøÅİ£¬duration ms ºó×Ô¶¯Çå³ı */
+  /** æ˜¾ç¤ºæŸä¸ªæ•Œäººçš„å°è¯æ°”æ³¡ï¼Œduration ms åè‡ªåŠ¨æ¸…é™¤ */
   const showEnemyQuote = (uid: string, text: string, duration = 2500) => {
     setEnemyQuotes(prev => ({ ...prev, [uid]: text }));
     setTimeout(() => {
@@ -227,21 +233,37 @@ export default function DiceHeroGame() {
     }, duration);
   };
 
-  /** ´ÓÌ¨´ÊÊı×éËæ»úÈ¡Ò»Ìõ */
+  /** ä»å°è¯æ•°ç»„éšæœºå–ä¸€æ¡ */
   const pickQuote = (arr?: string[]): string | null => {
     if (!arr || arr.length === 0) return null;
     return arr[Math.floor(Math.random() * arr.length)];
   };
 
-  /** ¸ù¾İµĞÈË id ²éÕÒÌ¨´ÊÅäÖÃ */
+  /** æ ¹æ®æ•Œäºº id æŸ¥æ‰¾å°è¯é…ç½® */
   const getEnemyQuotes = (enemyId: string) => {
     const all = [...NORMAL_ENEMIES, ...ELITE_ENEMIES, ...BOSS_ENEMIES];
     return all.find(e => e.id === enemyId)?.quotes;
   };
 
-  // === ½áËãÑİ³ö×´Ì¬ ===
+  /** æ•Œäººè¡ŒåŠ¨å‰æ‘‡ï¼šè¯´å°è¯+éœ‡åŠ¨+éŸ³æ•ˆï¼Œè¿”å›æ˜¯å¦è¯´äº†è¯ */
+  const enemyPreAction = async (e: Enemy, quoteType: 'attack' | 'defend' | 'skill' | 'heal') => {
+    const q = getEnemyQuotes(e.configId);
+    const lines = q?.[quoteType] ?? q?.attack; // fallbackåˆ°attackå°è¯
+    const line = pickQuote(lines ?? []);
+    if (line) {
+      setEnemyEffectForUid(e.uid, 'speaking');
+      showEnemyQuote(e.uid, line, 1800);
+      playSound('enemy_speak');
+      await new Promise(r => setTimeout(r, 600));
+      setEnemyEffectForUid(e.uid, null);
+      return true;
+    }
+    return false;
+  };
+
+  // === ç»“ç®—æ¼”å‡ºçŠ¶æ€ ===
   const [showDamageOverlay, setShowDamageOverlay] = useState<{damage: number, armor: number, heal: number} | null>(null);
-  const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'mult' | 'effects' | 'damage'>(null);
+  const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'mult' | 'effects' | 'bounce' | 'damage'>(null);
   const [flashingRelicIds, setFlashingRelicIds] = useState<string[]>([]);
   const [selectedRelic, setSelectedRelic] = useState<Relic | null>(null);
   const [settlementData, setSettlementData] = useState<{
@@ -277,7 +299,7 @@ export default function DiceHeroGame() {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 2500);
   };
-  const [floatingTexts, setFloatingTexts] = useState<{ id: string; text: string; x: number; y: number; color: string; icon?: React.ReactNode; target: 'player' | 'enemy' }[]>([]);
+  const [floatingTexts, setFloatingTexts] = useState<{ id: string; text: string; x: number; y: number; color: string; icon?: React.ReactNode; target: 'player' | 'enemy'; large?: boolean }[]>([]);
   const [selectedAugment, setSelectedAugment] = useState<Augment | null>(null);
   const [_campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
   const [skillTriggerTexts, _setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
@@ -285,20 +307,20 @@ export default function DiceHeroGame() {
   const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
   const [showWaveDetail, setShowWaveDetail] = useState(false);
 
-  // --- Õ½Ç°ÒÅÎïÑ¡Ôñ ---
+  // --- æˆ˜å‰é—ç‰©é€‰æ‹© ---
   const [startingRelicChoices, setStartingRelicChoices] = useState<Relic[]>([]);
   const [pendingBattleNode, setPendingBattleNode] = useState<MapNode | null>(null);
 
   // --- Actions ---
 
-  const addFloatingText = (text: string, color: string = 'text-red-500', icon?: React.ReactNode, target: 'player' | 'enemy' = 'enemy') => {
+  const addFloatingText = (text: string, color: string = 'text-red-500', icon?: React.ReactNode, target: 'player' | 'enemy' = 'enemy', large = false) => {
     const id = `${Date.now()}-${Math.random()}`;
     const x = Math.random() * 40 - 20;
     const y = Math.random() * 20 - 10;
-    setFloatingTexts(prev => [...prev, { id, text, x, y, color, icon, target }]);
+    setFloatingTexts(prev => [...prev, { id, text, x, y, color, icon, target, large }]);
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(t => t.id !== id));
-    }, 1500);
+    }, large ? 2500 : 1500);
   };
 
   const addLog = (msg: string) => {
@@ -310,7 +332,7 @@ export default function DiceHeroGame() {
     const node = pendingBattleNode;
     if (!node) return;
 
-    // Ìí¼ÓÒÅÎïµ½ÒÅÎïÁĞ±í
+    // æ·»åŠ é—ç‰©åˆ°é—ç‰©åˆ—è¡¨
     setGame(prev => ({
       ...prev,
       relics: [...prev.relics, relic],
@@ -318,10 +340,10 @@ export default function DiceHeroGame() {
       maxHp: prev.maxHp - (relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15),
     }));
 
-    addToast(`»ñµÃÒÅÎï¡¸${relic.name}¡¹!`, 'buff');
-    addLog(`Õ½Ç°Ñ¡ÔñÁËÒÅÎï¡¸${relic.name}¡¹`);
+    addToast(`è·å¾—é—ç‰©ã€Œ${relic.name}ã€!`, 'buff');
+    addLog(`æˆ˜å‰é€‰æ‹©äº†é—ç‰©ã€Œ${relic.name}ã€`);
 
-    // ¿ªÊ¼Õ½¶·
+    // å¼€å§‹æˆ˜æ–—
     setPendingBattleNode(null);
     startBattle(node);
   };
@@ -331,11 +353,16 @@ export default function DiceHeroGame() {
     const node = pendingBattleNode;
     if (!node) return;
     setPendingBattleNode(null);
-    addLog('Ìø¹ıÁËÕ½Ç°¼¼ÄÜÑ¡Ôñ£¬Ö±½Ó½øÈëÕ½¶·¡£');
+    addLog('è·³è¿‡äº†æˆ˜å‰æŠ€èƒ½é€‰æ‹©ï¼Œç›´æ¥è¿›å…¥æˆ˜æ–—ã€‚');
     startBattle(node);
   };
 
   const startBattle = async (node: MapNode) => {
+    // === æˆ˜æ–—è½¬åœº ===
+    setBattleTransition('fadeIn');
+    await new Promise(r => setTimeout(r, 200)); // é»‘å¹•æ·¡å…¥
+    setBattleTransition('hold');
+
     const waves = (() => {
       const chapterScale = CHAPTER_CONFIG.chapterScaling[Math.min(game.chapter - 1, CHAPTER_CONFIG.chapterScaling.length - 1)];
       return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult);
@@ -343,7 +370,7 @@ export default function DiceHeroGame() {
     const firstWave = waves[0]?.enemies || [];
     setEnemies(firstWave);
     setEnemyEffects({}); setDyingEnemies(new Set());
-    // ³ö³¡Ì¨´Ê
+    // å‡ºåœºå°è¯
     setEnemyQuotes({});
     setEnemyQuotedLowHp(new Set());
     setTimeout(() => {
@@ -351,12 +378,17 @@ export default function DiceHeroGame() {
         const q = getEnemyQuotes(e.configId);
         const line = pickQuote(q?.enter);
         if (line) {
-          setTimeout(() => showEnemyQuote(e.uid, line, 3000), idx * 400);
+          setTimeout(() => {
+            showEnemyQuote(e.uid, line, 3000);
+            playSound('enemy_speak');
+            setEnemyEffectForUid(e.uid, 'speaking');
+            setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
+          }, idx * 400);
         }
       });
     }, 300);
     setPlayerEffect(null);
-    // Boss³ö³¡ÒôĞ§
+    // Bosså‡ºåœºéŸ³æ•ˆ
     if (node.type === 'boss') {
       playSound('boss_appear');
     }
@@ -367,23 +399,24 @@ export default function DiceHeroGame() {
       currentNodeId: node.id, 
       armor: 0, 
       statuses: [],
+      playsPerEnemy: {},
       battleWaves: waves,
       currentWaveIndex: 0,
       targetEnemyUid: (firstWave.find(e => e.combatType === 'guardian') || firstWave[0])?.uid || null,
       diceBag: initDiceBag(prev.ownedDice),
-      discardPile: [], // ĞÂÕ½¶·¿ªÊ¼Ê±Çå¿ÕËùÓĞ×´Ì¬Ğ§¹û
+      discardPile: [], // æ–°æˆ˜æ–—å¼€å§‹æ—¶æ¸…ç©ºæ‰€æœ‰çŠ¶æ€æ•ˆæœ
       freeRerollsLeft: prev.freeRerollsPerTurn + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0),
       playsLeft: prev.maxPlays + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraPlay || 0), 0),
       isEnemyTurn: false 
     }));
-    // Ö±½ÓÓÃĞÂbag³éÈ¡£¨±ÜÃâ±Õ°ü¾ÉÖµÎÊÌâ£©
+    // ç›´æ¥ç”¨æ–°bagæŠ½å–ï¼ˆé¿å…é—­åŒ…æ—§å€¼é—®é¢˜ï¼‰
     const freshBag = initDiceBag(game.ownedDice);
     const drawCountBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
     const freshCount = game.drawCount + drawCountBonus;
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
-    if (fShuffled) addToast('\u2728 Æú÷»¿âÒÑÏ´»Ø÷»×Ó¿â!', 'buff');
+    if (fShuffled) addToast('\u2728 å¼ƒéª°åº“å·²æ´—å›éª°å­åº“!', 'buff');
     setGame(prev => ({ ...prev, diceBag: fBag, discardPile: fDiscard }));
-    // Æô¶¯÷»×Óroll¶¯»­
+    // å¯åŠ¨éª°å­rollåŠ¨ç”»
     setDice(freshDrawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
     const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
     for (let f = 0; f < frameTimes.length; f++) {
@@ -398,23 +431,64 @@ export default function DiceHeroGame() {
     setGame(prev => ({ ...prev, stats: { ...prev.stats, totalRerolls: prev.stats.totalRerolls + 1 } }));
     }
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
-    // ÔªËØ÷»×ÓÌ®Ëõ + Ğ¡³ó÷»×Ó1-9Ëæ»ú
+    // å…ƒç´ éª°å­åç¼© + å°ä¸‘éª°å­1-9éšæœº
     setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
     playSound('dice_lock');
     // Auto-sort dice by value ascending after roll
     await new Promise(r => setTimeout(r, 200));
     setDice(prev => [...prev].sort((a, b) => a.value - b.value));
-    addLog(`[÷»] ${freshDrawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
+    addLog(`[éª°] ${freshDrawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
 
     setRerollCount(0);
-    addLog(`Óöµ½ ${firstWave.map(e => e.name).join('¡¢')}£¡`);
+    addLog(`é‡åˆ° ${firstWave.map(e => e.name).join('ã€')}ï¼`);
+
+    // === è½¬åœºæ·¡å‡º ===
+    setBattleTransition('fadeOut');
+    setTimeout(() => setBattleTransition('none'), 300);
   };
 
   const startNode = (node: MapNode) => {
     playSound('select');
+    // --- Relic on_move effects ---
+    let moveGoldBonus = 0;
+    game.relics.filter(r => r.trigger === 'on_move').forEach(relic => {
+      if (relic.id === 'treasure_map_relic' && node.type !== 'treasure') return;
+      if (relic.id === 'navigator_compass') {
+        // å¯¼èˆªç½—ç›˜ï¼šè®¡æ•°å™¨æ¨¡å¼ï¼Œæ¯3æ­¥ç§¯ç´¯ä¸€æ¬¡buff
+        const compass = game.relics.find(r => r.id === 'navigator_compass');
+        const newCounter = ((compass?.counter || 0) + 1);
+        const maxC = compass?.maxCounter || 3;
+        if (newCounter >= maxC) {
+          addToast(`å¯¼èˆªç½—ç›˜: 3æ­¥å·²æ»¡ï¼Œä¸‹æ¬¡å‡ºç‰Œ+8ä¼¤å®³+5æŠ¤ç”²ï¼`, 'buff');
+          setGame(prev => ({
+            ...prev,
+            relics: prev.relics.map(r => r.id === 'navigator_compass' ? { ...r, counter: 0 } : r),
+          }));
+        } else {
+          setGame(prev => ({
+            ...prev,
+            relics: prev.relics.map(r => r.id === 'navigator_compass' ? { ...r, counter: newCounter } : r),
+          }));
+        }
+        return;
+      }
+      const res = relic.effect({});
+      if (res.goldBonus) {
+        moveGoldBonus += res.goldBonus;
+      }
+    });
+    if (moveGoldBonus > 0) {
+      setGame(prev => ({ ...prev, souls: prev.souls + moveGoldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + moveGoldBonus } }));
+      addToast(`ç§»åŠ¨å¥–åŠ±: +${moveGoldBonus}é‡‘å¸`, 'buff');
+    }
+    // --- Relic counter: æ€¥æ•‘æ²™æ¼ CD å‡1 ---
+    setGame(prev => ({
+      ...prev,
+      relics: prev.relics.map(r => r.id === 'emergency_hourglass' && (r.counter || 0) > 0 ? { ...r, counter: (r.counter || 0) - 1 } : r),
+    }));
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
       if (node.depth === 0) {
-        // µÚÒ»¸ö½Úµã£ºÕ½Ç°ÈıÑ¡Ò»Ç¿»¯
+        // ç¬¬ä¸€ä¸ªèŠ‚ç‚¹ï¼šæˆ˜å‰ä¸‰é€‰ä¸€å¼ºåŒ–
         const relicChoices = generateStartingRelicChoices(game.relics.map(r => r.id));
         setStartingRelicChoices(relicChoices);
         setPendingBattleNode(node);
@@ -427,12 +501,12 @@ export default function DiceHeroGame() {
       setCampfireView('main');
       setGame(prev => ({ ...prev, phase: 'campfire', currentNodeId: node.id }));
     } else if (node.type === 'merchant') {
-      // ÓÎµ´ÉÌÈË£ºËæ»ú3¸öÉÌÆ·£¬¼Û¸ñËæ»ú
+      // æ¸¸è¡å•†äººï¼šéšæœº3ä¸ªå•†å“ï¼Œä»·æ ¼éšæœº
       const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
       const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
-      // ¹¹½¨ºòÑ¡ÉÌÆ·³Ø
+      // æ„å»ºå€™é€‰å•†å“æ± 
       const candidateItems: ShopItem[] = [];
-      // ºòÑ¡£ºÒÅÎï
+      // å€™é€‰ï¼šé—ç‰©
       const shuffledRelics = pickRandomRelics([...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare], 3, game.relics.map(r => r.id));
       for (const shopRelic of shuffledRelics) {
         candidateItems.push({
@@ -440,7 +514,7 @@ export default function DiceHeroGame() {
           label: shopRelic.name, desc: shopRelic.description, price: randPrice()
         });
       }
-      // ºòÑ¡£º÷»×Ó
+      // å€™é€‰ï¼šéª°å­
       const shuffledDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
       for (const d of shuffledDice.slice(0, 2)) {
         candidateItems.push({
@@ -449,19 +523,19 @@ export default function DiceHeroGame() {
           price: d.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10
         });
       }
-      // ºòÑ¡£ºÖØÖÀÇ¿»¯
+      // å€™é€‰ï¼šé‡æ·å¼ºåŒ–
       candidateItems.push({
         id: 'reroll_' + Math.random().toString(36).slice(2, 6), type: 'reroll' as const,
-        label: 'ÖØÖÀÇ¿»¯', desc: 'ÓÀ¾ÃÔö¼ÓÃ¿»ØºÏ +1 ´ÎÃâ·ÑÖØÖÀ', price: randPrice()
+        label: 'é‡æ·å¼ºåŒ–', desc: 'æ°¸ä¹…å¢åŠ æ¯å›åˆ +1 æ¬¡å…è´¹é‡æ·', price: randPrice()
       });
-      // ´ÓºòÑ¡³ØËæ»ú³é3¸ö
+      // ä»å€™é€‰æ± éšæœºæŠ½3ä¸ª
       const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
-      // Ê¼ÖÕÌí¼ÓÉ¾³ı÷»×ÓÑ¡Ïî£¬¼Û¸ñËæ»ú
+      // å§‹ç»ˆæ·»åŠ åˆ é™¤éª°å­é€‰é¡¹ï¼Œä»·æ ¼éšæœº
       const [rmMin, rmMax] = SHOP_CONFIG.priceRange;
       const removeDicePrice = Math.floor(Math.random() * (rmMax - rmMin + 1)) + rmMin;
       shopItems.push({
         id: 'removeDice_fixed', type: 'removeDice' as const,
-        label: '÷»×Ó¾»»¯', desc: 'ÒÆ³ıÒ»¿Å÷»×Ó£¬ÊİÉí¹¹Öş',
+        label: 'éª°å­å‡€åŒ–', desc: 'ç§»é™¤ä¸€é¢—éª°å­ï¼Œç˜¦èº«æ„ç­‘',
         price: removeDicePrice
       });
       setGame(prev => ({ ...prev, phase: 'merchant', currentNodeId: node.id, shopItems }));
@@ -476,31 +550,31 @@ export default function DiceHeroGame() {
 
   const rollAllDice = async () => {
     playSound('roll');
-    // Ê¹ÓÃ gameRef.current ¶ÁÈ¡×îĞÂ×´Ì¬£¬±ÜÃâ±Õ°üÖĞ game µÄ¹ıÆÚÖµ
+    // ä½¿ç”¨ gameRef.current è¯»å–æœ€æ–°çŠ¶æ€ï¼Œé¿å…é—­åŒ…ä¸­ game çš„è¿‡æœŸå€¼
     const g = gameRef.current;
-    // ÏÈ°Ñµ±Ç°ÊÖÅÆÖĞÎ´Ê¹ÓÃµÄ÷»×Ó·Å»ØÆú÷»¿â£¨·ÀÖ¹÷»×Ó¶ªÊ§£©
+    // å…ˆæŠŠå½“å‰æ‰‹ç‰Œä¸­æœªä½¿ç”¨çš„éª°å­æ”¾å›å¼ƒéª°åº“ï¼ˆé˜²æ­¢éª°å­ä¸¢å¤±ï¼‰
     const handDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
     const currentDiscard = [...g.discardPile, ...handDefIds];
     const relicDrawBonus = g.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
     const count = g.drawCount + relicDrawBonus;
     
-    // ´Ó÷»×Ó¿â³éÈ¡£¨°üº¬¸Õ·Å»ØµÄÊÖÅÆ÷»×Ó£©
+    // ä»éª°å­åº“æŠ½å–ï¼ˆåŒ…å«åˆšæ”¾å›çš„æ‰‹ç‰Œéª°å­ï¼‰
     const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, currentDiscard, count);
     
     // Shuffle notice
     if (shuffled) {
             setShuffleAnimating(true);
             setTimeout(() => setShuffleAnimating(false), 800);
-      addToast('\u2728 Æú÷»¿âÒÑÏ´»Ø÷»×Ó¿â!', 'buff');
+      addToast('\u2728 å¼ƒéª°åº“å·²æ´—å›éª°å­åº“!', 'buff');
     }
     
-    // Ô­×Ó¸üĞÂ÷»×Ó¿â×´Ì¬
+    // åŸå­æ›´æ–°éª°å­åº“çŠ¶æ€
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
 
-    // ÉèÖÃrolling×´Ì¬£¨¶¯»­£©
+    // è®¾ç½®rollingçŠ¶æ€ï¼ˆåŠ¨ç”»ï¼‰
     setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
 
-    // ¿ìËÙ·­¹ö¶¯»­ ¡ª 8Ö¡£¬µİ¼õËÙ¶È
+    // å¿«é€Ÿç¿»æ»šåŠ¨ç”» â€” 8å¸§ï¼Œé€’å‡é€Ÿåº¦
     const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
     for (let i = 0; i < frameTimes.length; i++) {
       await new Promise(resolve => setTimeout(resolve, frameTimes[i]));
@@ -513,10 +587,10 @@ export default function DiceHeroGame() {
       if (i === 3) playSound('reroll');
     }
 
-    // Âä¶¨ ¡ª Ê¹ÓÃÔ¤ÏÈ³éÈ¡µÄ½á¹û
+    // è½å®š â€” ä½¿ç”¨é¢„å…ˆæŠ½å–çš„ç»“æœ
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     playSound('dice_lock');
-    addLog(`[÷»] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
+    addLog(`[éª°] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
 
   // Calculate reroll HP cost: first N rerolls free (N = freeRerollsPerTurn), then 2, 4, 8, 16...
@@ -537,11 +611,11 @@ export default function DiceHeroGame() {
     
     // Check HP cost
     let hpCost = getRerollHpCost(rerollCount);
-    // ×çÖä÷»×Ó£ºÊÖÖĞÓĞ×çÖä÷»×ÓÊ±£¬ÖØRoll´ú¼Û·­±¶
+    // è¯…å’’éª°å­ï¼šæ‰‹ä¸­æœ‰è¯…å’’éª°å­æ—¶ï¼Œé‡Rollä»£ä»·ç¿»å€
     const hasCursedInHand = dice.some(d => !d.selected && !d.spent && getDiceDef(d.diceDefId).isCursed);
     if (hasCursedInHand) hpCost *= 2;
     if (hpCost > 0 && game.hp <= hpCost) {
-      addToast(`ÉúÃü²»×ã£¡ÖØÖÀĞèÒª ${hpCost} HP`, 'damage');
+      addToast(`ç”Ÿå‘½ä¸è¶³ï¼é‡æ·éœ€è¦ ${hpCost} HP`, 'damage');
       setRerollFlash(true);
       setTimeout(() => setRerollFlash(false), 500);
       return;
@@ -551,7 +625,7 @@ export default function DiceHeroGame() {
     // Apply HP cost
     if (hpCost > 0) {
       setGame(prev => {
-        // on_reroll ÒÅÎï´¥·¢£¨ÈçºÚÊĞºÏÍ¬£©
+        // on_reroll é—ç‰©è§¦å‘ï¼ˆå¦‚é»‘å¸‚åˆåŒï¼‰
         let goldBonus = 0;
         prev.relics.filter(r => r.trigger === 'on_reroll').forEach(relic => {
           const res = relic.effect({ hpLostThisTurn: hpCost });
@@ -568,14 +642,14 @@ export default function DiceHeroGame() {
       if (rerollGoldBonus > 0) {
         setTimeout(() => addFloatingText(`+${rerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
       }
-      addLog(`ÖØÖÀÏûºÄ ${hpCost} HP`);
+      addLog(`é‡æ·æ¶ˆè€— ${hpCost} HP`);
     }
     
     playSound('roll');
-    // ÉèÖÃÎ´Ñ¡ÖĞ÷»×ÓµÄrolling×´Ì¬
+    // è®¾ç½®æœªé€‰ä¸­éª°å­çš„rollingçŠ¶æ€
     setDice(prev => prev.map(d => d.selected || d.spent ? d : { ...d, rolling: true }));
 
-    // ¿ìËÙ·­¹ö¶¯»­
+    // å¿«é€Ÿç¿»æ»šåŠ¨ç”»
     const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
     for (let i = 0; i < frameTimes.length; i++) {
       await new Promise(resolve => setTimeout(resolve, frameTimes[i]));
@@ -588,23 +662,23 @@ export default function DiceHeroGame() {
       }));
     }
 
-    // Âä¶¨£º½«Î´Ñ¡ÖĞ÷»×ÓÆúÖÃ£¬´Ó÷»×Ó¿â³éĞÂµÄÌæ»»
+    // è½å®šï¼šå°†æœªé€‰ä¸­éª°å­å¼ƒç½®ï¼Œä»éª°å­åº“æŠ½æ–°çš„æ›¿æ¢
     const unselectedDice = dice.filter(d => !d.selected && !d.spent && !d.locked);
     const unselectedDefIds = unselectedDice.map(d => d.diceDefId);
     const unselectedIds = new Set(unselectedDice.map(d => d.id));
 
     setGame(prev => {
-      // ½«Î´Ñ¡ÖĞ÷»×ÓµÄdefId·Å½øÆú÷»¿â
+      // å°†æœªé€‰ä¸­éª°å­çš„defIdæ”¾è¿›å¼ƒéª°åº“
       const newDiscard = [...prev.discardPile, ...unselectedDefIds];
-      // ´Ó÷»×Ó¿â³éÈ¡µÈÁ¿ĞÂ÷»×Ó
+      // ä»éª°å­åº“æŠ½å–ç­‰é‡æ–°éª°å­
       const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, unselectedDefIds.length);
       if (shuffled) {
                 setShuffleAnimating(true);
                 setTimeout(() => setShuffleAnimating(false), 800);
-        addToast(' Æú÷»¿âÏ´»Ø÷»×Ó¿â', 'info');
+        addToast(' å¼ƒéª°åº“æ´—å›éª°å­åº“', 'info');
       }
 
-      // Í¬²½¸üĞÂÊÖÖĞ÷»×Ó£ºÓÃĞÂ³éµÄÌæ»»Î´Ñ¡ÖĞµÄ
+      // åŒæ­¥æ›´æ–°æ‰‹ä¸­éª°å­ï¼šç”¨æ–°æŠ½çš„æ›¿æ¢æœªé€‰ä¸­çš„
       let drawIdx = 0;
       const newDice = dice.map(d => {
         if (!unselectedIds.has(d.id)) return d;
@@ -615,10 +689,10 @@ export default function DiceHeroGame() {
         }
         return { ...d, rolling: false };
       });
-      // Í¨¹ı±Õ°ü¸üĞÂdice×´Ì¬
+      // é€šè¿‡é—­åŒ…æ›´æ–°diceçŠ¶æ€
       setTimeout(() => {
         setDice(applyDiceSpecialEffects(newDice, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
-        addLog(`ÖØÖÀ½á¹û: ${newDice.filter(nd => unselectedIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
+        addLog(`é‡æ·ç»“æœ: ${newDice.filter(nd => unselectedIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
       }, 0);
 
       return {
@@ -636,33 +710,31 @@ export default function DiceHeroGame() {
     setRerollCount(prev => prev + 1);
   };
 
-  // quantum_observer: Ë«»÷Ëø¶¨÷»×Ó£¬Ëø¶¨µÄ÷»×ÓÔÚÖØÖÀÊ±²»»á±»Ìæ»»
-  const hasQuantumObserver = game.relics.some(r => r.id === 'quantum_observer');
+  // åŒå‡»é”å®šéª°å­ï¼Œé”å®šçš„éª°å­åœ¨é‡æ·æ—¶ä¸ä¼šè¢«æ›¿æ¢ï¼ˆåŸºç¡€åŠŸèƒ½ï¼‰
   const toggleLock = (id: number) => {
-    if (!hasQuantumObserver) return;
     const die = dice.find(d => d.id === id);
     if (!die || die.spent) return;
     playSound('select');
     setDice(prev => prev.map(d => d.id === id ? { ...d, locked: !d.locked } : d));
-    addToast(die.locked ? '÷»×ÓÒÑ½âËø' : '÷»×ÓÒÑËø¶¨ ??', 'info');
+    addToast(die.locked ? 'éª°å­å·²è§£é”' : 'éª°å­å·²é”å®š ??', 'info');
   };
 
   const toggleSelect = (id: number) => {
     const die = dice.find(d => d.id === id);
     if (!die) return;
-    if (die.spent) { addToast('¸Ã÷»×ÓÒÑÊ¹ÓÃ'); return; }
-    if (game.isEnemyTurn) { addToast('µĞÈË»ØºÏÖĞ£¬ÎŞ·¨²Ù×÷'); return; }
-    if (game.playsLeft <= 0) { addToast('³öÅÆ´ÎÊıÒÑºÄ¾¡'); return; }
+    if (die.spent) { addToast('è¯¥éª°å­å·²ä½¿ç”¨'); return; }
+    if (game.isEnemyTurn) { addToast('æ•Œäººå›åˆä¸­ï¼Œæ— æ³•æ“ä½œ'); return; }
+    if (game.playsLeft <= 0) { addToast('å‡ºç‰Œæ¬¡æ•°å·²è€—å°½'); return; }
     
     const _selectedCount = dice.filter(d => d.selected && !d.spent).length;
     const isCurrentlySelected = die.selected;
 
-    // ²»ÏŞÖÆÑ¡ÔñÊıÁ¿£¬Ö»ÒªÄÜ×é³ÉÅÆĞÍ¼´¿É
+    // ä¸é™åˆ¶é€‰æ‹©æ•°é‡ï¼Œåªè¦èƒ½ç»„æˆç‰Œå‹å³å¯
 
     playSound('select');
     setDice(prev => {
       const next = prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
-      // ¼ì²éĞÂ×´Ì¬ÏÂÊÇ·ñÎª¶àÑ¡ÆÕÍ¨¹¥»÷
+      // æ£€æŸ¥æ–°çŠ¶æ€ä¸‹æ˜¯å¦ä¸ºå¤šé€‰æ™®é€šæ”»å‡»
       const newSelected = next.filter(d => d.selected && !d.spent);
       const hasSpecial = newSelected.some(d => {
         const def = getDiceDef(d.diceDefId);
@@ -670,29 +742,29 @@ export default function DiceHeroGame() {
       });
       if (!isCurrentlySelected && newSelected.length > 1 && hasSpecial) {
         const handResult = checkHands(newSelected, { straightUpgrade: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
-        if (handResult.activeHands.includes('ÆÕÍ¨¹¥»÷') && handResult.activeHands.length === 1) {
-          setTimeout(() => addToast('¶àÑ¡ÆÕÍ¨¹¥»÷£ºÌØÊâ÷»×ÓĞ§¹û½«±»½ûÓÃ£¡', 'info'), 50);
+        if (handResult.activeHands.includes('æ™®é€šæ”»å‡»') && handResult.activeHands.length === 1) {
+          setTimeout(() => addToast('å¤šé€‰æ™®é€šæ”»å‡»ï¼šç‰¹æ®Šéª°å­æ•ˆæœå°†è¢«ç¦ç”¨ï¼', 'info'), 50);
         }
       }
       return next;
     });
   };
 
-  // ½µÎ¬´ò»÷ÒÅÎï£ºË³×ÓËùĞè÷»×ÓÊı-1
+  // é™ç»´æ‰“å‡»é—ç‰©ï¼šé¡ºå­æ‰€éœ€éª°å­æ•°-1
   const straightUpgrade = useMemo(() => {
     return game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0;
   }, [game.relics]);
 
   const currentHands = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
-    // ·ÖÁÑ÷»×Ó£ºÊÖÅÆÖĞµ±ÆÕÍ¨÷»×Ó£¬½áËãÑİ³öÊ±²Å·ÖÁÑ
+    // åˆ†è£‚éª°å­ï¼šæ‰‹ç‰Œä¸­å½“æ™®é€šéª°å­ï¼Œç»“ç®—æ¼”å‡ºæ—¶æ‰åˆ†è£‚
     return checkHands(selected, { straightUpgrade });
   }, [dice, straightUpgrade]);
 
-  // ¶àÑ¡ÆÕÍ¨¹¥»÷¼ì²â£ºÑ¡ÁË¶à¿Å÷»×Óµ«²»³ÉÅÆĞÍ
+  // å¤šé€‰æ™®é€šæ”»å‡»æ£€æµ‹ï¼šé€‰äº†å¤šé¢—éª°å­ä½†ä¸æˆç‰Œå‹
   const isNormalAttackMulti = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
-    return selected.length > 1 && currentHands.activeHands.includes('ÆÕÍ¨¹¥»÷') && currentHands.activeHands.length === 1;
+    return selected.length > 1 && currentHands.activeHands.includes('æ™®é€šæ”»å‡»') && currentHands.activeHands.length === 1;
   }, [dice, currentHands]);
 
   const invalidDiceIds = useMemo(() => {
@@ -779,34 +851,34 @@ export default function DiceHeroGame() {
       if (handDef) {
         const level = game.handLevels[handName] || 1;
         const levelBonusMult = (level - 1) * 0.3;
-        // baseÒÑÒÆ³ı£¬´¿±¶ÂÊÌåÏµ
+        // baseå·²ç§»é™¤ï¼Œçº¯å€ç‡ä½“ç³»
         handMultiplier += (((handDef as any).mult || 1) - 1) + levelBonusMult;
       }
 
       switch (handName) {
-        case 'ÆÕÍ¨¹¥»÷': break;
-        case '¶Ô×Ó': break;
-        case 'Ë³×Ó': break; // 3Ë³ AOE
-        case 'Á¬¶Ô': baseArmor += 5; break;
-        case 'ÈıÁ¬¶Ô': baseArmor += 8; break;
-        case 'ÈıÌõ': statusEffects.push({ type: 'vulnerable', value: 1, duration: 2 }); break; // 1²ãÒ×ÉË
-        case '4Ë³': statusEffects.push({ type: 'weak', value: 1, duration: 2 }); break; // AOE + 1²ãĞéÈõ
-        case 'Í¬ÔªËØ': break; // ÷»×ÓĞ§¹ûx2ÔÚºóÃæ´¦Àí
-        case 'ºùÂ«': baseArmor += 15; break; // ´¿·ÀÓù
-        case '5Ë³': statusEffects.push({ type: 'weak', value: 2, duration: 2 }); break; // AOE + 2²ãĞéÈõ
-        case 'ËÄÌõ': statusEffects.push({ type: 'vulnerable', value: 2, duration: 2 }); break; // 2²ãÒ×ÉË
-        case '6Ë³': baseArmor += 10; statusEffects.push({ type: 'weak', value: 3, duration: 2 }); break; // AOE + 3²ãĞéÈõ + 10»¤¼×
-        case 'ÔªËØË³': break; // AOE + ÷»×ÓĞ§¹ûx2
-        case 'ÔªËØºùÂ«': baseArmor += 25; break; // ÷»×ÓĞ§¹ûx2 + 25»¤¼×
-        case 'ÎåÌõ': statusEffects.push({ type: 'vulnerable', value: 3, duration: 2 }); break; // 3²ãÒ×ÉË
-        case 'ÁùÌõ': statusEffects.push({ type: 'vulnerable', value: 5, duration: 3 }); break; // 5²ãÒ×ÉË
-        case '»Ê¼ÒÔªËØË³': baseArmor += 50; break; // AOE + ÷»×ÓĞ§¹ûx3 + 50»¤¼×
+        case 'æ™®é€šæ”»å‡»': break;
+        case 'å¯¹å­': break;
+        case 'é¡ºå­': break; // 3é¡º AOE
+        case 'è¿å¯¹': baseArmor += 5; break;
+        case 'ä¸‰è¿å¯¹': baseArmor += 8; break;
+        case 'ä¸‰æ¡': statusEffects.push({ type: 'vulnerable', value: 1, duration: 2 }); break; // 1å±‚æ˜“ä¼¤
+        case '4é¡º': statusEffects.push({ type: 'weak', value: 1, duration: 2 }); break; // AOE + 1å±‚è™šå¼±
+        case 'åŒå…ƒç´ ': break; // éª°å­æ•ˆæœx2åœ¨åé¢å¤„ç†
+        case 'è‘«èŠ¦': baseArmor += 15; break; // çº¯é˜²å¾¡
+        case '5é¡º': statusEffects.push({ type: 'weak', value: 2, duration: 2 }); break; // AOE + 2å±‚è™šå¼±
+        case 'å››æ¡': statusEffects.push({ type: 'vulnerable', value: 2, duration: 2 }); break; // 2å±‚æ˜“ä¼¤
+        case '6é¡º': baseArmor += 10; statusEffects.push({ type: 'weak', value: 3, duration: 2 }); break; // AOE + 3å±‚è™šå¼± + 10æŠ¤ç”²
+        case 'å…ƒç´ é¡º': break; // AOE + éª°å­æ•ˆæœx2
+        case 'å…ƒç´ è‘«èŠ¦': baseArmor += 25; break; // éª°å­æ•ˆæœx2 + 25æŠ¤ç”²
+        case 'äº”æ¡': statusEffects.push({ type: 'vulnerable', value: 3, duration: 2 }); break; // 3å±‚æ˜“ä¼¤
+        case 'å…­æ¡': statusEffects.push({ type: 'vulnerable', value: 5, duration: 3 }); break; // 5å±‚æ˜“ä¼¤
+        case 'çš‡å®¶å…ƒç´ é¡º': baseArmor += 50; break; // AOE + éª°å­æ•ˆæœx3 + 50æŠ¤ç”²
       }
     });
 
     baseDamage = Math.floor(X * handMultiplier);
 
-    if (activeHands.some((h: string) => ['Í¬ÔªËØ', 'ÔªËØË³', 'ÔªËØºùÂ«', '»Ê¼ÒÔªËØË³'].includes(h))) {
+    if (activeHands.some((h: string) => ['åŒå…ƒç´ ', 'å…ƒç´ é¡º', 'å…ƒç´ è‘«èŠ¦', 'çš‡å®¶å…ƒç´ é¡º'].includes(h))) {
       baseArmor += baseDamage;
     }
 
@@ -824,11 +896,11 @@ export default function DiceHeroGame() {
       const res = aug.effect(X, selected, aug.level || 1, { rerollsThisTurn: rerollCount, currentHp: game.hp, maxHp: game.maxHp, currentGold: game.souls });
       const details: string[] = [];
 
-      if (res.damage) { extraDamage += res.damage; details.push(`ÉËº¦+${res.damage}`); }
-      if (res.armor) { extraArmor += res.armor; details.push(`»¤¼×+${res.armor}`); }
-      if (res.heal) { extraHeal += res.heal; details.push(`»Ø¸´+${res.heal}`); }
-      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`±¶ÂÊx${res.multiplier.toFixed(2)}`); }
-      if (res.pierce) { pierceDamage += res.pierce; details.push(`´©Í¸+${res.pierce}`); }
+      if (res.damage) { extraDamage += res.damage; details.push(`ä¼¤å®³+${res.damage}`); }
+      if (res.armor) { extraArmor += res.armor; details.push(`æŠ¤ç”²+${res.armor}`); }
+      if (res.heal) { extraHeal += res.heal; details.push(`å›å¤+${res.heal}`); }
+      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`å€ç‡x${res.multiplier.toFixed(2)}`); }
+      if (res.pierce) { pierceDamage += res.pierce; details.push(`ç©¿é€+${res.pierce}`); }
       if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`\u91D1\u5E01+${res.goldBonus}`); }
       if (res.statusEffects) {
         res.statusEffects.forEach(s => {
@@ -853,6 +925,8 @@ export default function DiceHeroGame() {
       const relicCtx = {
         handType: bestHand,
         diceCount: selected.length,
+        diceValues: selected.map(d => d.value),
+        diceDefIds: selected.map(d => d.diceDefId),
         pointSum: X,
         loadedDiceCount: selected.filter(d => getDiceDef(d.diceDefId).id === 'heavy').length,
         rerollsThisTurn: rerollCount,
@@ -866,28 +940,37 @@ export default function DiceHeroGame() {
         enemiesKilledThisBattle: game.enemiesKilledThisBattle || 0,
         hpLostThisBattle: game.hpLostThisBattle || 0,
         hpLostThisTurn: game.hpLostThisTurn || 0,
+        currentDepth: game.map.find(n => n.id === game.currentNodeId)?.depth || 0,
+        floorsCleared: game.relics.find(r => r.id === 'floor_conqueror')?.counter || 0,
       };
       const res = relic.effect(relicCtx);
       const details = [];
-      if (res.damage) { extraDamage += res.damage; details.push(`ÉËº¦+${res.damage}`); }
-      if (res.armor) { extraArmor += res.armor; details.push(`»¤¼×+${res.armor}`); }
-      if (res.heal) { extraHeal += res.heal; details.push(`»Ø¸´+${res.heal}`); }
-      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`±¶ÂÊx${res.multiplier.toFixed(2)}`); }
-      if (res.pierce) { pierceDamage += res.pierce; details.push(`´©Í¸+${res.pierce}`); }
-      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`½ğ±Ò+${res.goldBonus}`); }
+      if (res.damage) { extraDamage += res.damage; details.push(`ä¼¤å®³+${res.damage}`); }
+      if (res.armor) { extraArmor += res.armor; details.push(`æŠ¤ç”²+${res.armor}`); }
+      if (res.heal) { extraHeal += res.heal; details.push(`å›å¤+${res.heal}`); }
+      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`å€ç‡x${res.multiplier.toFixed(2)}`); }
+      if (res.pierce) { pierceDamage += res.pierce; details.push(`ç©¿é€+${res.pierce}`); }
+      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`é‡‘å¸+${res.goldBonus}`); }
       if (res.goldBonus) { /* toast will be shown in playHand */ }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined, relicId: relic.id, icon: relic.icon });
       }
     });
 
+    // --- Relic rageFireBonus: æ€’ç«ç‡åŸç´¯ç§¯ä¼¤å®³æ¶ˆè´¹ ---
+    if ((game.rageFireBonus || 0) > 0) {
+      extraDamage += game.rageFireBonus!;
+      triggeredAugments.push({ name: 'æ€’ç«ç‡åŸ', details: `ä¼¤å®³+${game.rageFireBonus}`, rawDamage: game.rageFireBonus!, relicId: 'rage_fire_relic', icon: 'blade' });
+      setGame(prev => ({ ...prev, rageFireBonus: 0 }));
+    }
+
     // --- Dice onPlay effects ---
-    // ¶àÑ¡ÆÕÍ¨¹¥»÷Ê±£¬ÌØÊâ÷»×Óµ±ÆÕÍ¨÷»×Ó£¬Ìø¹ıËùÓĞonPlayĞ§¹û
-    const skipOnPlay = selected.length > 1 && activeHands.includes('ÆÕÍ¨¹¥»÷') && activeHands.length === 1;
-    // Í¬ÔªËØÅÆĞÍÊ±£¬÷»×ÓĞ§¹û·­±¶£¨Í¬ÔªËØ´ó½±ÀøºËĞÄ»úÖÆ£©
-    const isSameElementHand = activeHands.some((h: string) => ['Í¬ÔªËØ', 'ÔªËØË³', 'ÔªËØºùÂ«', '»Ê¼ÒÔªËØË³'].includes(h));
-    const isRoyalElement = activeHands.some((h) => h === '»Ê¼ÒÔªËØË³');
-    const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0); // Í¬ÔªËØÊ±Ğ§¹û¡Á2
+    // å¤šé€‰æ™®é€šæ”»å‡»æ—¶ï¼Œç‰¹æ®Šéª°å­å½“æ™®é€šéª°å­ï¼Œè·³è¿‡æ‰€æœ‰onPlayæ•ˆæœ
+    const skipOnPlay = selected.length > 1 && activeHands.includes('æ™®é€šæ”»å‡»') && activeHands.length === 1;
+    // åŒå…ƒç´ ç‰Œå‹æ—¶ï¼Œéª°å­æ•ˆæœç¿»å€ï¼ˆåŒå…ƒç´ å¤§å¥–åŠ±æ ¸å¿ƒæœºåˆ¶ï¼‰
+    const isSameElementHand = activeHands.some((h: string) => ['åŒå…ƒç´ ', 'å…ƒç´ é¡º', 'å…ƒç´ è‘«èŠ¦', 'çš‡å®¶å…ƒç´ é¡º'].includes(h));
+    const isRoyalElement = activeHands.some((h) => h === 'çš‡å®¶å…ƒç´ é¡º');
+    const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0); // åŒå…ƒç´ æ—¶æ•ˆæœÃ—2
     
     selected.forEach(d => {
       if (skipOnPlay) return;
@@ -896,54 +979,54 @@ export default function DiceHeroGame() {
       const levelBonus = getElementLevelBonus(diceLevel);
       const totalElementBonus = elementBonus * levelBonus;
       
-      // ÔªËØ÷»×Ó£º¸ù¾İÌ®ËõºóµÄÔªËØ²úÉú²»Í¬Ğ§¹û
+      // å…ƒç´ éª°å­ï¼šæ ¹æ®åç¼©åçš„å…ƒç´ äº§ç”Ÿä¸åŒæ•ˆæœ
       if (def.isElemental && d.collapsedElement) {
         const diceValue = d.value;
         switch (d.collapsedElement) {
           case 'fire':
-            // »ğ£º´İ»ÙµĞÈËËùÓĞ»¤¼× + »ùÓÚµãÊıµÄÕæÊµÉËº¦ + µãÊı×ÆÉÕ
+            // ç«ï¼šæ‘§æ¯æ•Œäººæ‰€æœ‰æŠ¤ç”² + åŸºäºç‚¹æ•°çš„çœŸå®ä¼¤å®³ + ç‚¹æ•°ç¼çƒ§
             pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
             armorBreak = true;
             statusEffects.push({ type: 'burn', value: diceValue });
             break;
           case 'ice':
-            // ±ù£º¶³½á1»ØºÏ£¬µãÊı½áËã¼õ°ë
-            // ¼ì²éÄ¿±êÊÇ·ñÓĞ±ù¶³ÃâÒß
+            // å†°ï¼šå†»ç»“1å›åˆï¼Œç‚¹æ•°ç»“ç®—å‡åŠ
+            // æ£€æŸ¥ç›®æ ‡æ˜¯å¦æœ‰å†°å†»å…ç–«
             if (!targetEnemy?.statuses?.some(s => (s.type as string) === 'freeze_immune')) {
               statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
             }
-            // ±ùÔªËØµãÊı¼õ°ëÒÑÔÚbaseDamage¼ÆËãÇ°´¦Àí
+            // å†°å…ƒç´ ç‚¹æ•°å‡åŠå·²åœ¨baseDamageè®¡ç®—å‰å¤„ç†
             break;
           case 'thunder':
-            // À×£º¶ÔÆäËûµĞÈËÔì³ÉµÈÁ¿´©Í¸ÉËº¦£¨AOE±ê¼Ç£©
+            // é›·ï¼šå¯¹å…¶ä»–æ•Œäººé€ æˆç­‰é‡ç©¿é€ä¼¤å®³ï¼ˆAOEæ ‡è®°ï¼‰
             pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
             break;
           case 'poison':
-            // ¶¾£ºµş¼Ó¶¾²ã£¬¿ç»ØºÏ³ÖĞøµôÑª
+            // æ¯’ï¼šå åŠ æ¯’å±‚ï¼Œè·¨å›åˆæŒç»­æ‰è¡€
             const poisonStacks = Math.floor((diceValue + 2) * totalElementBonus);
             const existingPoison = statusEffects.find(es => es.type === 'poison');
             if (existingPoison) existingPoison.value += poisonStacks;
             else statusEffects.push({ type: 'poison', value: poisonStacks });
             break;
           case 'holy':
-            // Ê¥¹â£º»Ö¸´µÈÍ¬µãÊıµÄÉúÃüÖµ
+            // åœ£å…‰ï¼šæ¢å¤ç­‰åŒç‚¹æ•°çš„ç”Ÿå‘½å€¼
             extraHeal += Math.floor(diceValue * elementBonus);
-            // ±ê¼ÇĞèÒªÊ¥¹â¾»»¯£¨¸±×÷ÓÃÑÓ³Ùµ½ playHand ÖĞÖ´ĞĞ£©
+            // æ ‡è®°éœ€è¦åœ£å…‰å‡€åŒ–ï¼ˆå‰¯ä½œç”¨å»¶è¿Ÿåˆ° playHand ä¸­æ‰§è¡Œï¼‰
             holyPurify = true;
             break;
         }
-        return; // ÔªËØ÷»×Ó²»×ßÆÕÍ¨onPlay
+        return; // å…ƒç´ éª°å­ä¸èµ°æ™®é€šonPlay
       }
       
-      // ËéÁÑ÷»×Ó£º·´ÊÉÉËº¦
+      // ç¢è£‚éª°å­ï¼šåå™¬ä¼¤å®³
       if (def.onPlay?.selfDamage) {
-        extraHeal -= def.onPlay.selfDamage; // ¸º»ØÑª = ×ÔÉË
+        extraHeal -= def.onPlay.selfDamage; // è´Ÿå›è¡€ = è‡ªä¼¤
       }
       
       if (!def.onPlay) return;
       const upgradedOp = getUpgradedOnPlay(def, diceLevel);
       const op = upgradedOp || def.onPlay;
-      // Éî¶ÈËõ·Å£º¸ù¾İÕ½¶·½×¶ÎÌáÉı÷»×ÓonPlayĞ§¹û£¨Ã¿3²ã+15%»ù´¡ÉËº¦£¬Ã¿5²ã+0.05±¶ÂÊ£©
+      // æ·±åº¦ç¼©æ”¾ï¼šæ ¹æ®æˆ˜æ–—é˜¶æ®µæå‡éª°å­onPlayæ•ˆæœï¼ˆæ¯3å±‚+15%åŸºç¡€ä¼¤å®³ï¼Œæ¯5å±‚+0.05å€ç‡ï¼‰
       const depthDmgBonus = 1 + Math.floor((game.depth || 0) / 3) * 0.15;
       const depthMultBonus = Math.floor((game.depth || 0) / 5) * 0.05;
       if (op.bonusDamage) extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
@@ -1002,9 +1085,9 @@ export default function DiceHeroGame() {
     });
     const hasThunderDice = selected.some(d => d.element === 'thunder');
     if (hasDiceAoe || hasThunderDice) return true;
-      if (currentHands.activeHands.some(h => ['Ë³×Ó', '4Ë³', '5Ë³', '6Ë³'].includes(h))) return true;
+      if (currentHands.activeHands.some(h => ['é¡ºå­', '4é¡º', '5é¡º', '6é¡º'].includes(h))) return true;
     const { activeHands } = currentHands;
-    if (activeHands.some(h => h.includes('ÔªËØ') || h.includes('»Ê¼Ò'))) return true;
+    if (activeHands.some(h => h.includes('å…ƒç´ ') || h.includes('çš‡å®¶'))) return true;
     return false;
   }, [dice, expectedOutcome, currentHands]);
 
@@ -1013,7 +1096,16 @@ export default function DiceHeroGame() {
     const selected = dice.filter(d => d.selected && !d.spent);
     if (selected.length === 0 || enemies.length === 0 || !targetEnemy || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0) return;
 
-    setGame(prev => ({ ...prev, playsLeft: prev.playsLeft - 1 }));
+    // è¿½è¸ªå¯¹æ¯ä¸ªæ•Œäººçš„å‡ºç‰Œæ¬¡æ•°ï¼ˆç”¨äºé¦–æ¬¡ç§’æ€é­‚æ™¶åˆ¤å®šï¼‰
+    // åŒæ­¥è¯»å–å½“å‰å€¼ï¼Œç¡®ä¿åˆ¤å®šæ—¶ä¸å— setState å¼‚æ­¥å½±å“
+    const targetUidForTracking = targetEnemy.uid;
+    const playsBeforeThisPlay: Record<string, number> = { ...game.playsPerEnemy };
+    const currentPlaysOnTarget = (playsBeforeThisPlay[targetUidForTracking] || 0);
+    setGame(prev => ({
+      ...prev,
+      playsLeft: prev.playsLeft - 1,
+      playsPerEnemy: { ...prev.playsPerEnemy, [targetUidForTracking]: (prev.playsPerEnemy[targetUidForTracking] || 0) + 1 },
+    }));
 
     const outcome = expectedOutcome;
     if (!outcome) return;
@@ -1031,7 +1123,7 @@ export default function DiceHeroGame() {
     setTimeout(() => setHandLeftThrow(false), 500);
 
     // ========================================
-    // --- Í³¼Æ¸üĞÂ ---
+    // --- ç»Ÿè®¡æ›´æ–° ---
     setGame(prev => {
       const newStats = { ...prev.stats };
       newStats.totalPlays += 1;
@@ -1039,13 +1131,13 @@ export default function DiceHeroGame() {
       if (outcome.damage > newStats.maxSingleHit) newStats.maxSingleHit = outcome.damage;
       newStats.totalHealing += (outcome.heal || 0);
       newStats.totalArmorGained += (outcome.armor || 0);
-      // ÅÆĞÍÍ³¼Æ
+      // ç‰Œå‹ç»Ÿè®¡
       newStats.handTypeCounts[bestHand] = (newStats.handTypeCounts[bestHand] || 0) + 1;
-      // ×îÇ¿ÅÆĞÍ£¨ÓÃ handMultiplier ±È½Ï£©
+      // æœ€å¼ºç‰Œå‹ï¼ˆç”¨ handMultiplier æ¯”è¾ƒï¼‰
       if (!newStats.bestHandPlayed || outcome.handMultiplier > (prev.stats.handTypeCounts[newStats.bestHandPlayed] || 0)) {
         newStats.bestHandPlayed = bestHand;
       }
-      // ÷»×ÓÊ¹ÓÃÍ³¼Æ
+      // éª°å­ä½¿ç”¨ç»Ÿè®¡
       selected.forEach(d => {
         const defId = d.diceDefId;
         newStats.diceUsageCounts[defId] = (newStats.diceUsageCounts[defId] || 0) + 1;
@@ -1053,7 +1145,7 @@ export default function DiceHeroGame() {
       return { ...prev, stats: newStats };
     });
 
-    // Phase 1: ÅÆĞÍÕ¹Ê¾ (0.6s)
+    // Phase 1: ç‰Œå‹å±•ç¤º (0.6s)
     // ========================================
     setSettlementPhase('hand');
     setSettlementData({
@@ -1070,17 +1162,17 @@ export default function DiceHeroGame() {
       finalArmor: outcome.armor,
       finalHeal: outcome.heal,
       statusEffects: outcome.statusEffects,
-      isSameElement: currentHands.activeHands.some(h => ['Í¬ÔªËØ', 'ÔªËØË³', 'ÔªËØºùÂ«', '»Ê¼ÒÔªËØË³'].includes(h)),
+      isSameElement: currentHands.activeHands.some(h => ['åŒå…ƒç´ ', 'å…ƒç´ é¡º', 'å…ƒç´ è‘«èŠ¦', 'çš‡å®¶å…ƒç´ é¡º'].includes(h)),
     });
     playSound('augment_activate');
     await new Promise(r => setTimeout(r, 600));
 
     // ========================================
-    // Phase 2: Öğ¿Å÷»×Ó¼Æ·Ö (Ã¿¿Å0.3s) ¡ª ·ÖÁÑ÷»×ÓÔÚ´Ë½×¶Îµ¯³ö
+    // Phase 2: é€é¢—éª°å­è®¡åˆ† (æ¯é¢—0.3s) â€” åˆ†è£‚éª°å­åœ¨æ­¤é˜¶æ®µå¼¹å‡º
     // ========================================
     setSettlementPhase('dice');
     let runningBase = outcome.baseHandValue;
-    let settleDice = [...selected]; // Êµ¼Ê²ÎÓë½áËãµÄ÷»×ÓÁĞ±í
+    let settleDice = [...selected]; // å®é™…å‚ä¸ç»“ç®—çš„éª°å­åˆ—è¡¨
     let splitOccurred = false;
     for (let i = 0; i < settleDice.length; i++) {
       runningBase += settleDice[i].value;
@@ -1089,10 +1181,10 @@ export default function DiceHeroGame() {
       playSettlementTick(i);
       await new Promise(r => setTimeout(r, 280));
 
-      // ·ÖÁÑ÷»×Ó£º²¥·Åµ½ËüÊ±¶îÍâµ¯³öÒ»¿ÅËæ»úµãÊı÷»×Ó
+      // åˆ†è£‚éª°å­ï¼šæ’­æ”¾åˆ°å®ƒæ—¶é¢å¤–å¼¹å‡ºä¸€é¢—éšæœºç‚¹æ•°éª°å­
       if (settleDice[i].diceDefId === 'split') {
         const splitFaces = [1, 2, 3, 4, 5, 6];
-        const splitValue = splitFaces[Math.floor(Math.random() * splitFaces.length)]; // ¸´ÖÆÏàÍ¬µãÊı
+        const splitValue = splitFaces[Math.floor(Math.random() * splitFaces.length)]; // å¤åˆ¶ç›¸åŒç‚¹æ•°
         const splitDie: Die = {
           id: settleDice[i].id + 9000,
           diceDefId: 'standard',
@@ -1102,29 +1194,29 @@ export default function DiceHeroGame() {
           spent: false,
           rolling: false,
         };
-        // ²åÈëµ½µ±Ç°Î»ÖÃÖ®ºó
+        // æ’å…¥åˆ°å½“å‰ä½ç½®ä¹‹å
         settleDice.splice(i + 1, 0, splitDie);
         splitOccurred = true;
         playSound('augment_activate');
-        // ¸üĞÂÏÔÊ¾ ¡ª ĞÂ÷»×Óµ¯³ö£¬Í¬Ê±°ÑĞÂ÷»×ÓµÄÖµÒ²¼ÓÈë¼Æ·Ö²¢µãÁÁ
+        // æ›´æ–°æ˜¾ç¤º â€” æ–°éª°å­å¼¹å‡ºï¼ŒåŒæ—¶æŠŠæ–°éª°å­çš„å€¼ä¹ŸåŠ å…¥è®¡åˆ†å¹¶ç‚¹äº®
         runningBase += splitValue;
         const splitRunning = runningBase;
-        i++; // Ìø¹ıĞÂ²åÈëµÄ÷»×Ó£¬±ÜÃâÑ­»·ÖØ¸´´¦Àí
+        i++; // è·³è¿‡æ–°æ’å…¥çš„éª°å­ï¼Œé¿å…å¾ªç¯é‡å¤å¤„ç†
         setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice], currentBase: splitRunning, currentEffectIdx: i } : prev);
         await new Promise(r => setTimeout(r, 400));
-        addLog(`·ÖÁÑ÷»×Ó·ÖÁÑ£¡¶îÍâµ¯³öµãÊı ${splitValue}`);
-        addToast(`·ÖÁÑ! µ¯³öµãÊı ${splitValue}`, 'buff');
+        addLog(`åˆ†è£‚éª°å­åˆ†è£‚ï¼é¢å¤–å¼¹å‡ºç‚¹æ•° ${splitValue}`);
+        addToast(`åˆ†è£‚! å¼¹å‡ºç‚¹æ•° ${splitValue}`, 'buff');
       }
     }
 
-    // Èç¹û·¢ÉúÁË·ÖÁÑ£¬ÖØĞÂ¼ÆËãÅÆĞÍºÍÉËº¦
+    // å¦‚æœå‘ç”Ÿäº†åˆ†è£‚ï¼Œé‡æ–°è®¡ç®—ç‰Œå‹å’Œä¼¤å®³
 
-    // ´ÅÎü÷»×Ó£ºËæ»úÍ¬»¯Ò»¿ÅÍ¬°é÷»×ÓµÄµãÊıÎª×ÔÉíµãÊı
+    // ç£å¸éª°å­ï¼šéšæœºåŒåŒ–ä¸€é¢—åŒä¼´éª°å­çš„ç‚¹æ•°ä¸ºè‡ªèº«ç‚¹æ•°
     let magnetOccurred = false;
     for (let i = 0; i < settleDice.length; i++) {
       if (settleDice[i].diceDefId === 'magnet' && settleDice.length > 1) {
         const magnetValue = settleDice[i].value;
-        // ÕÒµ½ËùÓĞ·Ç´ÅÎüµÄÍ¬°é÷»×Ó
+        // æ‰¾åˆ°æ‰€æœ‰éç£å¸çš„åŒä¼´éª°å­
         const targets = settleDice.filter((d, idx) => idx !== i && d.diceDefId !== 'magnet');
         if (targets.length > 0) {
           const target = targets[Math.floor(Math.random() * targets.length)];
@@ -1135,20 +1227,20 @@ export default function DiceHeroGame() {
           setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice] } : prev);
           await new Promise(r => setTimeout(r, 400));
           const targetDef = getDiceDef(target.diceDefId);
-          addLog(`´ÅÎü÷»×ÓÍ¬»¯£¡${targetDef.name}µÄµãÊı ${oldValue} ¡ú ${magnetValue}`);
-          addToast(`?? ${targetDef.name} ${oldValue}¡ú${magnetValue}`, 'buff');
+          addLog(`ç£å¸éª°å­åŒåŒ–ï¼${targetDef.name}çš„ç‚¹æ•° ${oldValue} â†’ ${magnetValue}`);
+          addToast(`?? ${targetDef.name} ${oldValue}â†’${magnetValue}`, 'buff');
         }
       }
     }
 
-    // Èç¹û·¢ÉúÁË´ÅÎü£¬Ò²ĞèÒªÖØĞÂ¼ÆËãÅÆĞÍºÍÉËº¦£¨ºÍ·ÖÁÑÒ»ÑùµÄÂß¼­£©
+    // å¦‚æœå‘ç”Ÿäº†ç£å¸ï¼Œä¹Ÿéœ€è¦é‡æ–°è®¡ç®—ç‰Œå‹å’Œä¼¤å®³ï¼ˆå’Œåˆ†è£‚ä¸€æ ·çš„é€»è¾‘ï¼‰
     if (magnetOccurred && !splitOccurred) {
       const newHandResult = checkHands(settleDice, { straightUpgrade });
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
-        addLog(`´ÅÎü¸Ä±äÁËÅÆĞÍ£¡${outcome.bestHand} ¡ú ${newBestHand}`);
-        addToast(` ÅÆĞÍ±ä»¯: ${outcome.bestHand} ¡ú ${newBestHand}`, newBestHand === 'ÆÕÍ¨¹¥»÷' ? 'damage' : 'buff');
-        playSound(newBestHand === 'ÆÕÍ¨¹¥»÷' ? 'hit' : 'augment_activate');
+        addLog(`ç£å¸æ”¹å˜äº†ç‰Œå‹ï¼${outcome.bestHand} â†’ ${newBestHand}`);
+        addToast(` ç‰Œå‹å˜åŒ–: ${outcome.bestHand} â†’ ${newBestHand}`, newBestHand === 'æ™®é€šæ”»å‡»' ? 'damage' : 'buff');
+        playSound(newBestHand === 'æ™®é€šæ”»å‡»' ? 'hit' : 'augment_activate');
       }
       const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
       let newHandMult = 1;
@@ -1183,11 +1275,11 @@ export default function DiceHeroGame() {
       const newHandResult = checkHands(settleDice, { straightUpgrade });
       const newBestHand = newHandResult.bestHand;
       if (newBestHand !== outcome.bestHand) {
-        addLog(`·ÖÁÑ¸Ä±äÁËÅÆĞÍ£¡${outcome.bestHand} ¡ú ${newBestHand}`);
-        addToast(` ÅÆĞÍ±ä»¯: ${outcome.bestHand} ¡ú ${newBestHand}`, newBestHand === 'ÆÕÍ¨¹¥»÷' ? 'damage' : 'buff');
-        playSound(newBestHand === 'ÆÕÍ¨¹¥»÷' ? 'hit' : 'augment_activate');
+        addLog(`åˆ†è£‚æ”¹å˜äº†ç‰Œå‹ï¼${outcome.bestHand} â†’ ${newBestHand}`);
+        addToast(` ç‰Œå‹å˜åŒ–: ${outcome.bestHand} â†’ ${newBestHand}`, newBestHand === 'æ™®é€šæ”»å‡»' ? 'damage' : 'buff');
+        playSound(newBestHand === 'æ™®é€šæ”»å‡»' ? 'hit' : 'augment_activate');
       }
-      // ÖØĞÂ¼ÆËãÉËº¦£¨ÓÃĞÂµÄ÷»×ÓÁĞ±íºÍÅÆĞÍ£©
+      // é‡æ–°è®¡ç®—ä¼¤å®³ï¼ˆç”¨æ–°çš„éª°å­åˆ—è¡¨å’Œç‰Œå‹ï¼‰
       const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
       let newHandMult = 1;
       newHandResult.activeHands.forEach(handName => {
@@ -1200,7 +1292,7 @@ export default function DiceHeroGame() {
       });
       const newBaseDamage = Math.floor(newX * newHandMult);
       const newTotalDamage = Math.floor((newBaseDamage + (outcome.damage - Math.floor(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
-      // ¸üĞÂ outcome µÄÉËº¦Öµ£¨ÓÃ±Õ°ü±äÁ¿£©
+      // æ›´æ–° outcome çš„ä¼¤å®³å€¼ï¼ˆç”¨é—­åŒ…å˜é‡ï¼‰
       outcome.damage = Math.max(0, newTotalDamage);
       outcome.bestHand = newBestHand;
       outcome.X = newX;
@@ -1220,7 +1312,7 @@ export default function DiceHeroGame() {
     }
     await new Promise(r => setTimeout(r, 200));
 
-    // Phase 2.5: ±¶ÂÊÇ¿µ÷¶¯»­ (0.5s)
+    // Phase 2.5: å€ç‡å¼ºè°ƒåŠ¨ç”» (0.5s)
     // ========================================
     setSettlementPhase('mult');
     playMultiplierTick(0);
@@ -1228,47 +1320,47 @@ export default function DiceHeroGame() {
 
 
     // ========================================
-    // Phase 3: ÌØÊâĞ§¹û´¥·¢ (Ã¿¸ö0.4s)
+    // Phase 3: ç‰¹æ®Šæ•ˆæœè§¦å‘ (æ¯ä¸ª0.4s)
     // ========================================
     setSettlementPhase('effects');
     
-    // ÊÕ¼¯ËùÓĞ´¥·¢Ğ§¹û
+    // æ”¶é›†æ‰€æœ‰è§¦å‘æ•ˆæœ
     const allEffects: { name: string; detail: string; type: 'damage' | 'mult' | 'status' | 'heal' | 'armor'; rawValue?: number; rawMult?: number; relicId?: string; icon?: string }[] = [];
     
-    // ÷»×ÓonPlayĞ§¹û
-    const skipOnPlaySettlement = selected.length > 1 && currentHands.activeHands.includes('ÆÕÍ¨¹¥»÷') && currentHands.activeHands.length === 1;
+    // éª°å­onPlayæ•ˆæœ
+    const skipOnPlaySettlement = selected.length > 1 && currentHands.activeHands.includes('æ™®é€šæ”»å‡»') && currentHands.activeHands.length === 1;
     selected.forEach(d => {
       const def = getDiceDef(d.diceDefId);
       if (skipOnPlaySettlement || !def.onPlay) return;
       const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
       const op = getUpgradedOnPlay(def, diceLevel) || def.onPlay;
-      if (op.bonusDamage) allEffects.push({ name: def.name, rawValue: op.bonusDamage, detail: `ÉËº¦+${op.bonusDamage}`, type: 'damage' });
-      if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `±¶ÂÊ¡Á${op.bonusMult}`, type: 'mult' });
-      if (op.heal) allEffects.push({ name: def.name, detail: `»Ø¸´${op.heal}HP`, type: 'heal' });
-      if (op.pierce) allEffects.push({ name: def.name, rawValue: op.pierce, detail: `´©Í¸+${op.pierce}`, type: 'damage' });
+      if (op.bonusDamage) allEffects.push({ name: def.name, rawValue: op.bonusDamage, detail: `ä¼¤å®³+${op.bonusDamage}`, type: 'damage' });
+      if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `å€ç‡Ã—${op.bonusMult}`, type: 'mult' });
+      if (op.heal) allEffects.push({ name: def.name, detail: `å›å¤${op.heal}HP`, type: 'heal' });
+      if (op.pierce) allEffects.push({ name: def.name, rawValue: op.pierce, detail: `ç©¿é€+${op.pierce}`, type: 'damage' });
       if (op.statusToEnemy) {
         const info = STATUS_INFO[op.statusToEnemy.type];
         allEffects.push({ name: def.name, detail: `${info.label}+${op.statusToEnemy.value}`, type: 'status' });
       }
     });
     
-    // ÒÅÎïĞ§¹û
+    // é—ç‰©æ•ˆæœ
     outcome.triggeredAugments.forEach(aug => {
       allEffects.push({ name: aug.name, detail: aug.details, type: aug.rawMult ? 'mult' : 'damage', rawValue: aug.rawDamage || undefined, rawMult: aug.rawMult || undefined, relicId: aug.relicId, icon: aug.icon });
     });
     
-    // Öğ¸öÕ¹Ê¾Ğ§¹û
+    // é€ä¸ªå±•ç¤ºæ•ˆæœ
     for (let i = 0; i < allEffects.length; i++) {
       setSettlementData(prev => prev ? {
         ...prev,
         triggeredEffects: allEffects.slice(0, i + 1),
-        // ¶¯Ì¬¸üĞÂ»ù´¡ÖµºÍ±¶ÂÊÏÔÊ¾
+        // åŠ¨æ€æ›´æ–°åŸºç¡€å€¼å’Œå€ç‡æ˜¾ç¤º
         ...(allEffects[i].rawValue ? { currentBase: (prev?.currentBase || 0) + allEffects[i].rawValue } : {}),
         ...(allEffects[i].rawMult ? { currentMult: (prev?.currentMult || 1) * allEffects[i].rawMult } : {}),
         currentEffectIdx: i,
       } : prev);
       playMultiplierTick(i + 1);
-      // ÒÅÎïiconË¢¹â
+      // é—ç‰©iconåˆ·å…‰
       if (allEffects[i].relicId) {
         setFlashingRelicIds(prev => [...prev, allEffects[i].relicId!]);
         setTimeout(() => setFlashingRelicIds(prev => prev.filter(id => id !== allEffects[i].relicId)), 800);
@@ -1277,32 +1369,33 @@ export default function DiceHeroGame() {
     }
     if (allEffects.length > 0) await new Promise(r => setTimeout(r, 200));
 
-    // è®©ç©å®¶çœ‹å®Œèç®—è¿‡ç¨‹ï¼Œå¤šåœç•?1ç§’å†æ”¾ä¼¤å®³æ–‡å­?
-    await new Promise(r => setTimeout(r, 2000));
+    // ç»“ç®—æ¼”å‡ºQå¼¹å®šæ ¼åŠ¨ç”»
+    setSettlementPhase('bounce');
+    await new Promise(r => setTimeout(r, 500));
 
     // ========================================
-    // Phase 4: ×îÖÕÉËº¦·É³ö (0.8s)
+    // Phase 4: æœ€ç»ˆä¼¤å®³é£å‡º (0.8s)
     // ========================================
     setSettlementPhase('damage');
-    // ¿¨Èâ¶ÙÖ¡£º´óÉËº¦Ê±¶³½á»­Ãæ+ÖØ»÷ÒôĞ§+Ç¿ÁÒÕğ¶¯
+    // å¡è‚‰é¡¿å¸§ï¼šå¤§ä¼¤å®³æ—¶å†»ç»“ç”»é¢+é‡å‡»éŸ³æ•ˆ+å¼ºçƒˆéœ‡åŠ¨
     const maxEnemyHp = enemies.reduce((max, e) => Math.max(max, e.maxHp || e.hp), 1);
     const damageRatio = outcome.damage / maxEnemyHp;
     const isHeavyHit = damageRatio >= 0.5 || outcome.damage >= 60;
     const isMassiveHit = damageRatio >= 1.0 || outcome.damage >= 120;
 
     if (isMassiveHit) {
-      // »ÙÃğ¼¶£ºÖØ»÷ÒôĞ§ + ³¤¶ÙÖ¡ + Ç¿Õğ
+      // æ¯ç­çº§ï¼šé‡å‡»éŸ³æ•ˆ + é•¿é¡¿å¸§ + å¼ºéœ‡
       playHeavyImpact(1.0);
       setScreenShake(true);
-      await new Promise(r => setTimeout(r, 150)); // ¿¨Èâ¶³½á
+      await new Promise(r => setTimeout(r, 150)); // å¡è‚‰å†»ç»“
       playSound('critical');
       setTimeout(() => playSound('critical'), 120);
       setTimeout(() => playSound('critical'), 250);
     } else if (isHeavyHit) {
-      // ÖØ»÷£ºË«ÖØ±©»÷ + ÖĞµÈ¶ÙÖ¡
+      // é‡å‡»ï¼šåŒé‡æš´å‡» + ä¸­ç­‰é¡¿å¸§
       playHeavyImpact(0.6);
       setScreenShake(true);
-      await new Promise(r => setTimeout(r, 100)); // ¿¨Èâ¶³½á
+      await new Promise(r => setTimeout(r, 100)); // å¡è‚‰å†»ç»“
       playSound('critical');
       setTimeout(() => playSound('critical'), 150);
     } else if (outcome.damage >= 20) {
@@ -1319,7 +1412,7 @@ export default function DiceHeroGame() {
     await new Promise(r => setTimeout(r, isMassiveHit ? 1200 : isHeavyHit ? 1000 : 800));
 
     // ========================================
-    // ÇåÀí½áËãÑİ³ö£¬Ó¦ÓÃÊµ¼ÊĞ§¹û
+    // æ¸…ç†ç»“ç®—æ¼”å‡ºï¼Œåº”ç”¨å®é™…æ•ˆæœ
     // ========================================
     setSettlementPhase(null);
     setSettlementData(null);
@@ -1328,13 +1421,13 @@ export default function DiceHeroGame() {
     const targetUid = targetEnemy.uid;
     const selectedDefs = selected.map(d => getDiceDef(d.diceDefId));
     const hasThunderElement = selected.some(d => d.element === 'thunder');
-    const hasAoe = hasThunderElement || selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.some(h => ['Ë³×Ó', '4Ë³', '5Ë³', '6Ë³'].includes(h));
-    // Í¬ÔªËØÅÆĞÍµÄ×´Ì¬Ğ§¹ûAOE£¨¶ÔËùÓĞµĞÈËÊ©¼Ó×´Ì¬£©
-    const isElementalAoe = currentHands.activeHands.some(h => ['ÔªËØË³', 'ÔªËØºùÂ«', '»Ê¼ÒÔªËØË³'].includes(h));
+    const hasAoe = hasThunderElement || selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.some(h => ['é¡ºå­', '4é¡º', '5é¡º', '6é¡º'].includes(h));
+    // åŒå…ƒç´ ç‰Œå‹çš„çŠ¶æ€æ•ˆæœAOEï¼ˆå¯¹æ‰€æœ‰æ•Œäººæ–½åŠ çŠ¶æ€ï¼‰
+    const isElementalAoe = currentHands.activeHands.some(h => ['å…ƒç´ é¡º', 'å…ƒç´ è‘«èŠ¦', 'çš‡å®¶å…ƒç´ é¡º'].includes(h));
     
     if (outcome.damage > 0) {
       if (hasAoe) {
-        // AOE: ¶ÔËùÓĞ´æ»îµĞÈËÔì³ÉÉËº¦
+        // AOE: å¯¹æ‰€æœ‰å­˜æ´»æ•Œäººé€ æˆä¼¤å®³
         const aliveEnemies = enemies.filter(e => e.hp > 0);
         aliveEnemies.forEach((e, idx) => {
           setTimeout(() => {
@@ -1369,8 +1462,8 @@ export default function DiceHeroGame() {
     // Status effects on enemies
     if (outcome.statusEffects && outcome.statusEffects.length > 0) {
       if (isElementalAoe) {
-        // ¸ß½×Í¬ÔªËØÅÆĞÍ£º×´Ì¬Ğ§¹ûAOEÈ«ÌåµĞÈË
-        addFloatingText('ÔªËØ±¬·¢!', 'text-[var(--pixel-gold)]', undefined, 'enemy');
+        // é«˜é˜¶åŒå…ƒç´ ç‰Œå‹ï¼šçŠ¶æ€æ•ˆæœAOEå…¨ä½“æ•Œäºº
+        addFloatingText('å…ƒç´ çˆ†å‘!', 'text-[var(--pixel-gold)]', undefined, 'enemy');
       }
       outcome.statusEffects.forEach((s, idx) => {
         setTimeout(() => {
@@ -1388,7 +1481,7 @@ export default function DiceHeroGame() {
         if (e.hp <= 0) return e;
         let dmg = outcome.damage;
         let arm = e.armor;
-        // »ğÔªËØ£º´İ»Ù»¤¼×
+        // ç«å…ƒç´ ï¼šæ‘§æ¯æŠ¤ç”²
         if (outcome.armorBreak) { arm = 0; }
         if (arm > 0) {
           const absorbed = Math.min(arm, dmg);
@@ -1397,7 +1490,7 @@ export default function DiceHeroGame() {
         }
         const newHp = Math.max(0, e.hp - dmg);
         let newStatuses = [...e.statuses];
-        // AOE×´Ì¬Ğ§¹ûÒ²Ê©¼Ó¸øËùÓĞµĞÈË
+        // AOEçŠ¶æ€æ•ˆæœä¹Ÿæ–½åŠ ç»™æ‰€æœ‰æ•Œäºº
         if (outcome.statusEffects) {
           outcome.statusEffects.forEach(s => {
             const existing = newStatuses.find(es => es.type === s.type);
@@ -1417,14 +1510,14 @@ export default function DiceHeroGame() {
       // Single target
       let remainingDamage = outcome.damage;
       let enemyArmor = targetEnemy.armor;
-      // »ğÔªËØ£º´İ»Ù»¤¼×
+      // ç«å…ƒç´ ï¼šæ‘§æ¯æŠ¤ç”²
       if (outcome.armorBreak) { enemyArmor = 0; }
       if (enemyArmor > 0) {
         const absorbed = Math.min(enemyArmor, remainingDamage);
         enemyArmor -= absorbed;
         remainingDamage -= absorbed;
       }
-      finalEnemyHp = Math.max(0, targetEnemy.hp - remainingDamage);
+      finalEnemyHp = targetEnemy.hp - remainingDamage; // ä¿ç•™è´Ÿå€¼ç”¨äºoverkillè®¡ç®—
       if (finalEnemyHp <= 0) {
       setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death');
       const dq = getEnemyQuotes(targetEnemy.configId);
@@ -1435,6 +1528,9 @@ export default function DiceHeroGame() {
         const ll = pickQuote(lqc?.lowHp);
         if (ll) {
           showEnemyQuote(targetUid, ll, 3000);
+          playSound('enemy_speak');
+          setEnemyEffectForUid(targetUid, 'speaking');
+          setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
           setEnemyQuotedLowHp(prev => new Set([...prev, targetUid]));
         }
       }
@@ -1449,11 +1545,11 @@ export default function DiceHeroGame() {
             else { newStatuses.push({ ...s }); }
           });
         }
-        // ¸ß½×Í¬ÔªËØ£º×´Ì¬Ò²Ê©¼Ó¸øÆäËûµĞÈË
-        return { ...e, hp: finalEnemyHp, armor: enemyArmor, statuses: newStatuses };
+        // é«˜é˜¶åŒå…ƒç´ ï¼šçŠ¶æ€ä¹Ÿæ–½åŠ ç»™å…¶ä»–æ•Œäºº
+        return { ...e, hp: Math.max(0, finalEnemyHp), armor: enemyArmor, statuses: newStatuses };
       }));
       
-      // ¸ß½×Í¬ÔªËØÅÆĞÍ£º×´Ì¬Ğ§¹ûAOEÊ©¼Ó¸ø·ÇÄ¿±êµĞÈË
+      // é«˜é˜¶åŒå…ƒç´ ç‰Œå‹ï¼šçŠ¶æ€æ•ˆæœAOEæ–½åŠ ç»™éç›®æ ‡æ•Œäºº
       if (isElementalAoe && outcome.statusEffects && outcome.statusEffects.length > 0) {
         setEnemies(prev => prev.map(e => {
           if (e.uid === targetUid || e.hp <= 0) return e;
@@ -1482,7 +1578,7 @@ export default function DiceHeroGame() {
     if (killCount > 0) {
       setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + killCount }));
     }
-    // on_kill ÒÅÎïĞ§¹û£º¼ì²éÊÇ·ñÓĞµĞÈË±»»÷É±
+    // on_kill é—ç‰©æ•ˆæœï¼šæ£€æŸ¥æ˜¯å¦æœ‰æ•Œäººè¢«å‡»æ€
     // Pre-compute killed enemies data synchronously (avoid stale closure)
     const killedEnemiesData: Array<{uid: string, overkill: number}> = [];
     if (hasAoe) {
@@ -1514,7 +1610,7 @@ export default function DiceHeroGame() {
           });
         });
 
-          // Òç³öµ¼¹Ü: Òç³öÉËº¦×ªÒÆ¸øËæ»úµĞÈË
+          // æº¢å‡ºå¯¼ç®¡: æº¢å‡ºä¼¤å®³è½¬ç§»ç»™éšæœºæ•Œäºº
           const overflowRelic = game.relics.find(r => r.id === 'overflow_conduit');
           if (overflowRelic) {
             killedEnemiesData.forEach(killedData => {
@@ -1524,7 +1620,7 @@ export default function DiceHeroGame() {
                 if (aliveOthers.length > 0) {
                   const target = aliveOthers[Math.floor(Math.random() * aliveOthers.length)];
                   setEnemies(prev => prev.map(e => e.uid === target.uid ? { ...e, hp: Math.max(0, e.hp - overkill) } : e));
- addLog(' Òç³öµ¼¹Ü: ' + overkill + ' µãÒç³öÉËº¦×ªÒÆ¸ø ' + target.name + '!');
+ addLog(' æº¢å‡ºå¯¼ç®¡: ' + overkill + ' ç‚¹æº¢å‡ºä¼¤å®³è½¬ç§»ç»™ ' + target.name + '!');
                   addFloatingText('-' + overkill, 'text-orange-400', null, 'enemy');
                   playSound('hit');
                 }
@@ -1532,39 +1628,49 @@ export default function DiceHeroGame() {
             });
           }
       }
-
-        // Òç³öÉËº¦¡úºÚÊĞÅä¶î×ª»¯ (50:1»ãÂÊ)
-        const totalOverkill = killedEnemiesData.reduce((sum, k) => sum + k.overkill, 0);
-        if (totalOverkill > 0) {
-          const quotaGain = totalOverkill;  // 1:1 - any overkill gives soul crystals
-          if (quotaGain > 0) {
-            setGame(prev => ({
-              ...prev,
-              blackMarketQuota: (prev.blackMarketQuota || 0) + quotaGain,
-              totalOverkillThisRun: (prev.totalOverkillThisRun || 0) + totalOverkill,
-            }));
-            addToast('?? +' + quotaGain + ' »ê¾§ (Òç³ö' + totalOverkill + ')', 'buff');
-            addFloatingText('+' + quotaGain + ' ??', 'text-purple-400', null, 'player');
-          }
-        }
     }, 300);
+
+    // é­‚æ™¶è·å–ï¼šé¦–æ¬¡å‡ºç‰Œç§’æ€æ•Œäººæ—¶ï¼Œæº¢å‡ºä¼¤å®³Ã—å½“å‰å€ç‡=é­‚æ™¶ï¼ˆåŒæ­¥æ‰§è¡Œï¼Œä¸åœ¨setTimeoutä¸­ï¼‰
+    if (killedEnemiesData.length > 0) {
+      const currentNode = game.map.find(n => n.id === game.currentNodeId);
+      const currentDepth = currentNode?.depth || 0;
+      const depthMult = game.soulCrystalMultiplier + currentDepth * 0.2;
+      let totalSoulGain = 0;
+      killedEnemiesData.forEach(killedData => {
+        // é¦–æ¬¡ = è¿™æ¬¡å‡ºç‰Œä¹‹å‰ä»æœªæ‰“è¿‡è¿™ä¸ªæ•Œäººï¼ˆplaysBeforeThisPlayä¸º0ï¼‰
+        const playsBefore = playsBeforeThisPlay[killedData.uid] || 0;
+        if (playsBefore === 0 && killedData.overkill > 0) {
+          const gain = Math.floor(killedData.overkill * depthMult);
+          totalSoulGain += gain;
+        }
+      });
+      if (totalSoulGain > 0) {
+        setGame(prev => ({
+          ...prev,
+          blackMarketQuota: (prev.blackMarketQuota || 0) + totalSoulGain,
+          totalOverkillThisRun: (prev.totalOverkillThisRun || 0) + totalSoulGain,
+        }));
+        addFloatingText(`+${totalSoulGain} é­‚æ™¶`, 'text-purple-300', <PixelSoulCrystal size={3} />, 'player', true);
+        addToast(`+${totalSoulGain} é­‚æ™¶ (Ã—${depthMult.toFixed(1)}å€ç‡)`, 'buff');
+      }
+    }
 
     // Mark dice as spent & add to discard pile
     const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
     setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
     const usedElements = dice.filter(d => d.selected && !d.spent && d.element !== 'normal').map(d => d.element);
-    const isNormalAttackPlay = bestHand === 'ÆÕÍ¨¹¥»÷';
+    const isNormalAttackPlay = bestHand === 'æ™®é€šæ”»å‡»';
     setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
 
-    let logMsg = `´ò³ö ${bestHand}£¬Ôì³É ${outcome.damage} ÉËº¦`;
-    if (outcome.armor > 0) logMsg += `£¬»ñµÃ ${outcome.armor} »¤¼×`;
-    if (outcome.heal > 0) logMsg += `£¬»Ø¸´ ${outcome.heal} ÉúÃü`;
+    let logMsg = `æ‰“å‡º ${bestHand}ï¼Œé€ æˆ ${outcome.damage} ä¼¤å®³`;
+    if (outcome.armor > 0) logMsg += `ï¼Œè·å¾— ${outcome.armor} æŠ¤ç”²`;
+    if (outcome.heal > 0) logMsg += `ï¼Œå›å¤ ${outcome.heal} ç”Ÿå‘½`;
     if (outcome.triggeredAugments.length > 0) {
       const augDetails = outcome.triggeredAugments.map(a => `${a.name}(${a.details})`).join(', ');
-      logMsg += ` (´¥·¢: ${augDetails})`;
+      logMsg += ` (è§¦å‘: ${augDetails})`;
     }
 
-    // Ê¥¹â¾»»¯£º³öÅÆºó²ÅÖ´ĞĞ¸±×÷ÓÃ£¨Çå³ı¸ºÃæ×´Ì¬»òÒÆ³ı×çÖä÷»×Ó£©
+    // åœ£å…‰å‡€åŒ–ï¼šå‡ºç‰Œåæ‰æ‰§è¡Œå‰¯ä½œç”¨ï¼ˆæ¸…é™¤è´Ÿé¢çŠ¶æ€æˆ–ç§»é™¤è¯…å’’éª°å­ï¼‰
     if (outcome.holyPurify) {
       const negativeStatuses = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
       if (negativeStatuses.length > 0) {
@@ -1573,8 +1679,8 @@ export default function DiceHeroGame() {
           ...prev,
           statuses: prev.statuses.filter(s => s !== purged),
         }));
-        addLog(`Ê¥¹â¾»»¯£¡Çå³ıÁË ${purged.type} Ğ§¹û`);
-        addToast(`? ¾»»¯ ${purged.type}`, 'heal');
+        addLog(`åœ£å…‰å‡€åŒ–ï¼æ¸…é™¤äº† ${purged.type} æ•ˆæœ`);
+        addToast(`? å‡€åŒ– ${purged.type}`, 'heal');
       } else {
         const cursedIdx = game.ownedDice.findIndex(d => d.defId === 'cursed' || d.defId === 'cracked');
         if (cursedIdx >= 0) {
@@ -1601,12 +1707,12 @@ export default function DiceHeroGame() {
             });
             return { ...prev, ownedDice: newOwned, diceBag: newBag, discardPile: newDiscard };
           });
-          addLog(`Ê¥¹â¾»»¯£¡ÒÆ³ıÁË ${cursedDef.name}`);
-          addToast(`? ¾»»¯ ${cursedDef.name}`, 'heal');
+          addLog(`åœ£å…‰å‡€åŒ–ï¼ç§»é™¤äº† ${cursedDef.name}`);
+          addToast(`? å‡€åŒ– ${cursedDef.name}`, 'heal');
         }
       }
     }
-    logMsg += `¡£`;
+    logMsg += `ã€‚`;
     addLog(logMsg);
 
     // Check for enemy deaths (works for both AOE and single target)
@@ -1623,7 +1729,7 @@ export default function DiceHeroGame() {
           const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== targetUid);
           if (remainingAlive.length > 0) {
             setGame(prev => ({ ...prev, targetEnemyUid: (remainingAlive.find(e => e.combatType === 'guardian') || remainingAlive[0]).uid }));
-            addLog(`µ±Ç°Ä¿±ê±»»÷°Ü£¡»¹ÓĞ ${remainingAlive.length} ¸öµĞÈË´æ»î¡£`);
+            addLog(`å½“å‰ç›®æ ‡è¢«å‡»è´¥ï¼è¿˜æœ‰ ${remainingAlive.length} ä¸ªæ•Œäººå­˜æ´»ã€‚`);
             return;
           }
         } else {
@@ -1658,7 +1764,7 @@ export default function DiceHeroGame() {
           setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
           setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
-          addLog(`µÚ ${nextWaveIdx + 1} ²¨µĞÈËÀ´Ï®£¡`);
+          addLog(`ç¬¬ ${nextWaveIdx + 1} æ³¢æ•Œäººæ¥è¢­ï¼`);
           rollAllDice();
           return;
         }
@@ -1703,7 +1809,7 @@ export default function DiceHeroGame() {
         nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
       }
       currentPlayerHp = Math.max(0, prev.hp - poisonDamage);
-      // ¼±¾ÈÉ³Â©: ¶¾ÉËÖÂÃü±£»¤
+      // æ€¥æ•‘æ²™æ¼: æ¯’ä¼¤è‡´å‘½ä¿æŠ¤
       if (currentPlayerHp <= 0 && prev.hp > 0) {
         const hgR = prev.relics.find(r => r.id === 'emergency_hourglass');
         if (hgR && (hgR.counter || 0) === 0) {
@@ -1728,7 +1834,7 @@ export default function DiceHeroGame() {
         const dmg = burn.value;
         addLog(`${e.name} \u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${dmg} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${dmg}`, 'text-orange-500', <PixelFlame size={2} />, 'enemy');
-        // ×ÆÉÕÖ»´æÔÚÒ»»ØºÏ£¬Ôì³ÉÉËº¦ºóÖ±½ÓÒÆ³ı
+        // ç¼çƒ§åªå­˜åœ¨ä¸€å›åˆï¼Œé€ æˆä¼¤å®³åç›´æ¥ç§»é™¤
         const nextStatuses = e.statuses.filter(s => s.type !== 'burn');
         const newHp = Math.max(0, e.hp - dmg);
         if (newHp <= 0) enemyDeathsFromBurn.push(e.uid);
@@ -1840,9 +1946,9 @@ export default function DiceHeroGame() {
               en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
             ));
             if (e.distance === 1) {
-              addLog(`${e.name} ±Æ½üµ½½üÉíÎ»ÖÃ£¡`);
+              addLog(`${e.name} é€¼è¿‘åˆ°è¿‘èº«ä½ç½®ï¼`);
             } else {
-              addLog(`${e.name} ÕıÔÚ±Æ½ü...(¾àÀë ${e.distance - 1})`);
+              addLog(`${e.name} æ­£åœ¨é€¼è¿‘...(è·ç¦» ${e.distance - 1})`);
             }
             continue;
           }
@@ -1851,13 +1957,14 @@ export default function DiceHeroGame() {
           if (e.combatType === 'guardian') {
             if (game.battleTurn % 2 === 0) {
               // Defend turn + taunt
+              await enemyPreAction(e, 'defend');
               const shieldVal = Math.floor(e.attackDmg * 1.5);
               setEnemyEffectForUid(e.uid, 'defend');
               playSound('enemy_defend');
               setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
               // Force player to target this guardian
               setGame(prev => ({ ...prev, targetEnemyUid: e.uid }));
-              addLog(`${e.name} ¾Ù¶Ü·ÀÓù£¨+${shieldVal}»¤¼×£©£¬²¢³°·íÄã£¡`);
+              addLog(`${e.name} ä¸¾ç›¾é˜²å¾¡ï¼ˆ+${shieldVal}æŠ¤ç”²ï¼‰ï¼Œå¹¶å˜²è®½ä½ ï¼`);
               await new Promise(r => setTimeout(r, 300));
               setEnemyEffectForUid(e.uid, null);
               continue;
@@ -1867,6 +1974,7 @@ export default function DiceHeroGame() {
           
           // Priest (support): smart AI - prioritize healing damaged allies
           if (e.combatType === 'priest') {
+            await enemyPreAction(e, 'heal');
             setEnemyEffectForUid(e.uid, 'skill');
             playSound('enemy_skill');
             const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
@@ -1878,14 +1986,14 @@ export default function DiceHeroGame() {
               const lowestAlly = damagedAllies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
               const healVal = Math.floor(e.attackDmg * 4.0);
               setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-              addLog(`${e.name} ÖÎÁÆÁË ${lowestAlly.name} ${healVal} HP¡£`);
+              addLog(`${e.name} æ²»ç–—äº† ${lowestAlly.name} ${healVal} HPã€‚`);
               addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
               playSound('enemy_heal');
             } else if (selfDamaged) {
               // Priority 2: Heal self if damaged
               const healVal = Math.floor(e.attackDmg * 3.0);
               setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-              addLog(`${e.name} ÖÎÁÆ×Ô¼º ${healVal} HP¡£`);
+              addLog(`${e.name} æ²»ç–—è‡ªå·± ${healVal} HPã€‚`);
               playSound('enemy_heal');
             } else if (allies.length > 0) {
               // Priority 3: Buff ally - alternate between strength and armor
@@ -1900,15 +2008,15 @@ export default function DiceHeroGame() {
                   }
                   return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 3 }] };
                 }));
-                addLog(`${e.name} Îª ${target.name} Ê©¼ÓÁËÁ¦Á¿Ç¿»¯£¡`);
-                addFloatingText('Á¦Á¿+3', 'text-red-400', undefined, 'enemy');
+                addLog(`${e.name} ä¸º ${target.name} æ–½åŠ äº†åŠ›é‡å¼ºåŒ–ï¼`);
+                addFloatingText('åŠ›é‡+3', 'text-red-400', undefined, 'enemy');
               } else {
                 // Odd turns: give armor
                 const armorVal = Math.floor(e.attackDmg * 3);
                 setEnemies(prev => prev.map(en => en.uid === target.uid ? { ...en, armor: en.armor + armorVal } : en));
-                addLog(`${e.name} Îª ${target.name} Ê©¼ÓÁË»¤¼××£¸££¨+${armorVal}»¤¼×£©£¡`);
+                addLog(`${e.name} ä¸º ${target.name} æ–½åŠ äº†æŠ¤ç”²ç¥ç¦ï¼ˆ+${armorVal}æŠ¤ç”²ï¼‰ï¼`);
                 addFloatingText(
-`»¤¼×+${armorVal}`
+`æŠ¤ç”²+${armorVal}`
 , 'text-cyan-400', undefined, 'enemy');
               }
             } else {
@@ -1923,8 +2031,8 @@ export default function DiceHeroGame() {
                   }
                   return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 3 }] };
                 });
-                addLog(`${e.name} ¶ÔÄãÊ©¼ÓÁËĞéÈõ£¡`);
-                addFloatingText('ĞéÈõ', 'text-purple-400', undefined, 'player');
+                addLog(`${e.name} å¯¹ä½ æ–½åŠ äº†è™šå¼±ï¼`);
+                addFloatingText('è™šå¼±', 'text-purple-400', undefined, 'player');
               } else if (debuffRoll < 0.6) {
                 // Vulnerable
                 setGame(prev => {
@@ -1934,18 +2042,18 @@ export default function DiceHeroGame() {
                   }
                   return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 3 }] };
                 });
-                addLog(`${e.name} ¶ÔÄãÊ©¼ÓÁËÒ×ÉË£¡`);
-                addFloatingText('Ò×ÉË', 'text-orange-400', undefined, 'player');
+                addLog(`${e.name} å¯¹ä½ æ–½åŠ äº†æ˜“ä¼¤ï¼`);
+                addFloatingText('æ˜“ä¼¤', 'text-orange-400', undefined, 'player');
               } else {
                 // Insert curse dice
                 const curseDice = Math.random() < 0.5 ? 'cursed' : 'cracked';
-                const curseName = curseDice === 'cursed' ? '×çÖä÷»×Ó' : 'ËéÁÑ÷»×Ó';
+                const curseName = curseDice === 'cursed' ? 'è¯…å’’éª°å­' : 'ç¢è£‚éª°å­';
                 setGame(prev => ({
                   ...prev,
                   ownedDice: [...prev.ownedDice, { defId: curseDice, level: 1 }],
                   diceBag: [...prev.diceBag, curseDice],
                 }));
-                addLog(`${e.name} ÏòÄãµÄ÷»×Ó¿âÈûÈëÁËÒ»¿Å${curseName}£¡`);
+                addLog(`${e.name} å‘ä½ çš„éª°å­åº“å¡å…¥äº†ä¸€é¢—${curseName}ï¼`);
                 addFloatingText(
 `+${curseName}`
 , 'text-red-400', undefined, 'player');
@@ -1960,6 +2068,7 @@ export default function DiceHeroGame() {
           
           // Caster (ranged mage): never attacks directly, only applies DoT effects
           if (e.combatType === 'caster') {
+            await enemyPreAction(e, 'skill');
             setEnemyEffectForUid(e.uid, 'skill');
             playSound('enemy_skill');
             
@@ -1975,8 +2084,8 @@ export default function DiceHeroGame() {
                 }
                 return { ...prev, statuses: [...prev.statuses, { type: 'poison' as any, value: poisonVal }] };
               });
-              addLog(`${e.name} ÊÍ·Å¶¾Îí£¬Ê©¼ÓÁË ${poisonVal} ²ã¶¾ËØ£¡`);
-              addFloatingText(`¶¾ËØ+${poisonVal}`, 'text-emerald-400', undefined, 'player');
+              addLog(`${e.name} é‡Šæ”¾æ¯’é›¾ï¼Œæ–½åŠ äº† ${poisonVal} å±‚æ¯’ç´ ï¼`);
+              addFloatingText(`æ¯’ç´ +${poisonVal}`, 'text-emerald-400', undefined, 'player');
             } else if (dotRoll < 0.7) {
               // Apply burn
               const burnVal = Math.max(1, Math.floor(e.attackDmg * 0.3));
@@ -1987,8 +2096,8 @@ export default function DiceHeroGame() {
                 }
                 return { ...prev, statuses: [...prev.statuses, { type: 'burn' as any, value: burnVal, duration: 3 }] };
               });
-              addLog(`${e.name} ÊÍ·Å»ğÇò£¬Ê©¼ÓÁË×ÆÉÕ£¡`);
-              addFloatingText(`×ÆÉÕ+${burnVal}`, 'text-orange-400', undefined, 'player');
+              addLog(`${e.name} é‡Šæ”¾ç«çƒï¼Œæ–½åŠ äº†ç¼çƒ§ï¼`);
+              addFloatingText(`ç¼çƒ§+${burnVal}`, 'text-orange-400', undefined, 'player');
             } else {
               // Apply both poison + weak
               const poisonVal = Math.max(1, Math.floor(e.attackDmg * 0.25));
@@ -2008,8 +2117,8 @@ export default function DiceHeroGame() {
                 }
                 return { ...prev, statuses: newStatuses };
               });
-              addLog(`${e.name} Ê©·Å×çÖä£¬Ê©¼ÓÁË¶¾ËØºÍĞéÈõ£¡`);
-              addFloatingText('¶¾ËØ+ĞéÈõ', 'text-purple-400', undefined, 'player');
+              addLog(`${e.name} æ–½æ”¾è¯…å’’ï¼Œæ–½åŠ äº†æ¯’ç´ å’Œè™šå¼±ï¼`);
+              addFloatingText('æ¯’ç´ +è™šå¼±', 'text-purple-400', undefined, 'player');
             }
             
             await new Promise(r => setTimeout(r, 300));
@@ -2022,6 +2131,7 @@ export default function DiceHeroGame() {
           // - ranger: multi-hit (2 weaker hits), chance to apply burn
           // - caster: single hit + guaranteed debuff
           // - others: normal attack
+          await enemyPreAction(e, 'attack');
           setEnemyEffectForUid(e.uid, 'attack');
           setScreenShake(true);
           
@@ -2052,11 +2162,11 @@ export default function DiceHeroGame() {
             }
             const hpDmg = damage - absorbed;
             if (hpDmg > 0) newHp = Math.max(0, newHp - hpDmg);
-            // ¼±¾ÈÉ³Â©: ÃâÒßÖÂÃüÉËº¦
+            // æ€¥æ•‘æ²™æ¼: å…ç–«è‡´å‘½ä¼¤å®³
             if (newHp <= 0 && prev.hp > 0) {
               const hgRelic = prev.relics.find(r => r.id === 'emergency_hourglass');
               if (hgRelic && (hgRelic.counter || 0) === 0) {
-                newHp = prev.hp; // ÍêÈ«ÎŞÊÓÕâ´ÎÉËº¦
+                newHp = prev.hp; // å®Œå…¨æ— è§†è¿™æ¬¡ä¼¤å®³
                 newArmor = prev.armor;
                 return { ...prev, hp: newHp, armor: newArmor,
                   relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
@@ -2066,17 +2176,25 @@ export default function DiceHeroGame() {
             return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + (prev.hp - newHp), hpLostThisBattle: (prev.hpLostThisBattle || 0) + (prev.hp - newHp) };
           });
           
+          // --- Relic on_damage_taken effects ---
+          game.relics.filter(r => r.trigger === 'on_damage_taken').forEach(relic => {
+            const res = relic.effect({});
+            if (res.damage) {
+              setGame(prev => ({ ...prev, rageFireBonus: (prev.rageFireBonus || 0) + res.damage }));
+              addToast(`${relic.name}: ä¸‹æ¬¡å‡ºç‰Œ+${res.damage}ä¼¤å®³`, 'buff');
+            }
+          });
           addFloatingText(`-${damage}`, 'text-red-500', undefined, 'player');
           setPlayerEffect('flash');
-          addLog(`${e.name} ¹¥»÷Ôì³É ${damage} ÉËº¦£¡`);
+          addLog(`${e.name} æ”»å‡»é€ æˆ ${damage} ä¼¤å®³ï¼`);
           playSound('enemy');
-          // 30% ¸ÅÂÊ´¥·¢¹¥»÷Ì¨´Ê
+          // 30% æ¦‚ç‡è§¦å‘æ”»å‡»å°è¯
           if (Math.random() < 0.3) {
             const aqc = getEnemyQuotes(e.configId);
             const al = pickQuote(aqc?.attack);
             if (al) showEnemyQuote(e.uid, al, 1800);
           }
-          // ÊÜÖØ»÷Ì¨´Ê£¨µ¥´ÎÉËº¦³¬¹ı 15£©
+          // å—é‡å‡»å°è¯ï¼ˆå•æ¬¡ä¼¤å®³è¶…è¿‡ 15ï¼‰
           if (damage >= 15) {
             const hqc = getEnemyQuotes(e.configId);
             const hl = pickQuote(hqc?.hurt);
@@ -2101,7 +2219,7 @@ export default function DiceHeroGame() {
               return { ...prev, hp: newHp, armor: newArmor };
             });
             addFloatingText(`-${secondHit}`, 'text-orange-400', undefined, 'player');
-            addLog(`${e.name} ×·»÷Ôì³É ${secondHit} ÉËº¦£¡`);
+            addLog(`${e.name} è¿½å‡»é€ æˆ ${secondHit} ä¼¤å®³ï¼`);
             playSound('enemy');
           }
           
@@ -2113,21 +2231,21 @@ export default function DiceHeroGame() {
 
 
         
-        // --- 3.5. Elite/Boss: Èû·Ï÷»×Ó ---
-        // ¾«Ó¢¹ÖÃ¿2»ØºÏÈûÒ»¿ÅËéÁÑ÷»×Ó£¬BossÃ¿»ØºÏÈûÒ»¿Å£¨µÍÑªÁ¿Ê±Èû×çÖä÷»×Ó£©
+        // --- 3.5. Elite/Boss: å¡åºŸéª°å­ ---
+        // ç²¾è‹±æ€ªæ¯2å›åˆå¡ä¸€é¢—ç¢è£‚éª°å­ï¼ŒBossæ¯å›åˆå¡ä¸€é¢—ï¼ˆä½è¡€é‡æ—¶å¡è¯…å’’éª°å­ï¼‰
         for (const e of currentEnemies.filter(en => en.hp > 0)) {
-          const isElite = e.maxHp > 80 && e.maxHp <= 200; // ¾«Ó¢¹ÖHP·¶Î§
-          const isBoss = e.maxHp > 200; // Boss HP·¶Î§
+          const isElite = e.maxHp > 80 && e.maxHp <= 200; // ç²¾è‹±æ€ªHPèŒƒå›´
+          const isBoss = e.maxHp > 200; // Boss HPèŒƒå›´
           
           if (isElite && game.battleTurn % 3 === 0) {
-            // ¾«Ó¢Ã¿2»ØºÏÈûÒ»¿ÅËéÁÑ÷»×Ó
+            // ç²¾è‹±æ¯2å›åˆå¡ä¸€é¢—ç¢è£‚éª°å­
             setGame(prev => ({
               ...prev,
               ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
               diceBag: [...prev.diceBag, 'cracked'],
             }));
-            addLog(`${e.name} ÏòÄãµÄ÷»×Ó¿âÈûÈëÁËÒ»¿ÅËéÁÑ÷»×Ó£¡`);
-            addFloatingText('+ËéÁÑ÷»×Ó', 'text-red-400', undefined, 'player');
+            addLog(`${e.name} å‘ä½ çš„éª°å­åº“å¡å…¥äº†ä¸€é¢—ç¢è£‚éª°å­ï¼`);
+            addFloatingText('+ç¢è£‚éª°å­', 'text-red-400', undefined, 'player');
             playSound('enemy_skill');
             await new Promise(r => setTimeout(r, 400));
           }
@@ -2135,25 +2253,25 @@ export default function DiceHeroGame() {
           if (isBoss) {
             const hpRatio = e.hp / e.maxHp;
             if (hpRatio < 0.4 && game.battleTurn % 2 === 0) {
-              // BossµÍÑªÁ¿£ºÈû×çÖä÷»×Ó
+              // Bossä½è¡€é‡ï¼šå¡è¯…å’’éª°å­
               setGame(prev => ({
                 ...prev,
                 ownedDice: [...prev.ownedDice, { defId: 'cursed', level: 1 }],
                 diceBag: [...prev.diceBag, 'cursed'],
               }));
-              addLog(`${e.name} Ê©·Å×çÖä£¬ÏòÄãµÄ÷»×Ó¿âÈûÈëÁËÒ»¿Å×çÖä÷»×Ó£¡`);
-              addFloatingText('+×çÖä÷»×Ó', 'text-purple-400', undefined, 'player');
+              addLog(`${e.name} æ–½æ”¾è¯…å’’ï¼Œå‘ä½ çš„éª°å­åº“å¡å…¥äº†ä¸€é¢—è¯…å’’éª°å­ï¼`);
+              addFloatingText('+è¯…å’’éª°å­', 'text-purple-400', undefined, 'player');
               playSound('enemy_skill');
               await new Promise(r => setTimeout(r, 400));
             } else if (game.battleTurn % 3 === 0) {
-              // BossÕı³££ºÃ¿2»ØºÏÈûËéÁÑ÷»×Ó
+              // Bossæ­£å¸¸ï¼šæ¯2å›åˆå¡ç¢è£‚éª°å­
               setGame(prev => ({
                 ...prev,
                 ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
                 diceBag: [...prev.diceBag, 'cracked'],
               }));
-              addLog(`${e.name} ÏòÄãµÄ÷»×Ó¿âÈûÈëÁËÒ»¿ÅËéÁÑ÷»×Ó£¡`);
-              addFloatingText('+ËéÁÑ÷»×Ó', 'text-red-400', undefined, 'player');
+              addLog(`${e.name} å‘ä½ çš„éª°å­åº“å¡å…¥äº†ä¸€é¢—ç¢è£‚éª°å­ï¼`);
+              addFloatingText('+ç¢è£‚éª°å­', 'text-red-400', undefined, 'player');
               playSound('enemy_skill');
               await new Promise(r => setTimeout(r, 400));
             }
@@ -2161,8 +2279,8 @@ export default function DiceHeroGame() {
         }
 
 
-        // --- 3.6. Elite/Boss: µş»¤¼× ---
-        // ²¿·Ö¾«Ó¢Ã¿3»ØºÏµşÒ»´Î»¤¼×£¬BossÃ¿2»ØºÏµşÒ»´Î»¤¼×
+        // --- 3.6. Elite/Boss: å æŠ¤ç”² ---
+        // éƒ¨åˆ†ç²¾è‹±æ¯3å›åˆå ä¸€æ¬¡æŠ¤ç”²ï¼ŒBossæ¯2å›åˆå ä¸€æ¬¡æŠ¤ç”²
         for (const e of currentEnemies.filter(en => en.hp > 0)) {
           const isElite = e.maxHp > 80 && e.maxHp <= 200;
           const isBoss = e.maxHp > 200;
@@ -2170,9 +2288,9 @@ export default function DiceHeroGame() {
           if (isElite && game.battleTurn % 3 === 0 && game.battleTurn > 0) {
             const armorVal = Math.floor(e.attackDmg * 1.5);
             setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
-            addLog(`${e.name} Äı¾ÛÁË»¤¼×£¨+${armorVal}£©£¡`);
+            addLog(`${e.name} å‡èšäº†æŠ¤ç”²ï¼ˆ+${armorVal}ï¼‰ï¼`);
             addFloatingText(
-`»¤¼×+${armorVal}`
+`æŠ¤ç”²+${armorVal}`
 , 'text-cyan-400', undefined, 'enemy');
             playSound('enemy_defend');
             await new Promise(r => setTimeout(r, 300));
@@ -2181,9 +2299,9 @@ export default function DiceHeroGame() {
           if (isBoss && game.battleTurn % 2 === 0 && game.battleTurn > 0) {
             const armorVal = Math.floor(e.attackDmg * 2.0);
             setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
-            addLog(`${e.name} ÊÍ·ÅÁË»¤¶Ü£¨+${armorVal}»¤¼×£©£¡`);
+            addLog(`${e.name} é‡Šæ”¾äº†æŠ¤ç›¾ï¼ˆ+${armorVal}æŠ¤ç”²ï¼‰ï¼`);
             addFloatingText(
-`»¤¶Ü+${armorVal}`
+`æŠ¤ç›¾+${armorVal}`
 , 'text-cyan-300', undefined, 'enemy');
             playSound('enemy_defend');
             await new Promise(r => setTimeout(r, 300));
@@ -2193,11 +2311,11 @@ export default function DiceHeroGame() {
 
     // --- 5. Player Turn Start ---
     
-      // Ñ¦¶¨ÚÌµÄ´ü×Ó£ºÈôÉÏ»ØºÏÎ´Ê¹ÓÃÖØRoll£¬±¾»ØºÏ¶îÍâ³é1¿Å
+      // è–›å®šè°”çš„è¢‹å­ï¼šè‹¥ä¸Šå›åˆæœªä½¿ç”¨é‡Rollï¼Œæœ¬å›åˆé¢å¤–æŠ½1é¢—
       let _schrodingerBonus = 0;
       if (game.relics.some(r => r.id === 'schrodinger_bag') && rerollCount === 0) {
         _schrodingerBonus = 1;
-        addLog('Ñ¦¶¨ÚÌµÄ´ü×Ó£ºÎ´ÖØRoll£¬ÏÂ»ØºÏ¶îÍâ³é1¿Å÷»×Ó£¡');
+        addLog('è–›å®šè°”çš„è¢‹å­ï¼šæœªé‡Rollï¼Œä¸‹å›åˆé¢å¤–æŠ½1é¢—éª°å­ï¼');
       }
 setGame(prev => {
       const nextTurn = prev.battleTurn + 1;
@@ -2208,12 +2326,12 @@ setGame(prev => {
         burnDamage = burn.value;
         addLog(`\u4f60\u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${burnDamage} \u70b9\u4f24\u5bb3\u3002`);
         addFloatingText(`-${burnDamage}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
-        // ×ÆÉÕÖ»´æÔÚÒ»»ØºÏ£¬Ôì³ÉÉËº¦ºóÖ±½ÓÒÆ³ı
+        // ç¼çƒ§åªå­˜åœ¨ä¸€å›åˆï¼Œé€ æˆä¼¤å®³åç›´æ¥ç§»é™¤
         nextStatuses = nextStatuses.filter(s => s.type !== 'burn');
       }
       nextStatuses = tickStatuses(nextStatuses);
       currentPlayerHp = Math.max(0, prev.hp - burnDamage);
-      // ¼±¾ÈÉ³Â©: »ğÉËÖÂÃü±£»¤
+      // æ€¥æ•‘æ²™æ¼: ç«ä¼¤è‡´å‘½ä¿æŠ¤
       if (currentPlayerHp <= 0 && prev.hp > 0) {
         const hgR = prev.relics.find(r => r.id === 'emergency_hourglass');
         if (hgR && (hgR.counter || 0) === 0) {
@@ -2253,8 +2371,8 @@ setGame(prev => {
       consecutiveNormalAttacks: 0,
     }));
 
-    // === ÁôÊÖÅÆ»úÖÆ ===
-    // Î´Ê¹ÓÃµÄ÷»×ÓÁôÔÚÊÖÖĞ£¬ÏÂ»ØºÏÖ»²¹³éµ½ drawCount ÉÏÏŞ
+    // === ç•™æ‰‹ç‰Œæœºåˆ¶ ===
+    // æœªä½¿ç”¨çš„éª°å­ç•™åœ¨æ‰‹ä¸­ï¼Œä¸‹å›åˆåªè¡¥æŠ½åˆ° drawCount ä¸Šé™
     const remainingDice = dice.filter(d => !d.spent);
     const remainingCount = remainingDice.length;
     
@@ -2267,8 +2385,8 @@ setGame(prev => {
       setRerollCount(0); // Reset reroll count for new turn
       const needDraw = Math.max(0, g.drawCount + schrodingerBonus - remainingCount);
       
-      // Ö±½Ó´Ó gameRef.current ¶ÁÈ¡×îĞÂ×´Ì¬½øĞĞ³éÅÆ¼ÆËã
-      // setTimeout ±£Ö¤Ö®Ç°µÄ setGame ÒÑ flush£¬gameRef.current ÊÇ×îĞÂÖµ
+      // ç›´æ¥ä» gameRef.current è¯»å–æœ€æ–°çŠ¶æ€è¿›è¡ŒæŠ½ç‰Œè®¡ç®—
+      // setTimeout ä¿è¯ä¹‹å‰çš„ setGame å·² flushï¼ŒgameRef.current æ˜¯æœ€æ–°å€¼
       let finalBag = [...g.diceBag];
       let finalDiscard = [...g.discardPile];
       let drawnDice: Die[] = [];
@@ -2282,7 +2400,7 @@ setGame(prev => {
         wasShuffled = result.shuffled;
       }
       
-      // Ô­×Ó¸üĞÂ÷»×Ó¿â×´Ì¬
+      // åŸå­æ›´æ–°éª°å­åº“çŠ¶æ€
       setGame(prev => ({ ...prev, diceBag: finalBag, discardPile: finalDiscard }));
       
       if (wasShuffled) { setShuffleAnimating(true); setTimeout(() => setShuffleAnimating(false), 800); addToast('\u2728 \u5f03\u9ab0\u5e93\u5df2\u6d17\u56de\u9ab0\u5b50\u5e93!', 'buff'); }
@@ -2315,7 +2433,7 @@ setGame(prev => {
           if (f === 3) playSound('reroll');
         }
         setDice(pd => pd.map(d => ({ ...d, rolling: false, kept: false })));
-        // ÔªËØ÷»×ÓÌ®Ëõ + Ğ¡³ó÷»×Ó1-9Ëæ»ú
+        // å…ƒç´ éª°å­åç¼© + å°ä¸‘éª°å­1-9éšæœº
         setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
         playSound('dice_lock');
         // Auto-sort dice by value ascending after roll
@@ -2339,7 +2457,7 @@ setGame(prev => {
     }
   }, [enemies, game.phase, game.targetEnemyUid]);
 
-// È«¾Ö°²È«Íø£ºÕ½¶·ÖĞHP<=0Ê±Ç¿ÖÆ½øÈëgameover
+// å…¨å±€å®‰å…¨ç½‘ï¼šæˆ˜æ–—ä¸­HP<=0æ—¶å¼ºåˆ¶è¿›å…¥gameover
 useEffect(() => {
     if (game.phase === 'battle' && game.hp <= 0) {
       playSound('player_death');
@@ -2366,7 +2484,7 @@ useEffect(() => {
   }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft]);
 
   const handleVictory = () => {
-    // Õ½¶·½áÊø£ºÏú»ÙµĞÈËÈûµÄ·Ï÷»×Ó£¨cursed/cracked£©
+    // æˆ˜æ–—ç»“æŸï¼šé”€æ¯æ•Œäººå¡çš„åºŸéª°å­ï¼ˆcursed/crackedï¼‰
     setGame(prev => ({
       ...prev,
       ownedDice: prev.ownedDice.filter(d => d.defId !== 'cursed' && d.defId !== 'cracked'),
@@ -2374,7 +2492,7 @@ useEffect(() => {
       discardPile: prev.discardPile.filter(id => id !== 'cursed' && id !== 'cracked'),
     }));
 
-    // Õ½¶·Ê¤ÀûÍ³¼Æ
+    // æˆ˜æ–—èƒœåˆ©ç»Ÿè®¡
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
     const nodeType = currentNode?.type || 'enemy';
     const killedCount = enemies.filter(e => e.hp <= 0).length;
@@ -2386,13 +2504,18 @@ useEffect(() => {
       if (nodeType === 'boss') s.bossesWon += 1;
       return { ...prev, stats: s };
     });
+    // --- å±‚å…å¾æœè€…: counter é€’å¢ ---
+    setGame(prev => ({
+      ...prev,
+      relics: prev.relics.map(r => r.id === 'floor_conqueror' ? { ...r, counter: (r.counter || 0) + 1 } : r),
+    }));
     if (enemies.length === 0) return;
     const allWaveEnemies = game.battleWaves.flatMap(w => w.enemies);
     playSound('victory');
-    addLog(`»÷°ÜÁË ${enemies[0]?.name || ""}£¡`);
+    addLog(`å‡»è´¥äº† ${enemies[0]?.name || ""}ï¼`);
     
     let baseGold = enemies.reduce((s,e) => s + e.dropGold, 0);
-    // on_battle_end ÒÅÎï´¥·¢£¨Èç·ÏÆ·»ØÊÕÕ¾£©
+    // on_battle_end é—ç‰©è§¦å‘ï¼ˆå¦‚åºŸå“å›æ”¶ç«™ï¼‰
     game.relics.filter(r => r.trigger === 'on_battle_end').forEach(relic => {
       const res = relic.effect({
         cursedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCursed).length,
@@ -2401,7 +2524,7 @@ useEffect(() => {
       });
       if (res.goldBonus && res.goldBonus > 0) {
         baseGold += res.goldBonus;
-        addToast(` ${relic.name}: +${res.goldBonus}½ğ±Ò`, 'gold');
+        addToast(` ${relic.name}: +${res.goldBonus}é‡‘å¸`, 'gold');
       }
     });
     const loot: LootItem[] = [
@@ -2433,7 +2556,7 @@ useEffect(() => {
 
 
 
-    // ÒÅÎïµôÂä£º¾«Ó¢Õ½/BossÕ½±Øµô£¬ÆÕÍ¨Õ½30%¸ÅÂÊ
+    // é—ç‰©æ‰è½ï¼šç²¾è‹±æˆ˜/Bossæˆ˜å¿…æ‰ï¼Œæ™®é€šæˆ˜30%æ¦‚ç‡
     const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
                        allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
     const relicDropChance = battleType === 'enemy' ? 0 : 1.0;
@@ -2452,17 +2575,17 @@ useEffect(() => {
       
       if (prev.currentNodeId && prev.map.find(n => n.id === prev.currentNodeId)?.type === 'boss') {
         const bossNode = prev.map.find(n => n.id === prev.currentNodeId);
-        // Ö»ÓĞ×îÖÕBoss(depth>=14)²Å½øÈëÊ¤Àû»­Ãæ£¬ÖĞ²ãBoss¼ÌĞø×ßÍ¼ÄÃÕ½ÀûÆ·
+        // åªæœ‰æœ€ç»ˆBoss(depth>=14)æ‰è¿›å…¥èƒœåˆ©ç”»é¢ï¼Œä¸­å±‚Bossç»§ç»­èµ°å›¾æ‹¿æˆ˜åˆ©å“
         if (bossNode && bossNode.depth >= 14) {
-          // ÅĞ¶ÏÊÇ·ñÎª×îÖÕÕÂ
+          // åˆ¤æ–­æ˜¯å¦ä¸ºæœ€ç»ˆç« 
           if (prev.chapter >= CHAPTER_CONFIG.totalChapters) {
             return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false };
           } else {
-            // ½øÈë´ó¹Ø¹ı¶É
+            // è¿›å…¥å¤§å…³è¿‡æ¸¡
             return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false };
           }
         }
-        // ÖĞ²ãBoss£º¼ÌĞø×ßÕı³£Õ½ÀûÆ·Á÷³Ì
+        // ä¸­å±‚Bossï¼šç»§ç»­èµ°æ­£å¸¸æˆ˜åˆ©å“æµç¨‹
       }
 
       return { 
@@ -2476,7 +2599,7 @@ useEffect(() => {
     });
   };
 
-  // === ´ó¹Ø¹ı¶É£º½øÈëÏÂÒ»ÕÂ ===
+  // === å¤§å…³è¿‡æ¸¡ï¼šè¿›å…¥ä¸‹ä¸€ç«  ===
   const _handleNextChapter = () => {
     setGame(prev => {
       const nextChapter = prev.chapter + 1;
@@ -2502,7 +2625,7 @@ useEffect(() => {
         isEnemyTurn: false,
         battleWaves: [],
         currentWaveIndex: 0,
-        logs: [...prev.logs, `\n=== µÚ${nextChapter}ÕÂ: ${CHAPTER_CONFIG.chapterNames[nextChapter - 1]} ===\n»Ø¸´ÁË ${healAmount} HP£¬»ñµÃ ${bonusGold} ½ğ±Ò`],
+        logs: [...prev.logs, `\n=== ç¬¬${nextChapter}ç« : ${CHAPTER_CONFIG.chapterNames[nextChapter - 1]} ===\nå›å¤äº† ${healAmount} HPï¼Œè·å¾— ${bonusGold} é‡‘å¸`],
       };
     });
     setEnemies([]);
@@ -2525,52 +2648,52 @@ useEffect(() => {
 
       if (item.type === 'gold') {
         nextState.souls += item.value || 0;
-        addLog(`»ñµÃÁË ${item.value} ½ğ±Ò¡£`);
+        addLog(`è·å¾—äº† ${item.value} é‡‘å¸ã€‚`);
       } else if (item.type === 'reroll') {
         if (item.id === 'freeReroll') {
           nextState.freeRerollsPerTurn += item.value || 0;
-          addLog(`»ñµÃÁËÃ¿»ØºÏ +${item.value} Ãâ·ÑÖØ÷»¡£`);
+          addLog(`è·å¾—äº†æ¯å›åˆ +${item.value} å…è´¹é‡éª°ã€‚`);
         } else {
           nextState.freeRerollsPerTurn += item.value || 0;
-          addLog(`»ñµÃÁË ${item.value} ´ÎÈ«¾ÖÖØ÷»»ú»á¡£`);
+          addLog(`è·å¾—äº† ${item.value} æ¬¡å…¨å±€é‡éª°æœºä¼šã€‚`);
         }
       } else if (item.type === 'maxPlays') {
         nextState.maxPlays += item.value || 0;
-        addLog(`»ñµÃÁË ${item.value} ´Î³öÅÆ»ú»á¡£`);
+        addLog(`è·å¾—äº† ${item.value} æ¬¡å‡ºç‰Œæœºä¼šã€‚`);
       } else if (item.type === 'specialDice' && item.diceDefId) {
         nextState.ownedDice = [...nextState.ownedDice, { defId: item.diceDefId!, level: 1 }];
         const ddef = getDiceDef(item.diceDefId);
-        addLog(`»ñµÃÁËÌØÊâ÷»×Ó: ${ddef.name}¡£`);
+        addLog(`è·å¾—äº†ç‰¹æ®Šéª°å­: ${ddef.name}ã€‚`);
       } else if (item.type === 'diceCount') {
         const oldDice = nextState.drawCount;
         nextState.drawCount = Math.min(6, nextState.drawCount + (item.value || 0));
         if (nextState.drawCount > oldDice) {
           nextState.enemyHpMultiplier += 0.25;
         }
-        addLog(`»ñµÃÁË ${item.value} ¿Å÷»×Ó¡£`);
+        addLog(`è·å¾—äº† ${item.value} é¢—éª°å­ã€‚`);
       }
 
-      // ÒÅÎïÊ°È¡
+      // é—ç‰©æ‹¾å–
       if (item.type === 'relic' && item.relicData) {
         nextState.relics = [...nextState.relics, { ...item.relicData }];
-        addLog(`»ñµÃÒÅÎï: ${item.relicData.name}`);
+        addLog(`è·å¾—é—ç‰©: ${item.relicData.name}`);
       }
 
       return nextState;
     });
 
-    // é—ç‰© toast
+    // é–¬æ¥ƒå¢¿ toast
     if (item.type === 'relic' && item.relicData) {
-      addToast(' »ñµÃÒÅÎï: ' + item.relicData.name + '!', 'buff');
+      addToast(' è·å¾—é—ç‰©: ' + item.relicData.name + '!', 'buff');
     }
     
-    // Dice gained toast ¡ª outside setGame to avoid StrictMode double-fire
+    // Dice gained toast â€” outside setGame to avoid StrictMode double-fire
     if (item.type === 'specialDice' && item.diceDefId) {
       const ddef = getDiceDef(item.diceDefId);
-      addToast(`»ñµÃÁËÌØÊâ÷»×Ó: ${ddef.name}`);
+      addToast(`è·å¾—äº†ç‰¹æ®Šéª°å­: ${ddef.name}`);
     } else if (item.type === 'diceCount' && game.drawCount < 6) {
-      addToast("»ñµÃ×çÖäÖ®Á¦£¬µĞÈËÒ²¶¼±äÇ¿ÁË");
-      addLog("»ñµÃ×çÖäÖ®Á¦£¬µĞÈËÑªÁ¿ÌáÉı 25%¡£");
+      addToast("è·å¾—è¯…å’’ä¹‹åŠ›ï¼Œæ•Œäººä¹Ÿéƒ½å˜å¼ºäº†");
+      addLog("è·å¾—è¯…å’’ä¹‹åŠ›ï¼Œæ•Œäººè¡€é‡æå‡ 25%ã€‚");
     }
   };
 
@@ -2621,7 +2744,7 @@ useEffect(() => {
       // Find the loot item that triggered this and mark it collected
       const nextLoot = prev.lootItems.map(i => i.type === 'augment' && !i.collected ? { ...i, collected: true } : i);
       
-      addLog(`Ìæ»»ÁËÄ£¿é: ${oldAug?.name} -> ${newAug.name}£¬·µ»¹ÁË ${refund} ½ğ±Ò¡£`);
+      addLog(`æ›¿æ¢äº†æ¨¡å—: ${oldAug?.name} -> ${newAug.name}ï¼Œè¿”è¿˜äº† ${refund} é‡‘å¸ã€‚`);
       return { 
         ...prev, 
         augments: newAugs, 
@@ -2660,7 +2783,7 @@ useEffect(() => {
     if (next === 4 || next === 9) {
       setGame(prev => ({ ...prev, phase: 'campfire', currentNode: next }));
     } else if (next === 5) {
-      // ÓÎµ´ÉÌÈË£ºËæ»ú3¸öÉÌÆ·
+      // æ¸¸è¡å•†äººï¼šéšæœº3ä¸ªå•†å“
       const [minP, maxP] = SHOP_CONFIG.priceRange;
       const rp = () => Math.floor(Math.random() * (maxP - minP + 1)) + minP;
       const candidates: ShopItem[] = [];
@@ -2672,13 +2795,13 @@ useEffect(() => {
       for (const d of sDice.slice(0, 2)) {
         candidates.push({ id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id, label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']', price: d.rarity === 'rare' ? rp() + 30 : rp() + 10 });
       }
-      candidates.push({ id: 'reroll_legacy', type: 'reroll' as const, label: 'ÖØÖÀÇ¿»¯', desc: 'ÓÀ¾ÃÔö¼ÓÃ¿»ØºÏ +1 ´ÎÃâ·ÑÖØÖÀ', price: rp() });
+      candidates.push({ id: 'reroll_legacy', type: 'reroll' as const, label: 'é‡æ·å¼ºåŒ–', desc: 'æ°¸ä¹…å¢åŠ æ¯å›åˆ +1 æ¬¡å…è´¹é‡æ·', price: rp() });
       const shopItems: ShopItem[] = candidates.sort(() => Math.random() - 0.5).slice(0, 3);
-      // Ê¼ÖÕÌí¼ÓÉ¾³ı÷»×ÓÑ¡Ïî
+      // å§‹ç»ˆæ·»åŠ åˆ é™¤éª°å­é€‰é¡¹
       shopItems.push({
         id: 'removeDice_fixed', type: 'removeDice' as const,
-        label: '÷»×Ó¾»»¯', desc: 'ÒÆ³ıÒ»¿Å÷»×Ó£¬ÊİÉí¹¹Öş',
-        price: Math.floor(Math.random() * 61) + 20 // 20-80Ëæ»ú
+        label: 'éª°å­å‡€åŒ–', desc: 'ç§»é™¤ä¸€é¢—éª°å­ï¼Œç˜¦èº«æ„ç­‘',
+        price: Math.floor(Math.random() * 61) + 20 // 20-80éšæœº
       });
       setGame(prev => ({ ...prev, phase: 'merchant', currentNode: next, shopItems }));
     } else if (next === 7) {
@@ -2690,11 +2813,11 @@ useEffect(() => {
 
   
   const COMBAT_TYPE_DESC: Record<string, { name: string; icon: string; color: string; desc: string }> = {
-    warrior: { name: 'Õ½Ê¿', icon: '', color: 'var(--pixel-red)', desc: '½üÕ½ÀàĞÍ£¬ĞèÒª½Ó½üºó²ÅÄÜ¹¥»÷¡£Ã¿»ØºÏ±Æ½ü1²½£¬µ½´ïºóÃ¿»ØºÏÆÕÍ¨¹¥»÷¡£' },
-    guardian: { name: 'ÊØ»¤Õß', icon: '', color: 'var(--pixel-blue)', desc: 'ÖØ×°½üÕ½ÀàĞÍ£¬ĞèÒª½Ó½üºó²ÅÄÜ¹¥»÷¡£½»Ìæ¹¥»÷ºÍ¾Ù¶Ü·ÀÓù£¬»ñµÃ¶îÍâ»¤¼×¡£' },
-        ranger: { name: 'ÓÎÏÀ', icon: '', color: 'var(--pixel-green)', desc: 'Ô¶³Ì¹­¼ıÊÖ£¬Ö±½Ó¹¥»÷Á½´Î¡£Ã¿´ÎÉËº¦½ÏµÍµ«³ÖĞøÊä³ö¡£' },
-        caster: { name: 'ÊõÊ¿', icon: '', color: 'var(--pixel-purple)', desc: 'Ô¶³ÌÊ©·¨Õß£¬²»»áÖ±½Ó¹¥»÷¡£×¨×¢Ê©¼Ó¶¾ËØ¡¢×ÆÉÕµÈ³ÖĞøÉËº¦Ğ§¹û¡£' },
-        priest: { name: 'ÄÁÊ¦', icon: '', color: 'var(--pixel-gold)', desc: 'Ö§Ô®ĞÍ£¬²»»á¹¥»÷Íæ¼Ò¡£Îª¶ÓÓÑÖÎÁÆ¡¢¼Ó¼×¡¢¼ÓÁ¦Á¿£¬»ò¸øÍæ¼ÒÊ©¼ÓĞéÈõ¡¢Ò×ÉËµÈ¼õÒæ¡£' },
+    warrior: { name: 'æˆ˜å£«', icon: '', color: 'var(--pixel-red)', desc: 'è¿‘æˆ˜ç±»å‹ï¼Œéœ€è¦æ¥è¿‘åæ‰èƒ½æ”»å‡»ã€‚æ¯å›åˆé€¼è¿‘1æ­¥ï¼Œåˆ°è¾¾åæ¯å›åˆæ™®é€šæ”»å‡»ã€‚' },
+    guardian: { name: 'å®ˆæŠ¤è€…', icon: '', color: 'var(--pixel-blue)', desc: 'é‡è£…è¿‘æˆ˜ç±»å‹ï¼Œéœ€è¦æ¥è¿‘åæ‰èƒ½æ”»å‡»ã€‚äº¤æ›¿æ”»å‡»å’Œä¸¾ç›¾é˜²å¾¡ï¼Œè·å¾—é¢å¤–æŠ¤ç”²ã€‚' },
+        ranger: { name: 'æ¸¸ä¾ ', icon: '', color: 'var(--pixel-green)', desc: 'è¿œç¨‹å¼“ç®­æ‰‹ï¼Œç›´æ¥æ”»å‡»ä¸¤æ¬¡ã€‚æ¯æ¬¡ä¼¤å®³è¾ƒä½ä½†æŒç»­è¾“å‡ºã€‚' },
+        caster: { name: 'æœ¯å£«', icon: '', color: 'var(--pixel-purple)', desc: 'è¿œç¨‹æ–½æ³•è€…ï¼Œä¸ä¼šç›´æ¥æ”»å‡»ã€‚ä¸“æ³¨æ–½åŠ æ¯’ç´ ã€ç¼çƒ§ç­‰æŒç»­ä¼¤å®³æ•ˆæœã€‚' },
+        priest: { name: 'ç‰§å¸ˆ', icon: '', color: 'var(--pixel-gold)', desc: 'æ”¯æ´å‹ï¼Œä¸ä¼šæ”»å‡»ç©å®¶ã€‚ä¸ºé˜Ÿå‹æ²»ç–—ã€åŠ ç”²ã€åŠ åŠ›é‡ï¼Œæˆ–ç»™ç©å®¶æ–½åŠ è™šå¼±ã€æ˜“ä¼¤ç­‰å‡ç›Šã€‚' },
   };
 
   const _getEffectiveAttackDmg = (e: Enemy) => {
@@ -2761,10 +2884,42 @@ useEffect(() => {
   return (
     <GameContext.Provider value={contextValue}>
     <div className="relative h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] overflow-hidden select-none sm:border-x-3 border-[var(--dungeon-panel-border)] flex flex-col scanlines">
-      {/* ÏñËØÍø¸ñ±³¾° */}
+      {/* åƒç´ ç½‘æ ¼èƒŒæ™¯ */}
       <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
 
       <GlobalTopBar />
+
+      {/* æˆ˜æ–—è½¬åœºé®ç½© */}
+      {battleTransition !== 'none' && (
+        <div
+          className="absolute inset-0 z-[999] flex flex-col items-center justify-center bg-black"
+          style={{
+            opacity: battleTransition === 'fadeOut' ? 0 : 1,
+            transition: battleTransition === 'fadeIn' ? 'opacity 0.2s ease-in'
+              : battleTransition === 'fadeOut' ? 'opacity 0.3s ease-out' : 'none',
+          }}
+        >
+          <motion.div
+            animate={{ y: [0, -6, 0], rotate: [0, 8, -8, 0] }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <PixelDice size={4} />
+          </motion.div>
+          <div className="mt-3 text-[10px] text-[var(--dungeon-text-dim)] tracking-[0.2em] font-mono">
+            {'Loading'.split('').map((ch, i) => (
+              <motion.span
+                key={i}
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.1 }}
+              >{ch}</motion.span>
+            ))}
+            <motion.span
+              animate={{ opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.3, 0.7, 1] }}
+            >...</motion.span>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden relative">
         {game.phase === 'map' && <MapScreen />}
@@ -2775,7 +2930,7 @@ useEffect(() => {
         {game.phase === 'campfire' && <CampfireScreen />}
         {game.phase === 'event' && <EventScreen />}
 
-        {/* Õ½Ç°¼¼ÄÜÄ£¿éÑ¡Ôñ½çÃæ - extracted to SkillSelectScreen */}
+        {/* æˆ˜å‰æŠ€èƒ½æ¨¡å—é€‰æ‹©ç•Œé¢ - extracted to SkillSelectScreen */}
         {game.phase === 'skillSelect' && <SkillSelectScreen />}
 
         {game.phase === 'battle' && enemies.length > 0 && (
@@ -2784,22 +2939,22 @@ useEffect(() => {
             className="flex flex-col h-full relative"
           >
             {/* ============================================
-                ³Á½şÊ½µÚÒ»ÈË³ÆÕ½¶·½çÃæ
+                æ²‰æµ¸å¼ç¬¬ä¸€äººç§°æˆ˜æ–—ç•Œé¢
                 ============================================ */}
 
-            {/* µØÀÎ»·¾³±³¾°²ã */}
+            {/* åœ°ç‰¢ç¯å¢ƒèƒŒæ™¯å±‚ */}
             <div className="absolute inset-0 battle-open-bg" />
             <div className="absolute inset-0 battle-vignette z-[1]" />
             <div className="absolute inset-0 dungeon-stain pointer-events-none z-[1]" />
             
-            {/* Ô¶´¦¹°ÃÅ/Ê¯ÖùÂÖÀª */}
+            {/* è¿œå¤„æ‹±é—¨/çŸ³æŸ±è½®å»“ */}
             <div className="battle-archway" />
             
-            {/* ×óÓÒ»ğ°Ñ¹âÔ´ */}
+            {/* å·¦å³ç«æŠŠå…‰æº */}
             <div className="battle-torch-left battle-torch-flame" />
             <div className="battle-torch-right battle-torch-flame" style={{ animationDelay: '0.3s' }} />
             
-            {/* ÏñËØ»ğ°ÑSVG ¡ª ×ó²à */}
+            {/* åƒç´ ç«æŠŠSVG â€” å·¦ä¾§ */}
             <div className="absolute left-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75 }}>
               <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
                 <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
@@ -2811,7 +2966,7 @@ useEffect(() => {
                 <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
               </svg>
             </div>
-            {/* ÏñËØ»ğ°ÑSVG ¡ª ÓÒ²à */}
+            {/* åƒç´ ç«æŠŠSVG â€” å³ä¾§ */}
             <div className="absolute right-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75, animationDelay: '0.4s' }}>
               <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
                 <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
@@ -2824,15 +2979,15 @@ useEffect(() => {
               </svg>
             </div>
 
-            {/* »·¾³Á£×Ó ¡ª Æ®É¢µÄ»Ò³¾/Óà½ı */}
+            {/* ç¯å¢ƒç²’å­ â€” é£˜æ•£çš„ç°å°˜/ä½™çƒ¬ */}
             <CSSParticles type="ember" count={8} className="opacity-25 z-[2]" />
             <CSSParticles type="sparkle" count={4} className="opacity-15 z-[2]" />
             <CSSParticles type="float" count={4} className="opacity-15 z-[2]" />
 
-            {/* µØÃæµÍÎí */}
+            {/* åœ°é¢ä½é›¾ */}
             <div className="battle-ground-fog" />
 
-            {/* »·¾³ÎíÆø²ã */}
+            {/* ç¯å¢ƒé›¾æ°”å±‚ */}
             <div className="absolute inset-0 z-[2] pointer-events-none">
               <div className="absolute bottom-[35%] left-0 right-0 h-[35%] animate-fog-drift" 
                 style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(120,90,50,0.08) 0%, transparent 65%)' }} />
@@ -2840,7 +2995,7 @@ useEffect(() => {
                 style={{ background: 'radial-gradient(ellipse at 30% 60%, rgba(100,80,55,0.06) 0%, transparent 60%)', animationDelay: '3s' }} />
             </div>
 
-            {/* Õ½¶·ÉÁ¹â¸²¸Ç²ã */}
+            {/* æˆ˜æ–—é—ªå…‰è¦†ç›–å±‚ */}
             <AnimatePresence>
               {(playerEffect === 'attack' || Object.values(enemyEffects).includes('attack')) && (
                 <motion.div
@@ -2854,9 +3009,9 @@ useEffect(() => {
             </AnimatePresence>
 
             
-            {/* ===== ÉÏ°ëÇø£º3DÁ¢ÌåµĞÈËÎèÌ¨ ===== */}
+            {/* ===== ä¸ŠåŠåŒºï¼š3Dç«‹ä½“æ•Œäººèˆå° ===== */}
             <div className="flex-1 flex flex-col items-center justify-center relative z-[3] min-h-0">
-              {/* === Íæ¼ÒDebuffÆÁÄ»ÌØĞ§²ã === */}
+              {/* === ç©å®¶Debuffå±å¹•ç‰¹æ•ˆå±‚ === */}
               {game.statuses.some(s => s.type === 'burn') && (
                 <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-burn" />
               )}
@@ -2880,11 +3035,11 @@ useEffect(() => {
               {game.statuses.some(s => s.type === 'vulnerable') && (
                 <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-vulnerable" />
               )}
-              {/* Í¸ÊÓµØ°å */}
+              {/* é€è§†åœ°æ¿ */}
               <div className="battle-floor-perspective" />
               
-              {/* ×óÉÏ½Ç¹Ø¿¨Î»ÖÃĞÅÏ¢ */}
-              {/* ²¨´ÎĞÅÏ¢ - µã»÷²é¿´ÏêÇé */}
+              {/* å·¦ä¸Šè§’å…³å¡ä½ç½®ä¿¡æ¯ */}
+              {/* æ³¢æ¬¡ä¿¡æ¯ - ç‚¹å‡»æŸ¥çœ‹è¯¦æƒ… */}
               {game.battleWaves.length > 0 && (
                 <div 
                   className="absolute top-2 left-2 z-20 flex flex-col gap-1 cursor-pointer"
@@ -2892,12 +3047,12 @@ useEffect(() => {
                 >
                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[rgba(8,11,14,0.8)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
                       <PixelSkull size={1} className="inline-block mr-0.5" style={{ verticalAlign: 'middle' }} />
-                    <span className="text-[10px] text-[var(--pixel-orange)] font-bold">µÚ{game.currentWaveIndex + 1}²¨</span>
-                    <span className="text-[9px] text-[var(--dungeon-text-dim)]">/ {game.battleWaves.length}²¨</span>
+                    <span className="text-[10px] text-[var(--pixel-orange)] font-bold">ç¬¬{game.currentWaveIndex + 1}æ³¢</span>
+                    <span className="text-[9px] text-[var(--dungeon-text-dim)]">/ {game.battleWaves.length}æ³¢</span>
                   </div>
                   {game.currentWaveIndex + 1 < game.battleWaves.length && (
                     <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[rgba(8,11,14,0.65)] border border-[rgba(255,255,255,0.06)]" style={{borderRadius:'2px'}}>
-                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">ÏÂ²¨:</span>
+                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">ä¸‹æ³¢:</span>
                       {game.battleWaves[game.currentWaveIndex + 1].enemies.slice(0, 3).map((ne, ni) => (
                         <div key={ni} className="inline-flex items-center" title={ne.name} style={{ transform: 'scale(0.5)', transformOrigin: 'center', margin: '-2px' }}>
                           {hasSpriteData(ne.name) ? <PixelSprite name={ne.name} size={2} /> : <PixelSkull size={2} />}
@@ -2908,10 +3063,10 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* µĞÈËÎèÌ¨¹âĞ§ */}
+              {/* æ•Œäººèˆå°å…‰æ•ˆ */}
               <div className="absolute inset-0 enemy-stage-glow pointer-events-none" />
 
-              {/* µĞÈË¸¡¶¯ÉËº¦Êı×Ö */}
+              {/* æ•Œäººæµ®åŠ¨ä¼¤å®³æ•°å­— */}
               <AnimatePresence>
                 {floatingTexts.filter(ft => ft.target === 'enemy').map(ft => (
                   <motion.div
@@ -2930,7 +3085,7 @@ useEffect(() => {
 
                 {/* Multi-enemy fixed-slot display (no reflow on death) */}
                 <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '4px' }}>
-                {[...enemies]  /* ²»ÅÅĞò£¬±£³ÖÎÈ¶¨äÖÈ¾Ë³Ğò±ÜÃâÎ»ÖÃÉÁÏÖ */
+                {[...enemies]  /* ä¸æ’åºï¼Œä¿æŒç¨³å®šæ¸²æŸ“é¡ºåºé¿å…ä½ç½®é—ªç° */
                   .map((enemy) => {
                     const effect = enemyEffects[enemy.uid] || null;
                     if (enemy.hp <= 0 && effect !== 'death') {
@@ -2958,7 +3113,7 @@ useEffect(() => {
                         // Guardian taunt: if any guardian is alive, can only target guardians (or this IS a guardian)
                         const aliveGuardian = enemies.find(e => e.hp > 0 && e.combatType === 'guardian' && e.uid !== enemy.uid);
                         if (aliveGuardian && enemy.combatType !== 'guardian') {
-                          addToast('¶ÜÎÀÇ¿ÖÆ³°·í£¡±ØĞëÏÈ»÷°Ü¶ÜÎÀ');
+                          addToast('ç›¾å«å¼ºåˆ¶å˜²è®½ï¼å¿…é¡»å…ˆå‡»è´¥ç›¾å«');
                           return;
                         }
                         setGame(prev => ({ ...prev, targetEnemyUid: enemy.uid }));
@@ -2966,6 +3121,8 @@ useEffect(() => {
                       initial={{ scale: depthScale * 0.8, opacity: 0, y: depthY + 20 }}
                       animate={effect === 'death'
                         ? { scale: [1, 1.1, 0.95, 1.05, 1.2, 1.4, 0.5, 0], opacity: [1, 1, 1, 1, 0.9, 0.7, 0.3, 0], y: [0, -5, 0, -3, -10, -25, -35, 10], rotate: [0, -5, 5, -3, 8, -15, 30, 0], filter: ['brightness(1)', 'brightness(1)', 'brightness(1)', 'brightness(1.5)', 'brightness(2)', 'brightness(3)', 'brightness(5)', 'brightness(0)'] }
+                        : effect === 'speaking'
+                        ? { x: [0, -2, 2, -1.5, 1.5, -1, 1, 0], scale: [1, 1.02, 0.98, 1.01, 0.99, 1] }
                         : effect === 'attack' 
                         ? { y: [0, -8, 30, 0], scale: [1, 1.05, 1.12, 1] } 
                         : effect === 'defend' 
@@ -2976,7 +3133,7 @@ useEffect(() => {
                         ? { x: [0, -4, 6, -3, 0], scale: [1, 0.97, 1.01, 0.99, 1] }
                         : { scale: depthScale, y: depthY, opacity: depthOpacity }
                       }
-                      transition={{ duration: effect === 'death' ? 1.8 : 0.4, ease: effect === 'death' ? [0.25, 0.1, 0.25, 1] : 'easeOut' }}
+                      transition={{ duration: effect === 'death' ? 1.8 : effect === 'speaking' ? 0.4 : 0.4, ease: effect === 'death' ? [0.25, 0.1, 0.25, 1] : 'easeOut' }}
                       className={`relative cursor-pointer group flex flex-col items-center`}
                       style={{ zIndex: isTarget ? 10 : depthZ, filter: `brightness(${depthBrightness})` }}
                     >
@@ -2991,7 +3148,7 @@ useEffect(() => {
                         </div>
                       )}
 
-                      {/* Combat type indicator ¡ª click to show enemy info */}
+                      {/* Combat type indicator â€” click to show enemy info */}
                       <div className="flex items-center justify-center mb-1 px-1.5 py-0.5 cursor-pointer hover:brightness-125 transition-all"
                         onClick={(e) => { e.stopPropagation(); setEnemyInfoTarget(enemy.uid); }}
                         style={{
@@ -3013,17 +3170,17 @@ useEffect(() => {
                             'var(--pixel-gold-light)',
                         }}
                       >
-                        {enemy.combatType === 'warrior' && <><PixelSword size={2} /><span className="ml-0.5">Õ½</span></>}
-                        {enemy.combatType === 'guardian' && <><PixelShield size={2} /><span className="ml-0.5">¶Ü</span></>}
-                        {enemy.combatType === 'ranger' && <><PixelAttackIntent size={2} /><span className="ml-0.5">¹­</span></>}
-                        {enemy.combatType === 'caster' && <><PixelMagic size={2} /><span className="ml-0.5">Êõ</span></>}
-                        {enemy.combatType === 'priest' && <><PixelHeart size={2} /><span className="ml-0.5">ÄÁ</span></>}
+                        {enemy.combatType === 'warrior' && <><PixelSword size={2} /><span className="ml-0.5">æˆ˜</span></>}
+                        {enemy.combatType === 'guardian' && <><PixelShield size={2} /><span className="ml-0.5">ç›¾</span></>}
+                        {enemy.combatType === 'ranger' && <><PixelAttackIntent size={2} /><span className="ml-0.5">å¼“</span></>}
+                        {enemy.combatType === 'caster' && <><PixelMagic size={2} /><span className="ml-0.5">æœ¯</span></>}
+                        {enemy.combatType === 'priest' && <><PixelHeart size={2} /><span className="ml-0.5">ç‰§</span></>}
                         <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{enemy.attackDmg}</span>
                       </div>
 
                       {/* Enemy name + distance */}
                       <div className="text-center mb-0.5">
-                        <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '½ü' : 'Ô¶'}</span>
+                        <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'è¿‘' : 'è¿œ'}</span>
                         {enemy.distance > 0 && (
                           <div className="flex items-center justify-center gap-0.5 mt-0.5">
                             {Array.from({ length: 3 }).map((_, idx) => (
@@ -3033,7 +3190,7 @@ useEffect(() => {
                                 boxShadow: idx < enemy.distance ? '0 0 3px rgba(224,120,48,0.5)' : 'none'
                               }} />
                             ))}
-                            <span className="text-[9px] text-[var(--pixel-orange-light)] font-mono ml-0.5">{'¾à'}{enemy.distance}</span>
+                            <span className="text-[9px] text-[var(--pixel-orange-light)] font-mono ml-0.5">{'è·'}{enemy.distance}</span>
                           </div>
                         )}
                       </div>
@@ -3065,7 +3222,14 @@ useEffect(() => {
                       />
 
                       {/* Enemy sprite */}
-                      <div className="animate-enemy-breathe relative">
+                      <div className={`relative ${
+                        enemy.combatType === 'warrior' ? 'animate-enemy-breathe-warrior' :
+                        enemy.combatType === 'caster' ? 'animate-enemy-breathe-caster' :
+                        enemy.combatType === 'guardian' ? 'animate-enemy-breathe-guardian' :
+                        enemy.combatType === 'ranger' ? 'animate-enemy-breathe-ranger' :
+                        enemy.combatType === 'priest' ? 'animate-enemy-breathe-priest' :
+                        'animate-enemy-breathe'
+                      }`}>
                         {hasSpriteData(enemy.name) ? (
                           <PixelSprite name={enemy.name} size={spriteSize} />
                         ) : (
@@ -3112,14 +3276,13 @@ useEffect(() => {
                       </div>
                       
                       {/* Shadow on floor */}
-                      <div className="mt-1" style={{
+                      <div className="mt-1 animate-enemy-shadow" style={{
                         width: '150%',
                         height: '18px',
                         background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 45%, transparent 70%)',
                         borderRadius: '50%',
                         marginLeft: '-25%',
                         filter: 'blur(3px)',
-                        transform: 'scaleY(0.6)',
                       }} />
 
                       {/* Distance indicator */}
@@ -3180,7 +3343,7 @@ useEffect(() => {
                 )}
               </AnimatePresence>
 
-              {/* ²¨´ÎÏêÇéµ¯´° */}
+              {/* æ³¢æ¬¡è¯¦æƒ…å¼¹çª— */}
               <AnimatePresence>
                 {showWaveDetail && (
                   <motion.div
@@ -3198,11 +3361,11 @@ useEffect(() => {
                       style={{ borderRadius: '4px' }}
                       onClick={e => e.stopPropagation()}
                     >
-                      <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] mb-2 text-center pixel-text-shadow">²¨´ÎÏêÇé</div>
+                      <div className="text-[12px] font-bold text-[var(--dungeon-text-bright)] mb-2 text-center pixel-text-shadow">æ³¢æ¬¡è¯¦æƒ…</div>
                       {game.battleWaves.map((wave, wi) => (
                         <div key={wi} className={`mb-2 p-2 border ${wi === game.currentWaveIndex ? 'border-[var(--pixel-orange)] bg-[rgba(224,120,48,0.1)]' : 'border-[rgba(255,255,255,0.08)]'}`} style={{borderRadius:'3px'}}>
                           <div className="text-[11px] font-bold mb-1" style={{ color: wi === game.currentWaveIndex ? 'var(--pixel-orange)' : 'var(--dungeon-text-dim)' }}>
-                            µÚ{wi + 1}²¨ {wi === game.currentWaveIndex ? '(µ±Ç°)' : wi < game.currentWaveIndex ? '(ÒÑÇå³ı)' : ''}
+                            ç¬¬{wi + 1}æ³¢ {wi === game.currentWaveIndex ? '(å½“å‰)' : wi < game.currentWaveIndex ? '(å·²æ¸…é™¤)' : ''}
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {wave.enemies.map((we, ei) => (
@@ -3214,14 +3377,14 @@ useEffect(() => {
                           </div>
                         </div>
                       ))}
-                      <button className="w-full mt-1 py-1 text-[11px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] transition-colors" onClick={() => setShowWaveDetail(false)}>¹Ø±Õ</button>
+                      <button className="w-full mt-1 py-1 text-[11px] text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] transition-colors" onClick={() => setShowWaveDetail(false)}>å…³é—­</button>
                     </motion.div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
               <div className="first-person-hands">
-                {/* ×óÊÖ ¡ª ³Ö÷»×Ó */}
+                {/* å·¦æ‰‹ â€” æŒéª°å­ */}
                 <div className={`hand-left ${dice.some(d => d.rolling) ? 'hand-left-rolling' : handLeftThrow ? 'hand-left-throw' : ''}`}>
                   <svg width="130" height="160" viewBox="0 0 90 110" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))', transform: 'scaleX(-1)' }}>
                     <defs>
@@ -3231,42 +3394,42 @@ useEffect(() => {
                         <stop offset="100%" stopColor="#a0aab4" />
                       </linearGradient>
                     </defs>
-                    {/* ÊÖ±Û ¡ª ´ÓÏÂ·½Éì³ö */}
+                    {/* æ‰‹è‡‚ â€” ä»ä¸‹æ–¹ä¼¸å‡º */}
                     <rect x="22" y="60" width="40" height="50" fill="#b8906a" stroke="#7a5a3e" strokeWidth="3" />
-                    {/* ÊÖ±Û¸ß¹â */}
+                    {/* æ‰‹è‡‚é«˜å…‰ */}
                     <rect x="48" y="62" width="10" height="46" fill="rgba(212,176,140,0.15)" />
-                    {/* ÊÖ±³ ¡ª ÃæÏòÍæ¼Ò£¨µÚÒ»ÈË³Æ¿´µ½ÊÖ±³£© */}
+                    {/* æ‰‹èƒŒ â€” é¢å‘ç©å®¶ï¼ˆç¬¬ä¸€äººç§°çœ‹åˆ°æ‰‹èƒŒï¼‰ */}
                     <rect x="22" y="48" width="40" height="16" rx="2" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    {/* ÊÖ±³ÎÆÀí ¡ª ¹Ø½ÚÍ¹Æğ */}
+                    {/* æ‰‹èƒŒçº¹ç† â€” å…³èŠ‚å‡¸èµ· */}
                     <rect x="30" y="51" width="6" height="4" rx="1" fill="rgba(160,120,86,0.4)" />
                     <rect x="40" y="50" width="6" height="4" rx="1" fill="rgba(160,120,86,0.4)" />
                     <rect x="50" y="51" width="6" height="4" rx="1" fill="rgba(160,120,86,0.3)" />
-                    {/* Ä´Ö¸ ¡ª ×ó²àÎÕ÷» */}
+                    {/* æ‹‡æŒ‡ â€” å·¦ä¾§æ¡éª° */}
                     <rect x="14" y="36" width="10" height="20" rx="2" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    {/* ÊÖÖ¸ÍäÇúÎÕ×¡÷»×Ó ¡ª Ö»Â¶³öÖ¸¼â */}
+                    {/* æ‰‹æŒ‡å¼¯æ›²æ¡ä½éª°å­ â€” åªéœ²å‡ºæŒ‡å°– */}
                     <rect x="24" y="42" width="9" height="10" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="1.5" />
                     <rect x="35" y="40" width="9" height="12" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="1.5" />
                     <rect x="46" y="42" width="9" height="10" rx="1" fill="#b8906a" stroke="#7a5a3e" strokeWidth="1.5" />
                     <rect x="57" y="40" width="8" height="12" rx="1" fill="#a88060" stroke="#7a5a3e" strokeWidth="1.5" />
-                    {/* ÷»×ÓÒõÓ° */}
+                    {/* éª°å­é˜´å½± */}
                     <rect x="22" y="10" width="44" height="44" rx="3" fill="rgba(0,0,0,0.25)" />
-                    {/* ÷»×ÓÖ÷Ìå */}
+                    {/* éª°å­ä¸»ä½“ */}
                     <rect x="18" y="6" width="44" height="44" rx="3" fill="url(#diceGrad)" stroke="#8899aa" strokeWidth="3" />
-                    {/* ÷»×Ó¶¥²¿¸ß¹â */}
+                    {/* éª°å­é¡¶éƒ¨é«˜å…‰ */}
                     <rect x="20" y="8" width="40" height="4" rx="1" fill="rgba(255,255,255,0.35)" />
-                    {/* ÷»×Ó²àÃæ°µ²¿ */}
+                    {/* éª°å­ä¾§é¢æš—éƒ¨ */}
                     <rect x="18" y="38" width="44" height="12" rx="2" fill="rgba(0,0,0,0.08)" />
-                    {/* ÷»×ÓÃæ ¡ª 5µãÃ·»¨ĞÍ */}
+                    {/* éª°å­é¢ â€” 5ç‚¹æ¢…èŠ±å‹ */}
                     <circle cx="30" cy="18" r="3.5" fill="#3a4050" />
                     <circle cx="50" cy="18" r="3.5" fill="#3a4050" />
                     <circle cx="40" cy="28" r="3.5" fill="#3a4050" />
                     <circle cx="30" cy="38" r="3.5" fill="#3a4050" />
                     <circle cx="50" cy="38" r="3.5" fill="#3a4050" />
-                    {/* ÷»×ÓÍâ·¢¹â */}
+                    {/* éª°å­å¤–å‘å…‰ */}
                     <rect x="20" y="8" width="40" height="40" rx="2" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
                   </svg>
                 </div>
-                {/* ÓÒÊÖ ¡ª ³Ö¸½Ä§Ø°Ê× */}
+                {/* å³æ‰‹ â€” æŒé™„é­”åŒ•é¦– */}
                 <div className={`hand-right ${playerEffect === 'attack' ? 'hand-right-attacking' : ''}`}>
                   <svg width="140" height="180" viewBox="0 0 100 130" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))', transform: 'scaleX(-1)' }}>
                     <defs>
@@ -3280,40 +3443,40 @@ useEffect(() => {
                         <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                       </filter>
                     </defs>
-                    {/* µ¶ÈĞ ¡ª Ø°Ê×ÔìĞÍ */}
+                    {/* åˆ€åˆƒ â€” åŒ•é¦–é€ å‹ */}
                     <polygon points="50,0 56,6 56,42 50,50 44,42 44,6" fill="url(#bladeGrad)" stroke="#6a6a8e" strokeWidth="2" />
-                    {/* µ¶ÈĞÖĞÏß¸ß¹â */}
+                    {/* åˆ€åˆƒä¸­çº¿é«˜å…‰ */}
                     <line x1="50" y1="2" x2="50" y2="46" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
-                    {/* µ¶ÈĞ²àÃæ½¥±ä */}
+                    {/* åˆ€åˆƒä¾§é¢æ¸å˜ */}
                     <polygon points="44,6 50,0 50,50 44,42" fill="rgba(0,0,0,0.15)" />
-                    {/* ¸½Ä§¹âÎÆ ¡ª Ó«¹âÇà·ûÎÄ */}
+                    {/* é™„é­”å…‰çº¹ â€” è§å…‰é’ç¬¦æ–‡ */}
                     <rect x="48" y="10" width="4" height="4" fill="#30d8d0" opacity="0.7" />
                     <rect x="48" y="20" width="4" height="4" fill="#108880" opacity="0.5" />
                     <rect x="48" y="30" width="4" height="4" fill="#30d8d0" opacity="0.7" />
-                    {/* »¤ÊÖ ¡ª Ê®×ÖĞÎ */}
+                    {/* æŠ¤æ‰‹ â€” åå­—å½¢ */}
                     <rect x="34" y="48" width="32" height="10" rx="1" fill="#d4a030" stroke="#8b6a10" strokeWidth="2" />
                     <rect x="36" y="50" width="28" height="6" fill="rgba(240,200,80,0.3)" />
-                    {/* »¤ÊÖ±¦Ê¯ ¡ª ÉîÔ¨×Ï */}
+                    {/* æŠ¤æ‰‹å®çŸ³ â€” æ·±æ¸Šç´« */}
                     <rect x="47" y="50" width="6" height="6" fill="#7a30c0" stroke="#4a1080" strokeWidth="1" />
-                    {/* ÎÕ±ú ¡ª ²øÈÆÆ¤¸ï */}
+                    {/* æ¡æŸ„ â€” ç¼ ç»•çš®é© */}
                     <rect x="44" y="58" width="12" height="20" rx="1" fill="#5a3a1a" stroke="#3a2a0e" strokeWidth="2" />
                     <rect x="44" y="60" width="12" height="3" fill="#7a5a2e" opacity="0.5" />
                     <rect x="44" y="66" width="12" height="3" fill="#7a5a2e" opacity="0.5" />
                     <rect x="44" y="72" width="12" height="3" fill="#7a5a2e" opacity="0.5" />
-                    {/* ±úÎ² */}
+                    {/* æŸ„å°¾ */}
                     <rect x="42" y="78" width="16" height="6" rx="1" fill="#d4a030" stroke="#8b6a10" strokeWidth="2" />
-                    {/* ÊÖ±Û ¡ª ´ÓÏÂ·½Éì³ö */}
+                    {/* æ‰‹è‡‚ â€” ä»ä¸‹æ–¹ä¼¸å‡º */}
                     <rect x="32" y="82" width="36" height="48" fill="#b8906a" stroke="#7a5a3e" strokeWidth="3" />
-                    {/* ÊÖ±³ ¡ª ÃæÏòÍæ¼Ò */}
+                    {/* æ‰‹èƒŒ â€” é¢å‘ç©å®¶ */}
                     <rect x="28" y="76" width="44" height="18" rx="2" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="3" />
-                    {/* ÊÖ±³ÎÆÀí ¡ª ¹Ø½Ú */}
+                    {/* æ‰‹èƒŒçº¹ç† â€” å…³èŠ‚ */}
                     <rect x="34" y="80" width="6" height="4" rx="1" fill="rgba(160,120,86,0.35)" />
                     <rect x="44" y="79" width="6" height="4" rx="1" fill="rgba(160,120,86,0.35)" />
                     <rect x="54" y="80" width="6" height="4" rx="1" fill="rgba(160,120,86,0.3)" />
-                    {/* ÊÖÖ¸ÍäÇúÎÕ±ú ¡ª Ö»Â¶³öÖ¸¼â */}
+                    {/* æ‰‹æŒ‡å¼¯æ›²æ¡æŸ„ â€” åªéœ²å‡ºæŒ‡å°– */}
                     <rect x="36" y="66" width="10" height="14" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
                     <rect x="54" y="66" width="10" height="14" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    {/* ¹¥»÷Ê±µ¶ÈĞ·¢¹â ¡ª Ó«¹âÇà */}
+                    {/* æ”»å‡»æ—¶åˆ€åˆƒå‘å…‰ â€” è§å…‰é’ */}
                     {playerEffect === 'attack' && (
                       <>
                         <polygon points="50,0 56,6 56,42 50,50 44,42 44,6" fill="rgba(48,216,208,0.3)" filter="url(#bladeGlow)" />
@@ -3324,7 +3487,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* ¨‹ Õ½¶·Çø¼¼ÄÜ´¥·¢Æ®×Ö */}
+              {/* â–¼ æˆ˜æ–—åŒºæŠ€èƒ½è§¦å‘é£˜å­— */}
               <AnimatePresence>
                 {skillTriggerTexts.map(st => (
                   <motion.div
@@ -3346,25 +3509,25 @@ useEffect(() => {
                 ))}
               </AnimatePresence>
 
-              {/* ¨‹ Õ½¶·ÇøÓòÖĞÑëÅÆĞÍ+Ğ§¹ûÔ¤ÀÀ ¡ª ´óºÅĞÑÄ¿ */}
+              {/* â–¼ æˆ˜æ–—åŒºåŸŸä¸­å¤®ç‰Œå‹+æ•ˆæœé¢„è§ˆ â€” å¤§å·é†’ç›® */}
               <AnimatePresence>
 
-                {/* === ½áËãÑİ³ö¸²¸Ç²ã === */}
+                {/* === ç»“ç®—æ¼”å‡ºè¦†ç›–å±‚ === */}
                 {settlementPhase && settlementData && (
-                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.96)'}}>
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.75)'}}>
                     <div className="flex flex-col items-center gap-3 animate-fade-in">
-                      {/* ÅÆĞÍÃû³Æ */}
+                      {/* ç‰Œå‹åç§° */}
                       <div className="text-2xl font-bold text-[var(--pixel-gold)] pixel-text-shadow animate-bounce-in"
                         style={{textShadow: '0 0 20px rgba(212,160,48,0.8), 0 2px 4px rgba(0,0,0,0.8)'}}>
-                        ¡ô {settlementData.bestHand} ¡ô
+                        â—† {settlementData.bestHand} â—†
                       {settlementData.isSameElement && (
                         <div className="text-sm font-bold text-[var(--pixel-cyan)] mt-1 animate-pulse" style={{textShadow: '0 0 15px rgba(48,216,208,0.9), 0 0 30px rgba(48,216,208,0.5)'}}>
-                          ÔªËØ¹²Ãù ¡Á2
+                          å…ƒç´ å…±é¸£ Ã—2
                         </div>
                       )}
                       </div>
                       
-                      {/* ÷»×ÓÕ¹Ê¾Çø */}
+                      {/* éª°å­å±•ç¤ºåŒº */}
                       <div className="flex gap-2 mt-2">
                         {settlementData.selectedDice.map((d, i) => (
                           <div key={d.id}
@@ -3388,42 +3551,43 @@ useEffect(() => {
                         ))}
                       </div>
                       
-                      {/* ¼Æ·ÖÌõ */}
-                      <div className="flex items-center gap-3 mt-2 px-4 py-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]" style={{borderRadius: '4px'}}>
+                      {/* è®¡åˆ†æ¡ */}
+                      <motion.div
+                        className="flex items-center gap-3 mt-2 px-4 py-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]"
+                        style={{borderRadius: '4px'}}
+                        animate={settlementPhase === 'bounce' ? {
+                          scale: [1, 1.2, 0.9, 1],
+                        } : { scale: 1 }}
+                        transition={settlementPhase === 'bounce' ? {
+                          duration: 0.4,
+                          times: [0, 0.3, 0.6, 1],
+                          ease: 'easeOut',
+                        } : { duration: 0 }}
+                      >
                         <span key={`base-${settlementData.currentBase}-${settlementData.currentEffectIdx}`} className={`text-[var(--pixel-blue)] font-bold text-xl font-mono animate-value-pop ${settlementPhase === "effects" ? "settlement-value-glow-blue" : ""}`}>
                           {settlementData.currentBase}
                         </span>
-                        <span key={`x-${settlementPhase === 'mult' ? 'flash' : 'idle'}`} className={`text-[var(--dungeon-text-dim)] text-lg font-bold ${settlementPhase === 'mult' || settlementPhase === 'effects' || settlementPhase === 'damage' ? 'animate-percent-flash' : ''}`}>¡Á</span>
+                        <span key={`x-${settlementPhase === 'mult' ? 'flash' : 'idle'}`} className={`text-[var(--dungeon-text-dim)] text-lg font-bold ${settlementPhase === 'mult' || settlementPhase === 'effects' || settlementPhase === 'damage' ? 'animate-percent-flash' : ''}`}>Ã—</span>
                         <span key={`mult-${Math.round(settlementData.currentMult * 100)}-${settlementData.currentEffectIdx}`} className={`text-[var(--pixel-red)] font-bold text-xl font-mono ${settlementPhase === "mult" || settlementPhase === "effects" || settlementPhase === "damage" ? "animate-value-pop settlement-value-glow-red" : "opacity-50"}`}>
                           {Math.round(settlementData.currentMult * 100)}%
                         </span>
-                      </div>
+                      </motion.div>
                       
-                      {/* ´¥·¢Ğ§¹ûÁĞ±í */}
+                      {/* è§¦å‘æ•ˆæœåˆ—è¡¨ */}
                       {settlementPhase === 'effects' && settlementData.triggeredEffects.length > 0 && (
                         <div className="flex flex-col items-center gap-1 mt-1">
                           {settlementData.triggeredEffects.map((eff, i) => {
-                            const effIconMap: Record<string, string> = {
-                              blade: '??', flag: '??', weight: '???', pendulum: '??',
-                              grail: '??', gauge: '??', prism: '??', resonator: '?',
-                              diamond: '??', hourglass: '?', fangs: '??', contract: '??',
-                              recycle: '??', hand: '?', eye: '???', infinity: '??', bag: '??',
-                              compress: '??', shield: '???', fire: '??', coin: '??',
-                              skull: '??', heart: '??', star: '?', bolt: '?',
-                              crystal: '??', crown: '??', dice: '??', potion: '??',
-                            };
-                            const effIcon = eff.icon ? (effIconMap[eff.icon] || '?') : '';
                             return (
                               <div key={i} className={`text-xs px-3 py-1.5 border animate-effect-slide-in flex items-center gap-1.5 ${eff.type === "mult" ? "bg-[rgba(224,60,60,0.15)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]" : eff.type === "heal" ? "bg-[rgba(60,180,60,0.15)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]" : "bg-[rgba(60,120,224,0.15)] border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]"}`}
                                 style={{borderRadius: "2px", animationDelay: `${i * 100}ms`}}>
-                                {effIcon && <span className="text-sm">{effIcon}</span>}
-                                <span>{eff.type === "mult" ? "¡Á" : "+"} {eff.name}: {eff.detail}</span>
+                                {eff.relicId && <RelicPixelIcon relicId={eff.relicId} size={2} />}
+                                <span>{eff.type === "mult" ? "Ã—" : "+"} {eff.name}: {eff.detail}</span>
                               </div>
                             );
                           })}
                         </div>
                       )}
-                      {/* ×îÖÕÉËº¦ - ¸ù¾İÊı¶îËõ·Å */}
+                      {/* æœ€ç»ˆä¼¤å®³ - æ ¹æ®æ•°é¢ç¼©æ”¾ */}
                       {settlementPhase === 'damage' && (
                         <div className="mt-2 flex flex-col items-center">
                           <span className="text-xs font-bold text-[var(--dungeon-text-dim)] mb-1">
@@ -3465,20 +3629,20 @@ useEffect(() => {
                     exit={{ opacity: 0, y: 10, scale: 0.8 }}
                     className="flex flex-col items-center gap-0.5"
                   >
-                    {/* ÅÆĞÍÃû³Æ ¡ª ´óºÅ + Ç¿·¢¹â */}
+                    {/* ç‰Œå‹åç§° â€” å¤§å· + å¼ºå‘å…‰ */}
                     <motion.div 
                       animate={{ scale: [1, 1.06, 1], filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1)'] }}
                       transition={{ repeat: Infinity, duration: 1.8 }}
                       className="px-3 py-1 bg-[rgba(10,10,15,0.92)] border-2 border-[var(--pixel-green)] text-[var(--pixel-green-light)] font-bold text-sm tracking-wider pixel-text-shadow"
                       style={{ borderRadius: '2px', boxShadow: '0 0 8px rgba(60,200,100,0.3), inset 0 0 6px rgba(60,200,100,0.08)' }}
                     >
-                      ¡ô {expectedOutcome.bestHand} ¡ô
+                      â—† {expectedOutcome.bestHand} â—†
                       {game.handLevels[expectedOutcome.bestHand] > 1 && (
                         <span className="ml-1 text-xs opacity-70">Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
                       )}
                     </motion.div>
                     
-                    {/* Ğ§¹ûÔ¤ÀÀĞĞ ¡ª ¸ü´ó¸üĞÑÄ¿£¬µã»÷´ò¿ª¼ÆËãÏêÇé */}
+                    {/* æ•ˆæœé¢„è§ˆè¡Œ â€” æ›´å¤§æ›´é†’ç›®ï¼Œç‚¹å‡»æ‰“å¼€è®¡ç®—è¯¦æƒ… */}
                     <div 
                       className="flex items-center gap-2 px-2.5 py-0.5 bg-[rgba(10,10,15,0.88)] border border-[var(--dungeon-panel-highlight)] pointer-events-auto cursor-pointer active:scale-95 transition-transform"
                       onClick={() => setShowCalcModal(true)}
@@ -3515,7 +3679,7 @@ useEffect(() => {
                       )}
                     </div>
 
-                    {/* ´¥·¢µÄÒÅÎï */}
+                    {/* è§¦å‘çš„é—ç‰© */}
                     {activeAugments.length > 0 && (
                       <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[rgba(10,10,15,0.8)]" style={{ borderRadius: '2px' }}>
                         {activeAugments.map((aug, i) => (
@@ -3531,11 +3695,28 @@ useEffect(() => {
               </AnimatePresence>
             </div>
 
-            {/* ===== ÏÂ°ëÇø£ºÍæ¼ÒHUD ===== */}
+            {/* ===== ä¸‹åŠåŒºï¼šç©å®¶HUD ===== */}
             <div className="relative z-[5] player-hud-panel">
-              {/* Íæ¼Ò¸¡¶¯ÉËº¦Êı×Ö */}
+              {/* ç©å®¶æµ®åŠ¨ä¼¤å®³æ•°å­— */}
               <AnimatePresence>
                 {floatingTexts.filter(ft => ft.target === 'player').map(ft => (
+                  ft.large ? (
+                    // largeé£˜å­—ï¼šç”¨fixedå®šä½åœ¨å±å¹•ä¸­å¤®ä¸Šæ–¹ï¼Œä¸å—çˆ¶å®¹å™¨è£åˆ‡
+                    <motion.div
+                      key={ft.id}
+                      initial={{ opacity: 0, y: 20, scale: 0.5 }}
+                      animate={{ opacity: [0, 1, 1, 1, 0], y: [-30, -60, -70, -80, -100], scale: [0.5, 1.4, 1.3, 1.3, 1.5] }}
+                      transition={{ duration: 2.0, times: [0, 0.1, 0.3, 0.8, 1] }}
+                      className="fixed z-[200] font-black text-2xl pointer-events-none flex items-center gap-1.5 text-purple-300"
+                      style={{
+                        top: '35%', left: '50%', transform: 'translateX(-50%)',
+                        textShadow: '0 0 16px rgba(168,85,247,0.9), 0 0 32px rgba(168,85,247,0.5), 0 2px 4px rgba(0,0,0,0.9)',
+                      }}
+                    >
+                      {ft.icon}
+                      {ft.text}
+                    </motion.div>
+                  ) : (
                   <motion.div
                     key={ft.id}
                     initial={{ opacity: 0, y: 0 + ft.y, scale: 0.5 }}
@@ -3547,6 +3728,7 @@ useEffect(() => {
                     {ft.icon}
                     {ft.text}
                   </motion.div>
+                  )
                 ))}
               </AnimatePresence>
 
@@ -3610,7 +3792,7 @@ useEffect(() => {
                             transition={{ delay: 0.3 }}
                             className="text-2xl font-bold text-[var(--pixel-blue)] pixel-text-shadow"
                           >
-                            +{showDamageOverlay.armor} »¤¼×
+                            +{showDamageOverlay.armor} æŠ¤ç”²
                           </motion.span>
                         )}
                         {showDamageOverlay.heal > 0 && (
@@ -3620,7 +3802,7 @@ useEffect(() => {
                             transition={{ delay: 0.3 }}
                             className="text-2xl font-bold text-emerald-400 pixel-text-shadow"
                           >
-                            +{showDamageOverlay.heal} ÖÎÁÆ
+                            +{showDamageOverlay.heal} æ²»ç–—
                           </motion.span>
                         )}
                       </div>
@@ -3650,7 +3832,7 @@ useEffect(() => {
               </AnimatePresence>
 
 
-              {/* Íæ¼Ò×´Ì¬ĞĞ£ºHP + ×´Ì¬Í¼±ê */}
+              {/* ç©å®¶çŠ¶æ€è¡Œï¼šHP + çŠ¶æ€å›¾æ ‡ */}
               <div className="px-3 py-1.5">
                 <div className="flex items-center gap-2 mb-1">
                   <motion.div 
@@ -3658,7 +3840,7 @@ useEffect(() => {
                     className="flex items-center gap-1"
                   >
                     <PixelHeart size={1} />
-                    <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">ÊØÒ¹ÈË</span>
+                    <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">å®ˆå¤œäºº</span>
                   </motion.div>
                   <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)]" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
 
@@ -3676,16 +3858,16 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
-                {/* Íæ¼Ò×´Ì¬À¸ ¡ª ¶ÀÁ¢Ò»ĞĞ */}
-                {/* ×´Ì¬Í¼±êÀ¸ - ¹Ì¶¨¸ß¶È£¬²»»»ĞĞ£¬±ÜÃâµ×²¿Ìø¶¯ */}
+                {/* ç©å®¶çŠ¶æ€æ  â€” ç‹¬ç«‹ä¸€è¡Œ */}
+                {/* çŠ¶æ€å›¾æ ‡æ  - å›ºå®šé«˜åº¦ï¼Œä¸æ¢è¡Œï¼Œé¿å…åº•éƒ¨è·³åŠ¨ */}
                 <div className="h-7 flex items-center gap-1 px-3 pb-1 overflow-x-auto overflow-y-hidden no-scrollbar">
                   {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
                   {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
                 </div>
 
-              {/* ÷»×Ó²Ù×÷Ãæ°å */}
+              {/* éª°å­æ“ä½œé¢æ¿ */}
 
-              {/* µĞÈËĞÅÏ¢µ¯´° */}
+              {/* æ•Œäººä¿¡æ¯å¼¹çª— */}
               <AnimatePresence>
                 {enemyInfoTarget && (() => {
                   const infoEnemy = enemies.find(e => e.uid === enemyInfoTarget);
@@ -3728,23 +3910,23 @@ useEffect(() => {
                         
                         <div className="grid grid-cols-2 gap-1.5 mb-2">
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">ÉúÃü</div>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">ç”Ÿå‘½</div>
                             <div className="text-[12px] font-mono font-bold text-[var(--pixel-red-light)]">{infoEnemy.hp}/{infoEnemy.maxHp}</div>
                           </div>
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">»¤¼×</div>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">æŠ¤ç”²</div>
                             <div className="text-[12px] font-mono font-bold text-[var(--pixel-blue-light)]">{infoEnemy.armor}</div>
                           </div>
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">¾àÀë</div>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">è·ç¦»</div>
                             <div className="text-[12px] font-mono font-bold" style={{ color: isMelee && infoEnemy.distance > 0 ? 'var(--pixel-orange)' : 'var(--pixel-green-light)' }}>
-                              {infoEnemy.distance === 0 ? '½üÉí' : `¾àÀë ${infoEnemy.distance}`}
+                              {infoEnemy.distance === 0 ? 'è¿‘èº«' : `è·ç¦» ${infoEnemy.distance}`}
                             </div>
                           </div>
                           <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">ĞĞ¶¯</div>
+                            <div className="text-[9px] text-[var(--dungeon-text-dim)]">è¡ŒåŠ¨</div>
                             <div className="text-[12px] font-mono font-bold text-[var(--dungeon-text)]">
-                              {isMelee && infoEnemy.distance > 0 ? '±Æ½üÖĞ' : '¹¥»÷'}
+                              {isMelee && infoEnemy.distance > 0 ? 'é€¼è¿‘ä¸­' : 'æ”»å‡»'}
                             </div>
                           </div>
                         </div>
@@ -3766,10 +3948,10 @@ useEffect(() => {
 
               <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
 
-                {/* ÷»×Ó¿â + ÷»×Ó¶ÓÁĞÁ÷×ª + Æú÷»¿â (¶ÔÆë) */}
+                {/* éª°å­åº“ + éª°å­é˜Ÿåˆ—æµè½¬ + å¼ƒéª°åº“ (å¯¹é½) */}
                 <div className="flex items-center gap-1 mb-0.5 px-1 mt-1">
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
-                  {/* ÷»×Ó¶ÓÁĞÁ÷×ªËõÂÔÍ¼ */}
+                  {/* éª°å­é˜Ÿåˆ—æµè½¬ç¼©ç•¥å›¾ */}
                    <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
                     {/* Left: Draw pile - only diceBag remaining, highlight next-to-draw */}
                     <div className="flex gap-px items-center justify-end flex-1 overflow-hidden">
@@ -3835,7 +4017,7 @@ useEffect(() => {
                   <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="right" />
                 </div>
 
-                {/* ÷»×ÓĞĞ */}
+                {/* éª°å­è¡Œ */}
                 <div className="flex justify-center gap-2.5 mb-1.5 min-h-[80px] items-end relative pt-[20px]">
                   {dice.filter(d => !d.spent).map((die) => (
                       <motion.button
@@ -3895,12 +4077,12 @@ useEffect(() => {
                       </motion.button>
                   ))}
                   {dice.every(d => d.spent) && (
-                    <div className="text-[var(--dungeon-text-dim)] text-[11px] font-bold py-4">ËùÓĞ÷»×ÓÒÑÊ¹ÓÃ</div>
+                    <div className="text-[var(--dungeon-text-dim)] text-[11px] font-bold py-4">æ‰€æœ‰éª°å­å·²ä½¿ç”¨</div>
                   )}
                 </div>
 
 
-{/* Ñ¡ÖĞ÷»×Ótips - ¹Ì¶¨¸ß¶ÈÕ¼Î»£¬±ÜÃâ²¼¾ÖÌø¶¯ */}
+{/* é€‰ä¸­éª°å­tips - å›ºå®šé«˜åº¦å ä½ï¼Œé¿å…å¸ƒå±€è·³åŠ¨ */}
                 <div className="relative h-[22px] mx-1 mb-0.5">
                   {(() => {
                     const selectedDice = dice.filter(d => d.selected && !d.spent);
@@ -3911,7 +4093,7 @@ useEffect(() => {
                     return (
                       <div className="absolute inset-0 px-2 py-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)] overflow-hidden" style={{borderRadius:'2px'}}>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? 'ÆÕÍ¨÷»×Ó' : def.name}</span>
+                          <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? 'æ™®é€šéª°å­' : def.name}</span>
                           <span className="text-[9px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
                           {def.element !== 'normal' && (
                             <span className="text-[9px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
@@ -3920,7 +4102,7 @@ useEffect(() => {
                             <span className="text-[9px] text-[var(--pixel-orange-light)] ml-1">{getOnPlayDescription(def.onPlay)}</span>
                           )}
                       {showAsNormal && (
-                        <span className="text-[9px] text-[var(--pixel-orange)] ml-1">Ğ§¹ûÒÑ½ûÓÃ</span>
+                        <span className="text-[9px] text-[var(--pixel-orange)] ml-1">æ•ˆæœå·²ç¦ç”¨</span>
                       )}
                         </div>
                       </div>
@@ -3928,16 +4110,16 @@ useEffect(() => {
                   })()}
                 </div>
 
-                {/* ²Ù×÷°´Å¥ĞĞ */}
+                {/* æ“ä½œæŒ‰é’®è¡Œ */}
                 <div className="flex gap-1.5 items-center">
-                  {/* ÖØÖÀ°´Å¥ - HP cost escalation with blood effect */}
+                  {/* é‡æ·æŒ‰é’® - HP cost escalation with blood effect */}
                   <motion.button
                     disabled={dice.every(d => d.spent || d.selected) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0 || (!canAffordReroll && currentRerollCost > 0)}
                     onClick={() => {
-                      if (game.isEnemyTurn) { addToast('”³ÈË»ØºÏÖĞ£¬ÎŞ·¨²Ù×÷'); return; }
-                      if (dice.some(d => d.playing)) { addToast('ÕıÔÚ³öÅÆÖĞ...'); return; }
-                      if (game.playsLeft <= 0) { addToast('³öÅÆ´ÎÊıÒÑºÄ¾¡'); return; }
-                      if (dice.every(d => d.spent || d.selected)) { addToast('Ã»ÓĞ¿ÉÖØÖÀµÄ÷»×Ó'); return; }
+                      if (game.isEnemyTurn) { addToast('æ•µäººå›åˆä¸­ï¼Œæ— æ³•æ“ä½œ'); return; }
+                      if (dice.some(d => d.playing)) { addToast('æ­£åœ¨å‡ºç‰Œä¸­...'); return; }
+                      if (game.playsLeft <= 0) { addToast('å‡ºç‰Œæ¬¡æ•°å·²è€—å°½'); return; }
+                      if (dice.every(d => d.spent || d.selected)) { addToast('æ²¡æœ‰å¯é‡æ·çš„éª°å­'); return; }
                       rerollUnselected();
                     }}
                     whileHover={{ scale: 1.05 }}
@@ -3967,7 +4149,7 @@ useEffect(() => {
                     )}
                     <PixelRefresh size={2} />
                     {currentRerollCost <= 0 ? (
-                      <span className="text-[11px] font-mono font-bold flex items-center gap-0.5">{freeRerollsRemaining}<span className="text-[9px] opacity-70">¡Á</span></span>
+                      <span className="text-[11px] font-mono font-bold flex items-center gap-0.5">{freeRerollsRemaining}<span className="text-[9px] opacity-70">Ã—</span></span>
                     ) : (
                       <span className="text-[10px] font-mono font-bold flex items-center gap-0.5">
                         <span>-{currentRerollCost}</span>
@@ -3976,7 +4158,7 @@ useEffect(() => {
                     )}
                   </motion.button>
                   
-                  {/* Ö÷ĞĞ¶¯°´Å¥ */}
+                  {/* ä¸»è¡ŒåŠ¨æŒ‰é’® */}
                   <AnimatePresence mode="wait">
                     {game.isEnemyTurn ? (
                       <motion.div
@@ -3990,7 +4172,7 @@ useEffect(() => {
                           animate={{ opacity: [0.5, 1, 0.5] }}
                           transition={{ repeat: Infinity, duration: 1.5 }}
                         >
-                          µĞÈËĞĞ¶¯ÖĞ...
+                          æ•Œäººè¡ŒåŠ¨ä¸­...
                         </motion.div>
                       </motion.div>
                     ) : dice.some(d => d.selected && !d.spent) ? (
@@ -4002,9 +4184,9 @@ useEffect(() => {
                         onClick={playHand}
                         disabled={dice.some(d => d.playing) || game.playsLeft <= 0 || false /* always allow play */}
                         className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
-                        style={{borderRadius:'2px', boxShadow: currentHands.bestHand !== 'ÆÕÍ¨¹¥»÷' ? '0 0 10px rgba(60,200,100,0.25), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                        style={{borderRadius:'2px', boxShadow: currentHands.bestHand !== 'æ™®é€šæ”»å‡»' ? '0 0 10px rgba(60,200,100,0.25), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                       >
-                        <PixelPlay size={2} /> {game.playsLeft > 0 ? (false /* always allow play */ ? 'ÆÕÍ¨¹¥»÷' : `³öÅÆ: ${currentHands.bestHand}`) : '³öÅÆ´ÎÊıºÄ¾¡'}
+                        <PixelPlay size={2} /> {game.playsLeft > 0 ? (false /* always allow play */ ? 'æ™®é€šæ”»å‡»' : `å‡ºç‰Œ: ${currentHands.bestHand}`) : 'å‡ºç‰Œæ¬¡æ•°è€—å°½'}
                       </motion.button>
                     ) : (dice.every(d => d.spent) || game.playsLeft <= 0) ? (
                       <motion.button
@@ -4016,7 +4198,7 @@ useEffect(() => {
                         className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]"
                         style={{borderRadius:'2px'}}
                       >
-                        »ØºÏ½áÊøÖĞ...
+                        å›åˆç»“æŸä¸­...
                       </motion.button>
                     ) : (
                       <motion.button
@@ -4029,7 +4211,7 @@ useEffect(() => {
                         className="flex-1 py-2.5 bg-[var(--pixel-gold-dark)] border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn"
                         style={{borderRadius:'2px', boxShadow: '0 0 8px rgba(200,168,60,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                       >
-                        ? ½áÊø»ØºÏ
+                        <PixelArrowRight size={2} /> ç»“æŸå›åˆ
                       </motion.button>
                     )}
                   </AnimatePresence>
@@ -4037,23 +4219,17 @@ useEffect(() => {
               </div>
 
 
-              {/* ÒÅÎïÀ¸ - ÎŞÏŞÒÅÎïiconÕ¹Ê¾ + ÒÅÎï */}
+              {/* é—ç‰©æ  - æ— é™é—ç‰©iconå±•ç¤º + é—ç‰© */}
               <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
                 <div className="flex flex-wrap gap-1 items-center min-h-[28px]">
                   {game.relics.length === 0 && game.augments.every(a => !a) && (
                     <div className="flex-1 flex items-center justify-center opacity-30">
-                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">ÔİÎŞÒÅÎï</span>
+                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">æš‚æ— é—ç‰©</span>
                     </div>
                   )}
                   {game.relics.map((relic, i) => {
                     const isActive = relic.trigger === 'passive' || (relic.trigger === 'on_play' && game.phase === 'battle');
                     const isFlashing = flashingRelicIds.includes(relic.id);
-                    const iconMap: Record<string, string> = {
-                      blade: '??', flag: '??', weight: '???', pendulum: '??',
-                      grail: '??', gauge: '??', prism: '??', resonator: '?',
-                      diamond: '??', hourglass: '?', fangs: '??', contract: '??',
-                      recycle: '??', hand: '?', eye: '???', infinity: '??', bag: '??',
-                    };
                     return (
                       <motion.div
                         key={relic.id + "-r-" + i}
@@ -4067,9 +4243,7 @@ useEffect(() => {
                         style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}), ...(isFlashing ? { boxShadow: '0 0 16px rgba(255,255,255,0.9), 0 0 30px rgba(212,160,48,0.8)', animation: 'relic-flash 0.6s ease-out' } : {}) }}
                         onClick={() => setSelectedRelic(relic)}
                       >
-                        <span className={`text-[14px] leading-none ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`}>
-                          {iconMap[relic.icon] || '?'}
-                        </span>
+                        <RelicPixelIcon relicId={relic.id} size={2} />
                         {relic.counter !== undefined && (
                           <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none mt-px">
                             {relic.counter}{relic.counterLabel || ''}
@@ -4078,17 +4252,17 @@ useEffect(() => {
                       </motion.div>
                     );
                   })}
-                {/* ÒÅÎïÏêÇéµ¯´° */}
+                {/* é—ç‰©è¯¦æƒ…å¼¹çª— */}
                 {selectedRelic && (
                   <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70" onClick={() => setSelectedRelic(null)}>
                     <div className="pixel-panel p-4 max-w-[280px] w-full mx-4" onClick={e => e.stopPropagation()}>
                       <div className="text-center mb-2">
                         <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{selectedRelic.name}</div>
-                        <div className="text-[8px] text-[var(--pixel-gold)] mt-0.5">{selectedRelic.rarity === 'common' ? 'ÆÕÍ¨' : selectedRelic.rarity === 'uncommon' ? '¾«Á¼' : selectedRelic.rarity === 'rare' ? 'Ï¡ÓĞ' : '´«Ëµ'}</div>
+                        <div className="text-[8px] text-[var(--pixel-gold)] mt-0.5">{selectedRelic.rarity === 'common' ? 'æ™®é€š' : selectedRelic.rarity === 'uncommon' ? 'ç²¾è‰¯' : selectedRelic.rarity === 'rare' ? 'ç¨€æœ‰' : 'ä¼ è¯´'}</div>
                       </div>
                       <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center">{selectedRelic.description}</div>
-                      <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">´¥·¢: {selectedRelic.trigger === 'on_play' ? 'Ã¿´Î³öÅÆ' : selectedRelic.trigger === 'on_kill' ? '»÷É±Ê±' : selectedRelic.trigger === 'on_reroll' ? 'ÖØ RollÊ±' : selectedRelic.trigger === 'on_battle_end' ? 'Õ½¶·½áÊø' : selectedRelic.trigger === 'on_fatal' ? 'ÖÂÃüÉËº¦Ê±' : selectedRelic.trigger === 'on_turn_end' ? '»ØºÏ½áÊø' : '±»¶¯'}</div>
-                      <button onClick={() => setSelectedRelic(null)} className="w-full mt-3 py-1.5 pixel-btn pixel-btn-ghost text-[10px]">¹Ø±Õ</button>
+                      <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">è§¦å‘: {selectedRelic.trigger === 'on_play' ? 'æ¯æ¬¡å‡ºç‰Œ' : selectedRelic.trigger === 'on_kill' ? 'å‡»æ€æ—¶' : selectedRelic.trigger === 'on_reroll' ? 'é‡ Rollæ—¶' : selectedRelic.trigger === 'on_battle_end' ? 'æˆ˜æ–—ç»“æŸ' : selectedRelic.trigger === 'on_fatal' ? 'è‡´å‘½ä¼¤å®³æ—¶' : selectedRelic.trigger === 'on_turn_end' ? 'å›åˆç»“æŸ' : 'è¢«åŠ¨'}</div>
+                      <button onClick={() => setSelectedRelic(null)} className="w-full mt-3 py-1.5 pixel-btn pixel-btn-ghost text-[10px]">å…³é—­</button>
                     </div>
                   </div>
                 )}
@@ -4124,7 +4298,7 @@ useEffect(() => {
               <CollapsibleLog logs={game.logs} />
             </div>
 
-            {/* ===== µ¯´°ºÍÄ£Ì¬¿ò±£³Ö²»±ä ===== */}
+            {/* ===== å¼¹çª—å’Œæ¨¡æ€æ¡†ä¿æŒä¸å˜ ===== */}
 
             {/* Hand Types Guide Modal - extracted to HandGuideModal component */}
             <HandGuideModal />
@@ -4148,24 +4322,24 @@ useEffect(() => {
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="p-3 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-[12px] font-bold text-[var(--dungeon-text-bright)] tracking-[0.1em] pixel-text-shadow">¡ô ½á¹û¼ÆËãÏêÇé ¡ô</h3>
+                      <h3 className="text-[12px] font-bold text-[var(--dungeon-text-bright)] tracking-[0.1em] pixel-text-shadow">â—† ç»“æœè®¡ç®—è¯¦æƒ… â—†</h3>
                       <button onClick={() => setShowCalcModal(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]">
                         <PixelClose size={2} />
                       </button>
                     </div>
                     <div className="p-4 space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">¼¤»îÅÆĞÍ</span>
+                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">æ¿€æ´»ç‰Œå‹</span>
                         <div className="flex items-center gap-2">
                           <span className="text-[12px] font-bold text-[var(--pixel-green)]">{expectedOutcome.bestHand}</span>
                           {game.handLevels[expectedOutcome.bestHand] > 1 && (
                             <span className="text-[10px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
                           )}
-                          <span className="text-[10px] text-[var(--dungeon-text-dim)] font-mono">(»ù´¡ {expectedOutcome.baseHandValue} / ±¶ÂÊ x{expectedOutcome.handMultiplier.toFixed(1)})</span>
+                          <span className="text-[10px] text-[var(--dungeon-text-dim)] font-mono">(åŸºç¡€ {expectedOutcome.baseHandValue} / å€ç‡ x{expectedOutcome.handMultiplier.toFixed(1)})</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">Ñ¡ÖĞ÷»×Ó</span>
+                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">é€‰ä¸­éª°å­</span>
                         <div className="flex gap-1">
                           {expectedOutcome.selectedValues.map((v, i) => (
                             <span key={i} className="w-5 h-5 flex items-center justify-center bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[11px] font-bold text-[var(--dungeon-text-bright)]" style={{borderRadius:'2px'}}>{v}</span>
@@ -4173,36 +4347,36 @@ useEffect(() => {
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">»ù´¡µãÊı (X)</span>
+                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">åŸºç¡€ç‚¹æ•° (X)</span>
                         <span className="text-[12px] font-bold text-[var(--dungeon-text-bright)]">{expectedOutcome.X}</span>
                       </div>
                       <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-[12px]">
-                          <span className="text-[var(--dungeon-text-dim)]">ÅÆĞÍ»ù´¡ÉËº¦ <span className="text-[10px] opacity-50">({expectedOutcome.baseHandValue} + {expectedOutcome.X}) ¡Á {Math.round(expectedOutcome.handMultiplier * 100)}%</span></span>
+                          <span className="text-[var(--dungeon-text-dim)]">ç‰Œå‹åŸºç¡€ä¼¤å®³ <span className="text-[10px] opacity-50">({expectedOutcome.baseHandValue} + {expectedOutcome.X}) Ã— {Math.round(expectedOutcome.handMultiplier * 100)}%</span></span>
                           <span className="text-[var(--dungeon-text)]">{expectedOutcome.baseDamage}</span>
                         </div>
                         {expectedOutcome.extraDamage !== 0 && (
                           <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">¼Ó³ÉÉËº¦ <span className="text-[10px] opacity-50">¡Á {Math.round(expectedOutcome.multiplier * 100)}%</span></span>
+                            <span className="text-[var(--dungeon-text-dim)]">åŠ æˆä¼¤å®³ <span className="text-[10px] opacity-50">Ã— {Math.round(expectedOutcome.multiplier * 100)}%</span></span>
                             <span className="text-[var(--pixel-gold)]">+{expectedOutcome.extraDamage}</span>
                           </div>
                         )}
                         {expectedOutcome.pierceDamage > 0 && (
                           <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">´©Í¸ÉËº¦</span>
+                            <span className="text-[var(--dungeon-text-dim)]">ç©¿é€ä¼¤å®³</span>
                             <span className="text-[var(--pixel-purple)]">+{expectedOutcome.pierceDamage}</span>
                           </div>
                         )}
                         {expectedOutcome.armorBreak && (
                           <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">?? ÆÆ¼×</span>
-                            <span className="text-orange-400">´İ»Ù»¤¼×</span>
+                            <span className="text-[var(--dungeon-text-dim)]">?? ç ´ç”²</span>
+                            <span className="text-orange-400">æ‘§æ¯æŠ¤ç”²</span>
                           </div>
                         )}
                         {expectedOutcome.statusEffects?.filter(s => s.type === 'burn').length > 0 && (
                           <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">?? ×ÆÉÕ</span>
+                            <span className="text-[var(--dungeon-text-dim)]">?? ç¼çƒ§</span>
                             <span className="text-orange-400">+{expectedOutcome.statusEffects.filter(s => s.type === 'burn').reduce((sum, s) => sum + s.value, 0)}</span>
                           </div>
                         )}
@@ -4211,7 +4385,7 @@ useEffect(() => {
                         {game.statuses.find(s => s.type === 'weak') && (
                           <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
-                              <PixelArrowDown size={1} /> ĞéÈõĞŞÕı
+                              <PixelArrowDown size={1} /> è™šå¼±ä¿®æ­£
                             </span>
                             <span className="text-[var(--dungeon-text-dim)]">x0.75</span>
                           </div>
@@ -4219,19 +4393,19 @@ useEffect(() => {
                         {targetEnemy?.statuses.find(s => s.type === 'vulnerable') && (
                           <div className="flex justify-between items-center text-[12px]">
                             <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
-                              <PixelArrowUp size={1} /> Ò×ÉËĞŞÕı
+                              <PixelArrowUp size={1} /> æ˜“ä¼¤ä¿®æ­£
                             </span>
                             <span className="text-[var(--pixel-red)]">x1.50</span>
                           </div>
                         )}
 
                         <div className="flex justify-between items-center text-xs font-bold border-t-2 border-[var(--dungeon-panel-border)] pt-2">
-                          <span className="text-[var(--dungeon-text-bright)]">×îÖÕ×ÜÉËº¦</span>
+                          <span className="text-[var(--dungeon-text-bright)]">æœ€ç»ˆæ€»ä¼¤å®³</span>
                           <span className="text-[var(--pixel-red)] pixel-text-shadow">{expectedOutcome.damage}</span>
                         </div>
                         {expectedOutcome.armor > 0 && (
                           <div className="flex justify-between items-center text-xs font-bold pt-1">
-                            <span className="text-[var(--dungeon-text-bright)]">»ñµÃ»¤¼×</span>
+                            <span className="text-[var(--dungeon-text-bright)]">è·å¾—æŠ¤ç”²</span>
                             <span className="text-[var(--pixel-blue)] pixel-text-shadow">+{expectedOutcome.armor}</span>
                           </div>
                         )}
@@ -4239,7 +4413,7 @@ useEffect(() => {
                       
                       {expectedOutcome.statusEffects.length > 0 && (
                         <div className="pt-3 space-y-2">
-                          <div className="text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em]">¸½¼ÓĞ§¹û</div>
+                          <div className="text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em]">é™„åŠ æ•ˆæœ</div>
                           <div className="flex flex-wrap gap-2">
                             {expectedOutcome.statusEffects.map((s, i) => {
                               const info = STATUS_INFO[s.type];
@@ -4276,14 +4450,14 @@ useEffect(() => {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative w-full max-w-xs pixel-panel p-5"
             >
-              <div className="text-[11px] tracking-[0.15em] text-[var(--pixel-green)] font-bold mb-2">¡ô ÅÆĞÍÏêÇé ¡ô</div>
+              <div className="text-[11px] tracking-[0.15em] text-[var(--pixel-green)] font-bold mb-2">â—† ç‰Œå‹è¯¦æƒ… â—†</div>
               <h3 className="text-xl font-bold text-[var(--dungeon-text-bright)] mb-3 pixel-text-shadow">{selectedHandTypeInfo.name}</h3>
               <p className="text-[var(--dungeon-text)] text-[13px] leading-relaxed mb-6">{formatDescription(selectedHandTypeInfo.description)}</p>
               <button 
                 onClick={() => setSelectedHandTypeInfo(null)}
                 className="w-full py-3 pixel-btn pixel-btn-ghost text-xs font-bold"
               >
-                È·ÈÏ
+                ç¡®è®¤
               </button>
             </motion.div>
           </div>
@@ -4314,38 +4488,38 @@ useEffect(() => {
                   <div className="text-[var(--pixel-green)] font-bold text-lg mb-2 relative z-10 pixel-text-shadow">{selectedAugment.name}</div>
                   <div className="text-[var(--dungeon-text-dim)] text-[12px] tracking-[0.1em] mb-3 relative z-10 flex items-center gap-1">
                     <span className="text-[var(--pixel-green)]">{getAugmentIcon(selectedAugment.condition, 12)}</span>
-                    ´¥·¢Ìõ¼ş: {
-                    selectedAugment.condition === 'high_card' ? 'ÆÕÍ¨¹¥»÷' : 
-                    selectedAugment.condition === 'pair' ? '¶Ô×Ó' :
-                    selectedAugment.condition === 'two_pair' ? 'Á¬¶Ô' :
-                    selectedAugment.condition === 'n_of_a_kind' ? 'NÌõ' :
-                    selectedAugment.condition === 'full_house' ? 'ºùÂ«' :
-                    selectedAugment.condition === 'straight' ? 'Ë³×Ó' :
-                    selectedAugment.condition === 'same_element' ? 'Í¬ÔªËØ' :
-                    selectedAugment.condition === 'element_count' ? 'ÔªËØ¼ÆÊı' : selectedAugment.condition
+                    è§¦å‘æ¡ä»¶: {
+                    selectedAugment.condition === 'high_card' ? 'æ™®é€šæ”»å‡»' : 
+                    selectedAugment.condition === 'pair' ? 'å¯¹å­' :
+                    selectedAugment.condition === 'two_pair' ? 'è¿å¯¹' :
+                    selectedAugment.condition === 'n_of_a_kind' ? 'Næ¡' :
+                    selectedAugment.condition === 'full_house' ? 'è‘«èŠ¦' :
+                    selectedAugment.condition === 'straight' ? 'é¡ºå­' :
+                    selectedAugment.condition === 'same_element' ? 'åŒå…ƒç´ ' :
+                    selectedAugment.condition === 'element_count' ? 'å…ƒç´ è®¡æ•°' : selectedAugment.condition
                   }</div>
                   <div className="text-[var(--dungeon-text)] text-[13px] mb-3 relative z-10">{formatDescription(selectedAugment.description)}</div>
-                  {/* Á¬ÕĞ´óÊ¦£ºÏÔÊ¾µ±Ç°ÊıÖµ¼Ó³É */}
+                  {/* è¿æ‹›å¤§å¸ˆï¼šæ˜¾ç¤ºå½“å‰æ•°å€¼åŠ æˆ */}
                   {selectedAugment.id === 'combo_master' && (
                     <div className="text-[11px] mb-3 px-2 py-1.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] relative z-10" style={{borderRadius:'2px'}}>
-                      <div className="text-[var(--pixel-gold)] font-bold mb-1">µ±Ç°Á¬»÷¼Ó³É</div>
+                      <div className="text-[var(--pixel-gold)] font-bold mb-1">å½“å‰è¿å‡»åŠ æˆ</div>
                       <div className="text-[var(--dungeon-text-dim)]">
-                        Á¬ĞøÆÕ¹¥´ÎÊı: <span className="text-[var(--pixel-orange)] font-bold">{game.consecutiveNormalAttacks || 0}</span>
+                        è¿ç»­æ™®æ”»æ¬¡æ•°: <span className="text-[var(--pixel-orange)] font-bold">{game.consecutiveNormalAttacks || 0}</span>
                       </div>
                       <div className="text-[var(--dungeon-text-dim)]">
-                        ¶îÍâÉËº¦: <span className="text-[var(--pixel-red)] font-bold">+{(game.consecutiveNormalAttacks || 0) * 4}</span>
+                        é¢å¤–ä¼¤å®³: <span className="text-[var(--pixel-red)] font-bold">+{(game.consecutiveNormalAttacks || 0) * 4}</span>
                       </div>
                       <div className="text-[var(--dungeon-text-dim)]">
-                        ±¶ÂÊ¼Ó³É: <span className="text-[var(--pixel-cyan)] font-bold">+{((game.consecutiveNormalAttacks || 0) * 0.1).toFixed(1)}</span>
+                        å€ç‡åŠ æˆ: <span className="text-[var(--pixel-cyan)] font-bold">+{((game.consecutiveNormalAttacks || 0) * 0.1).toFixed(1)}</span>
                       </div>
-                      <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-1 opacity-60">¡ù Ã¿»ØºÏ½áÊøÊ±ÖØÖÃ</div>
+                      <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-1 opacity-60">â€» æ¯å›åˆç»“æŸæ—¶é‡ç½®</div>
                     </div>
                   )}
                   <button 
                     onClick={() => setSelectedAugment(null)}
                     className="w-full py-2.5 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10"
                   >
-                    ¹Ø±Õ
+                    å…³é—­
                   </button>
                 </motion.div>
               </motion.div>

@@ -10,7 +10,7 @@ type SoundType =
   | 'map_move' | 'shop_buy' | 'campfire' | 'event' | 'boss_appear'
   | 'dice_lock' | 'augment_activate' | 'turn_end'
   | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe'
-  | 'enemy_death' | 'player_death';
+  | 'enemy_death' | 'player_death' | 'enemy_speak';
 
 let audioCtx: AudioContext | null = null;
 let _bgmOscillators: OscillatorNode[] = [];
@@ -729,6 +729,27 @@ export const playSound = (type: SoundType) => {
         break;
       }
       
+      case 'enemy_speak': {
+        // 敌人说话 — 短促低沉咕噜声+音调变化模拟语调
+        const vowels = [180, 220, 160, 200];
+        vowels.forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          const filter = ctx.createBiquadFilter();
+          o.type = 'sawtooth';
+          o.frequency.setValueAtTime(f + Math.random() * 40, now + i * 0.06);
+          o.frequency.linearRampToValueAtTime(f - 20 + Math.random() * 30, now + i * 0.06 + 0.05);
+          filter.type = 'bandpass';
+          filter.frequency.value = 600 + Math.random() * 400;
+          filter.Q.value = 2;
+          g.gain.setValueAtTime(0.07, now + i * 0.06);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.06);
+          o.connect(filter); filter.connect(g); g.connect(master);
+          o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.07);
+        });
+        break;
+      }
+
       case 'enemy_death': {
         // 敌人死亡 — 低沉爆裂+碎片飞散+消散
         // Layer 1: 低频爆裂

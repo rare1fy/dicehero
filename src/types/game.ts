@@ -311,6 +311,9 @@ export interface RelicContext {
   // 免费重Roll追踪
   freeRerollsUsed?: number;
   selectedDiceCount?: number;
+  // 地图进度
+  currentDepth?: number;           // 当前节点深度
+  floorsCleared?: number;          // 已通过的战斗层数（层厅征服者用）
 }
 
 export interface RelicEffect {
@@ -397,10 +400,13 @@ export interface GameState {
   blackMarketQuota: number;           // 局内未撤离的黑市配额
   evacuatedQuota: number;             // 已撤离（安全）的配额
   totalOverkillThisRun: number;       // 本局总溢出伤害（统计用）
+  soulCrystalMultiplier: number;      // 魂晶倍率（按层数成长，撤离后重置为1）
+  playsPerEnemy: Record<string, number>; // 本场战斗中对每个敌人的出牌次数（追踪首次秒杀）
   consecutiveNormalAttacks?: number;  // 连续普通攻击计数
   enemiesKilledThisBattle?: number;   // 本场战斗击杀数
   hpLostThisBattle?: number;          // 本场战斗已损失的HP
   hpLostThisTurn?: number;            // 本回合已损失的HP
+  rageFireBonus?: number;              // 怒火燎原遗物：受伤后累积的额外伤害
 }
 
 // ============================================================

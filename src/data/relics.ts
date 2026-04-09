@@ -186,13 +186,13 @@ const voidEchoRelic: Relic = {
 const glassCannonRelic: Relic = {
   id: 'glass_cannon_relic',
   name: '玻璃大炮',
-  description: '每次出牌：伤害x2.0，但损失4HP',
+  description: '每次出牌：伤害x2.0，但损失10HP',
   icon: 'blade',
   rarity: 'rare',
   trigger: 'on_play',
   effect: () => ({
     multiplier: 2.0,
-    heal: -4,
+    heal: -10,
   }),
 };
 
@@ -251,13 +251,13 @@ const scrapYard: Relic = {
 
 const merchantsEyeRelic: Relic = {
   id: 'merchants_eye_relic',
-  name: '商人之眉',
-  description: '出牌触发非普通攻击牌型时，额外获得3金币',
+  name: '点石成金',
+  description: '打出普通攻击时，额外获得5金币',
   icon: 'bag',
   rarity: 'common',
   trigger: 'on_play',
   effect: (ctx) => {
-    if (ctx.handType && ctx.handType !== '普通攻击') return { goldBonus: 3 };
+    if (ctx.handType === '普通攻击') return { goldBonus: 5 };
     return {};
   },
 };
@@ -330,17 +330,23 @@ const overflowConduit: Relic = {
 const quantumObserver: Relic = {
   id: 'quantum_observer',
   name: '量子观测仪',
-  description: '可以透视骰子库，并锁定骰子不被重Roll',
+  description: '每次出牌时，随机复制1颗已选骰子的点数作为额外伤害',
   icon: 'eye',
   rarity: 'legendary',
-  trigger: 'passive',
-  effect: () => ({ canLockDice: true }),
+  trigger: 'on_play',
+  effect: (ctx) => {
+    if ((ctx.diceValues?.length || 0) > 0) {
+      const idx = Math.floor(Math.random() * ctx.diceValues!.length);
+      return { damage: ctx.diceValues![idx] };
+    }
+    return {};
+  },
 };
 
 const limitBreaker: Relic = {
   id: 'limit_breaker',
-  name: '底线突破',
-  description: '小丑骰子最大点数解锁(不再受限于9)',
+  name: '狂暴小丑',
+  description: '小丑骰子点数上限提升至100（原上限9）',
   icon: 'infinity',
   rarity: 'legendary',
   trigger: 'passive',
@@ -365,13 +371,13 @@ const schrodingerBag: Relic = {
 const comboMasterRelic: Relic = {
   id: 'combo_master_relic',
   name: '连招大师',
-  description: '连续使用普攻，每次伤害+5且倍率+0.1（非普攻出牌重置）',
+  description: '本场战斗中连续普攻，每次+5伤害且倍率+0.15（非普攻重置，战斗结束重置）',
   icon: 'blade',
   rarity: 'uncommon',
   trigger: 'on_play',
   effect: (ctx) => ({
     damage: (ctx.handType === '普通攻击') ? (ctx.consecutiveNormalAttacks || 0) * 5 : 0,
-    multiplier: (ctx.handType === '普通攻击') ? 1 + (ctx.consecutiveNormalAttacks || 0) * 0.1 : 1,
+    multiplier: (ctx.handType === '普通攻击') ? 1 + (ctx.consecutiveNormalAttacks || 0) * 0.15 : 1,
   }),
 };
 
@@ -382,40 +388,45 @@ const comboMasterRelic: Relic = {
 // 体系五：环层塔地图类
 // ============================================================
 
-/** 导航罗盘 - 每步移动获得 1 金币 */
+/** 导航罗盘 - 每移动3步，下场战斗首次出牌+8伤害+5护甲 */
 const navigatorCompass: Relic = {
   id: 'navigator_compass',
   name: '导航罗盘',
-  description: '每步移动获得 1 金币',
+  description: '每移动3步，下场战斗首次出牌+8伤害+5护甲',
   icon: 'gear',
   rarity: 'common',
   trigger: 'on_move',
-  effect: () => ({ goldBonus: 1 }),
+  effect: () => ({ damage: 8, armor: 5 }),
+  counter: 0,
+  maxCounter: 3,
+  counterLabel: '步',
 };
 
-/** 点数统计器 - 每层移动点数≥ 10 时，下场战斗 +3 护甲 */
+/** 点数统计器 - 每回合自动获得3护甲，每过6层多+1护甲 */
 const pointAccumulator: Relic = {
   id: 'point_accumulator',
   name: '点数统计器',
-  description: '每层移动点数≥ 10 时，下场战斗 +3 护甲',
+  description: '每次出牌获得3护甲，每通过6层额外+1护甲（成长型）',
   icon: 'layers',
   rarity: 'uncommon',
-  trigger: 'on_battle_start',
-  effect: () => ({ armor: 3 }),
+  trigger: 'on_play',
+  effect: (ctx) => {
+    const layerBonus = Math.floor((ctx.currentDepth || 0) / 6);
+    return { armor: 3 + layerBonus };
+  },
   counter: 0,
-  maxCounter: 10,
-  counterLabel: '点',
+  counterLabel: '层',
 };
 
-/** 层厅征服者 - 每完成一层，永久 +2 基础伤害 */
+/** 层厅征服者 - 每通过1层战斗节点，出牌时永久+2基础伤害 */
 const floorConqueror: Relic = {
   id: 'floor_conqueror',
   name: '层厅征服者',
-  description: '每完成一层，永久 +2 基础伤害',
+  description: '每通过1层战斗节点，出牌时永久+2基础伤害（累计叠加）',
   icon: 'crown',
   rarity: 'rare',
   trigger: 'on_play',
-  effect: (_ctx) => ({ damage: 2 }),
+  effect: (ctx) => ({ damage: (ctx.floorsCleared || 0) * 2 }),
   counter: 0,
   counterLabel: '层',
 };
@@ -892,9 +903,10 @@ const symmetrySeeker: Relic = {
   description: '出牌时若所有骰子点数相同，额外x1.5倍率',
   rarity: 'rare',
   trigger: 'on_play',
-  effect: (ctx: any) => {
-    if (!ctx) return {};
-    return {};
+  effect: (ctx) => {
+    if (!ctx || !ctx.diceValues || ctx.diceValues.length === 0) return {};
+    const allSame = ctx.diceValues.every((v: number) => v === ctx.diceValues![0]);
+    return allSame ? { multiplier: 1.5 } : {};
   },
 };
 export const ALL_RELICS: Record<string, Relic> = {
@@ -930,6 +942,10 @@ export const ALL_RELICS: Record<string, Relic> = {
   limit_breaker: limitBreaker,
   schrodinger_bag: schrodingerBag,
   combo_master_relic: comboMasterRelic,
+  // 环层塔地图类
+  navigator_compass: navigatorCompass,
+  point_accumulator: pointAccumulator,
+  floor_conqueror: floorConqueror,
   // 增幅转化遗物
   healing_breeze: healingBreeze,
   sharp_edge_relic: sharpEdgeRelic,

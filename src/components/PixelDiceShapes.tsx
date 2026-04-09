@@ -126,26 +126,26 @@ export const ElementBadge: React.FC<ElementBadgeProps> = ({ element, size = 10 }
  * 骰子稀有度边框颜色
  */
 export const RARITY_COLORS: Record<string, string> = {
-  common: 'var(--dungeon-panel-border)',
-  uncommon: 'var(--pixel-green)',
-  rare: 'var(--pixel-blue)',
-  legendary: 'var(--pixel-gold)',
+  common: 'var(--pixel-green)',
+  uncommon: 'var(--pixel-blue)',
+  rare: '#a855f7',
+  legendary: '#f97316',
   curse: 'var(--pixel-red)',
 };
 
 export const RARITY_LABELS: Record<string, string> = {
   common: '普通',
-  uncommon: '非凡',
+  uncommon: '精良',
   rare: '稀有',
   legendary: '传说',
   curse: '诅咒',
 };
 
 export const RARITY_TEXT_COLORS: Record<string, string> = {
-  common: 'var(--dungeon-text-dim)',
-  uncommon: 'var(--pixel-green-light)',
-  rare: 'var(--pixel-blue-light)',
-  legendary: 'var(--pixel-gold-light)',
+  common: 'var(--pixel-green-light)',
+  uncommon: 'var(--pixel-blue-light)',
+  rare: '#c084fc',
+  legendary: '#fb923c',
   curse: 'var(--pixel-red-light)',
 };
 

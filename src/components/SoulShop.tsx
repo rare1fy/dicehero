@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PixelSoulCrystal } from './PixelIcons';
+import { RelicPixelIcon } from './PixelRelicIcons';
 import { ALL_RELICS } from '../data/relics';
 
 const META_KEY = 'dicehero_meta';
@@ -27,28 +28,17 @@ const saveMeta = (meta: MetaProgress) => {
 
 /** 魂晶商店可购买的常驻遗物列表 */
 const SHOP_ITEMS: { relicId: string; cost: number; desc: string }[] = [
-  { relicId: 'grindstone', cost: 60, desc: '每次出牌额外+2伤害' },
-  { relicId: 'iron_banner', cost: 45, desc: '每场战斗开始获得3护甲' },
-  { relicId: 'fate_coin', cost: 75, desc: '本回合重投≥2次后出牌，倍率x1.5' },
-  { relicId: 'greedy_hand', cost: 90, desc: '打出≥4颗骰子的牌型时，基础伤害+20' },
-  { relicId: 'iron_skin_relic', cost: 40, desc: '受到伤害-1（最低1）' },
-  { relicId: 'crimson_grail', cost: 65, desc: '击杀敌人时回复2HP' },
-  { relicId: 'schrodinger_bag', cost: 80, desc: '骰子库耗尽时不洗牌，直接重新填充' },
-  { relicId: 'treasure_sense_relic', cost: 60, desc: '战利品中额外出现一个选项' },
-  { relicId: 'warm_ember_relic', cost: 50, desc: '营火回复量+50%' },
-  { relicId: 'symmetry_seeker', cost: 65, desc: '所有骰子同点数时额外x1.5' },
+  { relicId: 'grindstone', cost: 150, desc: '每次出牌额外+2伤害' },
+  { relicId: 'iron_banner', cost: 100, desc: '每场战斗开始获得3护甲' },
+  { relicId: 'fate_coin', cost: 200, desc: '本回合重投≥2次后出牌，倍率x1.5' },
+  { relicId: 'greedy_hand', cost: 250, desc: '打出≥4颗骰子的牌型时，基础伤害+20' },
+  { relicId: 'iron_skin_relic', cost: 120, desc: '受到伤害-1（最低1）' },
+  { relicId: 'crimson_grail', cost: 180, desc: '击杀敌人时回复2HP' },
+  { relicId: 'schrodinger_bag', cost: 220, desc: '骰子库耗尽时不洗牌，直接重新填充' },
+  { relicId: 'treasure_sense_relic', cost: 160, desc: '战利品中额外出现一个选项' },
+  { relicId: 'warm_ember_relic', cost: 130, desc: '营火回复量+50%' },
+  { relicId: 'symmetry_seeker', cost: 180, desc: '所有骰子同点数时额外x1.5' },
 ];
-
-const iconMap: Record<string, string> = {
-  blade: '\u2694\uFE0F', flag: '\uD83D\uDEA9', weight: '\uD83C\uDFCB\uFE0F', pendulum: '\uD83D\uDCCD',
-  grail: '\uD83C\uDFC6', gauge: '\uD83D\uDCCA', prism: '\uD83D\uDC8E', resonator: '\u2728',
-  diamond: '\uD83D\uDC8E', hourglass: '\u23F3', fangs: '\uD83E\uDDB7', contract: '\uD83D\uDCDC',
-  hand: '\u270B', eye: '\uD83D\uDC41\uFE0F', bag: '\uD83D\uDC5C', compress: '\uD83D\uDD3B',
-  shield: '\uD83D\uDEE1\uFE0F', fire: '\uD83D\uDD25', coin: '\uD83E\uDE99',
-  skull: '\uD83D\uDC80', heart: '\u2764\uFE0F', star: '\u2B50', bolt: '\u26A1',
-  crystal: '\uD83D\uDCA0', crown: '\uD83D\uDC51', dice: '\uD83C\uDFB2', potion: '\uD83E\uDDEA',
-  armor: '\uD83D\uDEE1\uFE0F', ember: '\uD83D\uDD25', compass: '\uD83E\uDDED', treasure: '\uD83D\uDCB0',
-};
 
 export const SoulShop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [meta, setMeta] = useState<MetaProgress>(loadMeta());
@@ -126,7 +116,6 @@ export const SoulShop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             const owned = meta.unlockedStartRelics.includes(item.relicId);
             const justBought = purchased.includes(item.relicId);
             const canAfford = meta.permanentQuota >= item.cost;
-            const icon = relic.icon ? (iconMap[relic.icon] || '\u2726') : '\u2726';
 
             return (
               <motion.button
@@ -143,7 +132,9 @@ export const SoulShop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 }`}
                 style={{ borderRadius: '3px' }}
               >
-                <div className="text-xl shrink-0 w-8 text-center">{icon}</div>
+                <div className="shrink-0 w-8 flex items-center justify-center">
+                  <RelicPixelIcon relicId={item.relicId} size={3} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold ${owned ? 'text-green-400' : 'text-[var(--dungeon-text-bright)]'}`}>
