@@ -6,6 +6,7 @@ import { CSSParticles } from './ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './TutorialOverlay';
 import { SoulShop } from './SoulShop';
 import { ALL_RELICS } from '../data/relics';
+import { playSound } from '../utils/sound';
 
 const META_KEY = 'dicehero_meta';
 const loadMeta = () => {
@@ -19,9 +20,9 @@ const loadMeta = () => {
 export const StartScreen: React.FC = () => {
   const { game, setGame, showTutorial, setShowTutorial } = useGameContext();
   const [showSoulShop, setShowSoulShop] = useState(false);
+  const [fading, setFading] = useState(false);
 
   const startGame = () => {
-    // 加载已解锁的常驻遗物
     const meta = loadMeta();
     const startRelics = (meta.unlockedStartRelics || [])
       .map((id: string) => ALL_RELICS[id])
@@ -38,47 +39,100 @@ export const StartScreen: React.FC = () => {
     }
   };
 
+  const handleStart = () => {
+    if (!isTutorialCompleted()) {
+      setShowTutorial(true);
+      return;
+    }
+    // 石门音效 + 慢速淡出
+    playSound('gate_close');
+    setFading(true);
+    setTimeout(() => startGame(), 1200);
+  };
+
   const meta = loadMeta();
 
   return (
     <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] p-6 overflow-hidden relative sm:border-x-3 border-[var(--dungeon-panel-border)] scanlines">
+      {/* 多层背景氛围 */}
       <div className="absolute inset-0 pixel-grid-bg opacity-30" />
       <div className="absolute inset-0 dungeon-bg" />
-      <CSSParticles type="sparkle" count={6} />
+      {/* 暗角氛围 */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(6,4,8,0.4) 60%, rgba(3,2,4,0.85) 100%)',
+      }} />
+      {/* 顶部暗雾 */}
+      <div className="absolute top-0 left-0 right-0 h-[30%] pointer-events-none" style={{
+        background: 'linear-gradient(to bottom, rgba(4,3,6,0.7) 0%, transparent 100%)',
+      }} />
+      {/* 底部暗雾 */}
+      <div className="absolute bottom-0 left-0 right-0 h-[25%] pointer-events-none" style={{
+        background: 'linear-gradient(to top, rgba(4,3,6,0.8) 0%, transparent 100%)',
+      }} />
+      {/* 微弱的脉冲光晕 */}
+      <motion.div
+        animate={{ opacity: [0.03, 0.08, 0.03] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute pointer-events-none"
+        style={{ top: '20%', left: '20%', width: '60%', height: '40%',
+          background: 'radial-gradient(circle, rgba(212,160,48,0.12) 0%, transparent 60%)',
+        }}
+      />
+      <CSSParticles type="sparkle" count={8} />
       
+      {/* 淡出遮罩 */}
+      <AnimatePresence>
+        {fading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.0, ease: 'easeIn' }}
+            className="absolute inset-0 z-50 bg-black pointer-events-none"
+          />
+        )}
+      </AnimatePresence>
+
       <motion.div 
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8 }}
         className="relative z-10 text-center w-full"
       >
+        {/* 骰子图标 — 加发光效果 */}
         <motion.div
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          className="mb-4 flex justify-center"
+          animate={{ y: [0, -6, 0], rotate: [0, 3, -3, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          className="mb-5 flex justify-center"
         >
-          <PixelDice size={4} />
+          <div style={{ filter: 'drop-shadow(0 0 12px rgba(212,160,48,0.4)) drop-shadow(0 0 24px rgba(212,160,48,0.15))' }}>
+            <PixelDice size={5} />
+          </div>
         </motion.div>
         
-        <h1 className="text-4xl font-black tracking-tight mb-3 pixel-text-shadow" style={{ textShadow: '3px 3px 0 rgba(0,0,0,0.9), 0 0 20px rgba(224,120,48,0.3)' }}>
-          <span className="text-[var(--dungeon-text-bright)]">DICE</span>
-          <span className="text-[var(--pixel-green)]"> BATTLE</span>
+        {/* 标题 — 加强辉光 */}
+        <h1 className="text-4xl font-black tracking-[0.15em] mb-2 pixel-text-shadow" style={{ textShadow: '3px 3px 0 rgba(0,0,0,0.9), 0 0 30px rgba(224,120,48,0.4), 0 0 60px rgba(224,120,48,0.15)' }}>
+          <span className="text-[var(--dungeon-text-bright)]">六面</span>
+          <span className="text-[var(--pixel-green)]">决界</span>
         </h1>
-        <p className="text-[var(--pixel-gold)] text-[10px] tracking-[0.25em] mb-3 pixel-text-shadow">{'\u25C6 \u9A78 \u6218 \u00B7 \u6C38 \u591C \u4E4B \u9003 \u25C6'}</p>
-        <p className="text-[var(--dungeon-text-dim)] text-[8px] mb-10">{'\u2014 Roguelike \u9AB0\u5B50\u6784\u7B51 \u2014'}</p>
-        
-        {/* 开始按钮 */}
-        <button 
-          onClick={() => {
-            if (!isTutorialCompleted()) {
-              setShowTutorial(true);
-            } else {
-              startGame();
-            }
-          }}
-          className="group relative w-full max-w-[220px] mx-auto py-3 pixel-btn pixel-btn-primary text-sm block mb-4"
+        <motion.p
+          animate={{ opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="text-[var(--pixel-gold)] text-[10px] tracking-[0.3em] mb-10 pixel-text-shadow"
+          style={{ textShadow: '0 0 8px rgba(212,160,48,0.5)' }}
         >
-          <span className="relative z-10">{'\u25B6 \u5F00\u542F\u5F81\u7A0B'}</span>
-        </button>
+          ◆ 6 SIDES BATTLE ◆
+        </motion.p>
+        
+        {/* 开始按钮 — 加呼吸光效 */}
+        <motion.button 
+          onClick={handleStart}
+          disabled={fading}
+          animate={{ boxShadow: ['0 0 8px rgba(60,200,100,0.2)', '0 0 20px rgba(60,200,100,0.4)', '0 0 8px rgba(60,200,100,0.2)'] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="group relative w-full max-w-[220px] mx-auto py-3 pixel-btn pixel-btn-primary text-sm block mb-4 disabled:opacity-50"
+        >
+          <span className="relative z-10">▶ 开启征程</span>
+        </motion.button>
 
         {/* 魂晶商店按钮 */}
         <button
@@ -87,7 +141,7 @@ export const StartScreen: React.FC = () => {
         >
           <span className="relative z-10 flex items-center justify-center gap-2 text-purple-300">
             <PixelSoulCrystal size={2} />
-            {'\u9B42\u6676\u5546\u5E97'}
+            魂晶商店
             {meta.permanentQuota > 0 && (
               <span className="text-[9px] text-purple-400 font-mono">({meta.permanentQuota})</span>
             )}
@@ -99,17 +153,17 @@ export const StartScreen: React.FC = () => {
           onClick={() => setShowTutorial(true)}
           className="text-[var(--dungeon-text-dim)] hover:text-[var(--pixel-green)] text-[9px] transition-colors mb-8 flex items-center gap-1 mx-auto"
         >
-          <PixelBook size={2} /> {'\u67E5\u770B\u6559\u7A0B'}
+          <PixelBook size={2} /> 查看教程
         </button>
 
-        <div className="flex gap-3 justify-center opacity-50 text-[9px] flex-wrap text-[var(--dungeon-text-dim)]">
+        <div className="flex gap-3 justify-center opacity-40 text-[9px] flex-wrap text-[var(--dungeon-text-dim)]">
           <div className="flex items-center gap-1"><PixelHeart size={2} /> {game.maxHp}</div>
           <div className="flex items-center gap-1"><PixelRefresh size={2} /> {game.globalRerolls}</div>
           <div className="flex items-center gap-1"><PixelDice size={2} /> {game.diceCount}</div>
           <div className="flex items-center gap-1"><PixelPlay size={2} /> {game.maxPlays}</div>
           {meta.unlockedStartRelics.length > 0 && (
             <div className="flex items-center gap-1 text-purple-400">
-              <PixelSoulCrystal size={2} /> {meta.unlockedStartRelics.length}{'\u5E38\u9A7B'}
+              <PixelSoulCrystal size={2} /> {meta.unlockedStartRelics.length}常驻
             </div>
           )}
         </div>
@@ -120,7 +174,9 @@ export const StartScreen: React.FC = () => {
         {showTutorial && (
           <TutorialOverlay onComplete={() => {
             setShowTutorial(false);
-            startGame();
+            playSound('gate_close');
+            setFading(true);
+            setTimeout(() => startGame(), 1200);
           }} />
         )}
       </AnimatePresence>

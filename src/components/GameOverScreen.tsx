@@ -47,8 +47,8 @@ export const GameOverScreen: React.FC = () => {
         className="relative z-10 w-full"
       >
         <div className="flex justify-center mb-6"><PixelSkull size={8} /></div>
-        <h1 className="text-3xl font-black mb-3 text-[var(--pixel-red)] pixel-text-shadow tracking-wide">{'\u25C6 \u610F\u8BC6\u6D88\u6563 \u25C6'}</h1>
-        <p className="text-[var(--dungeon-text-dim)] mb-4 max-w-xs mx-auto leading-relaxed text-[11px]">{'\u4F60\u5728\u6C38\u591C\u7684\u6DF1\u5904\u8FF7\u5931\u4E86\u65B9\u5411\uFF0C\u6240\u6709\u7684\u8BB0\u5FC6\u4E0E\u610F\u5FD7\u90FD\u5316\u4E3A\u4E86\u865A\u65E0...'}</p>
+        <h1 className="text-3xl font-black mb-3 text-[var(--pixel-red)] pixel-text-shadow tracking-wide">◆ 黑夜吞噬 ◆</h1>
+        <p className="text-[var(--dungeon-text-dim)] mb-4 max-w-xs mx-auto leading-relaxed text-[11px]">永夜降临，黑暗将你彻底吞噬。骰子停止了转动，光芒在无尽的深渊中熄灭...</p>
         
         {(lostQuota > 0 || savedQuota > 0) && (
           <motion.div

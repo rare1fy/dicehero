@@ -1,5 +1,6 @@
 ﻿import battleNormalMp3 from '../assets/DiceBattle-Normal.mp3';
-import battleBossMp3 from '../assets/DiceBattle-Boss.mp3';
+import startMp3 from '../assets/DiceBattle-Start.mp3';
+import outsideMp3 from '../assets/DiceBattle-Outside.mp3';
 
 // === 增强版音效系统 ===
 
@@ -10,7 +11,7 @@ type SoundType =
   | 'map_move' | 'shop_buy' | 'campfire' | 'event' | 'boss_appear'
   | 'dice_lock' | 'augment_activate' | 'turn_end'
   | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe'
-  | 'enemy_death' | 'player_death' | 'enemy_speak';
+  | 'enemy_death' | 'player_death' | 'enemy_speak' | 'boss_laugh' | 'gate_close';
 
 let audioCtx: AudioContext | null = null;
 let _bgmOscillators: OscillatorNode[] = [];
@@ -24,8 +25,9 @@ let bgmEnabled = true;
 let mp3Audio: HTMLAudioElement | null = null;
 let mp3BgmPlaying = false;
 const MP3_BGM_MAP: Record<string, string> = {
+  start: startMp3,
+  explore: outsideMp3,
   battle: battleNormalMp3,
-  boss: battleBossMp3,
 };
 
 const getCtx = (): AudioContext => {
@@ -730,60 +732,174 @@ export const playSound = (type: SoundType) => {
       }
       
       case 'enemy_speak': {
-        // 敌人说话 — 短促低沉咕噜声+音调变化模拟语调
-        const vowels = [180, 220, 160, 200];
+        // 敌人说话 — 低沉咕噜声，6个音节，更长更响
+        const vowels = [160, 200, 140, 220, 170, 190];
+        const syllableDur = 0.12;
+        const syllableGap = 0.14;
         vowels.forEach((f, i) => {
           const o = ctx.createOscillator();
           const g = ctx.createGain();
           const filter = ctx.createBiquadFilter();
           o.type = 'sawtooth';
-          o.frequency.setValueAtTime(f + Math.random() * 40, now + i * 0.06);
-          o.frequency.linearRampToValueAtTime(f - 20 + Math.random() * 30, now + i * 0.06 + 0.05);
+          const t = now + i * syllableGap;
+          o.frequency.setValueAtTime(f + Math.random() * 30, t);
+          o.frequency.linearRampToValueAtTime(f - 30 + Math.random() * 20, t + syllableDur);
           filter.type = 'bandpass';
-          filter.frequency.value = 600 + Math.random() * 400;
-          filter.Q.value = 2;
-          g.gain.setValueAtTime(0.07, now + i * 0.06);
-          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.06);
+          filter.frequency.value = 500 + Math.random() * 500;
+          filter.Q.value = 3;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.3 * masterVolume, t + 0.01);
+          g.gain.setValueAtTime(0.3 * masterVolume, t + syllableDur * 0.5);
+          g.gain.exponentialRampToValueAtTime(0.01, t + syllableDur);
           o.connect(filter); filter.connect(g); g.connect(master);
-          o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.07);
+          o.start(t); o.stop(t + syllableDur + 0.01);
         });
+        // 低频底噪增加厚度
+        const rumbleO = ctx.createOscillator();
+        const rumbleG = ctx.createGain();
+        rumbleO.type = 'sine'; rumbleO.frequency.value = 80;
+        rumbleG.gain.setValueAtTime(0.1 * masterVolume, now);
+        rumbleG.gain.linearRampToValueAtTime(0.15 * masterVolume, now + 0.3);
+        rumbleG.gain.exponentialRampToValueAtTime(0.001, now + vowels.length * syllableGap + 0.1);
+        rumbleO.connect(rumbleG); rumbleG.connect(master);
+        rumbleO.start(now); rumbleO.stop(now + vowels.length * syllableGap + 0.15);
+        break;
+      }
+
+      case 'boss_laugh': {
+        // Boss狂笑 — 低沉递升，10段笑声+颤音+回响
+        const laughNotes = [100, 120, 110, 135, 125, 150, 140, 165, 155, 180];
+        const noteDur = 0.15;
+        const noteGap = 0.16;
+        laughNotes.forEach((f, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          const filter = ctx.createBiquadFilter();
+          o.type = 'sawtooth';
+          const t = now + i * noteGap;
+          o.frequency.setValueAtTime(f, t);
+          o.frequency.linearRampToValueAtTime(f * 0.65, t + noteDur);
+          // 颤音
+          const vibrato = ctx.createOscillator();
+          const vibratoG = ctx.createGain();
+          vibrato.frequency.value = 8 + i;
+          vibratoG.gain.value = 12;
+          vibrato.connect(vibratoG); vibratoG.connect(o.frequency);
+          vibrato.start(t); vibrato.stop(t + noteDur + 0.01);
+          filter.type = 'bandpass';
+          filter.frequency.value = 350 + i * 40;
+          filter.Q.value = 4;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.28 * masterVolume, t + 0.015);
+          g.gain.setValueAtTime(0.25 * masterVolume, t + noteDur * 0.6);
+          g.gain.exponentialRampToValueAtTime(0.01, t + noteDur);
+          o.connect(filter); filter.connect(g); g.connect(master);
+          o.start(t); o.stop(t + noteDur + 0.01);
+        });
+        // 低频共鸣
+        const bRumble = ctx.createOscillator();
+        const bRumbleG = ctx.createGain();
+        bRumble.type = 'sine'; bRumble.frequency.value = 55;
+        bRumbleG.gain.setValueAtTime(0.15 * masterVolume, now);
+        bRumbleG.gain.linearRampToValueAtTime(0.2 * masterVolume, now + 0.8);
+        bRumbleG.gain.exponentialRampToValueAtTime(0.001, now + laughNotes.length * noteGap + 0.3);
+        bRumble.connect(bRumbleG); bRumbleG.connect(master);
+        bRumble.start(now); bRumble.stop(now + laughNotes.length * noteGap + 0.35);
+        break;
+      }
+
+      case 'gate_close': {
+        // 沉重石门关闭 — 低频隆隆声+金属撞击+回响
+        const rumble = ctx.createOscillator();
+        const rg = ctx.createGain();
+        const rf = ctx.createBiquadFilter();
+        rumble.type = 'sawtooth';
+        rumble.frequency.setValueAtTime(60, now);
+        rumble.frequency.linearRampToValueAtTime(35, now + 0.8);
+        rf.type = 'lowpass'; rf.frequency.value = 200; rf.Q.value = 2;
+        rg.gain.setValueAtTime(0.15 * masterVolume, now);
+        rg.gain.linearRampToValueAtTime(0.2 * masterVolume, now + 0.3);
+        rg.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        rumble.connect(rf); rf.connect(rg); rg.connect(master);
+        rumble.connect(rf); rf.connect(rg); rg.connect(master);
+        rumble.start(now); rumble.stop(now + 1.2);
+        // 撞击声
+        const impact = ctx.createOscillator();
+        const ig = ctx.createGain();
+        impact.type = 'square';
+        impact.frequency.setValueAtTime(90, now + 0.6);
+        impact.frequency.exponentialRampToValueAtTime(30, now + 1.0);
+        ig.gain.setValueAtTime(0.2 * masterVolume, now + 0.6);
+        ig.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+        impact.connect(ig); ig.connect(master);
+        impact.start(now + 0.6); impact.stop(now + 1.0);
+        // 回响
+        const echo = ctx.createOscillator();
+        const eg = ctx.createGain();
+        echo.type = 'sine';
+        echo.frequency.value = 45;
+        eg.gain.setValueAtTime(0.08 * masterVolume, now + 0.8);
+        eg.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+        echo.connect(eg); eg.connect(master);
+        echo.start(now + 0.8); echo.stop(now + 2.0);
         break;
       }
 
       case 'enemy_death': {
-        // 敌人死亡 — 低沉爆裂+碎片飞散+消散
-        // Layer 1: 低频爆裂
+        // 敌人死亡 — 沉重爆裂+骨碎飞散+灵魂消散+坠地
+        // Layer 1: 低频爆裂冲击
         const deathBoom = ctx.createOscillator();
         const dbg = ctx.createGain();
+        const dbf = ctx.createBiquadFilter();
         deathBoom.type = 'sawtooth';
-        deathBoom.frequency.setValueAtTime(120, now);
-        deathBoom.frequency.exponentialRampToValueAtTime(20, now + 0.3);
-        dbg.gain.setValueAtTime(0.2, now);
-        dbg.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        deathBoom.connect(dbg); dbg.connect(master);
-        deathBoom.start(now); deathBoom.stop(now + 0.35);
-        // Layer 2: 碎片飞散（高频噪声粒子）
-        for (let i = 0; i < 4; i++) {
+        deathBoom.frequency.setValueAtTime(140, now);
+        deathBoom.frequency.exponentialRampToValueAtTime(18, now + 0.5);
+        dbf.type = 'lowpass'; dbf.frequency.value = 300; dbf.Q.value = 2;
+        dbg.gain.setValueAtTime(0.35 * masterVolume, now);
+        dbg.gain.linearRampToValueAtTime(0.4 * masterVolume, now + 0.05);
+        dbg.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        deathBoom.connect(dbf); dbf.connect(dbg); dbg.connect(master);
+        deathBoom.start(now); deathBoom.stop(now + 0.65);
+
+        // Layer 2: 骨碎飞散（8个高频碎片粒子）
+        for (let i = 0; i < 8; i++) {
           const shard = ctx.createOscillator();
           const sg = ctx.createGain();
+          const sf = ctx.createBiquadFilter();
           shard.type = 'square';
-          shard.frequency.setValueAtTime(300 + Math.random() * 500, now + i * 0.03);
-          shard.frequency.exponentialRampToValueAtTime(50, now + i * 0.03 + 0.1);
-          sg.gain.setValueAtTime(0.06, now + i * 0.03);
-          sg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.12);
-          shard.connect(sg); sg.connect(master);
-          shard.start(now + i * 0.03); shard.stop(now + i * 0.03 + 0.12);
+          const t = now + 0.02 + i * 0.04;
+          shard.frequency.setValueAtTime(400 + Math.random() * 600, t);
+          shard.frequency.exponentialRampToValueAtTime(40 + Math.random() * 60, t + 0.15);
+          sf.type = 'highpass'; sf.frequency.value = 200;
+          sg.gain.setValueAtTime(0.12 * masterVolume, t);
+          sg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+          shard.connect(sf); sf.connect(sg); sg.connect(master);
+          shard.start(t); shard.stop(t + 0.2);
         }
-        // Layer 3: 消散下行音
+
+        // Layer 3: 灵魂消散下行音（幽灵般的下滑）
         const fade = ctx.createOscillator();
         const fg = ctx.createGain();
+        const ff = ctx.createBiquadFilter();
         fade.type = 'sine';
-        fade.frequency.setValueAtTime(400, now + 0.1);
-        fade.frequency.exponentialRampToValueAtTime(60, now + 0.5);
-        fg.gain.setValueAtTime(0.08, now + 0.1);
-        fg.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-        fade.connect(fg); fg.connect(master);
-        fade.start(now + 0.1); fade.stop(now + 0.55);
+        fade.frequency.setValueAtTime(500, now + 0.15);
+        fade.frequency.exponentialRampToValueAtTime(40, now + 0.9);
+        ff.type = 'bandpass'; ff.frequency.value = 300; ff.Q.value = 1;
+        fg.gain.setValueAtTime(0.18 * masterVolume, now + 0.15);
+        fg.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+        fade.connect(ff); ff.connect(fg); fg.connect(master);
+        fade.start(now + 0.15); fade.stop(now + 1.0);
+
+        // Layer 4: 坠地撞击（延迟的低频闷响）
+        const thud = ctx.createOscillator();
+        const tg = ctx.createGain();
+        thud.type = 'sine';
+        thud.frequency.setValueAtTime(65, now + 0.4);
+        thud.frequency.exponentialRampToValueAtTime(25, now + 0.7);
+        tg.gain.setValueAtTime(0.25 * masterVolume, now + 0.4);
+        tg.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+        thud.connect(tg); tg.connect(master);
+        thud.start(now + 0.4); thud.stop(now + 0.8);
         break;
       }
       
@@ -988,14 +1104,58 @@ const BGM_CONFIGS: Record<string, BGMConfig> = {
 
 let bgmInterval: ReturnType<typeof setInterval> | null = null;
 let currentBgmType: string = '';
+const BGM_VOLUME_SCALE = 0.4; // MP3 BGM音量系数
+const FADE_DURATION = 600; // 淡入淡出时间(ms)
 
-export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
+const fadeOutAudio = (audio: HTMLAudioElement, duration: number): Promise<void> => {
+  return new Promise(resolve => {
+    const startVol = audio.volume;
+    const steps = 15;
+    const interval = duration / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      audio.volume = Math.max(0, startVol * (1 - step / steps));
+      if (step >= steps) {
+        clearInterval(timer);
+        audio.pause();
+        audio.currentTime = 0;
+        resolve();
+      }
+    }, interval);
+  });
+};
+
+const fadeInAudio = (audio: HTMLAudioElement, targetVol: number, duration: number) => {
+  audio.volume = 0;
+  audio.play().catch(e => console.warn('BGM autoplay blocked:', e));
+  const steps = 15;
+  const interval = duration / steps;
+  let step = 0;
+  const timer = setInterval(() => {
+    step++;
+    audio.volume = Math.min(targetVol, targetVol * (step / steps));
+    if (step >= steps) {
+      clearInterval(timer);
+      audio.volume = targetVol;
+    }
+  }, interval);
+};
+
+export const startBGM = async (type: 'start' | 'explore' | 'battle') => {
   if (!bgmEnabled) return;
   if (currentBgmType === type && (bgmPlaying || mp3BgmPlaying)) return;
   
-  stopBGM();
+  // 淡出当前BGM
+  if (mp3Audio && mp3BgmPlaying) {
+    const oldAudio = mp3Audio;
+    mp3Audio = null;
+    mp3BgmPlaying = false;
+    await fadeOutAudio(oldAudio, FADE_DURATION);
+  } else {
+    stopBGMImmediate();
+  }
   
-  // MP3 BGM for battle and boss
   const mp3Path = MP3_BGM_MAP[type];
   if (mp3Path) {
     currentBgmType = type;
@@ -1003,8 +1163,7 @@ export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
     try {
       mp3Audio = new Audio(mp3Path);
       mp3Audio.loop = true;
-      mp3Audio.volume = masterVolume * 0.35; // MP3 volume (source files already reduced 50%)
-      mp3Audio.play().catch(e => console.warn('MP3 BGM autoplay blocked:', e));
+      fadeInAudio(mp3Audio, masterVolume * BGM_VOLUME_SCALE, FADE_DURATION);
     } catch (e) {
       console.error('MP3 BGM error:', e);
       mp3BgmPlaying = false;
@@ -1012,7 +1171,7 @@ export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
     return;
   }
   
-  // Programmatic BGM for explore
+  // Programmatic BGM fallback (explore等)
   const cfg = BGM_CONFIGS[type];
   if (!cfg) return;
   
@@ -1134,15 +1293,14 @@ export const startBGM = (type: 'explore' | 'battle' | 'boss') => {
   }, cfg.tempo);
 };
 
-export const stopBGM = () => {
+// 立即停止（内部用，无淡出）
+const stopBGMImmediate = () => {
   bgmPlaying = false;
   currentBgmType = '';
-  // Stop programmatic BGM
   if (bgmInterval) {
     clearInterval(bgmInterval);
     bgmInterval = null;
   }
-  // Stop MP3 BGM
   if (mp3Audio) {
     mp3Audio.pause();
     mp3Audio.currentTime = 0;
@@ -1151,11 +1309,23 @@ export const stopBGM = () => {
   mp3BgmPlaying = false;
 };
 
+// 外部调用的停止（带淡出）
+export const stopBGM = async () => {
+  if (mp3Audio && mp3BgmPlaying) {
+    const oldAudio = mp3Audio;
+    mp3Audio = null;
+    mp3BgmPlaying = false;
+    currentBgmType = '';
+    await fadeOutAudio(oldAudio, FADE_DURATION);
+  } else {
+    stopBGMImmediate();
+  }
+};
+
 export const setMasterVolume = (vol: number) => {
   masterVolume = Math.max(0, Math.min(1, vol));
-  // Sync MP3 BGM volume
   if (mp3Audio) {
-    mp3Audio.volume = masterVolume * 0.35;
+    mp3Audio.volume = masterVolume * BGM_VOLUME_SCALE;
   }
 };
 

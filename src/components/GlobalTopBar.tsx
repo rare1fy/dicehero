@@ -5,6 +5,9 @@ import { PixelCoin, PixelSword, PixelSoulCrystal } from './PixelIcons';
 import { StatsModal } from './StatsModal';
 import { SettingsPanel } from './SettingsPanel';
 import { RelicGuideModal } from './RelicGuideModal';
+import { EnemyBestiary } from './EnemyBestiary';
+import { LogModal } from './LogModal';
+import { CHAPTER_CONFIG } from '../config';
 
 /** 长按/hover tooltip hook */
 const useLongPressTooltip = (delay = 300) => {
@@ -26,6 +29,8 @@ export const GlobalTopBar: React.FC = () => {
   const { game, setShowTutorial, setShowHandGuide, setShowDiceGuide } = useGameContext();
   const [showStats, setShowStats] = useState(false);
   const [showRelicGuide, setShowRelicGuide] = useState(false);
+  const [showEnemyBestiary, setShowEnemyBestiary] = useState(false);
+  const [showLog, setShowLog] = useState(false);
 
   const currentNode = game.map.find(n => n.id === game.currentNodeId);
   const currentDepth = currentNode?.depth || 0;
@@ -36,7 +41,7 @@ export const GlobalTopBar: React.FC = () => {
   const dmgTip = useLongPressTooltip();
 
   return (
-    <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0">
+    <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0 tex-iron-panel">
       <div className="flex items-center gap-1.5">
         {/* 魂晶 */}
         <div className="flex items-center gap-1 text-purple-400 font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative" style={{borderRadius:'2px'}} {...soulTip.handlers}>
@@ -79,7 +84,10 @@ export const GlobalTopBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} onOpenDiceGuide={() => setShowDiceGuide(true)} onOpenRelicGuide={() => setShowRelicGuide(true)} />
+        <div className="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-[var(--dungeon-bg)] border-2 border-[var(--dungeon-panel-border)] text-[var(--pixel-gold-light)]" style={{borderRadius:'2px'}}>
+          {CHAPTER_CONFIG.chapterNames[Math.min(game.chapter - 1, CHAPTER_CONFIG.chapterNames.length - 1)]}
+        </div>
+        <SettingsPanel onResetTutorial={() => setShowTutorial(true)} onOpenHandGuide={() => setShowHandGuide(true)} onOpenDiceGuide={() => setShowDiceGuide(true)} onOpenRelicGuide={() => setShowRelicGuide(true)} onOpenEnemyGuide={() => setShowEnemyBestiary(true)} onOpenLog={() => setShowLog(true)} />
       </div>
       <AnimatePresence>
         {showStats && <StatsModal onClose={() => setShowStats(false)} />}
@@ -87,6 +95,8 @@ export const GlobalTopBar: React.FC = () => {
       {showRelicGuide && (
         <RelicGuideModal isOpen={showRelicGuide} onClose={() => setShowRelicGuide(false)} ownedRelicIds={game.relics.map(r => r.id)} />
       )}
+      <EnemyBestiary visible={showEnemyBestiary} onClose={() => setShowEnemyBestiary(false)} />
+      <LogModal visible={showLog} onClose={() => setShowLog(false)} />
     </div>
   );
 };

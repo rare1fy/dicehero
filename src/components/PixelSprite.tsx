@@ -12,9 +12,11 @@ interface PixelSpriteProps {
   className?: string;
 }
 
+import { ENEMY_SPRITES } from '../data/enemySprites';
+
 // 像素精灵数据：每个精灵用 [row][col] = color 的方式定义
 // 使用暗黑地牢色调
-const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: number }> = {
+const INTERNAL_SPRITES: Record<string, { pixels: string[][]; width: number; height: number }> = {
   //  虚空巡游者 — 幽灵形态
   '虚空巡游者': {
     width: 10, height: 10,
@@ -369,6 +371,12 @@ const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: n
       ['', '', '', '#4a5a8a', '#4a5a8a', '#4a5a8a', '#4a5a8a', '', '', ''],
     ]
   },
+};
+
+// 合并内部精灵+外部敌人精灵
+const SPRITE_DATA: Record<string, { pixels: string[][]; width: number; height: number }> = {
+  ...INTERNAL_SPRITES,
+  ...ENEMY_SPRITES,
 };
 
 // 将像素数据转换为box-shadow CSS

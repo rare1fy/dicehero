@@ -59,95 +59,12 @@
   }
 }
 
-/* === ���ط���Ϸ������ === */
-/* Webkit (Chrome, Edge, Safari) */
+/* === 全局隐藏滚动条 === */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  display: none;
 }
-
-::-webkit-scrollbar-track {
-  background: var(--dungeon-bg);
-  border-left: 2px solid var(--dungeon-panel-border);
-  border-right: 2px solid var(--dungeon-panel-border);
-}
-
-::-webkit-scrollbar-thumb {
-  background:
-    repeating-linear-gradient(
-      0deg,
-      var(--dungeon-panel-highlight) 0px,
-      var(--dungeon-panel-highlight) 3px,
-      var(--dungeon-panel-border) 3px,
-      var(--dungeon-panel-border) 4px
-    );
-  border: 2px solid var(--dungeon-panel-border);
-  border-radius: 0;
-  min-height: 24px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background:
-    repeating-linear-gradient(
-      0deg,
-      var(--pixel-green-dark) 0px,
-      var(--pixel-green-dark) 3px,
-      var(--pixel-green) 3px,
-      var(--pixel-green) 4px
-    );
-  border-color: var(--pixel-green);
-  box-shadow: 0 0 6px rgba(60,200,100,0.3);
-}
-
-::-webkit-scrollbar-thumb:active {
-  background: var(--pixel-green);
-  border-color: var(--pixel-green-light);
-}
-
-::-webkit-scrollbar-corner {
-  background: var(--dungeon-bg);
-}
-
-/* ������������ */
-::-webkit-scrollbar-track:horizontal {
-  border-left: none;
-  border-right: none;
-  border-top: 2px solid var(--dungeon-panel-border);
-  border-bottom: 2px solid var(--dungeon-panel-border);
-}
-
-/* ����/�ײ���ͷ��ť �� �������� */
-::-webkit-scrollbar-button:single-button:vertical:decrement {
-  height: 8px;
-  background: var(--dungeon-panel);
-  border: 2px solid var(--dungeon-panel-border);
-  border-bottom: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath d='M2 0L0 3h4z' fill='%236a6a7e'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 4px 3px;
-}
-
-::-webkit-scrollbar-button:single-button:vertical:increment {
-  height: 8px;
-  background: var(--dungeon-panel);
-  border: 2px solid var(--dungeon-panel-border);
-  border-top: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath d='M0 0l2 3 2-3z' fill='%236a6a7e'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 4px 3px;
-}
-
-::-webkit-scrollbar-button:single-button:vertical:decrement:hover,
-::-webkit-scrollbar-button:single-button:vertical:increment:hover {
-  background-color: var(--dungeon-panel-highlight);
-}
-
-/* Firefox */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--dungeon-panel-highlight) var(--dungeon-bg);
+  scrollbar-width: none;
 }
 
 /* === ���������� === */
@@ -160,12 +77,12 @@
 
 /* === 8-Bit ���ڵ�����ɫCSS���� �� ������Ԩ���� === */
 :root {
-  /* ����� / ����ʯ���� */
-  --dungeon-bg: #080b0e;
-  --dungeon-bg-light: #0e1317;
-  --dungeon-panel: #141a22;
-  --dungeon-panel-border: #1e2a34;
-  --dungeon-panel-highlight: #2a3a48;
+  /* 地牢 / 暗色石板基调 */
+  --dungeon-bg: #0a0908;
+  --dungeon-bg-light: #141210;
+  --dungeon-panel: #1a1714;
+  --dungeon-panel-border: #2e2820;
+  --dungeon-panel-highlight: #3a3228;
   --dungeon-text: #b8c4cc;
   --dungeon-text-dim: #5a6e7e;
   --dungeon-text-bright: #e0e8f0;
@@ -197,29 +114,43 @@
   --pixel-abyss: #6020a0;
   --pixel-abyss-light: #9050d0;
   
-  /* ���ر߿���ʽ */
+  /* 像素边框样式 */
   --pixel-border-width: 3px;
-  --pixel-border-radius: 2px;
+  --pixel-border-radius: 6px;
+
+  /* ═══ 像素拟物纹理（SVG data URI） ═══ */
+  /* 石头纹理 — 4x4 不规则噪点 */
+  --tex-stone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23181614'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%231c1a16' opacity='0.6'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%23141210' opacity='0.5'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%231e1c18' opacity='0.4'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%23141210' opacity='0.5'/%3E%3Crect x='0' y='6' width='2' height='1' fill='%23222018' opacity='0.3'/%3E%3Crect x='6' y='0' width='1' height='2' fill='%23201e16' opacity='0.3'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23242220' opacity='0.25'/%3E%3Crect x='5' y='5' width='1' height='1' fill='%230e0c0a' opacity='0.35'/%3E%3C/svg%3E");
+  /* 木头纹理 — 横向木纹 */
+  --tex-wood: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%231a1408'/%3E%3Crect x='0' y='0' width='8' height='1' fill='%23201a0c' opacity='0.5'/%3E%3Crect x='0' y='3' width='8' height='1' fill='%23161006' opacity='0.6'/%3E%3Crect x='0' y='5' width='8' height='1' fill='%23221c0e' opacity='0.4'/%3E%3Crect x='0' y='7' width='8' height='1' fill='%23141008' opacity='0.5'/%3E%3Crect x='2' y='1' width='1' height='1' fill='%23282010' opacity='0.3'/%3E%3Crect x='6' y='4' width='1' height='1' fill='%23241c0c' opacity='0.25'/%3E%3C/svg%3E");
+  /* 黑铁纹理 — 细密金属颗粒 */
+  --tex-iron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='6' height='6' fill='%23222020'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%232a2828' opacity='0.6'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%231a1818' opacity='0.5'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%232e2c2c' opacity='0.4'/%3E%3Crect x='4' y='4' width='1' height='1' fill='%23161414' opacity='0.5'/%3E%3Crect x='5' y='2' width='1' height='1' fill='%23282626' opacity='0.35'/%3E%3Crect x='2' y='5' width='1' height='1' fill='%23201e1e' opacity='0.3'/%3E%3C/svg%3E");
+  /* 羊皮纸纹理 — 暖色褪色斑点 */
+  --tex-parchment: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23282018'/%3E%3Crect x='1' y='0' width='2' height='1' fill='%232e2618' opacity='0.4'/%3E%3Crect x='5' y='2' width='2' height='2' fill='%23221a10' opacity='0.5'/%3E%3Crect x='0' y='4' width='2' height='2' fill='%232c2416' opacity='0.35'/%3E%3Crect x='4' y='6' width='2' height='1' fill='%23201810' opacity='0.4'/%3E%3Crect x='6' y='1' width='1' height='1' fill='%23342c1e' opacity='0.25'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%231c1408' opacity='0.3'/%3E%3C/svg%3E");
 }
 
-/* === ���ر߿�ϵͳ === */
+/* === 像素边框系统 — 石头纹理 === */
 .pixel-border {
   border: var(--pixel-border-width) solid var(--dungeon-panel-border);
   border-radius: var(--pixel-border-radius);
-  /* ���ػ���3D͹��Ч�� */
+  background-image: var(--tex-stone);
+  background-size: 8px 8px;
+  image-rendering: pixelated;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,255,255,0.05),
+    inset -2px -2px 0 rgba(0,0,0,0.5),
+    inset 2px 2px 0 rgba(255,255,255,0.06),
     0 0 0 1px rgba(0,0,0,0.8);
 }
 
 .pixel-border-sunken {
   border: var(--pixel-border-width) solid var(--dungeon-panel-border);
   border-radius: var(--pixel-border-radius);
-  /* ���ػ���3D����Ч�� */
+  background-image: var(--tex-stone);
+  background-size: 8px 8px;
+  image-rendering: pixelated;
   box-shadow: 
-    inset 2px 2px 0 rgba(0,0,0,0.4),
-    inset -2px -2px 0 rgba(255,255,255,0.05),
+    inset 2px 2px 0 rgba(0,0,0,0.5),
+    inset -2px -2px 0 rgba(255,255,255,0.06),
     0 0 0 1px rgba(0,0,0,0.8);
 }
 
@@ -398,7 +329,7 @@
   width: 52px;
   height: 52px;
   border: 3px solid;
-  border-radius: 2px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -483,13 +414,14 @@
 }
 
 .pixel-dice-white {
-  background: linear-gradient(180deg, #b0b8c0 0%, #98a0a8 50%, #808890 100%);
-  border-color: #a0a8b0;
+  background: linear-gradient(180deg, #c0c8d0 0%, #a0a8b0 40%, #888f98 100%);
+  border-color: #a8b0b8;
   color: #1a1e25;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.2),
-    inset 2px 2px 0 rgba(255,255,255,0.3),
-    0 3px 0 #606870;
+    inset -2px -3px 0 rgba(0,0,0,0.25),
+    inset 2px 2px 0 rgba(255,255,255,0.35),
+    0 4px 0 #505860,
+    0 5px 8px rgba(0,0,0,0.35);
   text-shadow: none;
 }
 /* === ��ǿ��������� === */
@@ -500,14 +432,28 @@
 .pixel-dice:hover:not(:disabled) {
   filter: brightness(1.3) !important;
 }
+/* 骰子顶部高光条 — 模拟圆角倒角 */
+.pixel-dice::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 12%;
+  width: 76%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+/* 骰子底部投影 */
 .pixel-dice::after {
   content: '';
   position: absolute;
-  bottom: -3px;
-  left: 10%;
-  width: 80%;
-  height: 4px;
-  background: radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%);
+  bottom: -4px;
+  left: 8%;
+  width: 84%;
+  height: 5px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
@@ -577,8 +523,12 @@
 }
 
 
-/* === Ԫ���������ӹ�Ч === */
-.dice-element-fire { position: relative; overflow: visible; }
+/* === 元素骰子光效 === */
+.dice-element-fire { position: relative; overflow: visible; border-radius: 6px !important; }
+.dice-element-ice { position: relative; overflow: visible; border-radius: 6px !important; }
+.dice-element-thunder { position: relative; overflow: visible; border-radius: 6px !important; }
+.dice-element-poison { position: relative; overflow: visible; border-radius: 6px !important; }
+.dice-element-holy { position: relative; overflow: visible; border-radius: 6px !important; }
 .dice-element-fire::before {
   content: '';
   position: absolute;
@@ -613,7 +563,6 @@
   z-index: 10;
 }
 
-.dice-element-ice { position: relative; overflow: visible; }
 .dice-element-ice::before {
   content: '';
   position: absolute;
@@ -634,7 +583,6 @@
   pointer-events: none;
 }
 
-.dice-element-thunder { position: relative; overflow: visible; }
 .dice-element-thunder::before {
   content: '';
   position: absolute;
@@ -656,7 +604,6 @@
   pointer-events: none;
 }
 
-.dice-element-poison { position: relative; overflow: visible; }
 .dice-element-poison::before {
   content: '';
   position: absolute;
@@ -678,7 +625,6 @@
   pointer-events: none;
 }
 
-.dice-element-holy { position: relative; overflow: visible; }
 .dice-element-holy::before {
   content: '';
   position: absolute;
@@ -1120,9 +1066,27 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   border: 2px solid var(--pixel-green-light);
   box-shadow: 0 0 4px rgba(60,200,100,0.4);
+  margin-top: -6px;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 0;
+  background: var(--dungeon-bg);
+  border: 2px solid var(--dungeon-panel-border);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 0;
+  background: var(--pixel-green);
+  cursor: pointer;
+  border: 2px solid var(--pixel-green-light);
+  box-shadow: 0 0 4px rgba(60,200,100,0.4);
+}
+
+input[type="range"]::-moz-range-track {
   height: 6px;
   border-radius: 0;
   background: var(--dungeon-bg);
@@ -1196,19 +1160,49 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 /* === ���ػ���ͼ���񱳾� === */
 .pixel-grid-bg {
-  background-image: 
-    linear-gradient(rgba(30,42,52,0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30,42,52,0.3) 1px, transparent 1px);
-  background-size: 16px 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23181614'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%23242220' opacity='0.8'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%23100e0c' opacity='0.7'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%23282624' opacity='0.6'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%23100e0c' opacity='0.7'/%3E%3Crect x='0' y='6' width='2' height='1' fill='%232c2a26' opacity='0.5'/%3E%3Crect x='6' y='0' width='1' height='2' fill='%23262420' opacity='0.5'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23302e2a' opacity='0.4'/%3E%3Crect x='5' y='5' width='1' height='1' fill='%230c0a08' opacity='0.5'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23343230' opacity='0.35'/%3E%3Crect x='7' y='3' width='1' height='1' fill='%23201e1c' opacity='0.4'/%3E%3C/svg%3E");
+  background-size: 8px 8px;
+  image-rendering: pixelated;
 }
 
-/* === ���ػ����Ʊ��� �� ��Ԩ���� === */
+/* ═══ 全局拟物纹理工具类 ═══ */
+/* 石头面板纹理 — 用于弹窗、面板、容器 */
+.tex-stone-panel {
+  background-image: var(--tex-stone) !important;
+  background-size: 8px 8px !important;
+  image-rendering: pixelated;
+}
+/* 木头纹理 — 用于按钮、标签 */
+.tex-wood-panel {
+  background-image: var(--tex-wood) !important;
+  background-size: 8px 8px !important;
+  image-rendering: pixelated;
+}
+/* 黑铁纹理 — 用于装备框、状态栏 */
+.tex-iron-panel {
+  background-image: var(--tex-iron) !important;
+  background-size: 6px 6px !important;
+  image-rendering: pixelated;
+}
+/* 羊皮纸纹理 — 用于描述框、提示 */
+.tex-parchment-panel {
+  background-image: var(--tex-parchment) !important;
+  background-size: 8px 8px !important;
+  image-rendering: pixelated;
+}
+
+/* ═══ 全局自动纹理应用 ═══ */
+
+/* === 像素地牢背景 — 石头底纹 === */
 .dungeon-bg {
   background-color: var(--dungeon-bg);
   background-image: 
+    var(--tex-stone),
     radial-gradient(ellipse at 20% 50%, rgba(122,48,192,0.03) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 50%, rgba(224,120,48,0.03) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 80%, rgba(48,216,208,0.02) 0%, transparent 40%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
 }
 
 /* === ������˸���� === */
@@ -1314,6 +1308,122 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 /* ============================================================
+   像素场景动画
+   ============================================================ */
+
+/* 星星闪烁 */
+/* ═══ 摇骰子能量粒子 ═══ */
+.dice-roll-particles {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+  z-index: 20;
+}
+.dice-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #f0c850;
+  box-shadow: 0 0 6px #f0c850, 0 0 12px rgba(240,200,80,0.5);
+  animation: dice-particle-fly 0.5s steps(6) infinite;
+  image-rendering: pixelated;
+}
+@keyframes dice-particle-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.9; }
+  25% { transform: translate(var(--px, 10px), var(--py, -15px)) scale(1.2); opacity: 1; }
+  50% { transform: translate(calc(var(--px, 10px) * 2), calc(var(--py, -15px) * 2)) scale(0.8); opacity: 0.7; }
+  75% { transform: translate(calc(var(--px, 10px) * 1.5), calc(var(--py, -15px) * 3)) scale(0.5); opacity: 0.4; }
+  100% { transform: translate(0, 0) scale(0.3); opacity: 0; }
+}
+.dice-particle:nth-child(1) { --px: -12px; --py: -18px; background: #f0c850; }
+.dice-particle:nth-child(2) { --px: 14px; --py: -22px; background: #e0b040; }
+.dice-particle:nth-child(3) { --px: -8px; --py: -28px; background: #ffe060; }
+.dice-particle:nth-child(4) { --px: 18px; --py: -14px; background: #f0c850; }
+.dice-particle:nth-child(5) { --px: -16px; --py: -10px; background: #d8a030; }
+.dice-particle:nth-child(6) { --px: 10px; --py: -30px; background: #ffe878; }
+.dice-particle:nth-child(7) { --px: -20px; --py: -24px; background: #f0c850; }
+.dice-particle:nth-child(8) { --px: 6px; --py: -20px; background: #e8b840; }
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.3; }
+  20% { opacity: 0.8; }
+  40% { opacity: 0.4; }
+  60% { opacity: 1; }
+  80% { opacity: 0.5; }
+}
+.animate-star-twinkle {
+  animation: star-twinkle 4s steps(3) infinite;
+}
+
+/* 萤火虫飘动 */
+@keyframes firefly-float {
+  0% { 
+    transform: translate(0, 0) scale(1); 
+    opacity: 0;
+  }
+  10% { opacity: 0.8; }
+  25% { 
+    transform: translate(12px, -8px) scale(1.2); 
+    opacity: 1;
+  }
+  40% {
+    transform: translate(-5px, -15px) scale(0.8);
+    opacity: 0.6;
+  }
+  60% { 
+    transform: translate(8px, -5px) scale(1.1); 
+    opacity: 0.9;
+  }
+  75% {
+    transform: translate(-10px, -12px) scale(0.9);
+    opacity: 0.5;
+  }
+  90% { opacity: 0.7; }
+  100% { 
+    transform: translate(0, 0) scale(1); 
+    opacity: 0;
+  }
+}
+.animate-firefly {
+  animation: firefly-float 6s ease-in-out infinite;
+}
+
+/* 飘雪动画 */
+@keyframes snow-fall {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.7; }
+  50% { transform: translateY(50vh) translateX(15px); opacity: 0.5; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(100vh) translateX(-10px); opacity: 0; }
+}
+.animate-snow-fall {
+  animation: snow-fall 6s linear infinite;
+}
+
+/* 森林地面雾气 */
+.battle-ground-fog-forest {
+  position: absolute;
+  top: 42%;
+  left: -10%;
+  right: -10%;
+  height: 16%;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 25% 60%, rgba(80,120,60,0.1) 0%, transparent 45%),
+    radial-gradient(ellipse at 65% 45%, rgba(60,100,50,0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 70%, rgba(70,110,55,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 55%, rgba(90,130,70,0.06) 0%, transparent 35%);
+  animation: forest-fog-drift 10s steps(16) infinite alternate;
+}
+
+@keyframes forest-fog-drift {
+  0% { transform: translateX(-2%) scaleY(1); opacity: 0.5; }
+  50% { transform: translateX(2%) scaleY(1.1); opacity: 0.8; }
+  100% { transform: translateX(-2%) scaleY(1); opacity: 0.5; }
+}
+
+/* ============================================================
    多场景主题系统 — 根据章节/深度切换
    ============================================================ */
 
@@ -1401,7 +1511,72 @@ input[type="range"]::-webkit-slider-runnable-track {
 .battle-ground-fog-shadow { filter: hue-rotate(270deg) brightness(0.9); }
 .battle-ground-fog-eternal { filter: hue-rotate(40deg) brightness(1.5) saturate(0.7); }
 
-/* 场景暗角变体 */
+/* ===== Boss 场景增强动画 ===== */
+
+/* 森林Boss — 血月脉冲 */
+@keyframes boss-moon-pulse {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 8px rgba(200,40,30,0.3)); }
+  50% { filter: brightness(1.3) drop-shadow(0 0 16px rgba(220,50,30,0.6)); }
+}
+.animate-boss-moon-pulse {
+  animation: boss-moon-pulse 3s ease-in-out infinite;
+}
+
+/* 冰封Boss — 极光脉冲 */
+@keyframes boss-aurora-pulse {
+  0%, 100% { opacity: 0.7; transform: scaleX(1); }
+  30% { opacity: 1; transform: scaleX(1.05); }
+  60% { opacity: 0.5; transform: scaleX(0.95); }
+}
+.animate-boss-aurora-pulse {
+  animation: boss-aurora-pulse 4s ease-in-out infinite;
+}
+
+/* 熔岩Boss — 岩浆脉冲 */
+@keyframes boss-lava-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1.2; }
+}
+.animate-boss-lava-pulse {
+  animation: boss-lava-pulse 2.5s ease-in-out infinite;
+}
+
+/* 暗影Boss — 紫色迷雾脉冲 */
+@keyframes boss-shadow-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+.animate-boss-shadow-pulse {
+  animation: boss-shadow-pulse 3.5s ease-in-out infinite;
+}
+
+/* 永恒Boss — 神圣光柱脉冲 */
+@keyframes boss-holy-pulse {
+  0%, 100% { opacity: 0.6; }
+  25% { opacity: 1; }
+  50% { opacity: 0.4; }
+  75% { opacity: 0.9; }
+}
+.animate-boss-holy-pulse {
+  animation: boss-holy-pulse 3s ease-in-out infinite;
+}
+
+/* Boss战屏幕震动 */
+@keyframes boss-screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-2px, 1px); }
+  20% { transform: translate(3px, -2px); }
+  30% { transform: translate(-1px, 2px); }
+  40% { transform: translate(2px, -1px); }
+  50% { transform: translate(-3px, 1px); }
+  60% { transform: translate(1px, -2px); }
+  70% { transform: translate(-2px, 2px); }
+  80% { transform: translate(3px, -1px); }
+  90% { transform: translate(-1px, 1px); }
+}
+.animate-boss-screen-shake {
+  animation: boss-screen-shake 0.5s ease-out;
+}
 .battle-vignette-warm {
   background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(15,8,4,0.25) 60%, rgba(12,6,3,0.55) 82%, rgba(10,5,2,0.8) 100%);
   pointer-events: none;
@@ -1775,29 +1950,40 @@ input[type="range"]::-webkit-slider-runnable-track {
   animation: torch-flicker 2s steps(4) infinite;
 }
 
-/* === ��һ�˳�˫��ϵͳ === */
+/* === 第一人称双手系统 === */
 .first-person-hands {
   position: absolute;
   bottom: -10px;
   left: 0;
   right: 0;
-  height: 220px;
+  height: 260px;
   pointer-events: none;
   z-index: 15;
 }
 
-/* ���� �� ������ */
+/* ── 骰子粒子特效层 ── */
+.hand-dice-fx {
+  position: absolute;
+  left: -10px;
+  bottom: 100px;
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* 左手 — 持骰子 */
 .hand-left {
   position: absolute;
-  left: -30px;
-  bottom: -30px;
+  left: -20px;
+  bottom: -40px;
   transform: rotate(15deg) scale(1);
   transform-origin: bottom left;
   z-index: 5;
   transition: transform 0.15s ease;
 }
 
-/* ���ֿ���ʱ����΢ҡ�� */
+/* 左手空闲呼吸 */
 @keyframes hand-idle-left {
   0%, 100% { transform: rotate(15deg) translateY(0); }
   50% { transform: rotate(17deg) translateY(-3px); }
@@ -1807,46 +1993,52 @@ input[type="range"]::-webkit-slider-runnable-track {
   animation: hand-idle-left 3s ease-in-out infinite;
 }
 
+/* 摇骰子动画 — 骰子发光飞出再飞回 */
 @keyframes hand-roll-dice {
-  0% { transform: rotate(15deg) translateY(0) scale(1); }
-  10% { transform: rotate(30deg) translateY(-35px) scale(1.1); }
-  25% { transform: rotate(-5deg) translateY(-50px) scale(1.15); }
-  40% { transform: rotate(35deg) translateY(-30px) scale(1.1); }
-  55% { transform: rotate(5deg) translateY(-45px) scale(1.12); }
-  70% { transform: rotate(25deg) translateY(-20px) scale(1.05); }
-  85% { transform: rotate(10deg) translateY(-10px) scale(1); }
-  100% { transform: rotate(15deg) translateY(0) scale(1); }
+  0% { transform: rotate(15deg) translateY(0) scale(1); filter: brightness(1); }
+  10% { transform: rotate(30deg) translateY(-40px) scale(1.15); filter: brightness(1.3); }
+  20% { transform: rotate(-10deg) translateY(-65px) translateX(15px) scale(1.2); filter: brightness(1.5); }
+  35% { transform: rotate(35deg) translateY(-50px) translateX(-10px) scale(1.15); filter: brightness(1.3); }
+  50% { transform: rotate(5deg) translateY(-60px) translateX(20px) scale(1.18); filter: brightness(1.4); }
+  65% { transform: rotate(25deg) translateY(-40px) translateX(-5px) scale(1.1); filter: brightness(1.2); }
+  80% { transform: rotate(10deg) translateY(-20px) scale(1.05); filter: brightness(1.1); }
+  100% { transform: rotate(15deg) translateY(0) scale(1); filter: brightness(1); }
 }
 
 .hand-left-rolling {
-  animation: hand-roll-dice 0.5s steps(8) infinite;
+  animation: hand-roll-dice 0.6s steps(8) infinite;
 }
 
-/* ���������ӳ��ƶ��� */
+/* 摇骰子时骰子发光 */
+.hand-left-rolling svg {
+  filter: drop-shadow(0 0 12px rgba(240,200,80,0.8)) drop-shadow(0 0 24px rgba(240,200,80,0.4)) !important;
+}
+
+/* 投掷动画 */
 @keyframes hand-throw-dice {
   0% { transform: rotate(15deg) translateY(0) scale(1); }
-  20% { transform: rotate(40deg) translateY(-40px) translateX(30px) scale(1.2); }
-  50% { transform: rotate(-10deg) translateY(-60px) translateX(60px) scale(1.3); }
-  80% { transform: rotate(20deg) translateY(-20px) translateX(20px) scale(1.05); }
-  100% { transform: rotate(15deg) translateY(0) scale(1); }
+  20% { transform: rotate(40deg) translateY(-40px) translateX(30px) scale(1.2); filter: brightness(1.5); }
+  50% { transform: rotate(-10deg) translateY(-70px) translateX(60px) scale(1.3); filter: brightness(1.8); }
+  80% { transform: rotate(20deg) translateY(-20px) translateX(20px) scale(1.05); filter: brightness(1.1); }
+  100% { transform: rotate(15deg) translateY(0) scale(1); filter: brightness(1); }
 }
 
 .hand-left-throw {
   animation: hand-throw-dice 0.5s steps(8) ease-out;
 }
 
-/* ���� �� �ֽ� */
+/* 右手 — 持剑 */
 .hand-right {
   position: absolute;
-  right: -30px;
-  bottom: -30px;
+  right: -20px;
+  bottom: -40px;
   transform: rotate(-15deg) scale(1);
   transform-origin: bottom right;
   z-index: 5;
   transition: transform 0.15s ease;
 }
 
-/* ���ֿ���ʱ����΢ҡ�� */
+/* 右手空闲呼吸 */
 @keyframes hand-idle-right {
   0%, 100% { transform: rotate(-15deg) translateY(0); }
   50% { transform: rotate(-13deg) translateY(-3px); }
@@ -1889,28 +2081,32 @@ input[type="range"]::-webkit-slider-runnable-track {
   animation: hand-sword-slash 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/* === ���HUD��� �� ����ʯ�ײ� === */
+/* === 玩家HUD面板 — 石板+黑铁框 === */
 .player-hud-panel {
-  background: linear-gradient(
-    to bottom,
-    rgba(12,16,22,0.97) 0%,
-    rgba(8,11,14,0.99) 100%
-  );
-  border-top: 3px solid var(--dungeon-panel-border);
+  background:
+    var(--tex-stone),
+    linear-gradient(to bottom, rgba(18,16,14,0.97) 0%, rgba(12,11,10,0.99) 100%);
+  background-size: 8px 8px, 100% 100%;
+  image-rendering: pixelated;
+  border-top: 3px solid #2a2420;
   box-shadow: 
-    inset 0 3px 12px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(42,58,72,0.2),
+    inset 0 2px 0 rgba(60,50,40,0.12),
+    inset 0 -2px 0 rgba(0,0,0,0.3),
+    inset 0 3px 12px rgba(0,0,0,0.6),
     0 -6px 20px rgba(0,0,0,0.7);
 }
 
-/* === ս��������ť �� �������Ŀ === */
+/* === 战斗操作按钮 — 木板+铁扣 === */
 .battle-action-btn {
   border: 3px solid;
-  border-radius: 2px;
+  border-radius: 6px;
   font-weight: 900;
   letter-spacing: 0.05em;
   position: relative;
   overflow: hidden;
+  background-image: var(--tex-wood);
+  background-size: 8px 8px;
+  image-rendering: pixelated;
 }
 
 .battle-action-btn::after {
@@ -2196,45 +2392,49 @@ input[type="range"]::-webkit-slider-runnable-track {
   background: linear-gradient(180deg, rgba(200,168,60,0.15) 0%, rgba(139,116,20,0.3) 100%);
 }
 
-/* �������ӽ����ɫ �� ��Ԩ���� */
+/* 骰子渐变色 — 西幻立体感 */
 .pixel-dice-red {
-  background: linear-gradient(180deg, #b03028 0%, #6b1510 100%) !important;
+  background: linear-gradient(180deg, #c03830 0%, #8b1810 50%, #6b1510 100%) !important;
   border-color: var(--pixel-red);
   color: var(--pixel-red-light);
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,200,200,0.12),
-    0 3px 0 #4a0808;
+    inset -2px -3px 0 rgba(0,0,0,0.5),
+    inset 2px 2px 0 rgba(255,200,200,0.18),
+    0 4px 0 #3a0606,
+    0 5px 8px rgba(0,0,0,0.4);
 }
 
 .pixel-dice-blue {
-  background: linear-gradient(180deg, #2e5aaa 0%, #152e70 100%) !important;
+  background: linear-gradient(180deg, #3868c0 0%, #1e4090 50%, #152e70 100%) !important;
   border-color: var(--pixel-blue);
   color: var(--pixel-blue-light);
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(200,200,255,0.12),
-    0 3px 0 #081a4a;
+    inset -2px -3px 0 rgba(0,0,0,0.5),
+    inset 2px 2px 0 rgba(200,220,255,0.18),
+    0 4px 0 #061440,
+    0 5px 8px rgba(0,0,0,0.4);
 }
 
 .pixel-dice-purple {
-  background: linear-gradient(180deg, #6828a0 0%, #3c1068 100%) !important;
+  background: linear-gradient(180deg, #7830b0 0%, #501888 50%, #3c1068 100%) !important;
   border-color: var(--pixel-purple);
   color: var(--pixel-purple-light);
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(220,200,255,0.12),
-    0 3px 0 #20084a;
+    inset -2px -3px 0 rgba(0,0,0,0.5),
+    inset 2px 2px 0 rgba(220,200,255,0.18),
+    0 4px 0 #180640,
+    0 5px 8px rgba(0,0,0,0.4);
 }
 
 .pixel-dice-gold {
-  background: linear-gradient(180deg, #a08828 0%, #6b5a10 100%) !important;
+  background: linear-gradient(180deg, #b89830 0%, #8a7018 50%, #6b5a10 100%) !important;
   border-color: var(--pixel-gold);
   color: var(--pixel-gold-light);
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,240,200,0.12),
-    0 3px 0 #4a3808;
+    inset -2px -3px 0 rgba(0,0,0,0.5),
+    inset 2px 2px 0 rgba(255,240,200,0.18),
+    0 4px 0 #3a2c06,
+    0 5px 8px rgba(0,0,0,0.4);
 }
 
 /* ====================================
@@ -2409,28 +2609,70 @@ input[type="range"]::-webkit-slider-runnable-track {
   opacity: 0.25;
 }
 
-/* ��ͼ����װ�� �� ��Ԩʯ�� */
+/* 地图背景 — 默认石板纹理 */
 .map-bg-dungeon {
-  background-color: #0c1018;
+  background-color: #0c0a08;
   background-image:
-    /* ʯǽ���� �� ����� */
-    repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      transparent 30px,
-      rgba(30,42,52,0.10) 30px,
-      rgba(30,42,52,0.10) 32px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0px,
-      transparent 48px,
-      rgba(30,42,52,0.08) 48px,
-      rgba(30,42,52,0.08) 50px
-    ),
-    /* ��Ԩ�Ϸ�Χ */
+    var(--tex-stone),
     radial-gradient(ellipse at 30% 30%, rgba(96,32,160,0.03) 0%, transparent 50%),
     radial-gradient(ellipse at 70% 70%, rgba(224,120,48,0.02) 0%, transparent 50%);
+  background-size: 8px 8px, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
+}
+/* 章1: 幽暗森林 — 深绿+暗棕 */
+.map-bg-forest {
+  background-color: #080a06;
+  background-image:
+    var(--tex-stone),
+    radial-gradient(ellipse at 25% 20%, rgba(40,100,30,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 80%, rgba(60,40,20,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(80,160,60,0.02) 0%, transparent 60%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
+}
+/* 章2: 冰封山脉 — 冰蓝+银白 */
+.map-bg-ice {
+  background-color: #0a0c10;
+  background-image:
+    var(--tex-stone),
+    radial-gradient(ellipse at 30% 15%, rgba(60,120,200,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 85%, rgba(80,160,240,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(100,180,255,0.02) 0%, transparent 60%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
+}
+/* 章3: 熔岩深渊 — 暗红+橙 */
+.map-bg-lava {
+  background-color: #0e0806;
+  background-image:
+    var(--tex-stone),
+    radial-gradient(ellipse at 25% 80%, rgba(200,60,20,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 20%, rgba(220,120,40,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 60%, rgba(240,80,20,0.03) 0%, transparent 60%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
+}
+/* 章4: 暗影要塞 — 深紫+暗绿 */
+.map-bg-shadow {
+  background-color: #08060c;
+  background-image:
+    var(--tex-stone),
+    radial-gradient(ellipse at 30% 30%, rgba(100,40,160,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 70%, rgba(60,200,80,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(80,20,140,0.02) 0%, transparent 60%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
+}
+/* 章5: 永恒之巅 — 金色+白光 */
+.map-bg-eternal {
+  background-color: #0c0a08;
+  background-image:
+    var(--tex-stone),
+    radial-gradient(ellipse at 50% 20%, rgba(220,200,100,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 70%, rgba(200,180,80,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 50%, rgba(240,220,140,0.03) 0%, transparent 60%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+  image-rendering: pixelated;
 }
 
 /* ====================================
@@ -2938,6 +3180,16 @@ input[type="range"]::-webkit-slider-runnable-track {
    ============================================================ */
 
 /* --- 锋刃骰子 (blade) - 金属银色 + 斜线切割纹理 --- */
+.pixel-dice-blade,
+.pixel-dice-amplify,
+.pixel-dice-split,
+.pixel-dice-magnet,
+.pixel-dice-joker,
+.pixel-dice-chaos,
+.pixel-dice-cursed,
+.pixel-dice-cracked {
+  border-radius: 6px !important;
+}
 .pixel-dice-blade {
   background: linear-gradient(135deg, #4a5568 0%, #2d3748 40%, #4a5568 50%, #2d3748 100%) !important;
   border-color: #a0aec0 !important;
@@ -3195,6 +3447,7 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 /* --- 元素骰子 (elemental) - 多元素能量流转 + 棱形边框 + 呼吸脉冲 --- */
 .pixel-dice-elemental {
+  border-radius: 6px !important;
   background:
     linear-gradient(135deg,
       #c04020 0%,
@@ -3209,8 +3462,7 @@ input[type="range"]::-webkit-slider-runnable-track {
     ) !important;
   background-size: 300% 300% !important;
   animation: elemental-flow 4s steps(8) infinite !important;
-  border: 2px solid !important;
-  border-image: linear-gradient(135deg, #e07830, #50b8e0, #8060c0, #70c030, #d4a030) 1 !important;
+  border: 2px solid #8060c0 !important;
   color: #f0e8ff !important;
   box-shadow:
     inset -2px -2px 0 rgba(0,0,0,0.5),

@@ -62,8 +62,67 @@ import { ReplacementModal } from './components/ReplacementModal';
 import { ToastDisplay } from './components/ToastDisplay';
 import { EnemyQuoteBubble } from './components/EnemyQuoteBubble';
 import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from './config/enemies';
+import ForestBattleScene from './components/ForestBattleScene';
+import IceBattleScene from './components/IceBattleScene';
+import LavaBossScene from './components/LavaBossScene';
+import ShadowBattleScene from './components/ShadowBattleScene';
+import EternalBossScene from './components/EternalBossScene';
+import { BossEntrance } from './components/BossEntrance';
 
 
+
+// 遗物描述富文本高亮
+const RELIC_HIGHLIGHT_RULES: { pattern: RegExp; color: string }[] = [
+  // 牌型名 — 金色
+  { pattern: /(?:普通攻击|对子|连对|三条|四条|五条|六条|葫芦|顺子|同元素|元素顺|元素葫芦|皇家元素顺)/g, color: 'var(--pixel-gold)' },
+  // 数值效果 — 各自颜色
+  { pattern: /(?:伤害|穿透伤害|穿透)/g, color: 'var(--pixel-red-light)' },
+  { pattern: /(?:护甲)/g, color: 'var(--pixel-blue-light)' },
+  { pattern: /(?:回复|治疗|HP|生命)/g, color: '#6ae86a' },
+  { pattern: /(?:倍率|x[\d.]+|×[\d.]+)/g, color: 'var(--pixel-orange)' },
+  // 状态效果 — 紫/橙
+  { pattern: /(?:灼烧|中毒|易伤|虚弱|净化|负面状态)/g, color: '#c88aff' },
+  // 条件关键字 — 青色
+  { pattern: /(?:出牌|击杀|重Roll|重投|致命伤害|受到伤害|卖血Roll)/g, color: 'var(--pixel-cyan)' },
+  // 骰子相关
+  { pattern: /(?:骰子|灌铅骰子|分裂骰子|特殊骰子|点数和|点数)/g, color: 'var(--dungeon-text-bright)' },
+];
+
+function highlightRelicDesc(desc: string): React.ReactNode {
+  if (!desc) return desc;
+  // 构建合并正则
+  const combined = new RegExp(
+    RELIC_HIGHLIGHT_RULES.map(r => `(${r.pattern.source})`).join('|'),
+    'g'
+  );
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = combined.exec(desc)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(desc.slice(lastIndex, match.index));
+    }
+    // 找到匹配的规则组
+    const matchedText = match[0];
+    let color = 'var(--dungeon-text-bright)';
+    for (let g = 0; g < RELIC_HIGHLIGHT_RULES.length; g++) {
+      if (match[g + 1] !== undefined) {
+        color = RELIC_HIGHLIGHT_RULES[g].color;
+        break;
+      }
+    }
+    parts.push(
+      <span key={match.index} style={{ color, fontWeight: 700, textShadow: `0 0 4px ${color}33` }}>
+        {matchedText}
+      </span>
+    );
+    lastIndex = combined.lastIndex;
+  }
+  if (lastIndex < desc.length) {
+    parts.push(desc.slice(lastIndex));
+  }
+  return <>{parts}</>;
+}
 
 export default function DiceHeroGame() {
   const createInitialGameState = (): GameState => ({
@@ -167,21 +226,70 @@ export default function DiceHeroGame() {
   const [showDiceGuide, setShowDiceGuide] = useState(false);
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [battleTransition, setBattleTransition] = useState<'none' | 'fadeIn' | 'hold' | 'fadeOut'>('none');
+  const [bossEntrance, setBossEntrance] = useState<{ visible: boolean; name: string; chapter: number }>({ visible: false, name: '', chapter: 1 });
   const [pendingLootAugment, setPendingLootAugment] = useState<{id: string, options: Augment[] } | null>(null);
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());
+
+  // GM: 杀死当前波次敌人 — 触发死亡动画+波次切换
+  useEffect(() => {
+    const flag = (game as any).gmKillWave;
+    if (flag && game.phase === 'battle') {
+      // 清除flag
+      setGame(prev => { const { gmKillWave: _, ...rest } = prev as any; return rest; });
+      // 触发死亡动画
+      const alive = enemies.filter(e => e.hp > 0);
+      alive.forEach(e => setEnemyEffectForUid(e.uid, 'death'));
+      setEnemies(prev => prev.map(e => e.hp > 0 ? { ...e, hp: 0 } : e));
+      // 延迟后处理波次切换/胜利
+      const doWaveTransition = async () => {
+        await new Promise(r => setTimeout(r, 1200));
+        const nextWaveIdx = game.currentWaveIndex + 1;
+        if (nextWaveIdx < game.battleWaves.length) {
+          const nextWave = game.battleWaves[nextWaveIdx].enemies;
+          // Boss出场演出
+          const currentNode = game.map.find(n => n.id === game.currentNodeId);
+          const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 200;
+          if (isBossWave) {
+            playSound('boss_appear');
+            setBossEntrance({ visible: true, name: nextWave[0].name, chapter: game.chapter });
+            await new Promise(r => setTimeout(r, 2200));
+            setBossEntrance(prev => ({ ...prev, visible: false }));
+            await new Promise(r => setTimeout(r, 300));
+          }
+          setEnemies(nextWave);
+          setEnemyEffects({}); setDyingEnemies(new Set());
+          if (isBossWave && nextWave[0]) {
+            setEnemyEffectForUid(nextWave[0].uid, 'boss_entrance');
+            playSound('boss_laugh');
+            await new Promise(r => setTimeout(r, 1300));
+            setEnemyEffectForUid(nextWave[0].uid, null);
+          }
+          setEnemyQuotes({});
+          setEnemyQuotedLowHp(new Set());
+          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+          setRerollCount(0);
+          setWaveAnnouncement(nextWaveIdx + 1);
+          addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
+          rollAllDice();
+        } else {
+          handleVictory();
+        }
+      };
+      doWaveTransition();
+    }
+  }, [(game as any).gmKillWave]);
 
   // BGM 管理
   useEffect(() => {
     if (game.phase === 'battle') {
-      const currentNode = game.map.find(n => n.id === game.currentNodeId);
-      if (currentNode?.type === 'boss') {
-        startBGM('boss');
-      } else {
-        startBGM('battle');
-      }
-    } else if (game.phase === 'map' || game.phase === 'merchant' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward') {
+      startBGM('battle');
+    } else if (game.phase === 'map' || game.phase === 'merchant' || game.phase === 'campfire' || game.phase === 'event' || game.phase === 'diceReward' || game.phase === 'loot' || game.phase === 'skillSelect' || game.phase === 'treasure') {
       startBGM('explore');
-    } else if (game.phase === 'start' || game.phase === 'gameover' || game.phase === 'victory') {
+    } else if (game.phase === 'start') {
+      startBGM('start');
+    } else if (game.phase === 'chapterTransition' as any) {
+      stopBGM();
+    } else if (game.phase === 'gameover' || game.phase === 'victory') {
       stopBGM();
     }
   }, [game.phase]);
@@ -195,6 +303,8 @@ export default function DiceHeroGame() {
   const [dice, setDice] = useState<Die[]>([]);
   const gameRef = useRef(game);
   gameRef.current = game;
+  // 同步追踪每个敌人的出牌次数（避免 React setState 闭包延迟导致魂晶误判）
+  const playsPerEnemyRef = useRef<Record<string, number>>({});
   const [_diceDrawAnim, setDiceDrawAnim] = useState(false); // 抽骰子入场动画
   const [diceDiscardAnim, _setDiceDiscardAnim] = useState(false);
   const [shuffleAnimating, setShuffleAnimating] = useState(false); // 洗牌动画状态 // 弃骰子退场动画
@@ -206,9 +316,9 @@ export default function DiceHeroGame() {
   })();
   const [selectedHandTypeInfo, setSelectedHandTypeInfo] = useState<{ name: string; description: string } | null>(null);
 
-  const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | null>>({});
+  const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | null>>({});
   const [_dyingEnemies, setDyingEnemies] = useState<Set<string>>(new Set());
-  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
+  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
 
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
   const [enemyInfoTarget, setEnemyInfoTarget] = useState<string | null>(null);
@@ -266,6 +376,7 @@ export default function DiceHeroGame() {
   const [settlementPhase, setSettlementPhase] = useState<null | 'hand' | 'dice' | 'mult' | 'effects' | 'bounce' | 'damage'>(null);
   const [flashingRelicIds, setFlashingRelicIds] = useState<string[]>([]);
   const [selectedRelic, setSelectedRelic] = useState<Relic | null>(null);
+  const [showRelicPanel, setShowRelicPanel] = useState(false);
   const [settlementData, setSettlementData] = useState<{
     bestHand: string;
     selectedDice: Die[];
@@ -320,7 +431,7 @@ export default function DiceHeroGame() {
     setFloatingTexts(prev => [...prev, { id, text, x, y, color, icon, target, large }]);
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(t => t.id !== id));
-    }, large ? 2500 : 1500);
+    }, large ? 3500 : 2200);
   };
 
   const addLog = (msg: string) => {
@@ -365,7 +476,7 @@ export default function DiceHeroGame() {
 
     const waves = (() => {
       const chapterScale = CHAPTER_CONFIG.chapterScaling[Math.min(game.chapter - 1, CHAPTER_CONFIG.chapterScaling.length - 1)];
-      return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult);
+      return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult, game.chapter);
     })();
     const firstWave = waves[0]?.enemies || [];
     setEnemies(firstWave);
@@ -388,10 +499,27 @@ export default function DiceHeroGame() {
       });
     }, 300);
     setPlayerEffect(null);
-    // Boss出场音效
+    // Boss出场音效+演出
     if (node.type === 'boss') {
       playSound('boss_appear');
+      // Boss战的wave2才是Boss单独出场，先打小怪(wave1)，所以出场演出在 wave transition 触发
+      // 但如果只有1波(直接是boss)，则在这里触发
+      if (waves.length === 1) {
+        const bossEnemy = firstWave[0];
+        if (bossEnemy) {
+          setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter });
+          await new Promise(r => setTimeout(r, 2200));
+          setBossEntrance(prev => ({ ...prev, visible: false }));
+          await new Promise(r => setTimeout(r, 200));
+          // 场景内演出：精灵缩放前冲+抖动+笑声
+          setEnemyEffectForUid(bossEnemy.uid, 'boss_entrance');
+          playSound('boss_laugh');
+          await new Promise(r => setTimeout(r, 1300));
+          setEnemyEffectForUid(bossEnemy.uid, null);
+        }
+      }
     }
+    playsPerEnemyRef.current = {}; // 重置同步出牌追踪
     setGame(prev => ({ 
       ...prev, 
       phase: 'battle', 
@@ -606,26 +734,31 @@ export default function DiceHeroGame() {
   const extraFreeRerollsForDisplay = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
   const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) + extraFreeRerollsForDisplay - rerollCount);
 
-  const rerollUnselected = async () => {
+  const rerollSelected = async () => {
     if (game.isEnemyTurn || game.playsLeft <= 0) return;
     
+    // 选中的骰子才是要重roll的
+    const toReroll = dice.filter(d => d.selected && !d.spent);
+    if (toReroll.length === 0) {
+      addToast('请先选中要重掷的骰子');
+      return;
+    }
+
     // Check HP cost
     let hpCost = getRerollHpCost(rerollCount);
-    // 诅咒骰子：手中有诅咒骰子时，重Roll代价翻倍
-    const hasCursedInHand = dice.some(d => !d.selected && !d.spent && getDiceDef(d.diceDefId).isCursed);
-    if (hasCursedInHand) hpCost *= 2;
+    // 诅咒骰子：要重roll的骰子中有诅咒骰子时，代价翻倍
+    const hasCursedInReroll = toReroll.some(d => getDiceDef(d.diceDefId).isCursed);
+    if (hasCursedInReroll) hpCost *= 2;
     if (hpCost > 0 && game.hp <= hpCost) {
       addToast(`生命不足！重掷需要 ${hpCost} HP`, 'damage');
       setRerollFlash(true);
       setTimeout(() => setRerollFlash(false), 500);
       return;
     }
-    
 
     // Apply HP cost
     if (hpCost > 0) {
       setGame(prev => {
-        // on_reroll 遗物触发（如黑市合同）
         let goldBonus = 0;
         prev.relics.filter(r => r.trigger === 'on_reroll').forEach(relic => {
           const res = relic.effect({ hpLostThisTurn: hpCost });
@@ -634,7 +767,6 @@ export default function DiceHeroGame() {
         return { ...prev, hp: prev.hp - hpCost, souls: prev.souls + goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldBonus } };
       });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
-      // Show gold bonus floating text if any relic triggered on_reroll
       const rerollGoldBonus = game.relics.filter(r => r.trigger === 'on_reroll').reduce((sum, relic) => {
         const res = relic.effect({ hpLostThisTurn: hpCost });
         return sum + (res.goldBonus || 0);
@@ -646,15 +778,16 @@ export default function DiceHeroGame() {
     }
     
     playSound('roll');
-    // 设置未选中骰子的rolling状态
-    setDice(prev => prev.map(d => d.selected || d.spent ? d : { ...d, rolling: true }));
+    const rerollIds = new Set(toReroll.map(d => d.id));
+    // 先取消选中，让骰子回到正常位置，再开始rolling动画
+    setDice(prev => prev.map(d => rerollIds.has(d.id) ? { ...d, selected: false, rolling: true } : d));
 
     // 快速翻滚动画
     const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
     for (let i = 0; i < frameTimes.length; i++) {
       await new Promise(resolve => setTimeout(resolve, frameTimes[i]));
       setDice(prev => prev.map(d => {
-        if (d.selected || d.spent) return d;
+        if (!rerollIds.has(d.id)) return d;
         const def = getDiceDef(d.diceDefId);
         const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
         const randElem = def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : d.element;
@@ -662,62 +795,52 @@ export default function DiceHeroGame() {
       }));
     }
 
-    // 落定：将未选中骰子弃置，从骰子库抽新的替换
-    const unselectedDice = dice.filter(d => !d.selected && !d.spent && !d.locked);
-    const unselectedDefIds = unselectedDice.map(d => d.diceDefId);
-    const unselectedIds = new Set(unselectedDice.map(d => d.id));
+    // 落定：将选中骰子弃置，从骰子库抽新的替换
+    const rerollDefIds = toReroll.map(d => d.diceDefId);
 
     setGame(prev => {
-      // 将未选中骰子的defId放进弃骰库
-      const newDiscard = [...prev.discardPile, ...unselectedDefIds];
-      // 从骰子库抽取等量新骰子
-      const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, unselectedDefIds.length);
+      const newDiscard = [...prev.discardPile, ...rerollDefIds];
+      const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, rerollDefIds.length);
       if (shuffled) {
-                setShuffleAnimating(true);
-                setTimeout(() => setShuffleAnimating(false), 800);
+        setShuffleAnimating(true);
+        setTimeout(() => setShuffleAnimating(false), 800);
         addToast(' 弃骰库洗回骰子库', 'info');
       }
 
-      // 同步更新手中骰子：用新抽的替换未选中的
-      let drawIdx = 0;
-      const newDice = dice.map(d => {
-        if (!unselectedIds.has(d.id)) return d;
-        if (drawIdx < drawn.length) {
-          const newDie = drawn[drawIdx];
-          drawIdx++;
-          return { ...newDie, id: d.id, rolling: false };
-        }
-        return { ...d, rolling: false };
-      });
-      // 通过闭包更新dice状态
+      // 使用函数式setDice避免闭包快照问题
       setTimeout(() => {
-        setDice(applyDiceSpecialEffects(newDice, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
-        addLog(`重掷结果: ${newDice.filter(nd => unselectedIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
+        setDice(prevDice => {
+          let drawIdx = 0;
+          const newDice = prevDice.map(d => {
+            if (!rerollIds.has(d.id)) return { ...d, rolling: false };
+            if (drawIdx < drawn.length) {
+              const newDie = drawn[drawIdx];
+              drawIdx++;
+              return { ...newDie, id: d.id, rolling: false, selected: false };
+            }
+            return { ...d, rolling: false, selected: false };
+          });
+          const result = applyDiceSpecialEffects(newDice, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') });
+          addLog(`重掷结果: ${result.filter(nd => rerollIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
+          return result;
+        });
       }, 0);
 
       return {
         ...prev,
         diceBag: newBag,
         discardPile: finalDiscard,
-        // HP cost already applied above
       };
     });
 
     playSound('dice_lock');
-    // Auto-sort dice by value ascending after reroll
     await new Promise(r => setTimeout(r, 200));
-    setDice(prev => [...prev].sort((a, b) => a.value - b.value));
+    setDice(prev => [...prev].map(d => ({ ...d, rolling: false })).sort((a, b) => a.value - b.value));
     setRerollCount(prev => prev + 1);
   };
 
-  // 双击锁定骰子，锁定的骰子在重掷时不会被替换（基础功能）
-  const toggleLock = (id: number) => {
-    const die = dice.find(d => d.id === id);
-    if (!die || die.spent) return;
-    playSound('select');
-    setDice(prev => prev.map(d => d.id === id ? { ...d, locked: !d.locked } : d));
-    addToast(die.locked ? '骰子已解锁' : '骰子已锁定 ??', 'info');
-  };
+  // 双击锁定骰子（已弃用 — 现在选中即重roll目标）
+  const toggleLock = (_id: number) => {};
 
   const toggleSelect = (id: number) => {
     const die = dice.find(d => d.id === id);
@@ -1099,17 +1222,21 @@ export default function DiceHeroGame() {
   const playHand = async () => {
     playSound('select');
     const selected = dice.filter(d => d.selected && !d.spent);
-    if (selected.length === 0 || enemies.length === 0 || !targetEnemy || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0) return;
+    if (selected.length === 0) { addToast('请先选择骰子'); return; }
+    if (enemies.length === 0 || !targetEnemy) return;
+    if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
+    if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
+    if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
 
     // 追踪对每个敌人的出牌次数（用于首次秒杀魂晶判定）
-    // 同步读取当前值，确保判定时不受 setState 异步影响
+    // 使用 ref 同步读写，避免 React setState 闭包延迟
     const targetUidForTracking = targetEnemy.uid;
-    const playsBeforeThisPlay: Record<string, number> = { ...game.playsPerEnemy };
-    const currentPlaysOnTarget = (playsBeforeThisPlay[targetUidForTracking] || 0);
+    const playsBefore = playsPerEnemyRef.current[targetUidForTracking] || 0;
+    playsPerEnemyRef.current = { ...playsPerEnemyRef.current, [targetUidForTracking]: playsBefore + 1 };
     setGame(prev => ({
       ...prev,
       playsLeft: prev.playsLeft - 1,
-      playsPerEnemy: { ...prev.playsPerEnemy, [targetUidForTracking]: (prev.playsPerEnemy[targetUidForTracking] || 0) + 1 },
+      playsPerEnemy: { ...playsPerEnemyRef.current },
     }));
 
     const outcome = expectedOutcome;
@@ -1642,10 +1769,10 @@ export default function DiceHeroGame() {
       const depthMult = game.soulCrystalMultiplier + currentDepth * 0.1;
       let totalSoulGain = 0;
       killedEnemiesData.forEach(killedData => {
-        // 首次 = 这次出牌之前从未打过这个敌人（playsBeforeThisPlay为0）
-        const playsBefore = playsBeforeThisPlay[killedData.uid] || 0;
-        if (playsBefore === 0 && killedData.overkill > 0) {
-          // overkill 上限为敌人maxHp（避免超高伤害得到天量魂晶）
+        // 只有当该敌人是本次出牌的直接目标，且是首次对其出牌时才给魂晶
+        const isDirectTarget = killedData.uid === targetUidForTracking;
+        // playsBefore 是本次出牌前对目标的出牌次数（来自 ref 同步值）
+        if (isDirectTarget && playsBefore === 0 && killedData.overkill > 0) {
           const enemy = enemies.find(e => e.uid === killedData.uid);
           const cappedOverkill = Math.min(killedData.overkill, enemy?.maxHp || 50);
           const gain = Math.max(1, Math.ceil(cappedOverkill * depthMult * 0.5));
@@ -1761,8 +1888,25 @@ export default function DiceHeroGame() {
         const nextWaveIdx = game.currentWaveIndex + 1;
         if (nextWaveIdx < game.battleWaves.length) {
           const nextWave = game.battleWaves[nextWaveIdx].enemies;
+          // Boss出场演出：如果当前是boss节点且下一波只有1个敌人(boss单独出场)
+          const currentNode = game.map.find(n => n.id === game.currentNodeId);
+          const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 200;
+          if (isBossWave) {
+            playSound('boss_appear');
+            setBossEntrance({ visible: true, name: nextWave[0].name, chapter: game.chapter });
+            await new Promise(r => setTimeout(r, 2200));
+            setBossEntrance(prev => ({ ...prev, visible: false }));
+            await new Promise(r => setTimeout(r, 300));
+          }
           setEnemies(nextWave);
           setEnemyEffects({}); setDyingEnemies(new Set());
+          // Boss场景内演出：缩放前冲+抖动+笑声
+          if (isBossWave && nextWave[0]) {
+            setEnemyEffectForUid(nextWave[0].uid, 'boss_entrance');
+            playSound('boss_laugh');
+            await new Promise(r => setTimeout(r, 1300));
+            setEnemyEffectForUid(nextWave[0].uid, null);
+          }
           setEnemyQuotes({});
           setEnemyQuotedLowHp(new Set());
           setTimeout(() => {
@@ -2934,6 +3078,13 @@ useEffect(() => {
         </div>
       )}
 
+      {/* Boss出场演出遮罩 */}
+      <BossEntrance
+        visible={bossEntrance.visible}
+        bossName={bossEntrance.name}
+        chapter={bossEntrance.chapter}
+      />
+
       <div className="flex-1 overflow-hidden relative">
         {game.phase === 'map' && <MapScreen />}
         {game.phase === 'diceReward' && <DiceRewardScreen />}
@@ -2955,64 +3106,6 @@ useEffect(() => {
                 沉浸式第一人称战斗界面
                 ============================================ */}
 
-            {/* 多场景背景层 — 根据层深度切换主题 */}
-            {(() => {
-              const node = game.map.find(n => n.id === game.currentNodeId);
-              const d = node?.depth || 0;
-              // 根据深度选择场景：0-2森林, 3-5冰封, 6-7Boss前+Boss(熔岩), 8-10暗影, 11-14永恒
-              const sceneClass = d <= 2 ? 'battle-scene-forest' : d <= 5 ? 'battle-scene-ice' : d <= 7 ? 'battle-scene-lava' : d <= 10 ? 'battle-scene-shadow' : 'battle-scene-eternal';
-              const vignetteClass = d <= 2 ? 'battle-vignette' : d <= 5 ? 'battle-vignette-cold' : d <= 7 ? 'battle-vignette-warm' : d <= 10 ? 'battle-vignette-purple' : 'battle-vignette';
-              const fogExtra = d <= 2 ? '' : d <= 5 ? 'battle-ground-fog-ice' : d <= 7 ? 'battle-ground-fog-lava' : d <= 10 ? 'battle-ground-fog-shadow' : 'battle-ground-fog-eternal';
-              // 火把颜色
-              const torchColors = d <= 2 ? ['#e8a030','#f0c848','#fff4c0'] : d <= 5 ? ['#60a0e0','#80c0f0','#c0e0ff'] : d <= 7 ? ['#e85020','#f08030','#ffc060'] : d <= 10 ? ['#a040e0','#c060f0','#e0a0ff'] : ['#e0c040','#f0e080','#fffde8'];
-              return (
-                <>
-                  <div className={`absolute inset-0 ${sceneClass}`} />
-                  <div className={`absolute inset-0 ${vignetteClass} z-[1]`} />
-                  <div className="absolute inset-0 dungeon-stain pointer-events-none z-[1]" />
-                  <div className="battle-archway" />
-                  <div className="battle-torch-left battle-torch-flame" />
-                  <div className="battle-torch-right battle-torch-flame" style={{ animationDelay: '0.3s' }} />
-                  {/* 像素火把SVG — 左侧 */}
-                  <div className="absolute left-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75 }}>
-                    <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
-                      <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
-                      <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
-                      <rect x="6" y="14" width="6" height="4" fill={torchColors[0]} />
-                      <rect x="5" y="10" width="8" height="6" fill={torchColors[0]} />
-                      <rect x="6" y="6" width="6" height="6" fill={torchColors[1]} />
-                      <rect x="7" y="3" width="4" height="5" fill={torchColors[2]} />
-                      <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
-                    </svg>
-                  </div>
-                  {/* 像素火把SVG — 右侧 */}
-                  <div className="absolute right-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75, animationDelay: '0.4s' }}>
-                    <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
-                      <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
-                      <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
-                      <rect x="6" y="14" width="6" height="4" fill={torchColors[0]} />
-                      <rect x="5" y="10" width="8" height="6" fill={torchColors[0]} />
-                      <rect x="6" y="6" width="6" height="6" fill={torchColors[1]} />
-                      <rect x="7" y="3" width="4" height="5" fill={torchColors[2]} />
-                      <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
-                    </svg>
-                  </div>
-                  <CSSParticles type="ember" count={8} className="opacity-25 z-[2]" />
-                  <CSSParticles type="sparkle" count={4} className="opacity-15 z-[2]" />
-                  <CSSParticles type="float" count={4} className="opacity-15 z-[2]" />
-                  <div className={`battle-ground-fog ${fogExtra}`} />
-                </>
-              );
-            })()}
-
-            {/* 环境雾气层 */}
-            <div className="absolute inset-0 z-[2] pointer-events-none">
-              <div className="absolute bottom-[35%] left-0 right-0 h-[35%] animate-fog-drift" 
-                style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(120,90,50,0.08) 0%, transparent 65%)' }} />
-              <div className="absolute bottom-[20%] left-0 right-0 h-[20%] animate-fog-drift"
-                style={{ background: 'radial-gradient(ellipse at 30% 60%, rgba(100,80,55,0.06) 0%, transparent 60%)', animationDelay: '3s' }} />
-            </div>
-
             {/* 战斗闪光覆盖层 */}
             <AnimatePresence>
               {(playerEffect === 'attack' || Object.values(enemyEffects).includes('attack')) && (
@@ -3028,7 +3121,19 @@ useEffect(() => {
 
             
             {/* ===== 上半区：3D立体敌人舞台 ===== */}
-            <div className="flex-1 flex flex-col items-center justify-center relative z-[3] min-h-0">
+            <div className="flex-1 flex flex-col items-center justify-center relative z-[3] min-h-0 overflow-hidden">
+              {/* ▶ 场景背景层 — 按章节+Boss状态选择 */}
+              {(() => {
+                const node = game.map.find(n => n.id === game.currentNodeId);
+                const isBossNode = node?.type === 'boss';
+                const ch = game.chapter;
+                if (ch <= 1) return <ForestBattleScene isBoss={isBossNode} />;
+                if (ch <= 2) return <IceBattleScene isBoss={isBossNode} />;
+                if (ch <= 3) return <LavaBossScene isBoss={isBossNode} />;
+                if (ch <= 4) return <ShadowBattleScene isBoss={isBossNode} />;
+                return <EternalBossScene isBoss={isBossNode} />;
+              })()}
+
               {/* === 玩家Debuff屏幕特效层 === */}
               {game.statuses.some(s => s.type === 'burn') && (
                 <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-burn" />
@@ -3053,8 +3158,6 @@ useEffect(() => {
               {game.statuses.some(s => s.type === 'vulnerable') && (
                 <div className="absolute inset-0 z-[5] pointer-events-none debuff-screen-vulnerable" />
               )}
-              {/* 透视地板 */}
-              <div className="battle-floor-perspective" />
               
               {/* 左上角关卡位置信息 */}
               {/* 波次信息 - 点击查看详情 */}
@@ -3091,7 +3194,7 @@ useEffect(() => {
                     key={ft.id}
                     initial={{ opacity: 0, y: 20 + ft.y, scale: 0.5 }}
                     animate={{ opacity: [0, 1, 1, 0], y: -120 + ft.y, x: ft.x, scale: [0.5, 1.4, 1.1, 1.6] }}
-                    transition={{ duration: 1.5, times: [0, 0.15, 0.7, 1] }}
+                    transition={{ duration: 2.0, times: [0, 0.12, 0.75, 1] }}
                     className={`absolute z-50 font-black text-3xl pointer-events-none flex items-center gap-1 drop-shadow-[0_3px_6px_rgba(0,0,0,0.7)] ${ft.color}`}
                     style={{ top: '25%' }}
                   >
@@ -3102,7 +3205,7 @@ useEffect(() => {
               </AnimatePresence>
 
                 {/* Multi-enemy fixed-slot display (no reflow on death) */}
-                <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '4px' }}>
+                <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '12px' }}>
                 {[...enemies]  /* 不排序，保持稳定渲染顺序避免位置闪现 */
                   .map((enemy) => {
                     const effect = enemyEffects[enemy.uid] || null;
@@ -3115,9 +3218,9 @@ useEffect(() => {
                   
                 // Distance-based visual scaling - USE SCALE for clear depth
                 const dist = enemy.distance || 0;
-                // Scale: distance 0 = 1.15 (big, in your face), 1 = 0.95, 2 = 0.75, 3 = 0.6
-                const depthScale = dist === 0 ? 1.35 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
-                  const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 25;
+                // Scale: distance 0 = 1.25 (close, pressure), 1 = 0.95, 2 = 0.75, 3 = 0.6
+                const depthScale = dist === 0 ? 1.25 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
+                  const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 30;
                   const depthOpacity = 1.0; // No opacity reduction - use brightness for depth
                   const _isAttackReady = dist === 0;
                     const depthBrightness = dist >= 3 ? 0.82 : dist === 2 ? 0.9 : dist === 1 ? 0.95 : 1.0;
@@ -3139,6 +3242,8 @@ useEffect(() => {
                       initial={{ scale: depthScale * 0.8, opacity: 0, y: depthY + 20 }}
                       animate={effect === 'death'
                         ? { scale: [1, 1.1, 0.95, 1.05, 1.2, 1.4, 0.5, 0], opacity: [1, 1, 1, 1, 0.9, 0.7, 0.3, 0], y: [0, -5, 0, -3, -10, -25, -35, 10], rotate: [0, -5, 5, -3, 8, -15, 30, 0], filter: ['brightness(1)', 'brightness(1)', 'brightness(1)', 'brightness(1.5)', 'brightness(2)', 'brightness(3)', 'brightness(5)', 'brightness(0)'] }
+                        : effect === 'boss_entrance'
+                        ? { scale: [0.6, 1.4, 1.3, 1.35, 1.25, 1.3, 1.2, 1.25], y: [60, -15, -5, -12, 0, -8, 2, 0], opacity: [0, 1, 1, 1, 1, 1, 1, 1], rotate: [0, 0, -3, 3, -2, 2, -1, 0] }
                         : effect === 'speaking'
                         ? { x: [0, -2, 2, -1.5, 1.5, -1, 1, 0], scale: [1, 1.02, 0.98, 1.01, 0.99, 1] }
                         : effect === 'attack' 
@@ -3151,7 +3256,7 @@ useEffect(() => {
                         ? { x: [0, -4, 6, -3, 0], scale: [1, 0.97, 1.01, 0.99, 1] }
                         : { scale: depthScale, y: depthY, opacity: depthOpacity }
                       }
-                      transition={{ duration: effect === 'death' ? 1.8 : effect === 'speaking' ? 0.4 : 0.4, ease: effect === 'death' ? [0.25, 0.1, 0.25, 1] : 'easeOut' }}
+                      transition={{ duration: effect === 'death' ? 1.8 : effect === 'boss_entrance' ? 1.2 : effect === 'speaking' ? 0.4 : 0.4, ease: effect === 'death' ? [0.25, 0.1, 0.25, 1] : 'easeOut' }}
                       className={`relative cursor-pointer group flex flex-col items-center`}
                       style={{ zIndex: isTarget ? 10 : depthZ, filter: `brightness(${depthBrightness})` }}
                     >
@@ -3402,103 +3507,140 @@ useEffect(() => {
               </AnimatePresence>
 
               <div className="first-person-hands">
-                {/* 左手 — 持骰子 */}
+                {/* ═══ 骰子特效层（粒子独立于手） ═══ */}
+                {dice.some(d => d.rolling) && (
+                  <div className="hand-dice-fx">
+                    {Array.from({length: 8}).map((_, i) => (
+                      <div key={i} className="dice-particle" style={{
+                        animationDelay: `${i * 0.08}s`,
+                        left: `${15 + Math.sin(i * 0.8) * 12}%`,
+                        top: `${20 + Math.cos(i * 1.1) * 15}%`,
+                      }} />
+                    ))}
+                  </div>
+                )}
+                {/* ═══ 左手铠甲手套 + 骰子 ═══ */}
                 <div className={`hand-left ${dice.some(d => d.rolling) ? 'hand-left-rolling' : handLeftThrow ? 'hand-left-throw' : ''}`}>
-                  <svg width="130" height="160" viewBox="0 0 90 110" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))', transform: 'scaleX(-1)' }}>
-                    <defs>
-                      <linearGradient id="diceGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#e8eef4" />
-                        <stop offset="50%" stopColor="#c8d0d8" />
-                        <stop offset="100%" stopColor="#a0aab4" />
-                      </linearGradient>
-                    </defs>
-                    {/* 手臂 — 从下方伸出 */}
-                    <rect x="22" y="60" width="40" height="50" fill="#b8906a" stroke="#7a5a3e" strokeWidth="3" />
-                    {/* 手臂高光 */}
-                    <rect x="48" y="62" width="10" height="46" fill="rgba(212,176,140,0.15)" />
-                    {/* 手背 — 面向玩家（第一人称看到手背） */}
-                    <rect x="22" y="48" width="40" height="16" rx="2" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    {/* 手背纹理 — 关节凸起 */}
-                    <rect x="30" y="51" width="6" height="4" rx="1" fill="rgba(160,120,86,0.4)" />
-                    <rect x="40" y="50" width="6" height="4" rx="1" fill="rgba(160,120,86,0.4)" />
-                    <rect x="50" y="51" width="6" height="4" rx="1" fill="rgba(160,120,86,0.3)" />
-                    {/* 拇指 — 左侧握骰 */}
-                    <rect x="14" y="36" width="10" height="20" rx="2" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    {/* 手指弯曲握住骰子 — 只露出指尖 */}
-                    <rect x="24" y="42" width="9" height="10" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="1.5" />
-                    <rect x="35" y="40" width="9" height="12" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="1.5" />
-                    <rect x="46" y="42" width="9" height="10" rx="1" fill="#b8906a" stroke="#7a5a3e" strokeWidth="1.5" />
-                    <rect x="57" y="40" width="8" height="12" rx="1" fill="#a88060" stroke="#7a5a3e" strokeWidth="1.5" />
-                    {/* 骰子阴影 */}
-                    <rect x="22" y="10" width="44" height="44" rx="3" fill="rgba(0,0,0,0.25)" />
-                    {/* 骰子主体 */}
-                    <rect x="18" y="6" width="44" height="44" rx="3" fill="url(#diceGrad)" stroke="#8899aa" strokeWidth="3" />
-                    {/* 骰子顶部高光 */}
-                    <rect x="20" y="8" width="40" height="4" rx="1" fill="rgba(255,255,255,0.35)" />
-                    {/* 骰子侧面暗部 */}
-                    <rect x="18" y="38" width="44" height="12" rx="2" fill="rgba(0,0,0,0.08)" />
-                    {/* 骰子面 — 5点梅花型 */}
-                    <circle cx="30" cy="18" r="3.5" fill="#3a4050" />
-                    <circle cx="50" cy="18" r="3.5" fill="#3a4050" />
-                    <circle cx="40" cy="28" r="3.5" fill="#3a4050" />
-                    <circle cx="30" cy="38" r="3.5" fill="#3a4050" />
-                    <circle cx="50" cy="38" r="3.5" fill="#3a4050" />
-                    {/* 骰子外发光 */}
-                    <rect x="20" y="8" width="40" height="40" rx="2" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+                  <svg width="140" height="200" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.9))', transform: 'scaleX(-1)' }}>
+                    {/* ── 骰子（手掌上方） ── */}
+                    <rect x="14" y="8" width="22" height="22" fill="rgba(0,0,0,0.25)" />
+                    <rect x="12" y="5" width="22" height="22" fill="#d8d0c0" />
+                    <rect x="12" y="5" width="22" height="4" fill="#e8e0d0" />
+                    <rect x="12" y="23" width="22" height="4" fill="#b8b0a0" />
+                    <rect x="12" y="5" width="4" height="22" fill="#c8c0b0" />
+                    <rect x="30" y="5" width="4" height="22" fill="#a8a090" />
+                    <rect x="16" y="9" width="3" height="3" fill="#3a3028" />
+                    <rect x="27" y="9" width="3" height="3" fill="#3a3028" />
+                    <rect x="22" y="15" width="3" height="3" fill="#3a3028" />
+                    <rect x="16" y="20" width="3" height="3" fill="#3a3028" />
+                    <rect x="27" y="20" width="3" height="3" fill="#3a3028" />
+                    <rect x="14" y="7" width="6" height="2" fill="rgba(255,255,255,0.3)" />
+                    <rect x="12" y="5" width="22" height="22" fill="none" stroke="#f0c850" strokeWidth="1" opacity="0.4" />
+                    {/* ── 手背（直接托住骰子） ── */}
+                    <rect x="8" y="28" width="30" height="14" fill="#58585e" />
+                    <rect x="8" y="28" width="30" height="2" fill="#6a6a72" />
+                    <rect x="8" y="40" width="30" height="2" fill="#3e3e46" />
+                    <rect x="10" y="30" width="5" height="8" fill="#626268" />
+                    <rect x="17" y="30" width="5" height="8" fill="#626268" />
+                    <rect x="24" y="30" width="5" height="8" fill="#626268" />
+                    <rect x="31" y="30" width="5" height="8" fill="#5a5a60" />
+                    {/* 拇指 */}
+                    <rect x="4" y="26" width="6" height="12" fill="#525258" />
+                    <rect x="4" y="26" width="6" height="2" fill="#5e5e66" />
+                    {/* ── 手臂铠甲 ── */}
+                    <rect x="10" y="42" width="28" height="54" fill="#4a4a50" />
+                    <rect x="10" y="42" width="28" height="2" fill="#5a5a62" />
+                    <rect x="10" y="46" width="28" height="2" fill="#3a3a42" />
+                    <rect x="10" y="50" width="28" height="2" fill="#5a5a62" />
+                    <rect x="10" y="54" width="28" height="2" fill="#3a3a42" />
+                    <rect x="10" y="58" width="28" height="2" fill="#5a5a62" />
+                    <rect x="10" y="62" width="28" height="2" fill="#3a3a42" />
+                    <rect x="10" y="66" width="28" height="2" fill="#5a5a62" />
+                    <rect x="10" y="70" width="28" height="2" fill="#3a3a42" />
+                    <rect x="10" y="74" width="28" height="2" fill="#5a5a62" />
+                    <rect x="10" y="78" width="28" height="2" fill="#3a3a42" />
+                    <rect x="10" y="82" width="28" height="2" fill="#5a5a62" />
+                    <rect x="10" y="86" width="28" height="2" fill="#3a3a42" />
+                    <rect x="10" y="90" width="28" height="2" fill="#5a5a62" />
+                    <rect x="12" y="44" width="2" height="52" fill="#5e5e68" />
+                    <rect x="12" y="48" width="2" height="2" fill="#6a6a72" />
+                    <rect x="12" y="60" width="2" height="2" fill="#6a6a72" />
+                    <rect x="12" y="72" width="2" height="2" fill="#6a6a72" />
+                    <rect x="12" y="84" width="2" height="2" fill="#6a6a72" />
                   </svg>
                 </div>
-                {/* 右手 — 持附魔匕首 */}
+                {/* 右手 — 铠甲手套持阔剑 */}
                 <div className={`hand-right ${playerEffect === 'attack' ? 'hand-right-attacking' : ''}`}>
-                  <svg width="140" height="180" viewBox="0 0 100 130" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.8))', transform: 'scaleX(-1)' }}>
-                    <defs>
-                      <linearGradient id="bladeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#e8e8f0" />
-                        <stop offset="50%" stopColor="#a0a0c0" />
-                        <stop offset="100%" stopColor="#c8c8d8" />
-                      </linearGradient>
-                      <filter id="bladeGlow">
-                        <feGaussianBlur stdDeviation="2" result="blur"/>
-                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                      </filter>
-                    </defs>
-                    {/* 刀刃 — 匕首造型 */}
-                    <polygon points="50,0 56,6 56,42 50,50 44,42 44,6" fill="url(#bladeGrad)" stroke="#6a6a8e" strokeWidth="2" />
-                    {/* 刀刃中线高光 */}
-                    <line x1="50" y1="2" x2="50" y2="46" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
-                    {/* 刀刃侧面渐变 */}
-                    <polygon points="44,6 50,0 50,50 44,42" fill="rgba(0,0,0,0.15)" />
-                    {/* 附魔光纹 — 荧光青符文 */}
-                    <rect x="48" y="10" width="4" height="4" fill="#30d8d0" opacity="0.7" />
-                    <rect x="48" y="20" width="4" height="4" fill="#108880" opacity="0.5" />
-                    <rect x="48" y="30" width="4" height="4" fill="#30d8d0" opacity="0.7" />
-                    {/* 护手 — 十字形 */}
-                    <rect x="34" y="48" width="32" height="10" rx="1" fill="#d4a030" stroke="#8b6a10" strokeWidth="2" />
-                    <rect x="36" y="50" width="28" height="6" fill="rgba(240,200,80,0.3)" />
-                    {/* 护手宝石 — 深渊紫 */}
-                    <rect x="47" y="50" width="6" height="6" fill="#7a30c0" stroke="#4a1080" strokeWidth="1" />
-                    {/* 握柄 — 缠绕皮革 */}
-                    <rect x="44" y="58" width="12" height="20" rx="1" fill="#5a3a1a" stroke="#3a2a0e" strokeWidth="2" />
-                    <rect x="44" y="60" width="12" height="3" fill="#7a5a2e" opacity="0.5" />
-                    <rect x="44" y="66" width="12" height="3" fill="#7a5a2e" opacity="0.5" />
-                    <rect x="44" y="72" width="12" height="3" fill="#7a5a2e" opacity="0.5" />
+                  <svg width="140" height="200" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.9))', transform: 'scaleX(-1)' }}>
+                    {/* === 剑刃 — 长阔剑 === */}
+                    {/* 剑尖 */}
+                    <rect x="20" y="0" width="8" height="2" fill="#d0d0e0" />
+                    <rect x="18" y="2" width="12" height="2" fill="#c8c8dc" />
+                    {/* 刃身 — 长段 */}
+                    <rect x="16" y="4" width="16" height="36" fill="#b0b0c8" />
+                    {/* 刃中线高光 */}
+                    <rect x="22" y="2" width="4" height="38" fill="#d8d8ec" />
+                    {/* 刃左暗面 */}
+                    <rect x="16" y="4" width="2" height="36" fill="#8888a0" />
+                    {/* 刃右暗面 */}
+                    <rect x="30" y="4" width="2" height="36" fill="#9090a8" />
+                    {/* 刃边高光 */}
+                    <rect x="18" y="4" width="2" height="36" fill="#c0c0d4" />
+                    {/* 刃纹装饰 — 细线 */}
+                    <rect x="20" y="10" width="8" height="1" fill="rgba(255,255,255,0.12)" />
+                    <rect x="20" y="20" width="8" height="1" fill="rgba(255,255,255,0.10)" />
+                    <rect x="20" y="30" width="8" height="1" fill="rgba(255,255,255,0.08)" />
+                    {/* 附魔光纹 */}
+                    <rect x="22" y="8" width="4" height="2" fill="#30d8d0" opacity="0.5" />
+                    <rect x="22" y="18" width="4" height="2" fill="#30d8d0" opacity="0.35" />
+                    <rect x="22" y="28" width="4" height="2" fill="#30d8d0" opacity="0.5" />
+                    {/* === 护手 === */}
+                    <rect x="8" y="40" width="32" height="4" fill="#c8a030" />
+                    <rect x="8" y="40" width="32" height="2" fill="#e0b840" />
+                    <rect x="8" y="42" width="32" height="2" fill="#a08020" />
+                    {/* 护手端饰 */}
+                    <rect x="6" y="40" width="4" height="4" fill="#d4a830" />
+                    <rect x="38" y="40" width="4" height="4" fill="#d4a830" />
+                    {/* 护手中央宝石 */}
+                    <rect x="21" y="40" width="6" height="4" fill="#7a30c0" />
+                    <rect x="23" y="40" width="2" height="2" fill="#a050e0" />
+                    {/* === 握柄 === */}
+                    <rect x="18" y="44" width="12" height="14" fill="#4a2a10" />
+                    <rect x="18" y="46" width="12" height="2" fill="#5e3818" />
+                    <rect x="18" y="50" width="12" height="2" fill="#5e3818" />
+                    <rect x="18" y="54" width="12" height="2" fill="#5e3818" />
+                    <rect x="20" y="44" width="2" height="14" fill="#5a3420" />
                     {/* 柄尾 */}
-                    <rect x="42" y="78" width="16" height="6" rx="1" fill="#d4a030" stroke="#8b6a10" strokeWidth="2" />
-                    {/* 手臂 — 从下方伸出 */}
-                    <rect x="32" y="82" width="36" height="48" fill="#b8906a" stroke="#7a5a3e" strokeWidth="3" />
-                    {/* 手背 — 面向玩家 */}
-                    <rect x="28" y="76" width="44" height="18" rx="2" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="3" />
-                    {/* 手背纹理 — 关节 */}
-                    <rect x="34" y="80" width="6" height="4" rx="1" fill="rgba(160,120,86,0.35)" />
-                    <rect x="44" y="79" width="6" height="4" rx="1" fill="rgba(160,120,86,0.35)" />
-                    <rect x="54" y="80" width="6" height="4" rx="1" fill="rgba(160,120,86,0.3)" />
-                    {/* 手指弯曲握柄 — 只露出指尖 */}
-                    <rect x="36" y="66" width="10" height="14" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    <rect x="54" y="66" width="10" height="14" rx="1" fill="#c8a07a" stroke="#7a5a3e" strokeWidth="2" />
-                    {/* 攻击时刀刃发光 — 荧光青 */}
+                    <rect x="16" y="58" width="16" height="4" fill="#c8a030" />
+                    <rect x="16" y="58" width="16" height="2" fill="#e0b840" />
+                    <rect x="22" y="58" width="4" height="4" fill="#d4a830" />
+                    {/* === 手部铠甲 === */}
+                    <rect x="12" y="52" width="24" height="10" fill="#4a4a50" />
+                    <rect x="12" y="52" width="24" height="2" fill="#5a5a62" />
+                    <rect x="12" y="56" width="24" height="2" fill="#3a3a42" />
+                    <rect x="14" y="54" width="4" height="6" fill="#525258" />
+                    <rect x="20" y="54" width="4" height="6" fill="#525258" />
+                    <rect x="26" y="54" width="4" height="6" fill="#4e4e56" />
+                    <rect x="32" y="54" width="4" height="6" fill="#484850" />
+                    {/* === 手臂铠甲 — 延长 === */}
+                    <rect x="12" y="62" width="24" height="34" fill="#4a4a50" />
+                    <rect x="12" y="64" width="24" height="2" fill="#5a5a62" />
+                    <rect x="12" y="68" width="24" height="2" fill="#3a3a42" />
+                    <rect x="12" y="72" width="24" height="2" fill="#5a5a62" />
+                    <rect x="12" y="76" width="24" height="2" fill="#3a3a42" />
+                    <rect x="12" y="80" width="24" height="2" fill="#5a5a62" />
+                    <rect x="12" y="84" width="24" height="2" fill="#3a3a42" />
+                    <rect x="14" y="62" width="2" height="34" fill="#5e5e68" />
+                    {/* 铆钉 */}
+                    <rect x="16" y="66" width="2" height="2" fill="#6a6a72" />
+                    <rect x="30" y="74" width="2" height="2" fill="#6a6a72" />
+                    <rect x="16" y="82" width="2" height="2" fill="#6a6a72" />
+                    {/* 攻击发光 */}
                     {playerEffect === 'attack' && (
                       <>
-                        <polygon points="50,0 56,6 56,42 50,50 44,42 44,6" fill="rgba(48,216,208,0.3)" filter="url(#bladeGlow)" />
-                        <line x1="50" y1="-4" x2="50" y2="52" stroke="rgba(48,216,208,0.5)" strokeWidth="4" />
+                        <rect x="16" y="4" width="16" height="36" fill="rgba(48,216,208,0.2)" />
+                        <rect x="22" y="0" width="4" height="40" fill="rgba(48,216,208,0.35)" />
+                        <rect x="20" y="0" width="8" height="2" fill="rgba(48,216,208,0.6)" />
                       </>
                     )}
                   </svg>
@@ -3532,32 +3674,52 @@ useEffect(() => {
 
                 {/* === 结算演出覆盖层 === */}
                 {settlementPhase && settlementData && (
-                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.75)'}}>
-                    <div className="flex flex-col items-center gap-3 animate-fade-in">
-                      {/* 牌型名称 */}
-                      <div className="text-2xl font-bold text-[var(--pixel-gold)] pixel-text-shadow animate-bounce-in"
-                        style={{textShadow: '0 0 20px rgba(212,160,48,0.8), 0 2px 4px rgba(0,0,0,0.8)'}}>
-                        ◆ {settlementData.bestHand} ◆
-                      {settlementData.isSameElement && (
-                        <div className="text-sm font-bold text-[var(--pixel-cyan)] mt-1 animate-pulse" style={{textShadow: '0 0 15px rgba(48,216,208,0.9), 0 0 30px rgba(48,216,208,0.5)'}}>
-                          元素共鸣 ×2
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.7)'}}>
+                    <div className="flex flex-col items-center animate-fade-in">
+                      {/* 牌型卡片 */}
+                      <motion.div
+                        initial={{ scale: 0.5, opacity: 0, y: -20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                        className="relative px-6 py-3"
+                        style={{
+                          background: 'linear-gradient(180deg, rgba(20,16,30,0.95) 0%, rgba(12,10,20,0.98) 100%)',
+                          border: '3px solid var(--pixel-gold)',
+                          borderRadius: '2px',
+                          boxShadow: '0 0 20px rgba(212,160,48,0.3), 0 0 40px rgba(212,160,48,0.1), inset 0 1px 0 rgba(255,240,180,0.1), inset 0 -2px 0 rgba(0,0,0,0.4)',
+                        }}
+                      >
+                        {/* 像素角装饰 */}
+                        <div className="absolute -top-[3px] -left-[3px] w-2 h-2 bg-[var(--pixel-gold)]" />
+                        <div className="absolute -top-[3px] -right-[3px] w-2 h-2 bg-[var(--pixel-gold)]" />
+                        <div className="absolute -bottom-[3px] -left-[3px] w-2 h-2 bg-[var(--pixel-gold)]" />
+                        <div className="absolute -bottom-[3px] -right-[3px] w-2 h-2 bg-[var(--pixel-gold)]" />
+                        <div className="text-center">
+                          <div className="text-2xl font-black tracking-wider text-[var(--pixel-gold)] pixel-text-shadow"
+                            style={{textShadow: '0 0 16px rgba(212,160,48,0.9), 0 2px 0 rgba(0,0,0,0.8)'}}>
+                            {settlementData.bestHand}
+                          </div>
+                          {settlementData.isSameElement && (
+                            <div className="text-[10px] font-bold text-[var(--pixel-cyan)] mt-1 animate-pulse tracking-widest"
+                              style={{textShadow: '0 0 10px rgba(48,216,208,0.8)'}}>
+                              ★ 元素共鸣 ×2 ★
+                            </div>
+                          )}
                         </div>
-                      )}
-                      </div>
+                      </motion.div>
                       
                       {/* 骰子展示区 */}
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-3">
                         {settlementData.selectedDice.map((d, i) => (
-                          <div key={d.id}
-                            className={`relative transition-all duration-300 ${
-                              settlementPhase === 'dice' && settlementData.currentEffectIdx >= i
-                                ? 'scale-110' : ''
-                            } ${getDiceElementClass(d.element, settlementPhase === 'dice' && settlementData.currentEffectIdx >= i, false, false, d.diceDefId)}`}
+                          <motion.div key={d.id}
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: settlementPhase === 'dice' && settlementData.currentEffectIdx >= i ? 1.1 : 1, rotate: 0 }}
+                            transition={{ delay: i * 0.08, duration: 0.3, type: 'spring', stiffness: 300 }}
+                            className={`relative ${getDiceElementClass(d.element, settlementPhase === 'dice' && settlementData.currentEffectIdx >= i, false, false, d.diceDefId)}`}
                             style={{
                               fontSize: '20px', width: '48px', height: '48px',
                               boxShadow: settlementPhase === 'dice' && settlementData.currentEffectIdx >= i
                                 ? '0 0 16px rgba(212,160,48,0.7), 0 0 4px rgba(212,160,48,0.4)' : 'none',
-                              animationDelay: `${i * 100}ms`,
                             }}>
                             <span className={`${d.element === 'normal' ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>{d.value}</span>
                             {d.element !== 'normal' && (
@@ -3565,74 +3727,57 @@ useEffect(() => {
                                 <ElementBadge element={d.element} size={7} />
                               </div>
                             )}
-                          </div>
+                          </motion.div>
                         ))}
                       </div>
                       
-                      {/* 计分条 */}
+                      {/* 计分条 — 像素风格卡片 */}
                       <motion.div
-                        className="flex items-center gap-3 mt-2 px-4 py-2 bg-[var(--dungeon-panel)] border-2 border-[var(--dungeon-panel-border)]"
-                        style={{borderRadius: '4px'}}
+                        className="relative flex items-center justify-center gap-2 mt-3 px-5 py-2.5"
+                        style={{
+                          background: 'linear-gradient(180deg, rgba(16,20,28,0.95) 0%, rgba(8,12,18,0.98) 100%)',
+                          border: '2px solid var(--dungeon-panel-border)',
+                          borderRadius: '2px',
+                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -2px 0 rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.5)',
+                          minWidth: '140px',
+                        }}
                         animate={settlementPhase === 'bounce' ? {
-                          scale: [1, 1.2, 0.9, 1],
+                          scale: [1, 1.25, 0.9, 1.05, 1],
+                          borderColor: ['var(--dungeon-panel-border)', 'var(--pixel-gold)', 'var(--pixel-orange)', 'var(--pixel-gold)', 'var(--dungeon-panel-border)'],
                         } : { scale: 1 }}
                         transition={settlementPhase === 'bounce' ? {
-                          duration: 0.4,
-                          times: [0, 0.3, 0.6, 1],
+                          duration: 0.5,
+                          times: [0, 0.25, 0.5, 0.75, 1],
                           ease: 'easeOut',
                         } : { duration: 0 }}
                       >
-                        <span key={`base-${settlementData.currentBase}-${settlementData.currentEffectIdx}`} className={`text-[var(--pixel-blue)] font-bold text-xl font-mono animate-value-pop ${settlementPhase === "effects" ? "settlement-value-glow-blue" : ""}`}>
+                        <span key={`base-${settlementData.currentBase}-${settlementData.currentEffectIdx}`}
+                          className={`text-[var(--pixel-blue)] font-black text-2xl font-mono animate-value-pop ${settlementPhase === "effects" ? "settlement-value-glow-blue" : ""}`}
+                          style={{ textShadow: '0 0 8px rgba(60,120,220,0.5)' }}>
                           {settlementData.currentBase}
                         </span>
-                        <span key={`x-${settlementPhase === 'mult' ? 'flash' : 'idle'}`} className={`text-[var(--dungeon-text-dim)] text-lg font-bold ${settlementPhase === 'mult' || settlementPhase === 'effects' || settlementPhase === 'damage' ? 'animate-percent-flash' : ''}`}>×</span>
-                        <span key={`mult-${Math.round(settlementData.currentMult * 100)}-${settlementData.currentEffectIdx}`} className={`text-[var(--pixel-red)] font-bold text-xl font-mono ${settlementPhase === "mult" || settlementPhase === "effects" || settlementPhase === "damage" ? "animate-value-pop settlement-value-glow-red" : "opacity-50"}`}>
+                        <span className={`text-[var(--dungeon-text-dim)] text-lg font-black ${settlementPhase === 'mult' || settlementPhase === 'effects' || settlementPhase === 'damage' ? 'animate-percent-flash' : ''}`}>×</span>
+                        <span key={`mult-${Math.round(settlementData.currentMult * 100)}-${settlementData.currentEffectIdx}`}
+                          className={`text-[var(--pixel-red)] font-black text-2xl font-mono ${settlementPhase === "mult" || settlementPhase === "effects" || settlementPhase === "damage" ? "animate-value-pop settlement-value-glow-red" : "opacity-40"}`}
+                          style={{ textShadow: settlementPhase === 'mult' || settlementPhase === 'effects' ? '0 0 8px rgba(220,60,60,0.5)' : 'none' }}>
                           {Math.round(settlementData.currentMult * 100)}%
                         </span>
                       </motion.div>
                       
                       {/* 触发效果列表 */}
                       {settlementPhase === 'effects' && settlementData.triggeredEffects.length > 0 && (
-                        <div className="flex flex-col items-center gap-1 mt-1">
-                          {settlementData.triggeredEffects.map((eff, i) => {
-                            return (
-                              <div key={i} className={`text-xs px-3 py-1.5 border animate-effect-slide-in flex items-center gap-1.5 ${eff.type === "mult" ? "bg-[rgba(224,60,60,0.15)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]" : eff.type === "heal" ? "bg-[rgba(60,180,60,0.15)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]" : "bg-[rgba(60,120,224,0.15)] border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]"}`}
-                                style={{borderRadius: "2px", animationDelay: `${i * 100}ms`}}>
-                                {eff.relicId && <RelicPixelIcon relicId={eff.relicId} size={2} />}
-                                <span>{eff.type === "mult" ? "×" : "+"} {eff.name}: {eff.detail}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {/* 最终伤害 - 根据数额缩放 */}
-                      {settlementPhase === 'damage' && (
-                        <div className="mt-2 flex flex-col items-center">
-                          <span className="text-xs font-bold text-[var(--dungeon-text-dim)] mb-1">
-                            {settlementData.finalDamage > 0 ? 'DAMAGE' : 'EFFECT'}
-                          </span>
-                          {settlementData.finalDamage > 0 && (
-                            <span
-                              className={`font-black font-mono animate-value-pop pixel-text-shadow ${settlementData.finalDamage >= 120 ? 'text-[var(--pixel-red)] settlement-value-glow-red' : settlementData.finalDamage >= 60 ? 'text-[var(--pixel-orange)]' : settlementData.finalDamage >= 30 ? 'text-[var(--pixel-gold)]' : 'text-[var(--dungeon-text)]'}`}
-                              style={{
-                                fontSize: settlementData.finalDamage >= 200 ? '56px'
-                                  : settlementData.finalDamage >= 120 ? '48px'
-                                  : settlementData.finalDamage >= 60 ? '40px'
-                                  : settlementData.finalDamage >= 30 ? '32px' : '24px',
-                                textShadow: settlementData.finalDamage >= 120
-                                  ? '0 0 30px rgba(224,60,60,0.9), 0 0 60px rgba(224,60,60,0.5), 0 4px 8px rgba(0,0,0,0.8)'
-                                  : settlementData.finalDamage >= 60
-                                  ? '0 0 20px rgba(255,160,60,0.8), 0 2px 4px rgba(0,0,0,0.8)'
-                                  : '0 2px 4px rgba(0,0,0,0.6)',
-                                letterSpacing: '2px',
-                              }}
-                            >
-                              {settlementData.finalDamage}
-                            </span>
-                          )}
-                          {(settlementData.finalDamage || 0) >= 120 && (
-                            <span className="text-[9px] text-[var(--pixel-red-light)] animate-pulse mt-1">OVERKILL!</span>
-                          )}
+                        <div className="flex flex-col items-center gap-1 mt-2">
+                          {settlementData.triggeredEffects.map((eff, i) => (
+                            <motion.div key={i}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.08 }}
+                              className={`text-[10px] px-3 py-1 border font-bold flex items-center gap-1.5 ${eff.type === "mult" ? "bg-[rgba(224,60,60,0.15)] border-[var(--pixel-red)] text-[var(--pixel-red-light)]" : eff.type === "heal" ? "bg-[rgba(60,180,60,0.15)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]" : "bg-[rgba(60,120,224,0.15)] border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]"}`}
+                              style={{borderRadius: "2px"}}>
+                              {eff.relicId && <RelicPixelIcon relicId={eff.relicId} size={2} />}
+                              <span>{eff.type === "mult" ? "×" : "+"} {eff.name}: {eff.detail}</span>
+                            </motion.div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -3640,73 +3785,117 @@ useEffect(() => {
                 )}
 
                 {expectedOutcome && !game.isEnemyTurn && (
-                  <div className="absolute z-[12] bottom-4 left-0 right-0 flex justify-center pointer-events-none">
+                  <div className="absolute z-[80] bottom-2 left-2 right-2 flex justify-center pointer-events-none">
                   <motion.div
-                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                    className="flex flex-col items-center gap-0.5"
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    className="w-full max-w-[340px]"
                   >
-                    {/* 牌型名称 — 大号 + 强发光 */}
-                    <motion.div 
-                      animate={{ scale: [1, 1.06, 1], filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1)'] }}
-                      transition={{ repeat: Infinity, duration: 1.8 }}
-                      className="px-3 py-1 bg-[rgba(10,10,15,0.92)] border-2 border-[var(--pixel-green)] text-[var(--pixel-green-light)] font-bold text-sm tracking-wider pixel-text-shadow"
-                      style={{ borderRadius: '2px', boxShadow: '0 0 8px rgba(60,200,100,0.3), inset 0 0 6px rgba(60,200,100,0.08)' }}
+                    {/* 一体化预览+激活遗物卡片 */}
+                    <div className="relative flex flex-col pointer-events-auto"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(20,16,10,0.92) 0%, rgba(14,10,6,0.96) 100%)',
+                        border: '2px solid var(--pixel-gold)',
+                        borderRadius: '3px',
+                        boxShadow: '0 0 12px rgba(212,160,48,0.2), 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,160,48,0.1)',
+                        padding: '5px 10px 4px',
+                      }}
                     >
-                      ◆ {expectedOutcome.bestHand} ◆
-                      {game.handLevels[expectedOutcome.bestHand] > 1 && (
-                        <span className="ml-1 text-xs opacity-70">Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
-                      )}
-                    </motion.div>
-                    
-                    {/* 效果预览行 — 更大更醒目，点击打开计算详情 */}
-                    <div 
-                      className="flex items-center gap-2 px-2.5 py-0.5 bg-[rgba(10,10,15,0.88)] border border-[var(--dungeon-panel-highlight)] pointer-events-auto cursor-pointer active:scale-95 transition-transform"
-                      onClick={() => setShowCalcModal(true)}
-                      style={{ borderRadius: '2px', boxShadow: '0 0 8px rgba(0,0,0,0.5)' }}
-                    >
-                      {expectedOutcome.damage > 0 && (
-                        <motion.span 
-                          animate={{ scale: [1, 1.2, 1], textShadow: ['0 0 4px rgba(200,64,60,0.5)', '0 0 12px rgba(200,64,60,0.8)', '0 0 4px rgba(200,64,60,0.5)'] }}
-                          transition={{ repeat: Infinity, duration: 1 }}
-                          className="flex items-center gap-1 text-[var(--pixel-red-light)] text-sm font-black pixel-text-shadow"
-                        >
-                          <PixelZap size={2} />{expectedOutcome.damage}
-                        </motion.span>
-                      )}
-                      {expectedOutcome.armor > 0 && (
-                        <span className="flex items-center gap-0.5 text-[var(--pixel-blue-light)] text-xs font-bold pixel-text-shadow">
-                          <PixelShield size={2} />+{expectedOutcome.armor}
-                        </span>
-                      )}
-                      {expectedOutcome.heal > 0 && (
-                        <span className="flex items-center gap-0.5 text-[var(--pixel-green-light)] text-xs font-bold pixel-text-shadow">
-                          <PixelHeart size={2} />+{expectedOutcome.heal}
-                        </span>
-                      )}
-                      {expectedOutcome.statusEffects && expectedOutcome.statusEffects.length > 0 && (
-                        expectedOutcome.statusEffects.map((s, i) => {
-                          const info = STATUS_INFO[s.type];
-                          return (
-                            <span key={i} className={`flex items-center gap-0.5 text-xs font-bold ${info.color}`}>
-                              {info.icon} {s.value}
+                      {/* 上部：牌型+数值 */}
+                      <div className="flex items-center justify-between gap-2 pointer-events-auto cursor-pointer" onClick={() => setShowCalcModal(true)}>
+                        {/* 左侧：牌型名 */}
+                        <div className="text-[12px] font-black tracking-wider text-[var(--pixel-gold-light)] pixel-text-shadow leading-tight shrink-0"
+                          style={{ textShadow: '0 0 8px rgba(212,160,48,0.5)' }}>
+                          {expectedOutcome.bestHand}
+                          {game.handLevels[expectedOutcome.bestHand] > 1 && (
+                            <span className="ml-1 text-[8px] opacity-60 font-mono">Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
+                          )}
+                        </div>
+                        {/* 右侧：数值 */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {expectedOutcome.damage > 0 && (
+                            <motion.span
+                              animate={{ textShadow: ['0 0 4px rgba(200,64,60,0.4)', '0 0 10px rgba(200,64,60,0.7)', '0 0 4px rgba(200,64,60,0.4)'] }}
+                              transition={{ repeat: Infinity, duration: 1.2 }}
+                              className="flex items-center gap-0.5 text-[var(--pixel-red-light)] text-[13px] font-black font-mono pixel-text-shadow"
+                            >
+                              <PixelZap size={1.5} />{expectedOutcome.damage}
+                            </motion.span>
+                          )}
+                          {expectedOutcome.armor > 0 && (
+                            <span className="flex items-center gap-0.5 text-[var(--pixel-blue-light)] text-[10px] font-bold font-mono pixel-text-shadow">
+                              <PixelShield size={1.5} />+{expectedOutcome.armor}
                             </span>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    {/* 触发的遗物 */}
-                    {activeAugments.length > 0 && (
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[rgba(10,10,15,0.8)]" style={{ borderRadius: '2px' }}>
-                        {activeAugments.map((aug, i) => (
-                          <span key={i} className="flex items-center gap-0.5 text-[var(--pixel-green)] text-[11px] font-bold">
-                            <PixelZap size={1} />{aug.name}
-                          </span>
-                        ))}
+                          )}
+                          {expectedOutcome.heal > 0 && (
+                            <span className="flex items-center gap-0.5 text-emerald-400 text-[10px] font-bold font-mono pixel-text-shadow">
+                              <PixelHeart size={1.5} />+{expectedOutcome.heal}
+                            </span>
+                          )}
+                          {expectedOutcome.statusEffects && expectedOutcome.statusEffects.length > 0 && (
+                            expectedOutcome.statusEffects.map((s, i) => {
+                              const info = STATUS_INFO[s.type];
+                              return (
+                                <span key={i} className={`flex items-center gap-0.5 text-[9px] font-bold ${info.color}`}>
+                                  {info.icon}{s.value}
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
                       </div>
-                    )}
+
+                      {/* 激活遗物+增强模块行 */}
+                      {(() => {
+                        const outcomeTriggeredRelicIds = new Set(
+                          (expectedOutcome?.triggeredAugments || []).filter(ta => ta.relicId).map(ta => ta.relicId!)
+                        );
+                        const sceneTriggeredRelics = game.relics.filter(relic =>
+                          flashingRelicIds.includes(relic.id) || outcomeTriggeredRelicIds.has(relic.id)
+                        );
+                        const sceneTriggeredAugs = game.augments.filter(Boolean).filter(aug =>
+                          aug && activeAugments.some(a => a.id === aug!.id)
+                        );
+                        if (sceneTriggeredRelics.length === 0 && sceneTriggeredAugs.length === 0) return null;
+                        return (
+                          <>
+                            <div className="w-full h-[1px] my-[3px]" style={{ background: 'linear-gradient(90deg, transparent, var(--pixel-gold), transparent)', opacity: 0.25 }} />
+                            <div className="flex items-center gap-1 flex-wrap pointer-events-auto">
+                              {sceneTriggeredRelics.map((relic, i) => (
+                                <motion.div
+                                  key={relic.id + "-sr-" + i}
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-6 h-6 flex items-center justify-center cursor-pointer border border-[var(--pixel-gold)] shrink-0"
+                                  style={{ borderRadius: '2px', background: 'rgba(212,160,48,0.12)', boxShadow: '0 0 6px rgba(212,160,48,0.3)' }}
+                                  onClick={() => setSelectedRelic(relic)}
+                                >
+                                  <RelicPixelIcon relicId={relic.id} size={1.5} />
+                                </motion.div>
+                              ))}
+                              {sceneTriggeredAugs.map((aug, i) => {
+                                if (!aug) return null;
+                                return (
+                                  <motion.div
+                                    key={"saug-" + aug.id + "-" + i}
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="w-6 h-6 flex items-center justify-center cursor-pointer border border-[var(--pixel-gold)] shrink-0"
+                                    style={{ borderRadius: '2px', background: 'rgba(212,160,48,0.12)', boxShadow: '0 0 6px rgba(212,160,48,0.3)' }}
+                                    onClick={() => setSelectedAugment(aug)}
+                                  >
+                                    <div className="text-[var(--pixel-gold-light)]" style={{ filter: 'drop-shadow(0 0 2px rgba(212,160,48,0.5))' }}>
+                                      {getAugmentIcon(aug.condition, 10)}
+                                    </div>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </motion.div>
                   </div>
                 )}
@@ -3739,7 +3928,7 @@ useEffect(() => {
                     key={ft.id}
                     initial={{ opacity: 0, y: 0 + ft.y, scale: 0.5 }}
                     animate={{ opacity: [0, 1, 1, 0], y: -80 + ft.y, x: ft.x, scale: [0.5, 2.0, 1.8, 2.2] }}
-                    transition={{ duration: 0.3, times: [0, 0.15, 0.85, 1] }}
+                    transition={{ duration: 1.8, times: [0, 0.1, 0.75, 1] }}
                     className={`absolute z-50 font-bold text-xl pointer-events-none flex items-center gap-1 pixel-text-shadow ${ft.color}`}
                     style={{ top: '-20px', left: '50%', marginLeft: '-20px' }}
                   >
@@ -4130,20 +4319,20 @@ useEffect(() => {
 
                 {/* 操作按钮行 */}
                 <div className="flex gap-1.5 items-center">
-                  {/* 重掷按钮 - HP cost escalation with blood effect */}
+                  {/* 重掷按钮 - 选中骰子后点击重roll */}
                   <motion.button
-                    disabled={dice.every(d => d.spent || d.selected) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0 || (!canAffordReroll && currentRerollCost > 0)}
+                    disabled={!dice.some(d => d.selected && !d.spent) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0 || (!canAffordReroll && currentRerollCost > 0)}
                     onClick={() => {
                       if (game.isEnemyTurn) { addToast('敵人回合中，无法操作'); return; }
                       if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
                       if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
-                      if (dice.every(d => d.spent || d.selected)) { addToast('没有可重掷的骰子'); return; }
-                      rerollUnselected();
+                      if (!dice.some(d => d.selected && !d.spent)) { addToast('请先选中要重掷的骰子'); return; }
+                      rerollSelected();
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`h-10 px-3 ${currentRerollCost <= 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : currentRerollCost <= 4 ? 'bg-[#4a1a1a] border-[#c04040] text-[#ff8080]' : 'bg-[#5a0a0a] border-[#ff2020] text-[#ff4040]'} disabled:opacity-30 border-3 flex items-center justify-center gap-1.5 transition-all shrink-0 relative overflow-hidden`}
-                    style={{borderRadius:'2px', boxShadow: currentRerollCost <= 0 ? '0 0 8px rgba(60,200,100,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)' : `0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)}), inset -2px -2px 0 rgba(0,0,0,0.3)`}}
+                    style={{borderRadius:'6px', boxShadow: currentRerollCost <= 0 ? '0 0 8px rgba(60,200,100,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)' : `0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)}), inset -2px -2px 0 rgba(0,0,0,0.3)`}}
                   >
                     {/* Blood drip particles when cost > 0 */}
                     {currentRerollCost > 0 && (
@@ -4202,7 +4391,7 @@ useEffect(() => {
                         onClick={playHand}
                         disabled={dice.some(d => d.playing) || game.playsLeft <= 0 || false /* always allow play */}
                         className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
-                        style={{borderRadius:'2px', boxShadow: currentHands.bestHand !== '普通攻击' ? '0 0 10px rgba(60,200,100,0.25), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                        style={{borderRadius:'6px', boxShadow: currentHands.bestHand !== '普通攻击' ? '0 0 10px rgba(60,200,100,0.25), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                       >
                         <PixelPlay size={2} /> {game.playsLeft > 0 ? (false /* always allow play */ ? '普通攻击' : `出牌: ${currentHands.bestHand}`) : '出牌次数耗尽'}
                       </motion.button>
@@ -4214,7 +4403,7 @@ useEffect(() => {
                         exit={{ opacity: 0, x: 10 }}
                         disabled={true}
                         className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]"
-                        style={{borderRadius:'2px'}}
+                        style={{borderRadius:'6px'}}
                       >
                         回合结束中...
                       </motion.button>
@@ -4227,7 +4416,7 @@ useEffect(() => {
                         onClick={() => endTurn()}
                         disabled={game.isEnemyTurn || dice.some(d => d.playing)}
                         className="flex-1 py-2.5 bg-[var(--pixel-gold-dark)] border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn"
-                        style={{borderRadius:'2px', boxShadow: '0 0 8px rgba(200,168,60,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                        style={{borderRadius:'6px', boxShadow: '0 0 8px rgba(200,168,60,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)'}}
                       >
                         <PixelArrowRight size={2} /> 结束回合
                       </motion.button>
@@ -4237,83 +4426,155 @@ useEffect(() => {
               </div>
 
 
-              {/* 遗物栏 - 无限遗物icon展示 + 遗物 */}
-              <div className="px-2 pb-1 pt-1 border-t-2 border-[var(--dungeon-panel-border)]">
-                <div className="flex flex-wrap gap-1 items-center min-h-[28px]">
-                  {game.relics.length === 0 && game.augments.every(a => !a) && (
-                    <div className="flex-1 flex items-center justify-center opacity-30">
-                      <span className="text-[8px] text-[var(--dungeon-text-dim)]">暂无遗物</span>
-                    </div>
-                  )}
-                  {game.relics.map((relic, i) => {
-                    const isActive = relic.trigger === 'passive' || (relic.trigger === 'on_play' && game.phase === 'battle');
-                    const isFlashing = flashingRelicIds.includes(relic.id);
-                    return (
-                      <motion.div
-                        key={relic.id + "-r-" + i}
-                        animate={isActive ? { scale: [1, 1.15, 1], y: [0, -2, 0] } : { scale: 1 }}
-                        transition={isActive ? { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } : { duration: 0.3 }}
-                        className={`w-7 h-8 flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
-                          isActive
-                            ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.35)] to-[rgba(180,120,30,0.15)]"
-                            : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
-                        }`}
-                        style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}), ...(isFlashing ? { boxShadow: '0 0 16px rgba(255,255,255,0.9), 0 0 30px rgba(212,160,48,0.8)', animation: 'relic-flash 0.6s ease-out' } : {}) }}
-                        onClick={() => setSelectedRelic(relic)}
-                      >
-                        <RelicPixelIcon relicId={relic.id} size={2} />
-                        {relic.counter !== undefined && (
-                          <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none mt-px">
-                            {relic.counter}{relic.counterLabel || ''}
-                          </span>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                {/* 遗物详情弹窗 */}
-                {selectedRelic && (
-                  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70" onClick={() => setSelectedRelic(null)}>
-                    <div className="pixel-panel p-4 max-w-[280px] w-full mx-4" onClick={e => e.stopPropagation()}>
-                      <div className="text-center mb-2">
-                        <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{selectedRelic.name}</div>
-                        <div className="text-[8px] text-[var(--pixel-gold)] mt-0.5">{selectedRelic.rarity === 'common' ? '普通' : selectedRelic.rarity === 'uncommon' ? '精良' : selectedRelic.rarity === 'rare' ? '稀有' : '传说'}</div>
-                      </div>
-                      <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center">{selectedRelic.description}</div>
-                      <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">触发: {selectedRelic.trigger === 'on_play' ? '每次出牌' : selectedRelic.trigger === 'on_kill' ? '击杀时' : selectedRelic.trigger === 'on_reroll' ? '重 Roll时' : selectedRelic.trigger === 'on_battle_end' ? '战斗结束' : selectedRelic.trigger === 'on_fatal' ? '致命伤害时' : selectedRelic.trigger === 'on_turn_end' ? '回合结束' : '被动'}</div>
-                      <button onClick={() => setSelectedRelic(null)} className="w-full mt-3 py-1.5 pixel-btn pixel-btn-ghost text-[10px]">关闭</button>
-                    </div>
-                  </div>
-                )}
-                  {game.augments.filter(Boolean).map((aug, i) => {
-                    if (!aug) return null;
-                    const isActive = activeAugments.some(a => a.id === aug.id);
-                    return (
-                      <motion.div
-                        key={"aug-" + aug.id + "-" + i}
-                        onClick={() => setSelectedAugment(aug)}
-                        animate={isActive ? { scale: [1, 1.15, 1], y: [0, -2, 0] } : { scale: 1 }}
-                        transition={isActive ? { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } : { duration: 0.3 }}
-                        className={`w-7 h-8 flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
-                          isActive
-                            ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.35)] to-[rgba(180,120,30,0.15)]"
-                            : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
-                        }`}
-                        style={{ borderRadius: "2px", ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.5)' } : {}) }}
-                        title={`${aug.name}: ${aug.description}`}
-                      >
-                        <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
-                          {getAugmentIcon(aug.condition, 12)}
-                        </div>
-                        <span className="text-[5px] font-bold leading-none px-0.5 py-px truncate max-w-full" style={{ color: getConditionInfo(aug.condition).color, backgroundColor: getConditionInfo(aug.condition).bgColor, border: `1px solid ${getConditionInfo(aug.condition).borderColor}`, borderRadius: '1px' }}>
-                          {getConditionInfo(aug.condition).abbr}
-                        </span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+              {/* 遗物库按钮 */}
+              <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
+                <button
+                  onClick={() => setShowRelicPanel(prev => !prev)}
+                  className="w-full text-[9px] text-[var(--pixel-gold)] hover:text-[var(--pixel-gold-light)] py-0.5 flex items-center justify-center gap-1 transition-colors font-bold"
+                  style={{ textShadow: '0 0 4px rgba(212,160,48,0.3)' }}
+                >
+                  <span className="tracking-[0.15em]">▲ 遗物库 ({game.relics.length + game.augments.filter(Boolean).length})</span>
+                </button>
               </div>
 
-              <CollapsibleLog logs={game.logs} />
+              {/* 遗物详情弹窗 */}
+              {selectedRelic && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70" onClick={() => setSelectedRelic(null)}>
+                  <div className="pixel-panel p-4 max-w-[280px] w-full mx-4" onClick={e => e.stopPropagation()}>
+                    <div className="text-center mb-2">
+                      <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{selectedRelic.name}</div>
+                      <div className="text-[8px] text-[var(--pixel-gold)] mt-0.5">{selectedRelic.rarity === 'common' ? '普通' : selectedRelic.rarity === 'uncommon' ? '精良' : selectedRelic.rarity === 'rare' ? '稀有' : '传说'}</div>
+                    </div>
+                    <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center">{highlightRelicDesc(selectedRelic.description)}</div>
+                    <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">触发: {selectedRelic.trigger === 'on_play' ? '每次出牌' : selectedRelic.trigger === 'on_kill' ? '击杀时' : selectedRelic.trigger === 'on_reroll' ? '重 Roll时' : selectedRelic.trigger === 'on_battle_end' ? '战斗结束' : selectedRelic.trigger === 'on_fatal' ? '致命伤害时' : selectedRelic.trigger === 'on_turn_end' ? '回合结束' : '被动'}</div>
+                    <button onClick={() => setSelectedRelic(null)} className="w-full mt-3 py-1.5 pixel-btn pixel-btn-ghost text-[10px]">关闭</button>
+                  </div>
+                </div>
+              )}
+
+              {/* 遗物库半窗口浮层 */}
+              <AnimatePresence>
+                {showRelicPanel && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[150] bg-black/50"
+                    onClick={() => setShowRelicPanel(false)}
+                  >
+                    <motion.div
+                      initial={{ y: '100%' }}
+                      animate={{ y: 0 }}
+                      exit={{ y: '100%' }}
+                      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                      className="absolute bottom-0 left-0 right-0 max-h-[55vh]"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(16,14,20,0.98) 0%, rgba(10,8,14,0.99) 100%)',
+                        borderTop: '3px solid var(--pixel-gold)',
+                        boxShadow: '0 -4px 24px rgba(0,0,0,0.6), 0 -1px 0 rgba(212,160,48,0.15)',
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {/* 顶部栏 */}
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--dungeon-panel-border)]">
+                        <span className="text-[11px] font-black text-[var(--pixel-gold)] tracking-wider pixel-text-shadow"
+                          style={{ textShadow: '0 0 6px rgba(212,160,48,0.4)' }}>
+                          遗物库 ({game.relics.length + game.augments.filter(Boolean).length})
+                        </span>
+                        <button
+                          onClick={() => setShowRelicPanel(false)}
+                          className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] text-sm px-2 py-0.5 transition-colors"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {/* 遗物网格 */}
+                      <div className="overflow-y-auto p-3" style={{ maxHeight: 'calc(55vh - 40px)' }}>
+                        {game.relics.length === 0 && game.augments.every(a => !a) && (
+                          <div className="flex items-center justify-center py-6 opacity-30">
+                            <span className="text-[10px] text-[var(--dungeon-text-dim)]">暂无遗物</span>
+                          </div>
+                        )}
+                        {/* 遗物区 */}
+                        {game.relics.length > 0 && (
+                          <>
+                            <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider mb-1.5">遗物</div>
+                            <div className="grid grid-cols-6 gap-1.5 mb-3">
+                              {game.relics.map((relic, i) => {
+                                const isActive = expectedOutcome?.triggeredAugments?.some(ta => ta.relicId === relic.id) || false;
+                                const isFlashing = flashingRelicIds.includes(relic.id);
+                                return (
+                                  <div
+                                    key={relic.id + "-rp-" + i}
+                                    className={`flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
+                                      isActive
+                                        ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.2)] to-[rgba(180,120,30,0.08)]"
+                                        : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
+                                    }`}
+                                    style={{
+                                      borderRadius: '3px',
+                                      padding: '4px 2px 3px',
+                                      ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.3)' } : {}),
+                                      ...(isFlashing ? { boxShadow: '0 0 16px rgba(255,255,255,0.9), 0 0 30px rgba(212,160,48,0.8)', animation: 'relic-flash 0.6s ease-out' } : {}),
+                                    }}
+                                    onClick={() => setSelectedRelic(relic)}
+                                  >
+                                    <RelicPixelIcon relicId={relic.id} size={2.5} />
+                                    <span className="text-[6px] font-bold text-[var(--dungeon-text-dim)] mt-0.5 truncate max-w-full px-0.5 leading-none text-center">
+                                      {relic.name.length > 4 ? relic.name.slice(0, 4) : relic.name}
+                                    </span>
+                                    {relic.counter !== undefined && (
+                                      <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none">
+                                        {relic.counter}{relic.counterLabel || ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                        {/* 增强模块区 */}
+                        {game.augments.filter(Boolean).length > 0 && (
+                          <>
+                            <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider mb-1.5">增强模块</div>
+                            <div className="grid grid-cols-6 gap-1.5">
+                              {game.augments.filter(Boolean).map((aug, i) => {
+                                if (!aug) return null;
+                                const isActive = activeAugments.some(a => a.id === aug.id);
+                                return (
+                                  <div
+                                    key={"augp-" + aug.id + "-" + i}
+                                    onClick={() => setSelectedAugment(aug)}
+                                    className={`flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
+                                      isActive
+                                        ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.2)] to-[rgba(180,120,30,0.08)]"
+                                        : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
+                                    }`}
+                                    style={{
+                                      borderRadius: '3px',
+                                      padding: '4px 2px 3px',
+                                      ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.3)' } : {}),
+                                    }}
+                                    title={`${aug.name}: ${aug.description}`}
+                                  >
+                                    <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
+                                      {getAugmentIcon(aug.condition, 14)}
+                                    </div>
+                                    <span className="text-[5px] font-bold leading-none px-0.5 py-px truncate max-w-full mt-0.5" style={{ color: getConditionInfo(aug.condition).color, backgroundColor: getConditionInfo(aug.condition).bgColor, border: `1px solid ${getConditionInfo(aug.condition).borderColor}`, borderRadius: '1px' }}>
+                                      {getConditionInfo(aug.condition).abbr}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* ===== 弹窗和模态框保持不变 ===== */}

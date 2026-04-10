@@ -17,7 +17,7 @@ const generateShadow = (pixels: string[][], ps: number): string => {
   for (let r = 0; r < pixels.length; r++) {
     for (let c = 0; c < pixels[r].length; c++) {
       const color = pixels[r][c];
-      if (color) shadows.push(`${c * ps}px ${r * ps}px 0 ${color}`);
+      if (color) shadows.push(`${(c + 1) * ps}px ${(r + 1) * ps}px 0 ${color}`);
     }
   }
   return shadows.join(',');
@@ -28,7 +28,7 @@ const IconBase: React.FC<{ pixels: string[][]; ps: number; className?: string; s
   const h = pixels.length;
   return (
     <div className={`inline-block relative ${className}`} style={{ width: w * ps, height: h * ps, ...style }}>
-      <div style={{ position: 'absolute', width: ps, height: ps, boxShadow: generateShadow(pixels, ps), imageRendering: 'pixelated' }} />
+      <div style={{ position: 'absolute', top: -ps, left: -ps, width: ps, height: ps, boxShadow: generateShadow(pixels, ps), imageRendering: 'pixelated' }} />
     </div>
   );
 };
@@ -451,6 +451,58 @@ export const PixelBook: React.FC<PixelIconProps> = ({ size = 2, className, style
     ['#3a3a4e', '#6a6a7e', '#c8c8d0', '#3a3a4e', '#c8c8d0', '#3a3a4e'],
     ['#3a3a4e', '#6a6a7e', '#c8c8d0', '#c8c8d0', '#c8c8d0', '#3a3a4e'],
     ['', '#3a3a4e', '#6a6a7e', '#6a6a7e', '#6a6a7e', '#3a3a4e'],
+  ];
+  return <IconBase pixels={p} ps={size} className={className} style={style} />;
+};
+
+// 扑克牌图标 — 牌型图鉴用（蓝色牌面）
+export const PixelCards: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
+  const p = [
+    ['', '', '#1a3c8b', '#3c6cc8', '#3c6cc8', '#1a3c8b'],
+    ['', '#1a3c8b', '#3c6cc8', '#68a0e8', '#3c6cc8', '#1a3c8b'],
+    ['#1a3c8b', '#3c6cc8', '#68a0e8', '#fff', '#3c6cc8', '#1a3c8b'],
+    ['#1a3c8b', '#3c6cc8', '#68a0e8', '#3c6cc8', '#3c6cc8', '#1a3c8b'],
+    ['#1a3c8b', '#3c6cc8', '#3c6cc8', '#3c6cc8', '#3c6cc8', '#1a3c8b'],
+    ['#1a3c8b', '#1a3c8b', '#1a3c8b', '#1a3c8b', '#1a3c8b', '#1a3c8b'],
+  ];
+  return <IconBase pixels={p} ps={size} className={className} style={style} />;
+};
+
+// 骰子图标 — 骰子图鉴用（绿色骰面+点数）
+export const PixelDiceIcon: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
+  const p = [
+    ['#1a6a2a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#1a6a2a'],
+    ['#2a8a3a', '#fff', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a'],
+    ['#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a'],
+    ['#2a8a3a', '#2a8a3a', '#2a8a3a', '#fff', '#2a8a3a', '#2a8a3a'],
+    ['#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#fff', '#2a8a3a'],
+    ['#1a6a2a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#2a8a3a', '#1a6a2a'],
+  ];
+  return <IconBase pixels={p} ps={size} className={className} style={style} />;
+};
+
+// 宝石/遗物图标 — 遗物图鉴用（紫色宝石）
+export const PixelGem: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
+  const p = [
+    ['', '', '#6a3a8a', '#6a3a8a', '', ''],
+    ['', '#6a3a8a', '#8a4aaa', '#8a4aaa', '#6a3a8a', ''],
+    ['#6a3a8a', '#8a4aaa', '#b068e8', '#b068e8', '#8a4aaa', '#6a3a8a'],
+    ['#6a3a8a', '#b068e8', '#d0a0ff', '#b068e8', '#8a4aaa', '#6a3a8a'],
+    ['', '#6a3a8a', '#8a4aaa', '#8a4aaa', '#6a3a8a', ''],
+    ['', '', '#6a3a8a', '#6a3a8a', '', ''],
+  ];
+  return <IconBase pixels={p} ps={size} className={className} style={style} />;
+};
+
+// 怪物爪痕图标 — 敌人图鉴用（红色爪印）
+export const PixelClaw: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
+  const p = [
+    ['#c8403c', '', '#c8403c', '', '#c8403c', ''],
+    ['#c8403c', '', '#c8403c', '', '#c8403c', ''],
+    ['', '#e86860', '', '#e86860', '', '#e86860'],
+    ['', '#e86860', '', '#e86860', '', '#e86860'],
+    ['', '', '#c8403c', '', '#c8403c', ''],
+    ['', '', '', '#c8403c', '', ''],
   ];
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
