@@ -93,10 +93,9 @@ export const SkillSelectScreen: React.FC = () => {
               transition={{ delay: 0.5 + i * 0.15 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleSelectStartingRelic(relic)}
-              className="flex flex-col items-center p-2.5 bg-[var(--dungeon-panel-bg)] border-2 border-[var(--dungeon-panel-border)] hover:border-[var(--pixel-purple)] transition-colors relative group"
-              style={{ borderRadius: '4px' }}
+              className="flex flex-col items-center p-2.5 pixel-panel hover:border-[var(--pixel-purple)] transition-colors relative group"
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '4px' }} />
+              <div className="absolute inset-0 bg-gradient-to-b from-[var(--pixel-purple)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" style={{ borderRadius: '2px' }} />
               <div className="mb-1.5 flex items-center justify-center w-10 h-10 border-2 border-[var(--dungeon-panel-border)] bg-[var(--dungeon-bg)]" style={{ borderRadius: '2px' }}>
                 <RelicPixelIcon relicId={relic.id} size={3} />
               </div>

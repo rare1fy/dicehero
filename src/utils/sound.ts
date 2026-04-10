@@ -87,7 +87,7 @@ export const playSettlementTick = (step: number) => {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, now);
     osc.frequency.exponentialRampToValueAtTime(freq * 1.2, now + 0.06);
-    g.gain.setValueAtTime(0.18, now);
+    g.gain.setValueAtTime(0.28, now);
     g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     osc.connect(g); g.connect(master);
     osc.start(now); osc.stop(now + 0.12);
@@ -97,7 +97,7 @@ export const playSettlementTick = (step: number) => {
     const g2 = ctx.createGain();
     osc2.type = 'triangle';
     osc2.frequency.value = harmFreq;
-    g2.gain.setValueAtTime(0.08, now);
+    g2.gain.setValueAtTime(0.14, now);
     g2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc2.connect(g2); g2.connect(master);
     osc2.start(now); osc2.stop(now + 0.08);
@@ -107,7 +107,7 @@ export const playSettlementTick = (step: number) => {
     const cg = ctx.createGain();
     click.type = 'square';
     click.frequency.value = freq * 3;
-    cg.gain.setValueAtTime(0.04, now);
+    cg.gain.setValueAtTime(0.08, now);
     cg.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
     click.connect(cg); cg.connect(master);
     click.start(now); click.stop(now + 0.03);
@@ -136,7 +136,7 @@ export const playMultiplierTick = (step: number) => {
     bass.type = 'sawtooth';
     bass.frequency.setValueAtTime(freq * 0.5, now);
     bass.frequency.exponentialRampToValueAtTime(freq * 0.3, now + 0.15);
-    bg.gain.setValueAtTime(0.12, now);
+    bg.gain.setValueAtTime(0.2, now);
     bg.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
     bass.connect(bg); bg.connect(master);
     bass.start(now); bass.stop(now + 0.2);
@@ -147,7 +147,7 @@ export const playMultiplierTick = (step: number) => {
     hi.type = 'sine';
     hi.frequency.setValueAtTime(freq * 2, now);
     hi.frequency.exponentialRampToValueAtTime(freq * 2.5, now + 0.1);
-    hg.gain.setValueAtTime(0.15, now);
+    hg.gain.setValueAtTime(0.22, now);
     hg.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     hi.connect(hg); hg.connect(master);
     hi.start(now); hi.stop(now + 0.12);
@@ -225,7 +225,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'square';
         osc.frequency.setValueAtTime(200, now);
         osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
-        g.gain.setValueAtTime(0.08, now);
+        g.gain.setValueAtTime(0.16, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.15);
@@ -234,7 +234,7 @@ export const playSound = (type: SoundType) => {
         noise.type = 'sawtooth';
         noise.frequency.setValueAtTime(800, now);
         noise.frequency.exponentialRampToValueAtTime(100, now + 0.08);
-        ng.gain.setValueAtTime(0.03, now);
+        ng.gain.setValueAtTime(0.08, now);
         ng.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
         noise.connect(ng); ng.connect(master);
         noise.start(now); noise.stop(now + 0.08);
@@ -247,7 +247,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(523, now); // C5
         osc.frequency.exponentialRampToValueAtTime(784, now + 0.06); // G5
-        g.gain.setValueAtTime(0.15, now);
+        g.gain.setValueAtTime(0.22, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.08);
@@ -261,7 +261,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.12, now + i * 0.05);
+          g.gain.setValueAtTime(0.2, now + i * 0.05);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.1);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.1);
@@ -276,7 +276,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(120, now);
         osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
-        g.gain.setValueAtTime(0.15, now);
+        g.gain.setValueAtTime(0.22, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.25);
@@ -287,7 +287,7 @@ export const playSound = (type: SoundType) => {
         impact.type = 'square';
         impact.frequency.setValueAtTime(60, now);
         impact.frequency.exponentialRampToValueAtTime(20, now + 0.1);
-        ig.gain.setValueAtTime(0.1, now);
+        ig.gain.setValueAtTime(0.16, now);
         ig.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
         impact.connect(ig); ig.connect(master);
         impact.start(now); impact.stop(now + 0.15);
@@ -316,7 +316,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(300, now);
         osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
-        g.gain.setValueAtTime(0.18, now);
+        g.gain.setValueAtTime(0.25, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.2);
@@ -344,7 +344,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.14, now + i * 0.08);
+          g.gain.setValueAtTime(0.22, now + i * 0.08);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.3);
@@ -399,7 +399,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(800, now);
         osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
-        g.gain.setValueAtTime(0.14, now);
+        g.gain.setValueAtTime(0.22, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.2);
@@ -413,7 +413,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(400, now);
         osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-        g.gain.setValueAtTime(0.18, now);
+        g.gain.setValueAtTime(0.25, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.25);
@@ -426,7 +426,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(400, now);
         osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-        g.gain.setValueAtTime(0.18, now);
+        g.gain.setValueAtTime(0.25, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.3);
@@ -440,7 +440,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.1, now + i * 0.06);
+          g.gain.setValueAtTime(0.18, now + i * 0.06);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.15);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.15);
@@ -455,7 +455,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'square';
           o.frequency.value = 150 + Math.random() * 200;
-          g.gain.setValueAtTime(0.1, now + i * 0.03);
+          g.gain.setValueAtTime(0.18, now + i * 0.03);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.05);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.03); o.stop(now + i * 0.03 + 0.05);
@@ -470,7 +470,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.18, now + i * 0.12);
+          g.gain.setValueAtTime(0.25, now + i * 0.12);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.5);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.5);
@@ -485,7 +485,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sawtooth';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.2, now + i * 0.2);
+          g.gain.setValueAtTime(0.28, now + i * 0.2);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.6);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.2); o.stop(now + i * 0.2 + 0.6);
@@ -500,7 +500,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.16, now + i * 0.1);
+          g.gain.setValueAtTime(0.24, now + i * 0.1);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.4);
@@ -514,7 +514,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(392, now);
         osc.frequency.exponentialRampToValueAtTime(523, now + 0.08);
-        g.gain.setValueAtTime(0.1, now);
+        g.gain.setValueAtTime(0.2, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.1);
@@ -528,7 +528,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.12, now + i * 0.07);
+          g.gain.setValueAtTime(0.2, now + i * 0.07);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.15);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.15);
@@ -543,7 +543,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sawtooth';
           o.frequency.value = 100 + Math.random() * 100;
-          g.gain.setValueAtTime(0.03, now + i * 0.1 + Math.random() * 0.05);
+          g.gain.setValueAtTime(0.12, now + i * 0.1 + Math.random() * 0.05);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.15);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.15);
@@ -559,7 +559,7 @@ export const playSound = (type: SoundType) => {
         osc.frequency.setValueAtTime(330, now);
         osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
         osc.frequency.exponentialRampToValueAtTime(330, now + 0.4);
-        g.gain.setValueAtTime(0.14, now);
+        g.gain.setValueAtTime(0.22, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.5);
@@ -601,7 +601,7 @@ export const playSound = (type: SoundType) => {
           const g = ctx.createGain();
           o.type = 'sine';
           o.frequency.value = f;
-          g.gain.setValueAtTime(0.1, now + i * 0.04);
+          g.gain.setValueAtTime(0.2, now + i * 0.04);
           g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.12);
           o.connect(g); g.connect(master);
           o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.12);
@@ -615,7 +615,7 @@ export const playSound = (type: SoundType) => {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(440, now);
         osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
-        g.gain.setValueAtTime(0.12, now);
+        g.gain.setValueAtTime(0.2, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(g); g.connect(master);
         osc.start(now); osc.stop(now + 0.25);
@@ -971,7 +971,7 @@ export const playSound = (type: SoundType) => {
           beat.type = 'sine';
           beat.frequency.setValueAtTime(50, now + t);
           beat.frequency.exponentialRampToValueAtTime(25, now + t + 0.15);
-          bg.gain.setValueAtTime(0.25 * (1 - i * 0.4), now + t);
+          bg.gain.setValueAtTime(0.35 * (1 - i * 0.4), now + t);
           bg.gain.exponentialRampToValueAtTime(0.001, now + t + 0.2);
           beat.connect(bg); bg.connect(master);
           beat.start(now + t); beat.stop(now + t + 0.2);
@@ -983,7 +983,7 @@ export const playSound = (type: SoundType) => {
           o.type = 'sawtooth';
           o.frequency.setValueAtTime(f, now + 0.5);
           o.frequency.exponentialRampToValueAtTime(f * 0.4, now + 1.2);
-          g.gain.setValueAtTime(0.08, now + 0.5 + i * 0.05);
+          g.gain.setValueAtTime(0.14, now + 0.5 + i * 0.05);
           g.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
           o.connect(g); g.connect(master);
           o.start(now + 0.5 + i * 0.05); o.stop(now + 1.3);
@@ -994,7 +994,7 @@ export const playSound = (type: SoundType) => {
         echo.type = 'triangle';
         echo.frequency.setValueAtTime(80, now + 1.0);
         echo.frequency.exponentialRampToValueAtTime(30, now + 2.0);
-        eg.gain.setValueAtTime(0.12, now + 1.0);
+        eg.gain.setValueAtTime(0.18, now + 1.0);
         eg.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
         echo.connect(eg); eg.connect(master);
         echo.start(now + 1.0); echo.stop(now + 2.0);

@@ -55,8 +55,7 @@ export const GameOverScreen: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mb-6 p-3 border border-purple-500/30 bg-purple-900/20 max-w-xs mx-auto"
-            style={{ borderRadius: '4px' }}
+            className="mb-6 p-3 pixel-panel border-purple-500/30 max-w-xs mx-auto"
           >
             <div className="text-[10px] text-purple-300 font-bold mb-2 flex items-center justify-center gap-1">
               <PixelSoulCrystal size={2} /> {'\u9B42\u6676\u7ED3\u7B97'}

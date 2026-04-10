@@ -3,7 +3,17 @@ import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
 import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelTreasure, PixelMerchant } from './PixelIcons';
+import { PixelSprite } from './PixelSprite';
 import { CHAPTER_CONFIG } from '../config';
+
+// 每章Boss名（[中Boss, 终Boss]）
+const CHAPTER_BOSSES: [string, string][] = [
+  ['枯骨巫妖', '远古树王'],
+  ['霜寒女王', '霜之巫妖王'],
+  ['炎魔之王', '熔火死翼'],
+  ['深渊领主', '暗影之王'],
+  ['泰坦看守者', '永恒主宰'],
+];
 
 const MAP_BG_CLASSES = ['map-bg-forest', 'map-bg-ice', 'map-bg-lava', 'map-bg-shadow', 'map-bg-eternal'];
 const MAP_HEADER_GRADIENTS = [
@@ -57,10 +67,20 @@ export const MapScreen: React.FC = () => {
   const svgHeight = (maxDepth + 1) * layerHeight + 140;
   const svgWidth = 720;
 
-  // 稳定的伪随机函数（基于种子字符串）
+  // 基于当前地图数据生成唯一盐值，使每局视觉布局不同
+  const mapSalt = useMemo(() => {
+    let h = 0;
+    for (const n of game.map) {
+      const s = n.id + n.type + n.connectedTo.join(',');
+      for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    }
+    return String(h);
+  }, [game.map]);
+
+  // 稳定的伪随机函数（基于种子字符串 + 地图盐值）
   const seededRand = (seed: string, index: number = 0) => {
     let hash = 0;
-    const s = seed + ':' + index;
+    const s = mapSalt + ':' + seed + ':' + index;
     for (let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
     return ((hash & 0x7fffffff) % 10000) / 10000; // 0~1
   };
@@ -144,21 +164,55 @@ export const MapScreen: React.FC = () => {
   const PARTICLE_CLASSES = ['map-particle-forest', 'map-particle-ice', 'map-particle-lava', 'map-particle-shadow', 'map-particle-eternal'];
   const particleClass = PARTICLE_CLASSES[chapterIdx];
 
-  // 生成粒子
+  // 边缘雾气颜色
+  const FOG_COLORS = [
+    'rgba(20,60,10,0.4)',  // 森林绿雾
+    'rgba(40,80,160,0.35)', // 冰蓝寒雾
+    'rgba(180,50,10,0.35)', // 熔岩红烟
+    'rgba(60,20,120,0.35)', // 暗影紫雾
+    'rgba(160,130,40,0.3)', // 永恒金雾
+  ];
+  const fogColor = FOG_COLORS[chapterIdx];
+
+  // 生成全屏粒子 — 单池，大小连续随机分布
   const particles = useMemo(() => {
-    const count = 20;
-    return Array.from({ length: count }, (_, i) => ({
-      left: `${seededRand('particle', i * 3) * 100}%`,
-      top: `${seededRand('particle', i * 3 + 1) * 100}%`,
-      size: 2 + seededRand('particle', i * 3 + 2) * 5,
-      duration: 3 + seededRand('particle', i * 5) * 5,
-      delay: seededRand('particle', i * 7) * 6,
-    }));
+    const count = 40;
+    return Array.from({ length: count }, (_, i) => {
+      const r = seededRand('p', i * 31 + 7);
+      const size = 2 + r * r * 10;
+      const isBig = size > 8;
+      // 随机方向：每个粒子有独立的dx/dy — 大幅发散
+      const dx = Math.round((seededRand('dx', i * 37 + 13) - 0.5) * 160);
+      const dy = Math.round((seededRand('dy', i * 41 + 17) - 0.5) * 240);
+      const dx2 = Math.round((seededRand('dx2', i * 43 + 19) - 0.5) * 120);
+      const dy2 = Math.round(dy * (0.6 + seededRand('dy2', i * 47 + 23) * 0.8));
+      return {
+        left: `${seededRand('x', i * 13 + 1) * 94 + 3}%`,
+        top: `${seededRand('y', i * 17 + 3) * 94 + 3}%`,
+        size,
+        duration: isBig ? 8 + seededRand('d', i * 19 + 5) * 10 : 3 + seededRand('d', i * 19 + 5) * 5,
+        delay: seededRand('dl', i * 23 + 9) * 10,
+        opacity: isBig ? 0.03 + seededRand('o', i * 29 + 11) * 0.08 : 0.2 + seededRand('o', i * 29 + 11) * 0.6,
+        dx, dy, dx2, dy2,
+      };
+    });
+  }, []);
+
+  const [fadeIn, setFadeIn] = React.useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setFadeIn(false), 50);
+    return () => clearTimeout(t);
   }, []);
 
   return (
     <div className={`flex flex-col h-full ${mapBgClass} text-[var(--dungeon-text)] relative overflow-hidden`}>
+      {/* 淡入遮罩 */}
+      <div
+        className="absolute inset-0 z-[99] bg-black pointer-events-none transition-opacity duration-1000 ease-out"
+        style={{ opacity: fadeIn ? 1 : 0 }}
+      />
       <div className="absolute inset-0 pixel-dither-overlay" />
+
       {/* 章节主题粒子效果 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
         {particles.map((p, i) => (
@@ -172,11 +226,25 @@ export const MapScreen: React.FC = () => {
               height: p.size,
               animationDuration: `${p.duration}s`,
               animationDelay: `${p.delay}s`,
-            }}
+              opacity: p.opacity,
+              '--dx': `${p.dx}px`,
+              '--dy': `${p.dy}px`,
+              '--dx2': `${p.dx2}px`,
+              '--dy2': `${p.dy2}px`,
+            } as React.CSSProperties}
           />
         ))}
       </div>
-      
+
+      {/* 顶部淡雾 */}
+      <div className="absolute top-0 left-0 right-0 h-[10%] pointer-events-none z-[2]" style={{
+        background: `linear-gradient(to bottom, ${fogColor.replace(/[\d.]+\)$/, '0.25)')} 0%, transparent 100%)`,
+      }} />
+      {/* 底部淡雾 */}
+      <div className="absolute bottom-0 left-0 right-0 h-[12%] pointer-events-none z-[2]" style={{
+        background: `linear-gradient(to top, ${fogColor.replace(/[\d.]+\)$/, '0.3)')} 0%, transparent 100%)`,
+      }} />
+
       <div className="absolute top-0 left-0 right-0 z-20 p-4 pb-10 pt-3" style={{background: headerGradient}}>
         <div className="flex justify-between items-end">
           <div>
@@ -214,61 +282,6 @@ export const MapScreen: React.FC = () => {
         }}
       >
         <div className="relative" style={{ width: svgWidth, minHeight: svgHeight, margin: '0 auto', minWidth: 'fit-content' }}>
-          {/* 章节主题像素装饰 — 散布在地图各处 */}
-          {useMemo(() => {
-            const decos: React.ReactNode[] = [];
-            // 每章的装饰模板
-            const chapterDecos: Record<number, { viewBox: string; w: number; h: number; rects: string; opacity: number }[]> = {
-              0: [ // 森林：枯树、灌木、蘑菇、藤蔓、落叶
-                { viewBox: '0 0 6 10', w: 20, h: 34, opacity: 0.13, rects: '<rect x="2" y="0" width="2" height="2" fill="#3a5a2a"/><rect x="1" y="2" width="4" height="2" fill="#4a7a2a"/><rect x="0" y="3" width="2" height="2" fill="#2a5a1a"/><rect x="2" y="4" width="2" height="6" fill="#3a2a1a"/>' },
-                { viewBox: '0 0 5 4', w: 16, h: 14, opacity: 0.1, rects: '<rect x="1" y="0" width="3" height="2" fill="#3a6a2a"/><rect x="0" y="2" width="5" height="2" fill="#2a4a1a"/>' },
-                { viewBox: '0 0 3 4', w: 10, h: 14, opacity: 0.12, rects: '<rect x="1" y="0" width="1" height="1" fill="#c04040"/><rect x="0" y="1" width="3" height="2" fill="#b83838"/><rect x="1" y="3" width="1" height="1" fill="#8a8060"/>' },
-                { viewBox: '0 0 2 6', w: 6, h: 20, opacity: 0.08, rects: '<rect x="0" y="0" width="1" height="6" fill="#3a6a2a"/><rect x="1" y="1" width="1" height="4" fill="#2a5a1a"/>' },
-                { viewBox: '0 0 3 2', w: 8, h: 6, opacity: 0.1, rects: '<rect x="0" y="0" width="2" height="1" fill="#6a8a2a"/><rect x="1" y="1" width="2" height="1" fill="#5a7a1a"/>' },
-              ],
-              1: [ // 冰封：雪花、冰晶、冰柱、雪堆
-                { viewBox: '0 0 5 5', w: 14, h: 14, opacity: 0.12, rects: '<rect x="2" y="0" width="1" height="5" fill="#90c8e0"/><rect x="0" y="2" width="5" height="1" fill="#90c8e0"/><rect x="1" y="1" width="1" height="1" fill="#70a8c0"/><rect x="3" y="3" width="1" height="1" fill="#70a8c0"/>' },
-                { viewBox: '0 0 3 7', w: 10, h: 24, opacity: 0.1, rects: '<rect x="1" y="0" width="1" height="1" fill="#b0e0f0"/><rect x="0" y="1" width="3" height="2" fill="#90c8e0"/><rect x="0" y="3" width="3" height="4" fill="#70a8c0"/>' },
-                { viewBox: '0 0 5 3', w: 16, h: 10, opacity: 0.09, rects: '<rect x="0" y="1" width="5" height="2" fill="#c0e0f0"/><rect x="1" y="0" width="3" height="1" fill="#d0ecf8"/>' },
-                { viewBox: '0 0 3 3', w: 8, h: 8, opacity: 0.14, rects: '<rect x="1" y="0" width="1" height="1" fill="#d0ecff"/><rect x="0" y="1" width="1" height="1" fill="#d0ecff"/><rect x="2" y="2" width="1" height="1" fill="#d0ecff"/>' },
-              ],
-              2: [ // 熔岩：火山岩、岩石、熔岩裂缝、骷髅
-                { viewBox: '0 0 5 4', w: 16, h: 14, opacity: 0.12, rects: '<rect x="1" y="0" width="3" height="1" fill="#5a3a2a"/><rect x="0" y="1" width="5" height="3" fill="#3a2a1a"/>' },
-                { viewBox: '0 0 4 2', w: 14, h: 8, opacity: 0.1, rects: '<rect x="0" y="0" width="4" height="1" fill="#e06020"/><rect x="0" y="1" width="4" height="1" fill="#c04010"/>' },
-                { viewBox: '0 0 6 8', w: 20, h: 28, opacity: 0.11, rects: '<rect x="2" y="0" width="2" height="2" fill="#e08030"/><rect x="1" y="2" width="4" height="2" fill="#c04020"/><rect x="0" y="4" width="6" height="4" fill="#3a2010"/>' },
-                { viewBox: '0 0 4 4', w: 12, h: 12, opacity: 0.08, rects: '<rect x="1" y="0" width="2" height="1" fill="#a0a090"/><rect x="0" y="1" width="4" height="1" fill="#808070"/><rect x="0" y="2" width="1" height="1" fill="#606050"/><rect x="3" y="2" width="1" height="1" fill="#606050"/>' },
-              ],
-              3: [ // 暗影：魔法符文、紫焰、暗能裂缝、邪眼
-                { viewBox: '0 0 5 5', w: 14, h: 14, opacity: 0.1, rects: '<rect x="1" y="0" width="3" height="1" fill="#6a3a8a"/><rect x="0" y="1" width="1" height="3" fill="#6a3a8a"/><rect x="4" y="1" width="1" height="3" fill="#6a3a8a"/><rect x="1" y="4" width="3" height="1" fill="#6a3a8a"/><rect x="2" y="2" width="1" height="1" fill="#a060d0"/>' },
-                { viewBox: '0 0 3 6', w: 10, h: 20, opacity: 0.09, rects: '<rect x="1" y="0" width="1" height="2" fill="#a060d0"/><rect x="0" y="2" width="3" height="2" fill="#8040b0"/><rect x="1" y="4" width="1" height="2" fill="#6030a0"/>' },
-                { viewBox: '0 0 5 2', w: 16, h: 6, opacity: 0.08, rects: '<rect x="0" y="0" width="5" height="1" fill="#4a2a6a"/><rect x="1" y="1" width="3" height="1" fill="#6a3a8a"/>' },
-                { viewBox: '0 0 3 3', w: 10, h: 10, opacity: 0.12, rects: '<rect x="0" y="1" width="3" height="1" fill="#40c060"/><rect x="1" y="0" width="1" height="3" fill="#40c060"/>' },
-              ],
-              4: [ // 永恒：光柱、星辰、云朵、圣光碎片
-                { viewBox: '0 0 2 10', w: 6, h: 34, opacity: 0.1, rects: '<rect x="0" y="0" width="2" height="10" fill="#e8d068"/><rect x="0" y="3" width="2" height="2" fill="rgba(255,240,140,0.6)"/>' },
-                { viewBox: '0 0 3 3', w: 10, h: 10, opacity: 0.14, rects: '<rect x="1" y="0" width="1" height="1" fill="#ffe080"/><rect x="0" y="1" width="1" height="1" fill="#ffe080"/><rect x="2" y="1" width="1" height="1" fill="#ffe080"/><rect x="1" y="2" width="1" height="1" fill="#ffe080"/><rect x="1" y="1" width="1" height="1" fill="#fff8c0"/>' },
-                { viewBox: '0 0 7 3', w: 22, h: 10, opacity: 0.07, rects: '<rect x="1" y="0" width="5" height="1" fill="#c0b080"/><rect x="0" y="1" width="7" height="1" fill="#a09070"/><rect x="2" y="2" width="3" height="1" fill="#c0b080"/>' },
-                { viewBox: '0 0 2 2', w: 6, h: 6, opacity: 0.16, rects: '<rect x="0" y="0" width="2" height="2" fill="#ffe080"/>' },
-              ],
-            };
-            const templates = chapterDecos[chapterIdx] || chapterDecos[0];
-            // 在地图区域内散布装饰
-            const decoCount = 18 + maxDepth * 3;
-            for (let i = 0; i < decoCount; i++) {
-              const t = templates[i % templates.length];
-              const px = seededRand(`deco-${chapterIdx}`, i * 3) * (svgWidth - 40) + 20;
-              const py = seededRand(`deco-${chapterIdx}`, i * 3 + 1) * (svgHeight - 60) + 30;
-              const scale = 0.7 + seededRand(`deco-${chapterIdx}`, i * 3 + 2) * 0.8;
-              decos.push(
-                <svg key={`deco-${i}`} className="absolute pointer-events-none" style={{
-                  left: px, top: py, opacity: t.opacity * (0.6 + seededRand(`deco-${chapterIdx}`, i * 5) * 0.5),
-                  imageRendering: 'pixelated' as any,
-                  transform: `scale(${scale})`,
-                }} width={t.w} height={t.h} viewBox={t.viewBox} dangerouslySetInnerHTML={{ __html: t.rects }} />
-              );
-            }
-            return <>{decos}</>;
-          }, [chapterIdx, svgHeight, maxDepth])}
 
           <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: svgHeight }} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
             <defs>
@@ -295,7 +308,7 @@ export const MapScreen: React.FC = () => {
                     strokeWidth={isReachablePath ? '3' : '2'}
                     strokeDasharray={isReachablePath ? 'none' : isCompletedPath ? 'none' : '6 4'}
                     fill="none"
-                    opacity={isReachablePath ? 1.0 : isCompletedPath ? 0.6 : 0.45}
+                    opacity={isReachablePath ? 1.0 : isCompletedPath ? 0.7 : 0.55}
                     filter={isReachablePath ? 'url(#pathGlow)' : 'none'}
                   />
                 );
@@ -309,6 +322,88 @@ export const MapScreen: React.FC = () => {
             const isCurrent = node.id === game.currentNodeId;
             const isCompleted = node.completed;
             const config = nodeTypeConfig[node.type] || nodeTypeConfig.enemy;
+
+            // Boss节点特殊处理
+            if (node.type === 'boss') {
+              const isFinalBoss = node.depth === maxDepth;
+              const bossPair = CHAPTER_BOSSES[chapterIdx] || CHAPTER_BOSSES[0];
+              const bossName = isFinalBoss ? bossPair[1] : bossPair[0];
+              const nodeSize = isFinalBoss ? 64 : 50;
+              const halfSize = nodeSize / 2;
+
+              return (
+                <motion.button
+                  key={node.id}
+                  id={node.id}
+                  whileHover={isReachable ? { scale: 1.15 } : {}}
+                  whileTap={isReachable ? { scale: 0.9 } : {}}
+                  onClick={() => isReachable && startNode(node)}
+                  className={`absolute flex flex-col items-center ${isReachable ? 'cursor-pointer' : 'cursor-default'}`}
+                  style={{ left: pos.x - halfSize, top: pos.y - halfSize - 6, width: nodeSize }}
+                >
+                  {/* Boss节点容器 */}
+                  <div
+                    className={`relative flex items-center justify-center
+                      ${isCurrent ? 'map-node-current' : ''}
+                      ${isCompleted ? 'map-node-completed' : ''}
+                      ${!isReachable && !isCurrent && !isCompleted ? 'opacity-50' : ''}
+                    `}
+                    style={{
+                      width: nodeSize,
+                      height: nodeSize,
+                      background: isFinalBoss
+                        ? 'linear-gradient(180deg, rgba(180,40,40,0.4) 0%, rgba(100,10,10,0.7) 100%)'
+                        : 'linear-gradient(180deg, rgba(139,60,200,0.35) 0%, rgba(80,20,140,0.6) 100%)',
+                      border: isFinalBoss ? '3px solid #e04040' : '3px solid #a050e0',
+                      borderRadius: '4px',
+                      boxShadow: isReachable
+                        ? isFinalBoss
+                          ? '0 0 16px rgba(224,60,60,0.6), 0 0 32px rgba(224,60,60,0.2), inset 0 0 8px rgba(224,60,60,0.2)'
+                          : '0 0 12px rgba(160,80,224,0.5), 0 0 24px rgba(160,80,224,0.15)'
+                        : isFinalBoss
+                          ? '0 0 8px rgba(224,60,60,0.3)'
+                          : '0 0 6px rgba(160,80,224,0.2)',
+                    }}
+                  >
+                    {/* 终Boss：直接展示像素精灵 */}
+                    {isFinalBoss ? (
+                      <div style={{ transform: 'scale(0.85)' }}>
+                        <PixelSprite name={bossName} size={3} />
+                      </div>
+                    ) : (
+                      <PixelSkull size={3} />
+                    )}
+
+                    {/* 脉冲光环 */}
+                    {isReachable && !isCurrent && !isCompleted && (
+                      <motion.div
+                        animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.08, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="absolute inset-[-3px] pointer-events-none"
+                        style={{
+                          borderRadius: '6px',
+                          border: isFinalBoss ? '2px solid rgba(224,60,60,0.5)' : '2px solid rgba(160,80,224,0.4)',
+                          boxShadow: isFinalBoss
+                            ? '0 0 20px rgba(224,60,60,0.4)'
+                            : '0 0 16px rgba(160,80,224,0.3)',
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Boss名字 */}
+                  <span className={`text-[8px] font-black tracking-wider leading-none pixel-text-shadow whitespace-nowrap mt-1
+                    ${isCurrent ? 'text-[var(--pixel-gold)]' : isReachable ? '' : 'opacity-60'}
+                  `}
+                  style={{ color: isReachable && !isCurrent ? (isFinalBoss ? '#e06060' : '#c080ff') : undefined }}
+                  >
+                    {isFinalBoss ? '★ BOSS' : 'Boss'}
+                  </span>
+                </motion.button>
+              );
+            }
+
+            // 普通节点渲染
             return (
               <motion.button
                 key={node.id}
@@ -339,7 +434,7 @@ export const MapScreen: React.FC = () => {
                   <span className="relative z-10">{config.icon}</span>
                 </div>
                 <span className={`text-[8px] font-bold tracking-wider leading-none pixel-text-shadow whitespace-nowrap
-                  ${isCurrent ? 'text-[var(--pixel-gold)]' : isReachable ? 'opacity-80' : 'text-[var(--dungeon-text-dim)] opacity-65'}
+                  ${isCurrent ? 'text-[var(--pixel-gold)]' : isReachable ? 'opacity-90' : 'text-[var(--dungeon-text-dim)] opacity-75'}
                 `}
                 style={{ color: isReachable && !isCurrent ? config.color : undefined }}
                 >

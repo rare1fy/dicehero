@@ -131,12 +131,12 @@ export const DiceRewardScreen: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`relative flex flex-col items-center p-2 rounded border-2 transition-all min-w-[80px] max-w-[100px] flex-1 ${
+        className={`relative flex flex-col items-center p-2 border-2 transition-all min-w-[80px] max-w-[100px] flex-1 ${
           isSelected
             ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
             : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
         }`}
-        style={{ borderRadius: '4px' }}
+        style={{ borderRadius: '2px' }}
       >
         {/* 稀有度标签 */}
         <div className="text-[8px] font-bold tracking-wider mb-1" style={{ color: RARITY_TEXT_COLORS[def.rarity] || '#888' }}>
@@ -189,7 +189,7 @@ export const DiceRewardScreen: React.FC = () => {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-gold)] rounded-full flex items-center justify-center"
+            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-gold)] flex items-center justify-center" style={{ borderRadius: '2px' }}
           >
             <span className="text-[8px] text-black font-black">●</span>
           </motion.div>
@@ -229,14 +229,13 @@ export const DiceRewardScreen: React.FC = () => {
             key={tab.id}
             onClick={() => { if (!('disabled' in tab && tab.disabled)) { setActiveTab(tab.id); setSelectedNewDice(null); } }}
             disabled={'disabled' in tab && tab.disabled}
-            className={`px-3 py-1.5 text-[9px] font-bold rounded transition-all ${
+            className={`px-3 py-1.5 text-[9px] font-bold transition-all ${
               activeTab === tab.id
-                ? 'bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] border border-[var(--pixel-gold)]'
+                ? 'pixel-btn pixel-btn-gold'
                 : 'disabled' in tab && tab.disabled
-                  ? 'bg-[rgba(255,255,255,0.02)] text-[var(--dungeon-text-dim)] border border-[rgba(255,255,255,0.05)] opacity-40 cursor-not-allowed'
-                  : 'bg-[rgba(255,255,255,0.05)] text-[var(--dungeon-text)] border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.1)]'
+                  ? 'pixel-btn pixel-btn-ghost opacity-40 cursor-not-allowed'
+                  : 'pixel-btn pixel-btn-ghost'
             }`}
-            style={{ borderRadius: '3px' }}
           >
             {tab.icon} {tab.label}
           </button>
@@ -276,14 +275,13 @@ export const DiceRewardScreen: React.FC = () => {
             <button
               onClick={handleRefresh}
               disabled={refreshPrice > 0 && !canAffordRefresh}
-              className={`flex items-center gap-1.5 px-4 py-1.5 text-[9px] font-bold rounded transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-[9px] font-bold pixel-btn transition-all ${
                 refreshPrice === 0
-                  ? 'bg-[rgba(48,216,208,0.15)] text-[var(--pixel-cyan)] border border-[var(--pixel-cyan)] hover:bg-[rgba(48,216,208,0.25)]'
+                  ? 'pixel-btn-primary'
                   : canAffordRefresh
-                    ? 'bg-[rgba(212,160,48,0.1)] text-[var(--pixel-gold)] border border-[var(--pixel-gold-dark)] hover:bg-[rgba(212,160,48,0.2)]'
-                    : 'bg-[rgba(255,255,255,0.03)] text-[var(--dungeon-text-dim)] border border-[rgba(255,255,255,0.05)] cursor-not-allowed opacity-50'
+                    ? 'pixel-btn-gold'
+                    : 'pixel-btn-ghost cursor-not-allowed opacity-50'
               }`}
-              style={{ borderRadius: '3px' }}
             >
               <span style={{ fontSize: '10px' }}>↻</span>
               {refreshPrice === 0 ? (
@@ -307,20 +305,18 @@ export const DiceRewardScreen: React.FC = () => {
       <div className="flex justify-center gap-3 p-3 mt-6 relative z-10">
         <button
           onClick={handleSkip}
-          className="px-4 py-2 text-[9px] font-bold text-[var(--dungeon-text-dim)] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.1)] transition-all"
-          style={{ borderRadius: '3px' }}
+          className="px-5 py-2 pixel-btn pixel-btn-ghost text-[9px] font-bold"
         >
           跳过
         </button>
         <button
           onClick={handleConfirm}
           disabled={confirmed || !selectedNewDice}
-          className={`px-6 py-2 text-[9px] font-bold transition-all ${
+          className={`px-6 py-2 pixel-btn text-[9px] font-bold ${
             confirmed || !selectedNewDice
-              ? 'bg-[rgba(255,255,255,0.05)] text-[var(--dungeon-text-dim)] border border-[rgba(255,255,255,0.05)] cursor-not-allowed'
-              : 'bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] border border-[var(--pixel-gold)] hover:bg-[var(--pixel-gold)] hover:text-black'
+              ? 'pixel-btn-ghost opacity-40 cursor-not-allowed'
+              : 'pixel-btn-gold'
           }`}
-          style={{ borderRadius: '3px' }}
         >
           {confirmed ? '确认中...' : '确认选择'}
         </button>

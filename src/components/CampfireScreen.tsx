@@ -66,7 +66,7 @@ export const CampfireScreen: React.FC = () => {
                         ? 'border-[var(--pixel-red)] bg-[rgba(224,60,49,0.15)] shadow-[0_0_12px_rgba(224,60,49,0.4)]'
                         : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
                     }`}
-                    style={{ borderRadius: '4px' }}
+                    style={{ borderRadius: '2px' }}
                   >
                     <div className="text-[8px] font-bold tracking-wider mb-1" style={{ color: RARITY_TEXT_COLORS[def.rarity] || '#888' }}>
                       {RARITY_LABELS[def.rarity] || def.rarity}
@@ -99,7 +99,7 @@ export const CampfireScreen: React.FC = () => {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] rounded-full flex items-center justify-center"
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] flex items-center justify-center" style={{ borderRadius: '2px' }}
                       >
                         <span className="text-[8px] text-white font-black">{'✖'}</span>
                       </motion.div>
@@ -204,7 +204,7 @@ export const CampfireScreen: React.FC = () => {
                         ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
                         : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
                     }`}
-                    style={{ borderRadius: '4px' }}
+                    style={{ borderRadius: '2px' }}
                   >
                     <div className="text-[8px] font-bold tracking-wider mb-1" style={{ color: RARITY_TEXT_COLORS[def.rarity] || '#888' }}>
                       {RARITY_LABELS[def.rarity] || def.rarity}
@@ -237,7 +237,7 @@ export const CampfireScreen: React.FC = () => {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-gold)] rounded-full flex items-center justify-center"
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-gold)] flex items-center justify-center" style={{ borderRadius: '2px' }}
                       >
                         <span className="text-[8px] text-black font-black">●</span>
                       </motion.div>

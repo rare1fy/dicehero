@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { PixelSoulCrystal } from './PixelIcons';
+import { PixelSoulCrystal, PixelClose } from './PixelIcons';
 import { RelicPixelIcon } from './PixelRelicIcons';
 import { ALL_RELICS } from '../data/relics';
 
@@ -79,8 +79,7 @@ export const SoulShop: React.FC<{ onClose: () => void; ownedRelicIds?: string[] 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
-        className="w-full max-w-md mx-4 bg-[var(--dungeon-panel)] border-3 border-purple-500/60 p-4 max-h-[85vh] overflow-y-auto"
-        style={{ borderRadius: '4px' }}
+        className="w-full max-w-md mx-4 pixel-panel border-purple-500/60 p-4 max-h-[85vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -92,7 +91,7 @@ export const SoulShop: React.FC<{ onClose: () => void; ownedRelicIds?: string[] 
               <PixelSoulCrystal size={2} />
               <span className="font-bold">{meta.permanentQuota}</span>
             </div>
-            <button onClick={onClose} className="text-[var(--dungeon-text-dim)] hover:text-[var(--pixel-red)] text-lg transition-colors">{'\u2715'}</button>
+            <button onClick={onClose} className="text-[var(--dungeon-text-dim)] hover:text-[var(--pixel-red)] transition-colors"><PixelClose size={2} /></button>
           </div>
         </div>
 
@@ -131,7 +130,7 @@ export const SoulShop: React.FC<{ onClose: () => void; ownedRelicIds?: string[] 
                     ? 'border-purple-500/40 bg-purple-900/10 hover:border-purple-400 hover:bg-purple-900/20 cursor-pointer'
                     : 'border-[var(--dungeon-panel-border)] bg-[var(--dungeon-bg)] opacity-50 cursor-not-allowed'
                 }`}
-                style={{ borderRadius: '3px' }}
+                style={{ borderRadius: '2px' }}
               >
                 <div className="shrink-0 w-8 flex items-center justify-center">
                   <RelicPixelIcon relicId={item.relicId} size={3} />

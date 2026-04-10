@@ -4,6 +4,7 @@
 import React, { useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
+import { PixelClose } from './PixelIcons';
 import { HAND_TYPES } from '../data/handTypes';
 
 const FILTERED = ['同花顺','皇家同花顺','同花','满堂红','同元素对','同元素三条','同元素四条','同元素五条','同元素六骰'];
@@ -29,7 +30,7 @@ export const HandGuideModal: React.FC = () => {
           >
             <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
               <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 牌型图鉴 ◆</h3>
-              <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-white text-xs">✕</button>
+              <button onClick={() => setShowHandGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-white"><PixelClose size={2} /></button>
             </div>
             <div className="overflow-y-auto p-3 flex-1">
               {HAND_TYPES.filter(h => !FILTERED.includes(h.name)).map(ht => {

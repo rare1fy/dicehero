@@ -13,11 +13,11 @@ interface BossEntranceProps {
 }
 
 const CHAPTER_COLORS: Record<number, { primary: string; glow: string; bg: string; stripe: string }> = {
-  1: { primary: '#c8403c', glow: 'rgba(200,64,60,0.6)', bg: 'rgba(10,2,2,0.96)', stripe: '#3a0808' },
-  2: { primary: '#68a0e8', glow: 'rgba(100,160,240,0.6)', bg: 'rgba(2,4,12,0.96)', stripe: '#081828' },
-  3: { primary: '#f0a040', glow: 'rgba(240,160,64,0.6)', bg: 'rgba(12,4,0,0.96)', stripe: '#281004' },
-  4: { primary: '#b068e8', glow: 'rgba(176,104,232,0.6)', bg: 'rgba(6,2,12,0.96)', stripe: '#140828' },
-  5: { primary: '#e8d068', glow: 'rgba(232,208,104,0.6)', bg: 'rgba(8,6,2,0.96)', stripe: '#1c1808' },
+  1: { primary: '#c8403c', glow: 'rgba(200,64,60,0.6)', bg: 'rgba(10,2,2,0.75)', stripe: '#3a0808' },
+  2: { primary: '#68a0e8', glow: 'rgba(100,160,240,0.6)', bg: 'rgba(2,4,12,0.75)', stripe: '#081828' },
+  3: { primary: '#f0a040', glow: 'rgba(240,160,64,0.6)', bg: 'rgba(12,4,0,0.75)', stripe: '#281004' },
+  4: { primary: '#b068e8', glow: 'rgba(176,104,232,0.6)', bg: 'rgba(6,2,12,0.75)', stripe: '#140828' },
+  5: { primary: '#e8d068', glow: 'rgba(232,208,104,0.6)', bg: 'rgba(8,6,2,0.75)', stripe: '#1c1808' },
 };
 
 const CHAPTER_SUBTITLES: Record<number, string> = {

@@ -218,7 +218,7 @@ export const EventScreen: React.FC = () => {
                 <div className="text-[8px] text-[var(--dungeon-text-dim)]">Lv.{d.level} [{faces.join(',')}]</div>
                 {isSelected && (
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] rounded-full flex items-center justify-center">
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] flex items-center justify-center" style={{ borderRadius: '2px' }}>
                     <span className="text-[8px] text-white font-black">{'✖'}</span>
                   </motion.div>
                 )}
@@ -281,8 +281,11 @@ export const EventScreen: React.FC = () => {
               key={i} 
               onClick={() => !opt.disabled && opt.action()} 
               disabled={opt.disabled}
-              className={`group w-full p-3.5 pixel-panel transition-all flex flex-col items-center gap-1 ${opt.disabled ? 'opacity-40 grayscale cursor-not-allowed' : 'active:scale-95'}`}
-              style={{ borderColor: opt.disabled ? 'var(--dungeon-panel-border)' : opt.color.includes('red') ? 'var(--pixel-red)' : opt.color.includes('amber') ? 'var(--pixel-gold)' : opt.color.includes('blue') ? 'var(--pixel-blue)' : opt.color.includes('purple') ? 'var(--pixel-purple)' : opt.color.includes('emerald') ? 'var(--pixel-green)' : opt.color.includes('cyan') ? 'var(--pixel-blue)' : opt.color.includes('orange') ? 'var(--pixel-orange)' : opt.color.includes('pink') ? 'var(--pixel-red)' : 'var(--dungeon-panel-border)' }}
+              className={`group w-full p-3.5 pixel-panel transition-all flex flex-col items-center gap-1 ${opt.disabled ? 'opacity-40 grayscale cursor-not-allowed' : 'active:scale-95 hover:brightness-110'}`}
+              style={{ 
+                borderColor: opt.disabled ? 'var(--dungeon-panel-border)' : opt.color.includes('red') ? 'var(--pixel-red)' : opt.color.includes('amber') ? 'var(--pixel-gold)' : opt.color.includes('blue') ? 'var(--pixel-blue)' : opt.color.includes('purple') ? 'var(--pixel-purple)' : opt.color.includes('emerald') ? 'var(--pixel-green)' : opt.color.includes('cyan') ? 'var(--pixel-blue)' : opt.color.includes('orange') ? 'var(--pixel-orange)' : opt.color.includes('pink') ? 'var(--pixel-red)' : 'var(--dungeon-panel-border)',
+                boxShadow: opt.disabled ? 'none' : 'inset 0 2px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.5), inset 2px 0 0 rgba(255,255,255,0.04), inset -2px 0 0 rgba(0,0,0,0.4), 0 4px 0 rgba(0,0,0,0.6)',
+              }}
             >
               <span className={`font-bold tracking-[0.1em] text-xs pixel-text-shadow ${opt.disabled ? 'text-[var(--dungeon-text-dim)]' : 'text-[var(--dungeon-text-bright)]'}`}>{opt.label}</span>
               <span className="text-[9px] text-[var(--dungeon-text-dim)] font-medium">{formatDescription(opt.sub)}</span>

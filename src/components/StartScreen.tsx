@@ -1,12 +1,32 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { PixelDice, PixelBook, PixelSoulCrystal } from './PixelIcons';
+import { PixelDice, PixelBook, PixelSoulCrystal, PixelSword } from './PixelIcons';
 import { CSSParticles } from './ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './TutorialOverlay';
 import { SoulShop } from './SoulShop';
 import { ALL_RELICS } from '../data/relics';
 import { playSound } from '../utils/sound';
+
+/** 首页专用金色骰子 — 与PixelDice同形态，神圣白金配色 */
+const GoldDice: React.FC<{ size?: number }> = ({ size = 2 }) => {
+  const s = size;
+  const B = '#6b5520', H = '#f0d860', F = '#dcc040', D = '#a88a28', DOT = '#3a2a10';
+  const p = [
+    [B, H, H, H, H, H, B],
+    [H, F, F, F, F, F, D],
+    [H, F, DOT, F, F, F, D],
+    [H, F, F, DOT, F, F, D],
+    [H, F, F, F, DOT, F, D],
+    [H, F, F, F, F, F, D],
+    [B, D, D, D, D, D, B],
+  ];
+  return (
+    <svg width={7 * s} height={7 * s} viewBox="0 0 7 7" shapeRendering="crispEdges" style={{ imageRendering: 'pixelated' }}>
+      {p.map((row, y) => row.map((c, x) => c ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={c} /> : null))}
+    </svg>
+  );
+};
 
 const META_KEY = 'dicehero_meta';
 const loadMeta = () => {
@@ -98,15 +118,24 @@ export const StartScreen: React.FC = () => {
         transition={{ duration: 0.8 }}
         className="relative z-10 text-center w-full"
       >
-        {/* 骰子图标 — 加发光效果 */}
+        {/* 金色呼吸发光骰子 */}
         <motion.div
-          animate={{ y: [0, -6, 0], rotate: [0, 3, -3, 0] }}
+          animate={{ y: [0, -8, 0], rotate: [0, 4, -4, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           className="mb-5 flex justify-center"
         >
-          <div style={{ filter: 'drop-shadow(0 0 12px rgba(212,160,48,0.4)) drop-shadow(0 0 24px rgba(212,160,48,0.15))' }}>
-            <PixelDice size={5} />
-          </div>
+          <motion.div
+            animate={{
+              filter: [
+                'drop-shadow(0 0 8px rgba(212,160,48,0.3)) drop-shadow(0 0 20px rgba(212,160,48,0.15))',
+                'drop-shadow(0 0 18px rgba(212,160,48,0.7)) drop-shadow(0 0 40px rgba(212,160,48,0.35))',
+                'drop-shadow(0 0 8px rgba(212,160,48,0.3)) drop-shadow(0 0 20px rgba(212,160,48,0.15))',
+              ],
+            }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <GoldDice size={8} />
+          </motion.div>
         </motion.div>
         
         {/* 标题 — 加强辉光 */}
@@ -123,27 +152,27 @@ export const StartScreen: React.FC = () => {
           ◆ 6 SIDES BATTLE ◆
         </motion.p>
         
-        {/* 开始按钮 — 加呼吸光效 */}
+        {/* 开始按钮 — 像素立体 + 呼吸光效 */}
         <motion.button 
           onClick={handleStart}
           disabled={fading}
-          animate={{ boxShadow: ['0 0 8px rgba(60,200,100,0.2)', '0 0 20px rgba(60,200,100,0.4)', '0 0 8px rgba(60,200,100,0.2)'] }}
+          animate={{ filter: ['drop-shadow(0 0 6px rgba(60,200,100,0.2))', 'drop-shadow(0 0 16px rgba(60,200,100,0.5))', 'drop-shadow(0 0 6px rgba(60,200,100,0.2))'] }}
           transition={{ duration: 2, repeat: Infinity }}
           className="group relative w-full max-w-[220px] mx-auto py-3 pixel-btn pixel-btn-primary text-sm block mb-4 disabled:opacity-50"
         >
-          <span className="relative z-10">▶ 开启征程</span>
+          <span className="relative z-10 flex items-center justify-center gap-2"><PixelSword size={2} /> 开启征程</span>
         </motion.button>
 
         {/* 魂晶商店按钮 */}
         <button
           onClick={() => setShowSoulShop(true)}
-          className="group relative w-full max-w-[220px] mx-auto py-2.5 pixel-btn text-sm block mb-5 border-purple-500/50 hover:border-purple-400 transition-colors"
+          className="group relative w-full max-w-[220px] mx-auto py-2.5 pixel-btn pixel-btn-purple text-sm block mb-5"
         >
-          <span className="relative z-10 flex items-center justify-center gap-2 text-purple-300">
+          <span className="relative z-10 flex items-center justify-center gap-2">
             <PixelSoulCrystal size={2} />
             魂晶商店
             {meta.permanentQuota > 0 && (
-              <span className="text-[9px] text-purple-400 font-mono">({meta.permanentQuota})</span>
+              <span className="text-[9px] opacity-70 font-mono">({meta.permanentQuota})</span>
             )}
           </span>
         </button>

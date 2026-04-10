@@ -135,7 +135,7 @@ export const LootScreen: React.FC = () => {
           </div>
           <button 
             onClick={() => setPendingLootAugment(null)}
-            className="mt-5 w-full py-2.5 text-[9px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.15em] hover:text-[var(--dungeon-text)] transition-colors"
+            className="mt-5 w-full py-2.5 pixel-btn pixel-btn-ghost text-[9px] font-bold tracking-[0.15em]"
           >
             取消
           </button>

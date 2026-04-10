@@ -71,57 +71,30 @@ import { BossEntrance } from './components/BossEntrance';
 
 
 
-// 遗物描述富文本高亮
-const RELIC_HIGHLIGHT_RULES: { pattern: RegExp; color: string }[] = [
-  // 牌型名 — 金色
-  { pattern: /(?:普通攻击|对子|连对|三条|四条|五条|六条|葫芦|顺子|同元素|元素顺|元素葫芦|皇家元素顺)/g, color: 'var(--pixel-gold)' },
-  // 数值效果 — 各自颜色
-  { pattern: /(?:伤害|穿透伤害|穿透)/g, color: 'var(--pixel-red-light)' },
-  { pattern: /(?:护甲)/g, color: 'var(--pixel-blue-light)' },
-  { pattern: /(?:回复|治疗|HP|生命)/g, color: '#6ae86a' },
-  { pattern: /(?:倍率|x[\d.]+|×[\d.]+)/g, color: 'var(--pixel-orange)' },
-  // 状态效果 — 紫/橙
-  { pattern: /(?:灼烧|中毒|易伤|虚弱|净化|负面状态)/g, color: '#c88aff' },
-  // 条件关键字 — 青色
-  { pattern: /(?:出牌|击杀|重Roll|重投|致命伤害|受到伤害|卖血Roll)/g, color: 'var(--pixel-cyan)' },
-  // 骰子相关
-  { pattern: /(?:骰子|灌铅骰子|分裂骰子|特殊骰子|点数和|点数)/g, color: 'var(--dungeon-text-bright)' },
-];
+// 遗物描述富文本高亮 — 只高亮触发条件关键词
+const RELIC_TRIGGER_PATTERN = /普通攻击|对子|连对|三条|四条|五条|六条|葫芦|顺子|同元素|元素顺|元素葫芦|皇家元素顺|击杀|重Roll|重投|致命伤害|受到伤害/g;
 
 function highlightRelicDesc(desc: string): React.ReactNode {
   if (!desc) return desc;
-  // 构建合并正则
-  const combined = new RegExp(
-    RELIC_HIGHLIGHT_RULES.map(r => `(${r.pattern.source})`).join('|'),
-    'g'
-  );
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = combined.exec(desc)) !== null) {
+  const regex = new RegExp(RELIC_TRIGGER_PATTERN.source, 'g');
+  while ((match = regex.exec(desc)) !== null) {
     if (match.index > lastIndex) {
       parts.push(desc.slice(lastIndex, match.index));
     }
-    // 找到匹配的规则组
-    const matchedText = match[0];
-    let color = 'var(--dungeon-text-bright)';
-    for (let g = 0; g < RELIC_HIGHLIGHT_RULES.length; g++) {
-      if (match[g + 1] !== undefined) {
-        color = RELIC_HIGHLIGHT_RULES[g].color;
-        break;
-      }
-    }
     parts.push(
-      <span key={match.index} style={{ color, fontWeight: 700, textShadow: `0 0 4px ${color}33` }}>
-        {matchedText}
+      <span key={match.index} style={{ color: 'var(--pixel-gold)', fontWeight: 700 }}>
+        {match[0]}
       </span>
     );
-    lastIndex = combined.lastIndex;
+    lastIndex = regex.lastIndex;
   }
   if (lastIndex < desc.length) {
     parts.push(desc.slice(lastIndex));
   }
-  return <>{parts}</>;
+  return parts.length > 1 ? <>{parts}</> : desc;
 }
 
 export default function DiceHeroGame() {
@@ -231,6 +204,9 @@ export default function DiceHeroGame() {
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());
 
   // GM: 杀死当前波次敌人 — 触发死亡动画+波次切换
+  const [gmPendingVictory, setGmPendingVictory] = useState(false);
+  const [gmPendingNextWave, setGmPendingNextWave] = useState(false);
+
   useEffect(() => {
     const flag = (game as any).gmKillWave;
     if (flag && game.phase === 'battle') {
@@ -240,44 +216,63 @@ export default function DiceHeroGame() {
       const alive = enemies.filter(e => e.hp > 0);
       alive.forEach(e => setEnemyEffectForUid(e.uid, 'death'));
       setEnemies(prev => prev.map(e => e.hp > 0 ? { ...e, hp: 0 } : e));
-      // 延迟后处理波次切换/胜利
-      const doWaveTransition = async () => {
-        await new Promise(r => setTimeout(r, 1200));
+      // 延迟后通过state触发波次切换/胜利
+      setTimeout(() => {
         const nextWaveIdx = game.currentWaveIndex + 1;
         if (nextWaveIdx < game.battleWaves.length) {
-          const nextWave = game.battleWaves[nextWaveIdx].enemies;
-          // Boss出场演出
-          const currentNode = game.map.find(n => n.id === game.currentNodeId);
-          const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 200;
-          if (isBossWave) {
-            playSound('boss_appear');
-            setBossEntrance({ visible: true, name: nextWave[0].name, chapter: game.chapter });
-            await new Promise(r => setTimeout(r, 2200));
-            setBossEntrance(prev => ({ ...prev, visible: false }));
-            await new Promise(r => setTimeout(r, 300));
-          }
-          setEnemies(nextWave);
-          setEnemyEffects({}); setDyingEnemies(new Set());
-          if (isBossWave && nextWave[0]) {
-            setEnemyEffectForUid(nextWave[0].uid, 'boss_entrance');
-            playSound('boss_laugh');
-            await new Promise(r => setTimeout(r, 1300));
-            setEnemyEffectForUid(nextWave[0].uid, null);
-          }
-          setEnemyQuotes({});
-          setEnemyQuotedLowHp(new Set());
-          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
-          setRerollCount(0);
-          setWaveAnnouncement(nextWaveIdx + 1);
-          addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
-          rollAllDice();
+          setGmPendingNextWave(true);
         } else {
-          handleVictory();
+          setGmPendingVictory(true);
         }
-      };
-      doWaveTransition();
+      }, 1200);
     }
   }, [(game as any).gmKillWave]);
+
+  // GM: 延迟触发胜利（从新的渲染周期获取最新state）
+  useEffect(() => {
+    if (gmPendingVictory) {
+      setGmPendingVictory(false);
+      handleVictory();
+    }
+  }, [gmPendingVictory]);
+
+  // GM: 延迟触发下一波
+  useEffect(() => {
+    if (gmPendingNextWave && game.phase === 'battle') {
+      setGmPendingNextWave(false);
+      const nextWaveIdx = game.currentWaveIndex + 1;
+      if (nextWaveIdx >= game.battleWaves.length) { handleVictory(); return; }
+      const nextWave = game.battleWaves[nextWaveIdx].enemies;
+      const currentNode = game.map.find(n => n.id === game.currentNodeId);
+      const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 200;
+
+      const doTransition = async () => {
+        if (isBossWave) {
+          playSound('boss_appear');
+          setBossEntrance({ visible: true, name: nextWave[0].name, chapter: game.chapter });
+          await new Promise(r => setTimeout(r, 2200));
+          setBossEntrance(prev => ({ ...prev, visible: false }));
+          await new Promise(r => setTimeout(r, 300));
+        }
+        setEnemies(nextWave);
+        setEnemyEffects({}); setDyingEnemies(new Set());
+        if (isBossWave && nextWave[0]) {
+          setEnemyEffectForUid(nextWave[0].uid, 'boss_entrance');
+          playSound('boss_laugh');
+          await new Promise(r => setTimeout(r, 1300));
+          setEnemyEffectForUid(nextWave[0].uid, null);
+        }
+        setEnemyQuotes({});
+        setEnemyQuotedLowHp(new Set());
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+        setRerollCount(0);
+        setWaveAnnouncement(nextWaveIdx + 1);
+        addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
+        rollAllDice();
+      };
+      doTransition();
+    }
+  }, [gmPendingNextWave]);
 
   // BGM 管理
   useEffect(() => {
@@ -2275,7 +2270,8 @@ export default function DiceHeroGame() {
                 return { ...prev, statuses: newStatuses };
               });
               addLog(`${e.name} 施放诅咒，施加了毒素和虚弱！`);
-              addFloatingText('毒素+虚弱', 'text-purple-400', undefined, 'player');
+              addFloatingText(`毒素+${poisonVal}`, 'text-emerald-400', undefined, 'player');
+              setTimeout(() => addFloatingText('虚弱', 'text-purple-400', undefined, 'player'), 200);
             }
             
             await new Promise(r => setTimeout(r, 300));
@@ -2688,14 +2684,20 @@ useEffect(() => {
       { id: 'gold', type: 'gold', value: baseGold, collected: false }
     ];
 
-    // Boss rewards: +1 draw count
+    // Boss rewards: +1 draw count (手牌上限+1)
     const victoryNode = game.map.find(n => n.id === game.currentNodeId);
     if (victoryNode?.type === 'boss') {
       loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
     }
 
     // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
-    if (enemies.find(e => e.rerollReward)?.rerollReward) {
+    // 中Boss(非终Boss)也走骰子奖励，不随机给重roll
+    const mapMaxDepth = Math.max(...game.map.map(n => n.depth));
+    const isMidBoss = victoryNode?.type === 'boss' && victoryNode.depth < mapMaxDepth;
+    if (isMidBoss) {
+      // 中Boss必给+1骰子（额外的，在diceReward阶段选新骰子之外再加一颗手牌）
+      // 不走随机elite奖励
+    } else if (enemies.find(e => e.rerollReward)?.rerollReward) {
       const eliteRewards = LOOT_CONFIG.eliteRewards;
       const selectedReward = eliteRewards[Math.floor(Math.random() * eliteRewards.length)];
       
@@ -2732,14 +2734,15 @@ useEffect(() => {
       
       if (prev.currentNodeId && prev.map.find(n => n.id === prev.currentNodeId)?.type === 'boss') {
         const bossNode = prev.map.find(n => n.id === prev.currentNodeId);
-        // 只有最终Boss(depth>=14)才进入胜利画面，中层Boss继续走图拿战利品
-        if (bossNode && bossNode.depth >= 14) {
+        const mapMaxDepth = Math.max(...prev.map.map(n => n.depth));
+        // 最终Boss = 当前地图最大深度的Boss节点
+        if (bossNode && bossNode.depth >= mapMaxDepth) {
           // 判断是否为最终章
           if (prev.chapter >= CHAPTER_CONFIG.totalChapters) {
-            return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false };
+            return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: (prev.stats.bossesKilled || 0) + 1 } };
           } else {
             // 进入大关过渡
-            return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false };
+            return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: (prev.stats.bossesKilled || 0) + 1 } };
           }
         }
         // 中层Boss：继续走正常战利品流程
@@ -3521,21 +3524,47 @@ useEffect(() => {
                 )}
                 {/* ═══ 左手铠甲手套 + 骰子 ═══ */}
                 <div className={`hand-left ${dice.some(d => d.rolling) ? 'hand-left-rolling' : handLeftThrow ? 'hand-left-throw' : ''}`}>
-                  <svg width="140" height="200" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.9))', transform: 'scaleX(-1)' }}>
-                    {/* ── 骰子（手掌上方） ── */}
-                    <rect x="14" y="8" width="22" height="22" fill="rgba(0,0,0,0.25)" />
-                    <rect x="12" y="5" width="22" height="22" fill="#d8d0c0" />
-                    <rect x="12" y="5" width="22" height="4" fill="#e8e0d0" />
-                    <rect x="12" y="23" width="22" height="4" fill="#b8b0a0" />
-                    <rect x="12" y="5" width="4" height="22" fill="#c8c0b0" />
-                    <rect x="30" y="5" width="4" height="22" fill="#a8a090" />
-                    <rect x="16" y="9" width="3" height="3" fill="#3a3028" />
-                    <rect x="27" y="9" width="3" height="3" fill="#3a3028" />
-                    <rect x="22" y="15" width="3" height="3" fill="#3a3028" />
-                    <rect x="16" y="20" width="3" height="3" fill="#3a3028" />
-                    <rect x="27" y="20" width="3" height="3" fill="#3a3028" />
-                    <rect x="14" y="7" width="6" height="2" fill="rgba(255,255,255,0.3)" />
-                    <rect x="12" y="5" width="22" height="22" fill="none" stroke="#f0c850" strokeWidth="1" opacity="0.4" />
+                  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+                    {/* ── 魔能骰子（手掌上方，纯像素） ── */}
+                    {/* 投影 */}
+                    <rect x="12" y="6" width="26" height="26" fill="rgba(0,0,0,0.3)" />
+                    {/* 外框 — 像素锯齿圆角 */}
+                    <rect x="12" y="4" width="2" height="2" fill="#1a1430" />
+                    <rect x="34" y="4" width="2" height="2" fill="#1a1430" />
+                    <rect x="12" y="26" width="2" height="2" fill="#1a1430" />
+                    <rect x="34" y="26" width="2" height="2" fill="#1a1430" />
+                    <rect x="14" y="2" width="20" height="2" fill="#1a1430" />
+                    <rect x="14" y="28" width="20" height="2" fill="#1a1430" />
+                    <rect x="10" y="6" width="2" height="20" fill="#1a1430" />
+                    <rect x="36" y="6" width="2" height="20" fill="#1a1430" />
+                    {/* 主体填充 */}
+                    <rect x="12" y="6" width="24" height="20" fill="#2c2050" />
+                    <rect x="14" y="4" width="20" height="2" fill="#2c2050" />
+                    <rect x="14" y="26" width="20" height="2" fill="#2c2050" />
+                    {/* 内层深色 */}
+                    <rect x="14" y="8" width="20" height="16" fill="#342868" />
+                    {/* 能量核心 — 3层像素方块 */}
+                    <rect x="18" y="10" width="12" height="12" fill="#4838a0" />
+                    <rect x="20" y="12" width="8" height="8" fill="#6050c0" />
+                    <rect x="22" y="14" width="4" height="4" fill="#9080ff" />
+                    {/* 核心高光点 */}
+                    <rect x="24" y="16" width="2" height="2" fill="#c0b0ff" />
+                    {/* 顶部高光条 */}
+                    <rect x="14" y="6" width="8" height="2" fill="#4a3c80" />
+                    <rect x="14" y="8" width="4" height="2" fill="#4a3c80" />
+                    {/* 底部暗边 */}
+                    <rect x="14" y="24" width="20" height="2" fill="#1e1840" />
+                    <rect x="34" y="10" width="2" height="16" fill="#1e1840" />
+                    {/* 魔法纹路 — 像素十字 */}
+                    <rect x="16" y="15" width="2" height="2" fill="#7060d0" opacity="0.5" />
+                    <rect x="30" y="15" width="2" height="2" fill="#7060d0" opacity="0.5" />
+                    <rect x="22" y="9" width="2" height="2" fill="#7060d0" opacity="0.4" />
+                    <rect x="22" y="21" width="2" height="2" fill="#7060d0" opacity="0.4" />
+                    {/* 四角能量点 */}
+                    <rect x="14" y="6" width="2" height="2" fill="#8070e0" opacity="0.6" />
+                    <rect x="32" y="6" width="2" height="2" fill="#8070e0" opacity="0.5" />
+                    <rect x="14" y="24" width="2" height="2" fill="#8070e0" opacity="0.5" />
+                    <rect x="32" y="24" width="2" height="2" fill="#8070e0" opacity="0.6" />
                     {/* ── 手背（直接托住骰子） ── */}
                     <rect x="8" y="28" width="30" height="14" fill="#58585e" />
                     <rect x="8" y="28" width="30" height="2" fill="#6a6a72" />
@@ -3571,49 +3600,49 @@ useEffect(() => {
                 </div>
                 {/* 右手 — 铠甲手套持阔剑 */}
                 <div className={`hand-right ${playerEffect === 'attack' ? 'hand-right-attacking' : ''}`}>
-                  <svg width="140" height="200" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.9))', transform: 'scaleX(-1)' }}>
-                    {/* === 剑刃 — 长阔剑 === */}
+                  <svg width="155" height="215" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+                    {/* === 剑刃 — 暗黑阔剑 === */}
                     {/* 剑尖 */}
-                    <rect x="20" y="0" width="8" height="2" fill="#d0d0e0" />
-                    <rect x="18" y="2" width="12" height="2" fill="#c8c8dc" />
-                    {/* 刃身 — 长段 */}
-                    <rect x="16" y="4" width="16" height="36" fill="#b0b0c8" />
-                    {/* 刃中线高光 */}
-                    <rect x="22" y="2" width="4" height="38" fill="#d8d8ec" />
+                    <rect x="21" y="0" width="6" height="2" fill="#606878" />
+                    <rect x="19" y="2" width="10" height="2" fill="#505868" />
+                    {/* 刃身 — 冷铁色 */}
+                    <rect x="17" y="4" width="14" height="36" fill="#3c4450" />
+                    {/* 刃中线 — 暗银高光 */}
+                    <rect x="22" y="2" width="4" height="38" fill="#4a5566" />
                     {/* 刃左暗面 */}
-                    <rect x="16" y="4" width="2" height="36" fill="#8888a0" />
+                    <rect x="17" y="4" width="2" height="36" fill="#282e38" />
                     {/* 刃右暗面 */}
-                    <rect x="30" y="4" width="2" height="36" fill="#9090a8" />
-                    {/* 刃边高光 */}
-                    <rect x="18" y="4" width="2" height="36" fill="#c0c0d4" />
-                    {/* 刃纹装饰 — 细线 */}
-                    <rect x="20" y="10" width="8" height="1" fill="rgba(255,255,255,0.12)" />
-                    <rect x="20" y="20" width="8" height="1" fill="rgba(255,255,255,0.10)" />
-                    <rect x="20" y="30" width="8" height="1" fill="rgba(255,255,255,0.08)" />
-                    {/* 附魔光纹 */}
-                    <rect x="22" y="8" width="4" height="2" fill="#30d8d0" opacity="0.5" />
-                    <rect x="22" y="18" width="4" height="2" fill="#30d8d0" opacity="0.35" />
-                    <rect x="22" y="28" width="4" height="2" fill="#30d8d0" opacity="0.5" />
-                    {/* === 护手 === */}
-                    <rect x="8" y="40" width="32" height="4" fill="#c8a030" />
-                    <rect x="8" y="40" width="32" height="2" fill="#e0b840" />
-                    <rect x="8" y="42" width="32" height="2" fill="#a08020" />
-                    {/* 护手端饰 */}
-                    <rect x="6" y="40" width="4" height="4" fill="#d4a830" />
-                    <rect x="38" y="40" width="4" height="4" fill="#d4a830" />
-                    {/* 护手中央宝石 */}
-                    <rect x="21" y="40" width="6" height="4" fill="#7a30c0" />
-                    <rect x="23" y="40" width="2" height="2" fill="#a050e0" />
-                    {/* === 握柄 === */}
-                    <rect x="18" y="44" width="12" height="14" fill="#4a2a10" />
-                    <rect x="18" y="46" width="12" height="2" fill="#5e3818" />
-                    <rect x="18" y="50" width="12" height="2" fill="#5e3818" />
-                    <rect x="18" y="54" width="12" height="2" fill="#5e3818" />
-                    <rect x="20" y="44" width="2" height="14" fill="#5a3420" />
-                    {/* 柄尾 */}
-                    <rect x="16" y="58" width="16" height="4" fill="#c8a030" />
-                    <rect x="16" y="58" width="16" height="2" fill="#e0b840" />
-                    <rect x="22" y="58" width="4" height="4" fill="#d4a830" />
+                    <rect x="29" y="4" width="2" height="36" fill="#303842" />
+                    {/* 刃边冷光 */}
+                    <rect x="19" y="4" width="2" height="36" fill="#4a5260" />
+                    {/* 暗纹蚀刻 */}
+                    <rect x="20" y="10" width="8" height="1" fill="rgba(0,0,0,0.2)" />
+                    <rect x="20" y="20" width="8" height="1" fill="rgba(0,0,0,0.15)" />
+                    <rect x="20" y="30" width="8" height="1" fill="rgba(0,0,0,0.2)" />
+                    {/* 暗红邪能纹 */}
+                    <rect x="22" y="8" width="4" height="2" fill="#8a2020" opacity="0.5" />
+                    <rect x="22" y="18" width="4" height="2" fill="#8a2020" opacity="0.35" />
+                    <rect x="22" y="28" width="4" height="2" fill="#8a2020" opacity="0.45" />
+                    {/* === 护手 — 暗铁 === */}
+                    <rect x="8" y="40" width="32" height="4" fill="#2a2a30" />
+                    <rect x="8" y="40" width="32" height="2" fill="#3a3a42" />
+                    <rect x="8" y="42" width="32" height="2" fill="#1e1e24" />
+                    {/* 护手端饰 — 暗银尖角 */}
+                    <rect x="6" y="40" width="4" height="4" fill="#3e3e48" />
+                    <rect x="38" y="40" width="4" height="4" fill="#3e3e48" />
+                    {/* 护手中央 — 暗红宝石 */}
+                    <rect x="21" y="40" width="6" height="4" fill="#601818" />
+                    <rect x="23" y="40" width="2" height="2" fill="#a03030" />
+                    {/* === 握柄 — 暗黑皮革 === */}
+                    <rect x="18" y="44" width="12" height="14" fill="#1a1418" />
+                    <rect x="18" y="46" width="12" height="2" fill="#241c20" />
+                    <rect x="18" y="50" width="12" height="2" fill="#241c20" />
+                    <rect x="18" y="54" width="12" height="2" fill="#241c20" />
+                    <rect x="20" y="44" width="2" height="14" fill="#201820" />
+                    {/* 柄尾 — 暗铁 */}
+                    <rect x="16" y="58" width="16" height="4" fill="#2a2a30" />
+                    <rect x="16" y="58" width="16" height="2" fill="#3a3a42" />
+                    <rect x="22" y="58" width="4" height="4" fill="#3e3e48" />
                     {/* === 手部铠甲 === */}
                     <rect x="12" y="52" width="24" height="10" fill="#4a4a50" />
                     <rect x="12" y="52" width="24" height="2" fill="#5a5a62" />
@@ -3674,7 +3703,7 @@ useEffect(() => {
 
                 {/* === 结算演出覆盖层 === */}
                 {settlementPhase && settlementData && (
-                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.7)'}}>
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] pointer-events-none" style={{background: 'rgba(0,0,0,0.7)'}}>
                     <div className="flex flex-col items-center animate-fade-in">
                       {/* 牌型卡片 */}
                       <motion.div
@@ -3709,7 +3738,7 @@ useEffect(() => {
                       </motion.div>
                       
                       {/* 骰子展示区 */}
-                      <div className="flex gap-2 mt-3">
+                      <div className="flex gap-2 mt-5">
                         {settlementData.selectedDice.map((d, i) => (
                           <motion.div key={d.id}
                             initial={{ scale: 0, rotate: -180 }}
@@ -4153,7 +4182,7 @@ useEffect(() => {
                 })()}
               </AnimatePresence>
 
-              <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
+              <div className="px-2 pb-3 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
 
                 {/* 骰子库 + 骰子队列流转 + 弃骰库 (对齐) */}
                 <div className="flex items-center gap-1 mb-0.5 px-1 mt-1">
@@ -4332,7 +4361,7 @@ useEffect(() => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`h-10 px-3 ${currentRerollCost <= 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : currentRerollCost <= 4 ? 'bg-[#4a1a1a] border-[#c04040] text-[#ff8080]' : 'bg-[#5a0a0a] border-[#ff2020] text-[#ff4040]'} disabled:opacity-30 border-3 flex items-center justify-center gap-1.5 transition-all shrink-0 relative overflow-hidden`}
-                    style={{borderRadius:'6px', boxShadow: currentRerollCost <= 0 ? '0 0 8px rgba(60,200,100,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)' : `0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)}), inset -2px -2px 0 rgba(0,0,0,0.3)`}}
+                    style={{boxShadow: currentRerollCost <= 0 ? 'inset 0 2px 0 rgba(60,200,100,0.3), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5)' : `inset 0 2px 0 rgba(255,60,60,0.25), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5), 0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)})`}}
                   >
                     {/* Blood drip particles when cost > 0 */}
                     {currentRerollCost > 0 && (
@@ -4373,7 +4402,8 @@ useEffect(() => {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
-                        className="flex-1 py-2.5 bg-[var(--pixel-red-dark)] text-[var(--pixel-red-light)] border-3 border-[var(--pixel-red)] flex items-center justify-center font-bold text-[12px] tracking-[0.1em] battle-action-btn"
+                        className="flex-1 py-2.5 bg-[#a02820] text-[#ffc8c0] border-3 border-[#2a0808] flex items-center justify-center font-bold text-[12px] tracking-[0.1em] battle-action-btn"
+                        style={{boxShadow: 'inset 0 2px 0 #d04838, inset 0 -2px 0 #601008, 0 4px 0 #1a0404'}}
                       >
                         <motion.div
                           animate={{ opacity: [0.5, 1, 0.5] }}
@@ -4390,8 +4420,8 @@ useEffect(() => {
                         exit={{ opacity: 0, x: 10 }}
                         onClick={playHand}
                         disabled={dice.some(d => d.playing) || game.playsLeft <= 0 || false /* always allow play */}
-                        className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
-                        style={{borderRadius:'6px', boxShadow: currentHands.bestHand !== '普通攻击' ? '0 0 10px rgba(60,200,100,0.25), inset -2px -2px 0 rgba(0,0,0,0.3)' : 'inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                        className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
+                        style={{boxShadow: 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}
                       >
                         <PixelPlay size={2} /> {game.playsLeft > 0 ? (false /* always allow play */ ? '普通攻击' : `出牌: ${currentHands.bestHand}`) : '出牌次数耗尽'}
                       </motion.button>
@@ -4403,7 +4433,6 @@ useEffect(() => {
                         exit={{ opacity: 0, x: 10 }}
                         disabled={true}
                         className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]"
-                        style={{borderRadius:'6px'}}
                       >
                         回合结束中...
                       </motion.button>
@@ -4415,8 +4444,8 @@ useEffect(() => {
                         exit={{ opacity: 0, x: 10 }}
                         onClick={() => endTurn()}
                         disabled={game.isEnemyTurn || dice.some(d => d.playing)}
-                        className="flex-1 py-2.5 bg-[var(--pixel-gold-dark)] border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn"
-                        style={{borderRadius:'6px', boxShadow: '0 0 8px rgba(200,168,60,0.2), inset -2px -2px 0 rgba(0,0,0,0.3)'}}
+                        className="flex-1 py-2.5 bg-[#907020] border-[#2a2008] text-[#fff0c0] disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn"
+                        style={{boxShadow: 'inset 0 2px 0 #c8a040, inset 0 -2px 0 #604008, inset 2px 0 0 #b09030, inset -2px 0 0 #705010, 0 4px 0 #1a1404', textShadow: '1px 1px 0 #2a2008'}}
                       >
                         <PixelArrowRight size={2} /> 结束回合
                       </motion.button>
@@ -4426,14 +4455,22 @@ useEffect(() => {
               </div>
 
 
-              {/* 遗物库按钮 */}
-              <div className="px-2 pb-1 pt-0.5 border-t-2 border-[var(--dungeon-panel-border)]">
+              {/* 遗物库面板（收起状态） */}
+              <div className="px-2 pb-2 pt-0"
+                style={{
+                  borderTop: '2px solid rgba(80,70,55,0.6)',
+                  boxShadow: '0 -4px 12px rgba(0,0,0,0.5), 0 -1px 0 rgba(120,100,70,0.25)',
+                  background: 'linear-gradient(to bottom, rgba(40,34,26,0.6) 0%, rgba(20,18,14,0.3) 60%, transparent 100%)',
+                }}
+              >
                 <button
                   onClick={() => setShowRelicPanel(prev => !prev)}
-                  className="w-full text-[9px] text-[var(--pixel-gold)] hover:text-[var(--pixel-gold-light)] py-0.5 flex items-center justify-center gap-1 transition-colors font-bold"
+                  className="w-full flex flex-col items-center justify-center py-1.5 transition-colors"
                   style={{ textShadow: '0 0 4px rgba(212,160,48,0.3)' }}
                 >
-                  <span className="tracking-[0.15em]">▲ 遗物库 ({game.relics.length + game.augments.filter(Boolean).length})</span>
+                  <span className="text-[11px] text-[var(--pixel-gold)] font-bold leading-none">▲</span>
+                  <span className="text-[12px] text-[var(--pixel-gold)] hover:text-[var(--pixel-gold-light)] font-black tracking-[0.2em] leading-tight mt-0.5">遗物库</span>
+                  <span className="text-[9px] text-[var(--dungeon-text-dim)] font-mono leading-none mt-0.5">- {game.relics.length + game.augments.filter(Boolean).length}件 -</span>
                 </button>
               </div>
 
@@ -4459,7 +4496,7 @@ useEffect(() => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[150] bg-black/50"
+                    className="absolute inset-0 z-[150] bg-black/50"
                     onClick={() => setShowRelicPanel(false)}
                   >
                     <motion.div
@@ -4483,9 +4520,9 @@ useEffect(() => {
                         </span>
                         <button
                           onClick={() => setShowRelicPanel(false)}
-                          className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] text-sm px-2 py-0.5 transition-colors"
+                          className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] px-1 py-0.5 transition-colors"
                         >
-                          ✕
+                          <PixelClose size={2} />
                         </button>
                       </div>
                       {/* 遗物网格 */}

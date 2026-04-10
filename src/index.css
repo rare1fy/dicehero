@@ -116,7 +116,7 @@
   
   /* 像素边框样式 */
   --pixel-border-width: 3px;
-  --pixel-border-radius: 6px;
+  --pixel-border-radius: 0px;
 
   /* ═══ 像素拟物纹理（SVG data URI） ═══ */
   /* 石头纹理 — 4x4 不规则噪点 */
@@ -168,103 +168,134 @@
 .pixel-btn {
   font-family: 'FusionPixel', monospace !important;
   border: 3px solid;
-  border-radius: 2px;
+  border-radius: 0px;
   padding: 8px 16px;
   cursor: pointer;
-  transition: all 0.1s step-end;
+  transition: transform 0.05s step-end, filter 0.05s step-end;
   position: relative;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  image-rendering: pixelated;
 }
 
 .pixel-btn:hover {
   transform: translateY(-2px);
-  filter: brightness(1.2);
+  filter: brightness(1.15);
 }
 
 .pixel-btn:active {
   transform: translateY(2px);
-  filter: brightness(0.8);
+  filter: brightness(0.85);
+}
+.pixel-btn:active.pixel-btn-primary,
+.pixel-btn:active.pixel-btn-danger,
+.pixel-btn:active.pixel-btn-gold,
+.pixel-btn:active.pixel-btn-purple {
+  box-shadow:
+    inset 2px 2px 0 rgba(0,0,0,0.5),
+    inset -2px -2px 0 rgba(255,255,255,0.08) !important;
 }
 
 .pixel-btn-primary {
-  background: linear-gradient(180deg, #1ca840 0%, #0e6828 60%, #084a18 100%);
-  border-color: var(--pixel-green);
-  color: var(--pixel-green-light);
+  background-color: #18803a;
+  border-color: #0a3014;
+  color: #c8ffd0;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,255,255,0.15),
-    0 4px 0 #042a0c,
-    0 0 10px rgba(56,192,96,0.25);
+    inset 0 2px 0 #3ccc60,
+    inset 0 -2px 0 #0c4418,
+    inset 2px 0 0 #28a848,
+    inset -2px 0 0 #105820,
+    0 4px 0 #042a0c;
+  text-shadow: 1px 1px 0 #042a0c, 0 0 6px rgba(56,192,96,0.4);
 }
 
 .pixel-btn-danger {
-  background: linear-gradient(180deg, #c03828 0%, #882010 60%, #601008 100%);
-  border-color: var(--pixel-red);
-  color: var(--pixel-red-light);
+  background-color: #a02820;
+  border-color: #2a0808;
+  color: #ffc8c0;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,255,255,0.15),
-    0 4px 0 #2a0808,
-    0 0 10px rgba(212,74,42,0.25);
+    inset 0 2px 0 #d04838,
+    inset 0 -2px 0 #601008,
+    inset 2px 0 0 #c03828,
+    inset -2px 0 0 #781810,
+    0 4px 0 #1a0404;
+  text-shadow: 1px 1px 0 #2a0808, 0 0 6px rgba(212,74,42,0.4);
 }
 
 .pixel-btn-gold {
-  background: linear-gradient(180deg, #c09028 0%, #886010 60%, #604008 100%);
-  border-color: var(--pixel-gold);
-  color: var(--pixel-gold-light);
+  background-color: #907020;
+  border-color: #2a2008;
+  color: #fff0c0;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,255,255,0.15),
-    0 4px 0 #2a2008,
-    0 0 10px rgba(212,160,48,0.25);
+    inset 0 2px 0 #c8a040,
+    inset 0 -2px 0 #604008,
+    inset 2px 0 0 #b09030,
+    inset -2px 0 0 #705010,
+    0 4px 0 #1a1404;
+  text-shadow: 1px 1px 0 #2a2008, 0 0 6px rgba(212,160,48,0.4);
 }
 
 .pixel-btn-purple {
-  background: linear-gradient(180deg, #7028a8 0%, #481070 60%, #300850 100%);
-  border-color: var(--pixel-purple);
-  color: var(--pixel-purple-light);
+  background-color: #582090;
+  border-color: #180830;
+  color: #e0c0ff;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,255,255,0.15),
-    0 4px 0 #180830,
-    0 0 10px rgba(122,48,192,0.25);
+    inset 0 2px 0 #8840c0,
+    inset 0 -2px 0 #300850,
+    inset 2px 0 0 #7030b0,
+    inset -2px 0 0 #401068,
+    0 4px 0 #0c0418;
+  text-shadow: 1px 1px 0 #180830, 0 0 6px rgba(122,48,192,0.4);
 }
 
 .pixel-btn-ghost {
-  background-color: rgba(26,26,46,0.6);
-  border-color: var(--dungeon-panel-border);
+  background-color: #1a1a2e;
+  border-color: #2a2a40;
   color: var(--dungeon-text-dim);
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.2),
-    inset 2px 2px 0 rgba(255,255,255,0.03);
+    inset 0 2px 0 #282840,
+    inset 0 -2px 0 #0e0e1a,
+    inset 2px 0 0 #222238,
+    inset -2px 0 0 #141424;
 }
 
 .pixel-btn-ghost:hover {
   color: var(--dungeon-text);
-  border-color: var(--dungeon-panel-highlight);
+  border-color: #3a3a58;
+  background-color: #222240;
 }
 
 /* === ������� �� ��Ԩʯ���ʸ� === */
 .pixel-panel {
-  background: linear-gradient(180deg, rgba(20,26,34,0.98) 0%, rgba(14,19,23,0.99) 100%);
+  background:
+    var(--tex-stone),
+    linear-gradient(180deg, rgba(20,26,34,0.98) 0%, rgba(14,19,23,0.99) 100%);
+  background-size: 8px 8px, 100% 100%;
+  image-rendering: pixelated;
   border: 3px solid var(--dungeon-panel-border);
-  border-radius: 2px;
+  border-radius: 0px;
   box-shadow: 
-    inset -2px -2px 0 rgba(0,0,0,0.4),
-    inset 2px 2px 0 rgba(255,255,255,0.04),
-    0 0 0 1px rgba(0,0,0,0.9),
-    0 4px 14px rgba(0,0,0,0.6);
+    inset 0 2px 0 rgba(255,255,255,0.06),
+    inset 0 -2px 0 rgba(0,0,0,0.5),
+    inset 2px 0 0 rgba(255,255,255,0.03),
+    inset -2px 0 0 rgba(0,0,0,0.4),
+    0 4px 0 rgba(0,0,0,0.7);
 }
 
 .pixel-panel-dark {
-  background: linear-gradient(180deg, rgba(14,19,23,0.98) 0%, rgba(8,11,14,0.99) 100%);
+  background:
+    var(--tex-stone),
+    linear-gradient(180deg, rgba(14,19,23,0.98) 0%, rgba(8,11,14,0.99) 100%);
+  background-size: 8px 8px, 100% 100%;
+  image-rendering: pixelated;
   border: 3px solid rgba(30,42,52,0.6);
-  border-radius: 2px;
+  border-radius: 0px;
   box-shadow: 
-    inset 2px 2px 0 rgba(0,0,0,0.4),
-    inset -2px -2px 0 rgba(255,255,255,0.02),
-    0 0 0 1px rgba(0,0,0,0.9);
+    inset 0 2px 0 rgba(255,255,255,0.03),
+    inset 0 -2px 0 rgba(0,0,0,0.5),
+    inset 2px 0 0 rgba(255,255,255,0.02),
+    inset -2px 0 0 rgba(0,0,0,0.4);
+}
 }
 
 /* === ����HP�� === */
@@ -329,7 +360,7 @@
   width: 52px;
   height: 52px;
   border: 3px solid;
-  border-radius: 6px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -524,11 +555,11 @@
 
 
 /* === 元素骰子光效 === */
-.dice-element-fire { position: relative; overflow: visible; border-radius: 6px !important; }
-.dice-element-ice { position: relative; overflow: visible; border-radius: 6px !important; }
-.dice-element-thunder { position: relative; overflow: visible; border-radius: 6px !important; }
-.dice-element-poison { position: relative; overflow: visible; border-radius: 6px !important; }
-.dice-element-holy { position: relative; overflow: visible; border-radius: 6px !important; }
+.dice-element-fire { position: relative; overflow: visible; border-radius: 4px !important; }
+.dice-element-ice { position: relative; overflow: visible; border-radius: 4px !important; }
+.dice-element-thunder { position: relative; overflow: visible; border-radius: 4px !important; }
+.dice-element-poison { position: relative; overflow: visible; border-radius: 4px !important; }
+.dice-element-holy { position: relative; overflow: visible; border-radius: 4px !important; }
 .dice-element-fire::before {
   content: '';
   position: absolute;
@@ -2011,7 +2042,7 @@ input[type="range"]::-moz-range-track {
 
 /* 摇骰子时骰子发光 */
 .hand-left-rolling svg {
-  filter: drop-shadow(0 0 12px rgba(240,200,80,0.8)) drop-shadow(0 0 24px rgba(240,200,80,0.4)) !important;
+  filter: drop-shadow(0 0 12px rgba(140,100,240,0.8)) drop-shadow(0 0 24px rgba(100,60,200,0.4)) !important;
 }
 
 /* 投掷动画 */
@@ -2096,16 +2127,14 @@ input[type="range"]::-moz-range-track {
     0 -6px 20px rgba(0,0,0,0.7);
 }
 
-/* === 战斗操作按钮 — 木板+铁扣 === */
+/* === 战斗操作按钮 — 像素硬斜角 === */
 .battle-action-btn {
   border: 3px solid;
-  border-radius: 6px;
+  border-radius: 0px;
   font-weight: 900;
   letter-spacing: 0.05em;
   position: relative;
   overflow: hidden;
-  background-image: var(--tex-wood);
-  background-size: 8px 8px;
   image-rendering: pixelated;
 }
 
@@ -2563,7 +2592,7 @@ input[type="range"]::-moz-range-track {
 }
 
 .map-node-locked {
-  opacity: 0.4;
+  opacity: 0.6;
 }
 
 /* ��ͼ�ڵ�������ɫ */
@@ -2573,7 +2602,7 @@ input[type="range"]::-moz-range-track {
 .map-node-shop { background: linear-gradient(180deg, rgba(60,200,100,0.25) 0%, rgba(26,139,52,0.45) 100%); }
 .map-node-event { background: linear-gradient(180deg, rgba(60,108,200,0.25) 0%, rgba(26,60,139,0.45) 100%); }
 .map-node-campfire { background: linear-gradient(180deg, rgba(200,124,60,0.3) 0%, rgba(139,80,20,0.5) 100%); }
-.map-node-treasure { background: linear-gradient(180deg, rgba(200,170,40,0.3) 0%, rgba(180,140,20,0.5) 100%); }
+.map-node-treasure { background: linear-gradient(180deg, rgba(60,200,180,0.3) 0%, rgba(20,140,120,0.5) 100%); }
 .map-node-merchant { background: linear-gradient(180deg, rgba(40,160,80,0.3) 0%, rgba(20,120,50,0.5) 100%); }
 
 /* ��ͼ�ڵ����嶯�� �� �ɴ�ڵ� */
@@ -2619,133 +2648,133 @@ input[type="range"]::-moz-range-track {
   background-size: 8px 8px, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章1: 幽暗森林 — 深邃墨绿+暗棕泥土 */
+/* 章1: 幽暗森林 — 墨绿深林 */
 .map-bg-forest {
-  background-color: #060d04;
+  background-color: #040a02;
   background-image:
-    var(--tex-stone),
-    radial-gradient(ellipse at 25% 20%, rgba(30,90,20,0.14) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 80%, rgba(50,30,10,0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(60,140,40,0.06) 0%, transparent 60%),
-    radial-gradient(circle at 40% 60%, rgba(20,80,15,0.08) 0%, transparent 40%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23060e03'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%230a1406' opacity='0.7'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%23041004' opacity='0.6'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%230c1808' opacity='0.5'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%23040c02' opacity='0.6'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 25% 20%, rgba(30,100,20,0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 80%, rgba(40,80,15,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(50,130,30,0.12) 0%, transparent 60%),
+    radial-gradient(circle at 20% 60%, rgba(80,160,40,0.06) 0%, transparent 40%);
   background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章2: 冰封山脉 — 深冰蓝+霜白 */
+/* 章2: 冰封山脉 — 深冰蓝寒霜 */
 .map-bg-ice {
-  background-color: #040810;
+  background-color: #030610;
   background-image:
-    var(--tex-stone),
-    radial-gradient(ellipse at 30% 15%, rgba(50,110,200,0.16) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 85%, rgba(70,150,240,0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(90,170,255,0.06) 0%, transparent 60%),
-    radial-gradient(circle at 60% 30%, rgba(120,200,255,0.04) 0%, transparent 35%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23040814'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%23060c1c' opacity='0.7'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%23030610' opacity='0.6'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%23080e20' opacity='0.5'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%23030610' opacity='0.6'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 30% 15%, rgba(50,120,220,0.28) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 85%, rgba(60,140,240,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(80,160,255,0.1) 0%, transparent 60%),
+    radial-gradient(circle at 60% 30%, rgba(120,200,255,0.06) 0%, transparent 40%);
   background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章3: 熔岩深渊 — 暗黑岩底+岩浆裂光 */
+/* 章3: 熔岩深渊 — 炽热暗红 */
 .map-bg-lava {
-  background-color: #0c0402;
+  background-color: #0c0300;
   background-image:
-    var(--tex-stone),
-    radial-gradient(ellipse at 25% 80%, rgba(200,50,10,0.14) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 20%, rgba(220,100,30,0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 60%, rgba(240,70,10,0.07) 0%, transparent 55%),
-    radial-gradient(circle at 35% 45%, rgba(255,120,20,0.05) 0%, transparent 30%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23100400'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%23180600' opacity='0.7'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%230c0200' opacity='0.6'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%231a0800' opacity='0.5'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%230e0300' opacity='0.6'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 25% 80%, rgba(220,50,10,0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 20%, rgba(240,100,20,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 60%, rgba(255,70,10,0.12) 0%, transparent 55%),
+    radial-gradient(circle at 40% 40%, rgba(255,140,30,0.07) 0%, transparent 35%);
   background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章4: 暗影要塞 — 深渊紫+邪能绿光 */
+/* 章4: 暗影要塞 — 深渊紫暗 */
 .map-bg-shadow {
-  background-color: #06040c;
+  background-color: #050310;
   background-image:
-    var(--tex-stone),
-    radial-gradient(ellipse at 30% 30%, rgba(90,30,150,0.14) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 70%, rgba(50,180,70,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(70,15,130,0.06) 0%, transparent 55%),
-    radial-gradient(circle at 65% 40%, rgba(120,40,200,0.04) 0%, transparent 35%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23060414'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%230a061c' opacity='0.7'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%23040210' opacity='0.6'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%230c0820' opacity='0.5'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%23040210' opacity='0.6'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 30% 30%, rgba(100,30,180,0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 70%, rgba(50,200,80,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(80,20,160,0.1) 0%, transparent 55%),
+    radial-gradient(circle at 65% 40%, rgba(140,50,220,0.06) 0%, transparent 35%);
   background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章5: 永恒之巅 — 暗金+天穹白光 */
+/* 章5: 永恒之巅 — 暗金圣光 */
 .map-bg-eternal {
-  background-color: #0a0804;
+  background-color: #0a0702;
   background-image:
-    var(--tex-stone),
-    radial-gradient(ellipse at 50% 20%, rgba(220,190,80,0.14) 0%, transparent 50%),
-    radial-gradient(ellipse at 30% 70%, rgba(200,170,60,0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 50%, rgba(240,220,130,0.06) 0%, transparent 55%),
-    radial-gradient(circle at 50% 35%, rgba(255,240,180,0.04) 0%, transparent 35%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%230e0a04'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%23140e06' opacity='0.7'/%3E%3Crect x='4' y='2' width='2' height='2' fill='%230c0802' opacity='0.6'/%3E%3Crect x='2' y='4' width='2' height='2' fill='%23161008' opacity='0.5'/%3E%3Crect x='6' y='6' width='2' height='2' fill='%230c0802' opacity='0.6'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 50% 20%, rgba(230,200,80,0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 70%, rgba(210,180,60,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 50%, rgba(250,230,130,0.1) 0%, transparent 55%),
+    radial-gradient(circle at 50% 40%, rgba(255,245,180,0.06) 0%, transparent 40%);
   background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
 
-/* 地图粒子效果 — 各章节主题 */
+/* 地图粒子效果 — 像素方块风格 */
 .map-particle {
   position: absolute;
   pointer-events: none;
-  border-radius: 50%;
+  image-rendering: pixelated;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
-/* 森林：绿色萤火虫飘浮 */
 .map-particle-forest {
-  background: radial-gradient(circle, rgba(80,200,60,0.8) 0%, rgba(60,160,40,0) 70%);
+  background-color: rgba(80,200,60,0.8);
   animation-name: mapParticleFloat;
-  filter: blur(1px);
+  box-shadow: 0 0 4px rgba(60,180,40,0.5);
 }
-/* 冰封：白色雪花飘落 */
 .map-particle-ice {
-  background: radial-gradient(circle, rgba(200,230,255,0.9) 0%, rgba(180,210,240,0) 70%);
+  background-color: rgba(200,230,255,0.85);
   animation-name: mapParticleFall;
+  box-shadow: 0 0 3px rgba(160,210,255,0.4);
 }
-/* 熔岩：橙红火星上升 */
 .map-particle-lava {
-  background: radial-gradient(circle, rgba(255,120,20,0.9) 0%, rgba(200,60,10,0) 70%);
+  background-color: rgba(255,120,20,0.85);
   animation-name: mapParticleRise;
+  box-shadow: 0 0 4px rgba(255,80,10,0.5);
 }
-/* 暗影：紫色幽魂游荡 */
 .map-particle-shadow {
-  background: radial-gradient(circle, rgba(140,60,220,0.7) 0%, rgba(100,30,180,0) 70%);
+  background-color: rgba(150,70,240,0.7);
   animation-name: mapParticleWander;
-  filter: blur(2px);
+  box-shadow: 0 0 5px rgba(120,40,200,0.4);
 }
-/* 永恒：金色光尘缓缓下落 */
 .map-particle-eternal {
-  background: radial-gradient(circle, rgba(255,220,100,0.8) 0%, rgba(220,180,60,0) 70%);
+  background-color: rgba(255,220,100,0.8);
   animation-name: mapParticleShimmer;
-  filter: blur(1px);
+  box-shadow: 0 0 4px rgba(220,180,60,0.5);
 }
 @keyframes mapParticleFloat {
-  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  0% { transform: translate(0, 0); opacity: 0; }
   10% { opacity: 0.8; }
-  50% { transform: translateY(-40px) translateX(15px); opacity: 0.6; }
-  90% { opacity: 0.2; }
-  100% { transform: translateY(-80px) translateX(-10px); opacity: 0; }
+  50% { transform: translate(var(--dx, 15px), var(--dy, -60px)); opacity: 0.5; }
+  100% { transform: translate(var(--dx2, -10px), var(--dy2, -120px)); opacity: 0; }
 }
 @keyframes mapParticleFall {
-  0% { transform: translateY(-20px) translateX(0); opacity: 0; }
+  0% { transform: translate(0, 0); opacity: 0; }
   10% { opacity: 0.9; }
-  100% { transform: translateY(100px) translateX(20px); opacity: 0; }
+  100% { transform: translate(var(--dx, 20px), var(--dy, 120px)); opacity: 0; }
 }
 @keyframes mapParticleRise {
-  0% { transform: translateY(20px) scale(1); opacity: 0; }
+  0% { transform: translate(0, 0); opacity: 0; }
   15% { opacity: 1; }
-  100% { transform: translateY(-90px) scale(0.3); opacity: 0; }
+  100% { transform: translate(var(--dx, -15px), var(--dy, -120px)); opacity: 0; }
 }
 @keyframes mapParticleWander {
   0% { transform: translate(0, 0); opacity: 0; }
   15% { opacity: 0.6; }
-  33% { transform: translate(20px, -15px); }
-  66% { transform: translate(-15px, -30px); }
-  85% { opacity: 0.3; }
-  100% { transform: translate(5px, -50px); opacity: 0; }
+  33% { transform: translate(var(--dx, 25px), calc(var(--dy, -80px) * 0.3)); }
+  66% { transform: translate(var(--dx2, -20px), calc(var(--dy, -80px) * 0.7)); }
+  100% { transform: translate(calc(var(--dx, 25px) * 0.5), var(--dy, -80px)); opacity: 0; }
 }
 @keyframes mapParticleShimmer {
-  0% { transform: translateY(-10px) scale(0.8); opacity: 0; }
+  0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
   20% { opacity: 0.7; }
-  60% { opacity: 0.9; }
-  100% { transform: translateY(60px) scale(0.4); opacity: 0; }
+  50% { transform: translate(var(--dx, 10px), calc(var(--dy, 60px) * 0.5)) scale(1.1); opacity: 0.9; }
+  100% { transform: translate(var(--dx2, -5px), var(--dy, 60px)) scale(0.4); opacity: 0; }
+}
+@keyframes mapFogDrift {
+  0% { transform: translateX(-3%) scaleY(1); opacity: 0.7; }
+  50% { transform: translateX(3%) scaleY(1.15); opacity: 1; }
+  100% { transform: translateX(-2%) scaleY(0.9); opacity: 0.8; }
 }
 
 /* ====================================

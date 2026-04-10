@@ -33,7 +33,7 @@ export const EnemyBestiary: React.FC<Props> = ({ visible, onClose }) => {
     const ct = COMBAT_LABELS[e.combatType] || { label: '?', color: '#888' };
     const catColor = CAT_COLORS[e.category] || '#888';
     return (
-      <div key={e.id} className="flex items-center gap-2 p-1.5 bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]" style={{ borderRadius: '4px' }}>
+      <div key={e.id} className="flex items-center gap-2 p-1.5 bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]" style={{ borderRadius: '2px' }}>
         <div className="w-10 h-10 flex items-center justify-center shrink-0">
           {hasSpriteData(e.name) ? (
             <PixelSprite name={e.name} size={e.category === 'boss' ? 4 : e.category === 'elite' ? 3.5 : 3} />
@@ -94,7 +94,7 @@ export const EnemyBestiary: React.FC<Props> = ({ visible, onClose }) => {
                       ? 'bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] border-[var(--pixel-gold)]'
                       : 'bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-[var(--dungeon-panel-border)] hover:text-[var(--dungeon-text)]'
                   }`}
-                  style={{ borderRadius: '3px' }}
+                  style={{ borderRadius: '2px' }}
                 >
                   {name}
                 </button>

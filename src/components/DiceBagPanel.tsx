@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
-import { PixelDice } from './PixelIcons';
+import { PixelDice, PixelClose } from './PixelIcons';
 
 /** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
 const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
@@ -202,7 +202,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                   onClick={() => setExpanded(false)}
                   className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] text-xs font-bold"
                 >
-                  {'\u2715'}
+                  <PixelClose size={2} />
                 </button>
               </div>
 

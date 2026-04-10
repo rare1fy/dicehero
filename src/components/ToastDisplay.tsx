@@ -9,7 +9,7 @@ export const ToastDisplay: React.FC = () => {
   const { toasts } = useContext(GameContext);
 
   return (
-    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-1.5 pointer-events-none w-full max-w-xs px-4">
+    <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-1.5 pointer-events-none w-full max-w-xs px-4">
       <AnimatePresence>
         {toasts.map(t => (
           <motion.div

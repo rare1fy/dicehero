@@ -54,15 +54,15 @@ export const EnemyQuoteBubble: React.FC<EnemyQuoteBubbleProps> = ({ text, catego
             transform: 'translateX(-50%)',
             marginBottom: '6px',
             zIndex: 50,
-            minWidth: '60px',
-            maxWidth: '140px',
+            minWidth: '80px',
+            maxWidth: '200px',
           }}
         >
           <div
             style={{
               background: bgColor,
               border: `2px solid ${borderColor}`,
-              borderRadius: '3px',
+              borderRadius: '2px',
               padding: '4px 6px',
               fontFamily: 'fusion-pixel, monospace',
               fontSize: '10px',

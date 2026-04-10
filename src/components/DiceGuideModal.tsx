@@ -4,6 +4,7 @@
 import React, { useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
+import { PixelClose } from './PixelIcons';
 import { ALL_DICE, ELEMENT_EFFECT_DESC } from '../data/dice';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import type { DiceDef } from '../types/game';
@@ -56,7 +57,7 @@ export const DiceGuideModal: React.FC = () => {
           >
             <div className="p-4 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
               <h3 className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">◆ 骰子图鉴 ◆</h3>
-              <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-white text-xs">✕</button>
+              <button onClick={() => setShowDiceGuide(false)} className="text-[var(--dungeon-text-dim)] hover:text-white"><PixelClose size={2} /></button>
             </div>
             <div className="overflow-y-auto p-3 flex-1">
               {RARITY_ORDER.map(rarity => {
