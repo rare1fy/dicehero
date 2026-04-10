@@ -46,7 +46,7 @@ export const HandGuideModal: React.FC = () => {
                     <div className="text-[9px]">
                       <span className="text-[var(--pixel-cyan)]">{baseDmg}</span>
                       <span className="text-[var(--dungeon-text-dim)] mx-0.5">×</span>
-                      <span className="text-[var(--pixel-red)]">{mult.toFixed(1)}</span>
+                      <span className="text-[var(--pixel-red)]">{Math.round(mult * 100)}%</span>
                     </div>
                   </div>
                 );

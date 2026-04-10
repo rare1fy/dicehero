@@ -2249,6 +2249,24 @@ input[type="range"]::-moz-range-track {
   z-index: 10;
 }
 
+/* 牌型提示：wrapper div 承载发光+漂浮，不受 framer-motion 干扰 */
+@keyframes dice-hint-float {
+  0%, 100% {
+    transform: translateY(0px);
+    box-shadow: 0 0 10px rgba(34,197,94,0.5), 0 0 22px rgba(34,197,94,0.2), 0 0 40px rgba(34,197,94,0.1);
+  }
+  50% {
+    transform: translateY(-5px);
+    box-shadow: 0 0 16px rgba(34,197,94,0.7), 0 0 32px rgba(34,197,94,0.3), 0 0 48px rgba(34,197,94,0.15);
+  }
+}
+.dice-hand-hint-wrap {
+  border-radius: 6px;
+  animation: dice-hint-float 1.6s ease-in-out infinite;
+  z-index: 3;
+  position: relative;
+}
+
 /* ����ȡ��ѡ�� �� ��ʱ���䣬�������� */
 .dice-deselect-snap {
   transition: transform 0.08s steps(2), box-shadow 0.08s steps(2), filter 0.08s steps(2) !important;

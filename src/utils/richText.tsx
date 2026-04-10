@@ -2,150 +2,79 @@ import React from 'react';
 
 /**
  * 富文本描述格式化工具
- * 将说明文本中的关键信息用彩色高亮显示
+ * 规则：每句话最多高亮2个关键词，统一用金色加粗
  */
 
-// 匹配规则定义
-interface HighlightRule {
-  pattern: RegExp;
-  className: string;
-}
-
-const _HIGHLIGHT_RULES: HighlightRule[] = [
-  // 数字+单位（如 "5 点护甲"、"20 HP"、"-15 HP"、"+3"、"x1.5"、"* 2.2"）
-  { pattern: /([+\-×x*]\s*\d+(?:\.\d+)?(?:\s*%)?)/g, className: 'text-[var(--pixel-gold)] font-bold' },
-  // 纯数字+单位词组合（如 "3 层灼烧"、"10 点伤害"、"50 金币"）
-  { pattern: /(\d+(?:\.\d+)?)\s*(点|层|颗|次|回合|格|个|枚)/g, className: '__NUM_UNIT__' },
-  // HP相关
-  { pattern: /(\d+)\s*(HP|hp|生命值?|生命力?)/g, className: '__NUM_UNIT_HP__' },
-  // 金币
-  { pattern: /(\d+)\s*(金币|魂魄)/g, className: '__NUM_UNIT_GOLD__' },
+// 所有可高亮的关键词/模式，按优先级排列
+const KEYWORD_PATTERNS: RegExp[] = [
+  // 数值类（最高优先）
+  /[+\-]\s*\d+(?:\.\d+)?(?:\s*%)?/g,
+  /[×x*]\s*\d+(?:\.\d+)?/g,
+  /\d+(?:\.\d+)?\s*(?:点|层|颗|次|回合|格|个|枚)/g,
+  /\d+\s*(?:HP|hp|生命值?)/g,
+  /\d+\s*(?:金币|魂魄)/g,
+  /\d+%/g,
   // 牌型名称
-  { pattern: /(普通攻击|对子|连对|三条|顺子|同元素|葫芦|四条|五条|六条|元素顺|元素葫芦|皇家元素顺)/g, className: 'text-[var(--pixel-cyan)] font-bold' },
+  /皇家元素顺|元素葫芦|元素顺|三连对|同元素|普通攻击|葫芦|连对|三条|四条|五条|六条|顺子|对子|6顺|5顺|4顺|3顺|AOE/g,
   // 状态效果
-  { pattern: /(灼烧|中毒|虚弱|易伤|护甲|闪避|力量)/g, className: 'text-[var(--pixel-orange)] font-bold' },
-  // 骰子颜色
-  { pattern: /(红色|蓝色|紫色|金色)骰子/g, className: '__DICE_COLOR__' },
-  // 关键动作词
-  { pattern: /(伤害|穿透|回复|获得|附加|升级|强化)/g, className: 'text-[var(--pixel-green-light)] font-semibold' },
+  /灼烧|中毒|虚弱|易伤|护甲|冻结|减速|净化|免疫|毒素|闪避|力量/g,
+  // 触发条件 & 机制关键词
+  /出牌时|击杀时|受到伤害时|回合结束时|回合开始时|战斗开始时|战斗结束时|致命伤害时|移动时|卖血[Rr]oll|卖血重投|重[Rr]oll|重投|重掷|被动|首次出牌|溢出伤害|每回合|每次出牌|坍缩|分裂|反噬|自毁|自伤|破甲|穿透|真实伤害|净化|严格递减|完全相同|恰好为|恰好等于|全部手牌|全部≤\d+点|全部同为奇数|全部同为偶数|与上次相反|点数之和|点数和|同一种元素|不构成任何牌型|≥\d+颗骰子|≤\d+/g,
+  // 骰子名称
+  /普通骰子|灌铅骰子|元素骰子|锋刃骰子|倍增骰子|分裂骰子|磁吸骰子|小丑骰子|混沌骰子|诅咒骰子|碎裂骰子/g,
+  // 元素
+  /火元素|冰元素|雷元素|毒元素|圣光/g,
 ];
 
-/**
- * 将描述文本转换为带高亮的React元素
- */
+const HL_CLASS = 'text-[var(--pixel-gold)] font-bold';
+
+interface Marker {
+  start: number;
+  end: number;
+}
+
 export const formatDescription = (text: string): React.ReactNode => {
   if (!text) return null;
 
-  // 使用一个简化的方法：逐步替换为标记，最后渲染
-  const _segments: { text: string; className?: string }[] = [];
-  
-  // 先用正则把所有需要高亮的部分标记出来
-  interface Marker {
-    start: number;
-    end: number;
-    className: string;
-  }
-  
-  const markers: Marker[] = [];
-  
-  // 规则1：数字+单位（"3 层"、"10 点"）
-  const numUnitRegex = /(\d+(?:\.\d+)?)\s*(点|层|颗|次|回合|格|个|枚)/g;
-  let match: RegExpExecArray | null;
-  while ((match = numUnitRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-num' });
-  }
-  
-  // 规则2：HP相关
-  const hpRegex = /(\d+)\s*(HP|hp|生命值?|生命力?)/g;
-  while ((match = hpRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-hp' });
-  }
-  
-  // 规则3：金币
-  const goldRegex = /(\d+)\s*(金币|魂魄)/g;
-  while ((match = goldRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-gold' });
+  // 收集所有匹配
+  const allMarkers: Marker[] = [];
+  for (const pattern of KEYWORD_PATTERNS) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      allMarkers.push({ start: match.index, end: match.index + match[0].length });
+    }
   }
 
-  // 规则4：运算符+数字（"+5"、"x1.5"、"* 2.0"、"-15"）
-  const opNumRegex = /([+\-]\s*\d+(?:\.\d+)?(?:\s*%)?|[×x*]\s*\d+(?:\.\d+)?)/g;
-  while ((match = opNumRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-op' });
-  }
-  
-  // 规则5：牌型名称
-  const handRegex = /(普通攻击|对子|连对|三条|顺子|元素顺|元素葫芦|皇家元素顺|同元素|葫芦|四条|五条|六条)/g;
-  while ((match = handRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-hand' });
-  }
-  
-  // 规则6：状态效果
-  const statusRegex = /(灼烧|中毒|虚弱|易伤|护甲|闪避|力量)/g;
-  while ((match = statusRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-status' });
-  }
-
-  // 规则7：骰子颜色
-  const colorRegex = /(红色|蓝色|紫色|金色)/g;
-  while ((match = colorRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-color' });
-  }
-
-  // 规则8：括号内的公式
-  const formulaRegex = /\([^)]*[+×x*][^)]*\)/g;
-  while ((match = formulaRegex.exec(text)) !== null) {
-    markers.push({ start: match.index, end: match.index + match[0].length, className: 'hl-formula' });
-  }
-
-  // 去重：如果多个marker重叠，优先级高的（先出现的规则）覆盖
-  markers.sort((a, b) => a.start - b.start || b.end - a.end);
-  const finalMarkers: Marker[] = [];
+  // 按位置排序，去重（重叠的取先出现的）
+  allMarkers.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  const deduped: Marker[] = [];
   let lastEnd = 0;
-  for (const m of markers) {
+  for (const m of allMarkers) {
     if (m.start >= lastEnd) {
-      finalMarkers.push(m);
+      deduped.push(m);
       lastEnd = m.end;
     }
   }
 
-  // 构建segments
+  // 限制最多2个高亮
+  const finalMarkers = deduped.slice(0, 2);
+
+  if (finalMarkers.length === 0) return text;
+
+  // 构建React节点
   let pos = 0;
   const result: React.ReactNode[] = [];
-  
   for (let i = 0; i < finalMarkers.length; i++) {
     const m = finalMarkers[i];
-    
-    // 未高亮的文本
     if (pos < m.start) {
       result.push(<span key={`t${i}`}>{text.slice(pos, m.start)}</span>);
     }
-    
-    // 高亮文本
-    const hlText = text.slice(m.start, m.end);
-    const cls = getClassName(m.className);
-    result.push(<span key={`h${i}`} className={cls}>{hlText}</span>);
-    
+    result.push(<span key={`h${i}`} className={HL_CLASS}>{text.slice(m.start, m.end)}</span>);
     pos = m.end;
   }
-  
-  // 剩余文本
   if (pos < text.length) {
     result.push(<span key="tail">{text.slice(pos)}</span>);
   }
-  
   return <>{result}</>;
 };
-
-function getClassName(type: string): string {
-  switch (type) {
-    case 'hl-num': return 'text-[var(--pixel-gold)] font-bold';
-    case 'hl-hp': return 'text-[var(--pixel-red)] font-bold';
-    case 'hl-gold': return 'text-[var(--pixel-gold)] font-bold';
-    case 'hl-op': return 'text-[var(--pixel-gold)] font-bold';
-    case 'hl-hand': return 'text-[var(--pixel-cyan)] font-bold';
-    case 'hl-status': return 'text-[var(--pixel-orange)] font-bold';
-    case 'hl-color': return 'font-bold';
-    case 'hl-formula': return 'text-[var(--dungeon-text-bright)] font-mono text-[0.9em]';
-    default: return '';
-  }
-}

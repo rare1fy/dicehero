@@ -47,12 +47,12 @@ export const GlobalTopBar: React.FC = () => {
         <div className="flex items-center gap-1 text-purple-400 font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative" style={{borderRadius:'2px'}} {...soulTip.handlers}>
           <span className="relative">
             <PixelSoulCrystal size={2} />
-            <span className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 text-[8px] text-purple-200 whitespace-nowrap leading-none font-bold" style={{textShadow:'0 0 2px #000, 0 0 2px #000'}}>×{actualMult.toFixed(1)}</span>
+            <span className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 text-[8px] text-purple-200 whitespace-nowrap leading-none font-bold" style={{textShadow:'0 0 2px #000, 0 0 2px #000'}}>{Math.round(actualMult * 100)}%</span>
           </span>
           <span className="font-bold">{game.blackMarketQuota || 0}</span>
           {soulTip.show && (
             <div className="absolute left-0 top-full mt-1 bg-[var(--dungeon-panel)] border-2 border-purple-500 px-2 py-1 text-[8px] text-purple-300 z-[200] pixel-text-shadow min-w-[180px]" style={{borderRadius:'2px', whiteSpace:'normal'}}>
-              魂晶 — 首次出牌秒杀时获得（溢出伤害×倍率）。撤离转移后倍率归1，不撤离可贪更高倍率，死亡全丢。
+              魂晶 — 首次出牌秒杀时获得（溢出伤害×倍率）。撤离转移后倍率归1，不撤离可贪更高倍率，死亡损失60%。
             </div>
           )}
         </div>

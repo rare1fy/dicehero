@@ -201,6 +201,17 @@ export interface BattleWave {
   enemies: Enemy[];
 }
 
+/** 一击必杀挑战条件 */
+export interface InstakillChallenge {
+  type: string;
+  label: string;
+  description: string;
+  value?: number;
+  handType?: string;
+  progress?: number;
+  completed: boolean;
+}
+
 
 // ============================================================
 // 本局统计数据
@@ -407,6 +418,10 @@ export interface GameState {
   hpLostThisBattle?: number;          // 本场战斗已损失的HP
   hpLostThisTurn?: number;            // 本回合已损失的HP
   rageFireBonus?: number;              // 怒火燎原遗物：受伤后累积的额外伤害
+  instakillChallenge?: InstakillChallenge | null; // 一击必杀挑战条件
+  instakillCompleted?: boolean;        // 是否已达成一击必杀
+  playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）
+  rerollsThisWave?: number;            // 本波重投次数（挑战追踪用）
 }
 
 // ============================================================

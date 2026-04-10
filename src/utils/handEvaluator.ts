@@ -112,3 +112,86 @@ export const checkHands = (dice: Die[], options?: { straightUpgrade?: number }):
 export const canFormValidHand = (_selected: Die[], _candidate: Die, _available: Die[]): boolean => {
   return true; // Any combination is valid: non-hand = 普通攻击
 };
+
+/**
+ * 对手中所有未使用的骰子，检测哪些可以参与组成牌型（对子以上）。
+ * 返回一个 Set<number>，包含所有"能组成牌型"的骰子ID。
+ * 
+ * 如果传入了 selectedId，则只返回能和该骰子一起组成牌型的骰子ID集合。
+ */
+export const findHandCandidates = (allDice: Die[], selectedId?: number): Set<number> => {
+  const available = allDice.filter(d => !d.spent && !d.rolling);
+  if (available.length < 2) return new Set();
+
+  const result = new Set<number>();
+
+  if (selectedId !== undefined) {
+    // 模式B：找能和selectedId一起组成牌型的骰子
+    const anchor = available.find(d => d.id === selectedId);
+    if (!anchor) return result;
+    result.add(selectedId); // 自己总是候选
+
+    for (const other of available) {
+      if (other.id === selectedId) continue;
+      // 检测 anchor + other 能否组成对子以上
+      const pair = [anchor, other];
+      const hand = checkHands(pair);
+      if (hand.activeHands.some(h => h !== '普通攻击')) {
+        result.add(other.id);
+        continue;
+      }
+      // 也检测 anchor + other + 其他已选的骰子 是否能组合
+      const selected = available.filter(d => d.selected && d.id !== selectedId);
+      if (selected.length > 0) {
+        const combo = [anchor, ...selected, other];
+        const comboHand = checkHands(combo);
+        if (comboHand.activeHands.some(h => h !== '普通攻击')) {
+          result.add(other.id);
+        }
+      }
+    }
+    return result;
+  }
+
+  // 模式A：没有选中骰子时，找所有可以和任意其他骰子组成牌型的骰子
+  // 检查对子：相同点数
+  const valueCounts: Record<number, number[]> = {};
+  available.forEach(d => {
+    if (!valueCounts[d.value]) valueCounts[d.value] = [];
+    valueCounts[d.value].push(d.id);
+  });
+  for (const ids of Object.values(valueCounts)) {
+    if (ids.length >= 2) ids.forEach(id => result.add(id));
+  }
+
+  // 检查顺子：连续3+个不同值
+  const uniqueVals = [...new Set(available.map(d => d.value))].sort((a, b) => a - b);
+  for (let i = 0; i < uniqueVals.length - 2; i++) {
+    if (uniqueVals[i + 1] === uniqueVals[i] + 1 && uniqueVals[i + 2] === uniqueVals[i] + 2) {
+      // 找到3连续，标记这些值的骰子
+      const seqVals = new Set([uniqueVals[i], uniqueVals[i + 1], uniqueVals[i + 2]]);
+      // 扩展连续序列
+      let j = i + 3;
+      while (j < uniqueVals.length && uniqueVals[j] === uniqueVals[j - 1] + 1) {
+        seqVals.add(uniqueVals[j]);
+        j++;
+      }
+      available.filter(d => seqVals.has(d.value)).forEach(d => result.add(d.id));
+    }
+  }
+
+  // 检查同元素(4+颗同元素非normal)
+  const elemCounts: Record<string, number[]> = {};
+  available.forEach(d => {
+    const elem = d.collapsedElement || d.element;
+    if (elem !== 'normal') {
+      if (!elemCounts[elem]) elemCounts[elem] = [];
+      elemCounts[elem].push(d.id);
+    }
+  });
+  for (const ids of Object.values(elemCounts)) {
+    if (ids.length >= 4) ids.forEach(id => result.add(id));
+  }
+
+  return result;
+};

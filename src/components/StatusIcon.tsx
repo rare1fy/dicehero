@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { formatDescription } from '../utils/richText';
 import { StatusEffect } from '../types/game';
 import { STATUS_INFO } from '../data/statusInfo';
 
@@ -54,7 +55,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center'
               {info.icon} {info.label} {status.value}
             </div>
             <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-relaxed">
-              {info.description}
+              {formatDescription(info.description)}
             </div>
             <div className={`absolute top-full ${arrowClasses[align]} border-[5px] border-transparent border-t-[var(--dungeon-panel-border)]`} />
           </motion.div>

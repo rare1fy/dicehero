@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PixelClose } from './PixelIcons';
 import { RelicPixelIcon } from './PixelRelicIcons';
 import { RELICS_BY_RARITY } from '../data/relics';
+import { formatDescription } from '../utils/richText';
 import type { Relic, RelicRarity } from '../types/game';
 
 const RARITY_CONFIG: Record<RelicRarity, { label: string; color: string; border: string }> = {
@@ -112,7 +113,7 @@ export const RelicGuideModal: React.FC<RelicGuideModalProps> = ({ isOpen, onClos
                           )}
                         </div>
                         <p className="text-[9px] text-[var(--dungeon-text-dim)] leading-relaxed">
-                          {relic.description}
+                          {formatDescription(relic.description)}
                         </p>
                       </div>
                     </div>

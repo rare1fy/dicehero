@@ -18,8 +18,10 @@ const saveMeta = (meta: any) => {
 
 export const GameOverScreen: React.FC = () => {
   const { game, resetGame } = useGameContext();
-  const lostQuota = game.blackMarketQuota || 0;
-  const savedQuota = game.evacuatedQuota || 0;
+  const totalQuota = game.blackMarketQuota || 0;
+  const lostQuota = Math.ceil(totalQuota * 0.6);  // 掉60%
+  const deathSaved = totalQuota - lostQuota;       // 保留40%
+  const savedQuota = (game.evacuatedQuota || 0) + deathSaved;
 
   useEffect(() => {
     const meta = loadMeta();
@@ -62,12 +64,17 @@ export const GameOverScreen: React.FC = () => {
             </div>
             {lostQuota > 0 && (
               <div className="text-[9px] text-red-400">
-                {'\u672A\u64A4\u79BB\u9B42\u6676'}: <span className="font-bold">-{lostQuota}</span> ({'\u5DF2\u6E05\u96F6'})
+                {'\u672A\u64A4\u79BB\u9B42\u6676'}: <span className="font-bold">-{lostQuota}</span> ({'\u635F\u5931'}60%)
               </div>
             )}
-            {savedQuota > 0 && (
+            {deathSaved > 0 && (
+              <div className="text-[9px] text-yellow-400">
+                {'\u6B7B\u4EA1\u4FDD\u7559'}: <span className="font-bold">+{deathSaved}</span> ({'\u4FDD\u7559'}40%)
+              </div>
+            )}
+            {(game.evacuatedQuota || 0) > 0 && (
               <div className="text-[9px] text-green-400">
-                {'\u5DF2\u64A4\u79BB\u9B42\u6676'}: <span className="font-bold">+{savedQuota}</span> ({'\u5DF2\u5B58\u5165\u6C38\u4E45\u8D26\u6237'})
+                {'\u5DF2\u64A4\u79BB\u9B42\u6676'}: <span className="font-bold">+{game.evacuatedQuota || 0}</span> ({'\u5DF2\u5B58\u5165\u6C38\u4E45\u8D26\u6237'})
               </div>
             )}
             <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-1">

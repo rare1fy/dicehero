@@ -8,6 +8,7 @@ import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
 import { MiniDice } from './DiceBagPanel';
 import { getDiceElementClass } from '../utils/uiHelpers';
+import { formatDescription } from '../utils/richText';
 import { ElementBadge } from './PixelDiceShapes';
 import { RARITY_COLORS as DICE_RARITY_COLORS } from './PixelDiceShapes';
 
@@ -308,7 +309,7 @@ const MerchantScreen: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow truncate">{item.label}</div>
-                <div className="text-[8px] text-[var(--dungeon-text-dim)] leading-tight mt-0.5">{item.desc}</div>
+                <div className="text-[8px] text-[var(--dungeon-text-dim)] leading-tight mt-0.5">{formatDescription(item.desc)}</div>
               </div>
               <motion.button
                 disabled={!canBuy}
@@ -519,7 +520,7 @@ const TreasureScreen: React.FC = () => {
                         {reward.type === 'maxPlays' && <PixelStar size={5} />}
                       </div>
                       <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{reward.label}</div>
-                      <div className="text-[9px] text-[var(--dungeon-text-dim)]">{reward.desc}</div>
+                      <div className="text-[9px] text-[var(--dungeon-text-dim)]">{formatDescription(reward.desc)}</div>
                       <motion.button onClick={collectReward} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         className="mt-2 px-6 py-2 pixel-btn text-xs font-bold"
                         style={{ borderColor: RARITY_COLORS[reward.rarity] }}>收下奖励</motion.button>

@@ -220,26 +220,11 @@ export const DiceRewardScreen: React.FC = () => {
         </p>
       </div>
 
-      {/* Tab 切换 */}
-      <div className="flex justify-center gap-1.5 mb-3 px-4 relative z-10">
-        {([
-          { id: 'newDice' as RewardTab, label: '获取新骰子', icon: '' },
-        ] as const).map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { if (!('disabled' in tab && tab.disabled)) { setActiveTab(tab.id); setSelectedNewDice(null); } }}
-            disabled={'disabled' in tab && tab.disabled}
-            className={`px-3 py-1.5 text-[9px] font-bold transition-all ${
-              activeTab === tab.id
-                ? 'pixel-btn pixel-btn-gold'
-                : 'disabled' in tab && tab.disabled
-                  ? 'pixel-btn pixel-btn-ghost opacity-40 cursor-not-allowed'
-                  : 'pixel-btn pixel-btn-ghost'
-            }`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
+      {/* 标签 */}
+      <div className="flex justify-center mb-3 px-4 relative z-10">
+        <div className="text-[9px] font-bold tracking-[0.15em] text-[var(--pixel-gold)] border-b-2 border-[var(--pixel-gold)] pb-1 px-2">
+          ◆ 获取新骰子 ◆
+        </div>
       </div>
 
       {/* 内容区 */}

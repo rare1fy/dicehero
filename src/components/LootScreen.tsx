@@ -76,7 +76,7 @@ export const LootScreen: React.FC = () => {
                `+${item.value} 每回合重掷次数`}
             </div>
             <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
-              {item.type === 'relic' && item.relicData ? item.relicData.description : item.type === 'augment' ? '点击从中选择一个模块' : `点击拾取该奖励`}
+              {item.type === 'relic' && item.relicData ? formatDescription(item.relicData.description) : item.type === 'augment' ? '点击从中选择一个模块' : `点击拾取该奖励`}
             </div>
           </div>
         </motion.button>

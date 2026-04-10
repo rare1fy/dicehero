@@ -29,8 +29,9 @@ import { getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
 import { playSound, playSettlementTick, playMultiplierTick, playHeavyImpact } from './utils/sound';
-import { checkHands, canFormValidHand } from './utils/handEvaluator';
+import { checkHands, canFormValidHand, findHandCandidates } from './utils/handEvaluator';
 import { generateMap } from './utils/mapGenerator';
+import { generateChallenge, checkChallenge } from './utils/instakillChallenge';
 import { StatusIcon } from './components/StatusIcon';
 import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES, ELEMENT_COLORS } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
@@ -144,7 +145,12 @@ export default function DiceHeroGame() {
     totalOverkillThisRun: 0,
     soulCrystalMultiplier: 1.0,
     playsPerEnemy: {},
+    instakillChallenge: null,
+    instakillCompleted: false,
+    playsThisWave: 0,
+    rerollsThisWave: 0,
   });
+
 
   const [game, setGame] = useState<GameState>({
     hp: PLAYER_INITIAL.hp,
@@ -193,6 +199,10 @@ export default function DiceHeroGame() {
     soulCrystalMultiplier: 1.0,
     playsPerEnemy: {},
     rageFireBonus: 0,
+    instakillChallenge: null,
+    instakillCompleted: false,
+    playsThisWave: 0,
+    rerollsThisWave: 0,
   });
 
   const [showHandGuide, setShowHandGuide] = useState(false);
@@ -264,7 +274,7 @@ export default function DiceHeroGame() {
         }
         setEnemyQuotes({});
         setEnemyQuotedLowHp(new Set());
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0 }));
         setRerollCount(0);
         setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
@@ -412,6 +422,7 @@ export default function DiceHeroGame() {
   const [handLeftThrow, setHandLeftThrow] = useState(false);
   const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
   const [showWaveDetail, setShowWaveDetail] = useState(false);
+  const [showChallengeDetail, setShowChallengeDetail] = useState(false);
 
   // --- 战前遗物选择 ---
   const [startingRelicChoices, setStartingRelicChoices] = useState<Relic[]>([]);
@@ -515,6 +526,7 @@ export default function DiceHeroGame() {
       }
     }
     playsPerEnemyRef.current = {}; // 重置同步出牌追踪
+    const battleChallenge = generateChallenge(node.depth, game.chapter, game.drawCount, node.type);
     setGame(prev => ({ 
       ...prev, 
       phase: 'battle', 
@@ -530,7 +542,11 @@ export default function DiceHeroGame() {
       discardPile: [], // 新战斗开始时清空所有状态效果
       freeRerollsLeft: prev.freeRerollsPerTurn + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0),
       playsLeft: prev.maxPlays + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraPlay || 0), 0),
-      isEnemyTurn: false 
+      isEnemyTurn: false,
+      instakillChallenge: battleChallenge,
+      instakillCompleted: false,
+      playsThisWave: 0,
+      rerollsThisWave: 0,
     }));
     // 直接用新bag抽取（避免闭包旧值问题）
     const freshBag = initDiceBag(game.ownedDice);
@@ -557,9 +573,8 @@ export default function DiceHeroGame() {
     // 元素骰子坍缩 + 小丑骰子1-9随机
     setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
     playSound('dice_lock');
-    // Auto-sort dice by value ascending after roll
     await new Promise(r => setTimeout(r, 200));
-    setDice(prev => [...prev].sort((a, b) => a.value - b.value));
+    setDice(prev => [...prev]);
     addLog(`[骰] ${freshDrawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
 
     setRerollCount(0);
@@ -830,8 +845,12 @@ export default function DiceHeroGame() {
 
     playSound('dice_lock');
     await new Promise(r => setTimeout(r, 200));
-    setDice(prev => [...prev].map(d => ({ ...d, rolling: false })).sort((a, b) => a.value - b.value));
+    setDice(prev => [...prev].map(d => ({ ...d, rolling: false })));
     setRerollCount(prev => prev + 1);
+    // 追踪本波重投次数（洞察弱点用）
+    setGame(prev => ({
+      ...prev, rerollsThisWave: (prev.rerollsThisWave || 0) + 1
+    }));
   };
 
   // 双击锁定骰子（已弃用 — 现在选中即重roll目标）
@@ -884,6 +903,27 @@ export default function DiceHeroGame() {
     const selected = dice.filter(d => d.selected && !d.spent);
     return selected.length > 1 && currentHands.activeHands.includes('普通攻击') && currentHands.activeHands.length === 1;
   }, [dice, currentHands]);
+
+  // 牌型提示：哪些骰子可以组成牌型（发光+漂浮）
+  const handHintIds = useMemo(() => {
+    if (game.phase !== 'battle' || game.isEnemyTurn || game.playsLeft <= 0) return new Set<number>();
+    const selected = dice.filter(d => d.selected && !d.spent);
+    if (selected.length === 0) {
+      // 无选中：全局检测
+      return findHandCandidates(dice);
+    }
+    // 有选中骰子：找能和已选骰子一起组成/增强牌型的未选骰子
+    const available = dice.filter(d => !d.spent && !d.rolling && !d.selected);
+    const result = new Set<number>();
+    for (const other of available) {
+      const combo = [...selected, other];
+      const hand = checkHands(combo);
+      if (hand.activeHands.some(h => h !== '普通攻击')) {
+        result.add(other.id);
+      }
+    }
+    return result;
+  }, [dice, game.phase, game.isEnemyTurn, game.playsLeft]);
 
   const invalidDiceIds = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
@@ -1017,7 +1057,7 @@ export default function DiceHeroGame() {
       if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
       if (res.armor) { extraArmor += res.armor; details.push(`护甲+${res.armor}`); }
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
-      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
+      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率${Math.round(res.multiplier * 100)}%`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
       if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`\u91D1\u5E01+${res.goldBonus}`); }
       if (res.statusEffects) {
@@ -1066,7 +1106,7 @@ export default function DiceHeroGame() {
       if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
       if (res.armor) { extraArmor += res.armor; details.push(`护甲+${res.armor}`); }
       if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
-      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率x${res.multiplier.toFixed(2)}`); }
+      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率${Math.round(res.multiplier * 100)}%`); }
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
       if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`金币+${res.goldBonus}`); }
       if (res.goldBonus) { /* toast will be shown in playHand */ }
@@ -1274,6 +1314,7 @@ export default function DiceHeroGame() {
 
     // Phase 1: 牌型展示 (0.6s)
     // ========================================
+    setShowRelicPanel(true); // 结算时展开遗物面板
     setSettlementPhase('hand');
     setSettlementData({
       bestHand: outcome.bestHand,
@@ -1462,7 +1503,7 @@ export default function DiceHeroGame() {
       const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
       const op = getUpgradedOnPlay(def, diceLevel) || def.onPlay;
       if (op.bonusDamage) allEffects.push({ name: def.name, rawValue: op.bonusDamage, detail: `伤害+${op.bonusDamage}`, type: 'damage' });
-      if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `倍率×${op.bonusMult}`, type: 'mult' });
+      if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `倍率${Math.round(op.bonusMult * 100)}%`, type: 'mult' });
       if (op.heal) allEffects.push({ name: def.name, detail: `回复${op.heal}HP`, type: 'heal' });
       if (op.pierce) allEffects.push({ name: def.name, rawValue: op.pierce, detail: `穿透+${op.pierce}`, type: 'damage' });
       if (op.statusToEnemy) {
@@ -1543,6 +1584,7 @@ export default function DiceHeroGame() {
     // ========================================
     setSettlementPhase(null);
     setSettlementData(null);
+    setShowRelicPanel(false); // 结算结束关闭遗物面板
 
     // --- Apply damage to enemy (with AOE support) ---
     const targetUid = targetEnemy.uid;
@@ -1556,6 +1598,12 @@ export default function DiceHeroGame() {
       if (hasAoe) {
         // AOE: 对所有存活敌人造成伤害
         const aliveEnemies = enemies.filter(e => e.hp > 0);
+        // AOE也算攻击过这些敌人（避免后续首杀魂晶误判）
+        aliveEnemies.forEach(e => {
+          if (!playsPerEnemyRef.current[e.uid]) {
+            playsPerEnemyRef.current = { ...playsPerEnemyRef.current, [e.uid]: 1 };
+          }
+        });
         aliveEnemies.forEach((e, idx) => {
           setTimeout(() => {
             const absorbed = Math.min(e.armor, outcome.damage);
@@ -1700,6 +1748,7 @@ export default function DiceHeroGame() {
       hp: Math.min(prev.maxHp, prev.hp + outcome.heal)
     }));
 
+
     // Track kills for war_profiteer_relic
     const killCount = enemies.filter(e => e.hp <= 0).length;
     if (killCount > 0) {
@@ -1722,6 +1771,167 @@ export default function DiceHeroGame() {
         killedEnemiesData.push({ uid: targetUid, overkill: Math.abs(finalEnemyHp) });
       }
     }
+    // === 洞察弱点检测（使用结算演出后的最终数据） ===
+    const finalHandResult = checkHands(settleDice, { straightUpgrade });
+    const totalDiceInHand = dice.filter(d => !d.spent).length;
+    setGame(prev => {
+      const newPlaysWave = (prev.playsThisWave || 0) + 1;
+      let challenge = prev.instakillChallenge;
+      if (challenge && !challenge.completed) {
+        challenge = checkChallenge(challenge, {
+          selectedDice: settleDice,
+          activeHands: finalHandResult.activeHands,
+          pointSum: outcome.X,
+          rerollsUsedSinceLastPlay: prev.rerollsThisWave || 0,
+          totalDiceInHand: totalDiceInHand,
+          ownedDiceTypes: [...new Set(prev.ownedDice.map(d => d.defId))],
+          killedThisPlay: killedEnemiesData.length,
+        });
+      }
+      return { ...prev, playsThisWave: newPlaysWave, instakillChallenge: challenge, rerollsThisWave: 0 };
+    });
+
+    // 检测挑战达成 → 触发战斗援助效果
+    setTimeout(() => {
+      const currentChallenge = gameRef.current.instakillChallenge;
+      if (currentChallenge?.completed && !gameRef.current.instakillCompleted) {
+        setGame(prev => ({ ...prev, instakillCompleted: true }));
+        playSound('critical');
+        setScreenShake(true);
+        setTimeout(() => setScreenShake(false), 600);
+
+        // 随机选择一种援助效果
+        const g = gameRef.current;
+        const currentNode = g.map.find(n => n.id === g.currentNodeId);
+        const depth = currentNode?.depth || 0;
+        const chapter = g.chapter;
+        const isBoss = currentNode?.type === 'boss';
+
+        const aidRoll = Math.random();
+        if (aidRoll < 0.3) {
+          // 效果1：对全场敌人造成大量伤害（基于敌人最大HP的百分比）
+          const pct = isBoss ? 0.3 : 0.5;
+          const dmgText = `${Math.round(pct * 100)}%`;
+          addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+          addToast(`◆ 洞察弱点！全场敌人受到${dmgText}最大生命值伤害`, 'buff');
+          addLog(`洞察弱点达成！全场敌人受到${dmgText}最大HP伤害`);
+          setTimeout(() => {
+            setEnemies(prev => prev.map(e => {
+              if (e.hp <= 0) return e;
+              const dmg = Math.floor(e.maxHp * pct);
+              const newHp = Math.max(1, e.hp - dmg);
+              return { ...e, hp: newHp };
+            }));
+            enemies.filter(e => e.hp > 0).forEach(e => {
+              addFloatingText(`-${Math.floor(e.maxHp * pct)}`, 'text-red-500', <PixelHeart size={2} />, 'enemy');
+              setEnemyEffectForUid(e.uid, 'hit');
+            });
+            setScreenShake(true);
+            setTimeout(() => setScreenShake(false), 300);
+          }, 800);
+        } else if (aidRoll < 0.5) {
+          // 效果2：全场敌人HP降至N%
+          const targetPct = isBoss ? 0.5 : 0.35;
+          const pctText = `${Math.round(targetPct * 100)}%`;
+          addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+          addToast(`◆ 洞察弱点！全场敌人血量降至${pctText}`, 'buff');
+          addLog(`洞察弱点达成！全场敌人血量降至${pctText}`);
+          setTimeout(() => {
+            setEnemies(prev => prev.map(e => {
+              if (e.hp <= 0) return e;
+              const cap = Math.floor(e.maxHp * targetPct);
+              if (e.hp <= cap) return e;
+              return { ...e, hp: cap };
+            }));
+            enemies.filter(e => e.hp > 0).forEach(e => {
+              setEnemyEffectForUid(e.uid, 'hit');
+            });
+            setScreenShake(true);
+            setTimeout(() => setScreenShake(false), 300);
+          }, 800);
+        } else if (aidRoll < 0.7) {
+          // 效果3：全场敌人施加大量灼烧+中毒
+          const stacks = 3 + depth + (chapter - 1) * 2;
+          addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+          addToast(`◆ 洞察弱点！全场敌人获得${stacks}层灼烧+${stacks}层中毒`, 'buff');
+          addLog(`洞察弱点达成！全场敌人获得${stacks}层灼烧和中毒`);
+          setTimeout(() => {
+            setEnemies(prev => prev.map(e => {
+              if (e.hp <= 0) return e;
+              const newStatuses = [...(e.statuses || [])];
+              const burnIdx = newStatuses.findIndex(s => s.type === 'burn');
+              if (burnIdx >= 0) newStatuses[burnIdx] = { ...newStatuses[burnIdx], stacks: newStatuses[burnIdx].stacks + stacks };
+              else newStatuses.push({ type: 'burn', stacks, duration: 99 });
+              const poisonIdx = newStatuses.findIndex(s => s.type === 'poison');
+              if (poisonIdx >= 0) newStatuses[poisonIdx] = { ...newStatuses[poisonIdx], stacks: newStatuses[poisonIdx].stacks + stacks };
+              else newStatuses.push({ type: 'poison', stacks, duration: 99 });
+              return { ...e, statuses: newStatuses };
+            }));
+            enemies.filter(e => e.hp > 0).forEach(e => {
+              setEnemyEffectForUid(e.uid, 'debuff');
+            });
+          }, 800);
+        } else if (aidRoll < 0.85) {
+          // 效果4：临时增加骰子上限+2，立刻补抽
+          const extraDraw = 2;
+          addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+          addToast(`◆ 洞察弱点！本场战斗骰子上限+${extraDraw}，立刻补抽！`, 'buff');
+          addLog(`洞察弱点达成！骰子上限+${extraDraw}`);
+          setTimeout(() => {
+            setGame(prev => ({
+              ...prev,
+              drawCount: prev.drawCount + extraDraw,
+            }));
+            // 立刻补抽额外骰子到手中
+            setGame(prev => {
+              const bag = [...prev.diceBag];
+              const drawn: Die[] = [];
+              for (let i = 0; i < extraDraw && bag.length > 0; i++) {
+                const idx = Math.floor(Math.random() * bag.length);
+                const defId = bag.splice(idx, 1)[0];
+                const def = getDiceDef(defId);
+                const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+                drawn.push({
+                  id: Date.now() + i + 9000,
+                  diceDefId: defId,
+                  value: rollDiceDef(def),
+                  element: def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : 'normal',
+                  selected: false,
+                  spent: false,
+                  rolling: false,
+                });
+              }
+              setDice(prev2 => [...prev2, ...drawn]);
+              return { ...prev, diceBag: bag };
+            });
+            addFloatingText(`+${extraDraw}骰子`, 'text-yellow-300', <PixelDice size={2} />, 'player');
+          }, 800);
+        } else {
+          // 效果5：骰子库全部临时替换为随机一种强力骰子
+          const strongPool = [
+            { id: 'blade', name: '锋刃骰子' },
+            { id: 'amplify', name: '倍增骰子' },
+            { id: 'split', name: '分裂骰子' },
+            { id: 'magnet', name: '磁吸骰子' },
+            { id: 'joker', name: '小丑骰子' },
+            { id: 'chaos', name: '混沌骰子' },
+            { id: 'elemental', name: '元素骰子' },
+          ];
+          const pick = strongPool[Math.floor(Math.random() * strongPool.length)];
+          addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+          addToast(`◆ 洞察弱点！骰子库全部变为${pick.name}！`, 'buff');
+          addLog(`洞察弱点达成！骰子库临时替换为${pick.name}`);
+          setTimeout(() => {
+            setGame(prev => ({
+              ...prev,
+              diceBag: prev.diceBag.map(() => pick.id),
+              discardPile: prev.discardPile.map(() => pick.id),
+            }));
+          }, 800);
+        }
+      }
+    }, 600);
+
     setTimeout(() => {
       // Use pre-computed kill data instead of stale enemies closure
       if (killedEnemiesData.length > 0) {
@@ -1781,7 +1991,7 @@ export default function DiceHeroGame() {
           totalOverkillThisRun: (prev.totalOverkillThisRun || 0) + totalSoulGain,
         }));
         addFloatingText(`+${totalSoulGain} 魂晶`, 'text-purple-300', <PixelSoulCrystal size={3} />, 'player', true);
-        addToast(`+${totalSoulGain} 魂晶 (×${depthMult.toFixed(1)}倍率)`, 'buff');
+        addToast(`+${totalSoulGain} 魂晶 (${Math.round(depthMult * 100)}%倍率)`, 'buff');
       }
     }
 
@@ -1913,7 +2123,7 @@ export default function DiceHeroGame() {
               }
             });
           }, 300);
-          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0 }));
           setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
           addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
@@ -2006,7 +2216,7 @@ export default function DiceHeroGame() {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         setEnemies(nextWave);
         setEnemyEffects({}); setDyingEnemies(new Set());
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0 }));
         setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
@@ -2049,7 +2259,7 @@ export default function DiceHeroGame() {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         setEnemies(nextWave);
         setEnemyEffects({}); setDyingEnemies(new Set());
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0 }));
+        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0 }));
         setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
         addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
@@ -2589,9 +2799,8 @@ setGame(prev => {
         // 元素骰子坍缩 + 小丑骰子1-9随机
         setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
         playSound('dice_lock');
-        // Auto-sort dice by value ascending after roll
         await new Promise(r => setTimeout(r, 200));
-        setDice(prev => [...prev].sort((a, b) => a.value - b.value));
+        setDice(prev => [...prev]);
       };
       doRoll();
     }, 100);
@@ -2709,6 +2918,37 @@ useEffect(() => {
     }
 
     // (augment loot removed - unified into relic drops)
+
+    // 一击必杀挑战奖励：额外宝箱
+    if (game.instakillCompleted || gameRef.current.instakillCompleted) {
+      const chestRoll = Math.random();
+      if (chestRoll < 0.4) {
+        const bonusGold = 30 + Math.floor(Math.random() * 30);
+        loot.push({ id: 'challenge_chest_gold', type: 'gold', value: bonusGold, collected: false });
+      } else if (chestRoll < 0.7) {
+        loot.push({ id: 'challenge_chest_reroll', type: 'reroll', value: 1, collected: false });
+      } else if (chestRoll < 0.9) {
+        const dicePool = [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || [])];
+        const pick = dicePool[Math.floor(Math.random() * dicePool.length)];
+        if (pick) {
+          loot.push({ id: 'challenge_chest_dice', type: 'specialDice', diceDefId: pick.id, collected: false });
+        } else {
+          loot.push({ id: 'challenge_chest_gold2', type: 'gold', value: 50, collected: false });
+        }
+      } else {
+        const relicPool2 = [...(RELICS_BY_RARITY.common || []), ...(RELICS_BY_RARITY.uncommon || [])];
+        const ownedIds = game.relics.map(r => r.id);
+        const available2 = relicPool2.filter(r => !ownedIds.includes(r.id));
+        if (available2.length > 0) {
+          const pick2 = available2[Math.floor(Math.random() * available2.length)];
+          loot.push({ id: 'challenge_chest_relic', type: 'relic' as any, value: 0, collected: false, relicData: { ...pick2 } });
+        } else {
+          loot.push({ id: 'challenge_chest_gold3', type: 'gold', value: 60, collected: false });
+        }
+      }
+    }
+
+
 
 
 
@@ -3186,6 +3426,82 @@ useEffect(() => {
                   )}
                 </div>
               )}
+
+              {/* 洞察弱点 */}
+              {game.instakillChallenge && (
+                <motion.div
+                  className="absolute top-2 right-2 z-20 max-w-[130px]"
+                  animate={game.instakillCompleted ? {
+                    scale: [1, 1.15, 1.05, 1.15, 1],
+                    rotate: [0, -2, 2, -2, 0],
+                  } : {}}
+                  transition={{ duration: 0.6 }}
+                >
+                  <div
+                    className={`px-1.5 py-1 bg-[rgba(8,11,14,0.85)] border cursor-pointer transition-all ${
+                      game.instakillCompleted ? 'border-[var(--pixel-gold)]' :
+                      'border-[rgba(212,160,48,0.4)]'
+                    }`}
+                    style={{
+                      borderRadius:'2px',
+                      boxShadow: game.instakillCompleted ? '0 0 12px rgba(212,160,48,0.6), 0 0 24px rgba(212,160,48,0.3), inset 0 0 8px rgba(212,160,48,0.15)' : 'none',
+                    }}
+                    onClick={() => setShowChallengeDetail(true)}
+                  >
+                    <div className="text-[7px] text-[var(--pixel-gold)] font-bold tracking-wider mb-0.5 text-center">
+                      {game.instakillCompleted ? '✦ 弱点击破 ✦' : '◆ 洞察弱点'}
+                    </div>
+                    <div className={`text-[9px] font-bold text-center leading-tight ${
+                      game.instakillCompleted ? 'text-[var(--pixel-gold)]' :
+                      'text-[var(--dungeon-text-bright)]'
+                    }`}>
+                      {game.instakillChallenge.label}
+                    </div>
+                    {/* 有进度的条件显示进度 */}
+                    {game.instakillChallenge.progress !== undefined && game.instakillChallenge.value && !game.instakillCompleted && (
+                      <div className="mt-0.5">
+                        <div className="h-1 bg-[rgba(255,255,255,0.1)] relative" style={{borderRadius:'1px'}}>
+                          <div className="h-full bg-[var(--pixel-gold)]" style={{
+                            width: `${Math.min(100, ((game.instakillChallenge.progress || 0) / (game.instakillChallenge.value || 1)) * 100)}%`,
+                            borderRadius:'1px',
+                            transition: 'width 0.3s',
+                          }} />
+                        </div>
+                        <div className="text-[7px] text-[var(--dungeon-text-dim)] text-center mt-0.5 font-mono">
+                          {game.instakillChallenge.progress || 0}/{game.instakillChallenge.value}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+              <AnimatePresence>
+                {showChallengeDetail && game.instakillChallenge && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-[60] flex items-center justify-center bg-[rgba(0,0,0,0.7)]"
+                    onClick={() => setShowChallengeDetail(false)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.8, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.8, y: 20 }}
+                      className="pixel-panel p-4 max-w-[260px] w-[85%]"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div className="text-[8px] text-[var(--pixel-gold)] font-bold tracking-[0.15em] text-center mb-1">◆ 洞察弱点 ◆</div>
+                      <div className="text-[13px] font-bold text-[var(--dungeon-text-bright)] text-center mb-2 pixel-text-shadow">{game.instakillChallenge.label}</div>
+                      <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center mb-3">{formatDescription(game.instakillChallenge.description)}</div>
+                      <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mb-3 leading-relaxed border-t border-[var(--dungeon-panel-border)] pt-2">
+                        达成条件后将获得强力战斗援助效果，并获得额外宝箱奖励
+                      </div>
+                      <button onClick={() => setShowChallengeDetail(false)} className="w-full py-1.5 pixel-btn pixel-btn-ghost text-[10px]">关闭</button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* 敌人舞台光效 */}
               <div className="absolute inset-0 enemy-stage-glow pointer-events-none" />
@@ -3813,7 +4129,7 @@ useEffect(() => {
                   </div>
                 )}
 
-                {expectedOutcome && !game.isEnemyTurn && (
+                {expectedOutcome && !game.isEnemyTurn && !settlementPhase && (
                   <div className="absolute z-[80] bottom-2 left-2 right-2 flex justify-center pointer-events-none">
                   <motion.div
                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -4069,17 +4385,21 @@ useEffect(() => {
 
 
               {/* 玩家状态行：HP + 状态图标 */}
-              <div className="px-3 py-1.5">
-                <div className="flex items-center gap-2 mb-1">
+              <div className="px-3 py-1">
+                <div className="flex items-center gap-1.5 mb-1">
                   <motion.div 
                     animate={hpGained ? { scale: [1, 1.1, 1] } : playerEffect === 'attack' ? { y: [0, -6, 0] } : {}}
-                    className="flex items-center gap-1"
+                    className="flex items-center gap-1 shrink-0"
                   >
                     <PixelHeart size={1} />
                     <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
                   </motion.div>
-                  <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)]" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
-
+                  {/* 状态图标内联 */}
+                  <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
+                    {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
+                    {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
+                  </div>
+                  <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] shrink-0" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
                 </div>
                 <div className={`pixel-hp-bar h-3 relative ${game.statuses.some(s => s.type === 'poison') ? 'animate-poison-pulse' : ''} ${game.statuses.some(s => s.type === 'burn') ? 'animate-burn-edge' : ''}`}>
                   <motion.div 
@@ -4094,12 +4414,6 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
-                {/* 玩家状态栏 — 独立一行 */}
-                {/* 状态图标栏 - 固定高度，不换行，避免底部跳动 */}
-                <div className="h-7 flex items-center gap-1 px-3 pb-1 overflow-x-auto overflow-y-hidden no-scrollbar">
-                  {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
-                  {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
-                </div>
 
               {/* 骰子操作面板 */}
 
@@ -4141,7 +4455,7 @@ useEffect(() => {
                         </div>
                         
                         <div className="text-[11px] text-[var(--dungeon-text)] leading-relaxed mb-2 px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>
-                          {typeInfo.desc}
+                          {formatDescription(typeInfo.desc)}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-1.5 mb-2">
@@ -4255,7 +4569,10 @@ useEffect(() => {
 
                 {/* 骰子行 */}
                 <div className="flex justify-center gap-2.5 mb-1.5 min-h-[80px] items-end relative pt-[20px]">
-                  {dice.filter(d => !d.spent).map((die) => (
+                  {dice.filter(d => !d.spent).map((die) => {
+                    const isHint = !die.selected && handHintIds.has(die.id) && !die.rolling;
+                    return (
+                      <div key={`die-wrap-${die.id}`} className={isHint ? 'dice-hand-hint-wrap' : ''}>
                       <motion.button
                         key={`die-${die.id}`}
                         initial={false}
@@ -4291,7 +4608,7 @@ useEffect(() => {
                         style={{ 
                           fontSize: '26px', width: '56px', height: '56px',
                           ...(die.locked ? { boxShadow: '0 0 6px rgba(234,179,8,0.6)', borderColor: '#eab308' } : {}),
-                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
+                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected && !handHintIds.has(die.id) ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
                         }}
                       >
                         <span className={`${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
@@ -4311,7 +4628,9 @@ useEffect(() => {
                           </div>
                         )}
                       </motion.button>
-                  ))}
+                      </div>
+                    );
+                  })}
                   {dice.every(d => d.spent) && (
                     <div className="text-[var(--dungeon-text-dim)] text-[11px] font-bold py-4">所有骰子已使用</div>
                   )}
@@ -4482,7 +4801,7 @@ useEffect(() => {
                       <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{selectedRelic.name}</div>
                       <div className="text-[8px] text-[var(--pixel-gold)] mt-0.5">{selectedRelic.rarity === 'common' ? '普通' : selectedRelic.rarity === 'uncommon' ? '精良' : selectedRelic.rarity === 'rare' ? '稀有' : '传说'}</div>
                     </div>
-                    <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center">{highlightRelicDesc(selectedRelic.description)}</div>
+                    <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center">{formatDescription(selectedRelic.description)}</div>
                     <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">触发: {selectedRelic.trigger === 'on_play' ? '每次出牌' : selectedRelic.trigger === 'on_kill' ? '击杀时' : selectedRelic.trigger === 'on_reroll' ? '重 Roll时' : selectedRelic.trigger === 'on_battle_end' ? '战斗结束' : selectedRelic.trigger === 'on_fatal' ? '致命伤害时' : selectedRelic.trigger === 'on_turn_end' ? '回合结束' : '被动'}</div>
                     <button onClick={() => setSelectedRelic(null)} className="w-full mt-3 py-1.5 pixel-btn pixel-btn-ghost text-[10px]">关闭</button>
                   </div>
@@ -4651,7 +4970,7 @@ useEffect(() => {
                           {game.handLevels[expectedOutcome.bestHand] > 1 && (
                             <span className="text-[10px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
                           )}
-                          <span className="text-[10px] text-[var(--dungeon-text-dim)] font-mono">(基础 {expectedOutcome.baseHandValue} / 倍率 x{expectedOutcome.handMultiplier.toFixed(1)})</span>
+                          <span className="text-[10px] text-[var(--dungeon-text-dim)] font-mono">(基础 {expectedOutcome.baseHandValue} / 倍率 {Math.round(expectedOutcome.handMultiplier * 100)}%)</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
@@ -4826,7 +5145,7 @@ useEffect(() => {
                         额外伤害: <span className="text-[var(--pixel-red)] font-bold">+{(game.consecutiveNormalAttacks || 0) * 4}</span>
                       </div>
                       <div className="text-[var(--dungeon-text-dim)]">
-                        倍率加成: <span className="text-[var(--pixel-cyan)] font-bold">+{((game.consecutiveNormalAttacks || 0) * 0.1).toFixed(1)}</span>
+                        倍率加成: <span className="text-[var(--pixel-cyan)] font-bold">+{Math.round((game.consecutiveNormalAttacks || 0) * 10)}%</span>
                       </div>
                       <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-1 opacity-60">※ 每回合结束时重置</div>
                     </div>

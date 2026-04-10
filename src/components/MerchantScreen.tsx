@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
+import { formatDescription } from '../utils/richText';
 import { MiniDice } from './DiceBagPanel';
 import { PixelCoin, PixelDice } from './PixelIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
@@ -202,7 +203,7 @@ export const MerchantScreen: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold truncate" style={{ color: elemColor }}>{item.label}</div>
-                    <div className="text-xs opacity-60 truncate mt-0.5">{item.desc}</div>
+                    <div className="text-xs opacity-60 truncate mt-0.5">{formatDescription(item.desc)}</div>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-0.5">
                     <div className="flex items-center gap-1">

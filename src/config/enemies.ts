@@ -679,7 +679,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章1 中Boss
   {
     id: 'boss_lich_forest', name: '枯骨巫妖', emoji: '', chapter: 1,
-    baseHp: 200, baseDmg: 10, category: 'boss', combatType: 'caster',
+    baseHp: 150, baseDmg: 10, category: 'boss', combatType: 'caster',
     drops: { gold: 60, augment: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -708,7 +708,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章1 终Boss
   {
     id: 'boss_ancient_treant', name: '远古树王', emoji: '', chapter: 1,
-    baseHp: 380, baseDmg: 15, category: 'boss', combatType: 'guardian',
+    baseHp: 300, baseDmg: 15, category: 'boss', combatType: 'guardian',
     drops: { gold: 0, augment: false },
     phases: [
       { hpThreshold: 0.5, actions: [
@@ -735,7 +735,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章2 中Boss
   {
     id: 'boss_frost_queen', name: '霜寒女王', emoji: '', chapter: 2,
-    baseHp: 200, baseDmg: 10, category: 'boss', combatType: 'caster',
+    baseHp: 160, baseDmg: 10, category: 'boss', combatType: 'caster',
     drops: { gold: 60, augment: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -764,7 +764,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章2 终Boss
   {
     id: 'boss_frost_lich', name: '霜之巫妖王', emoji: '', chapter: 2,
-    baseHp: 380, baseDmg: 15, category: 'boss', combatType: 'warrior',
+    baseHp: 320, baseDmg: 15, category: 'boss', combatType: 'warrior',
     drops: { gold: 0, augment: false },
     phases: [
       { hpThreshold: 0.5, actions: [

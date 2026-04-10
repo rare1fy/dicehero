@@ -34,7 +34,7 @@ export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
   { hpMult: 1.30, dmgMult: 0.70 },  // depth 4: 精英后休息
   { hpMult: 1.60, dmgMult: 0.85 },  // depth 5: 热身完毕
   { hpMult: 1.40, dmgMult: 0.75 },  // depth 6: 营火前缓冲
-  { hpMult: 2.40, dmgMult: 1.20 },  // depth 7: 中期Boss
+  { hpMult: 2.00, dmgMult: 1.10 },  // depth 7: 中期Boss
   { hpMult: 1.20, dmgMult: 0.65 },  // depth 8: Boss后恢复期
   { hpMult: 1.70, dmgMult: 0.90 },  // depth 9: 重新热身
   { hpMult: 2.00, dmgMult: 1.10 },  // depth 10: 后期开始

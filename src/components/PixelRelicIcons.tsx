@@ -720,6 +720,15 @@ const RELIC_PIXEL_DATA: Record<string, string[][]> = {
   treasure_map_relic: treasure_map,
   dimension_crush, universal_pair, chaos_face, greedy_hand,
   double_strike, fate_coin, element_affinity, symmetry_seeker,
+  less_is_more_relic: [
+    [_,_,_,Y,_,_,_],
+    [_,_,Y,Yd,Y,_,_],
+    [_,_,_,Yd,_,_,_],
+    [_,C,_,Yd,_,C,_],
+    [_,_,C,Yd,C,_,_],
+    [_,_,_,Cd,_,_,_],
+    [_,_,C,Cd,C,_,_],
+  ],
 };
 
 // 默认图标（问号）

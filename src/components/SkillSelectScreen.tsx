@@ -5,6 +5,7 @@ import React, { useContext } from 'react';
 import { motion } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
 import { RelicPixelIcon } from './PixelRelicIcons';
+import { formatDescription } from '../utils/richText';
 
 /** 稀有度颜色映射 */
 const RARITY_COLORS: Record<string, string> = {
@@ -103,7 +104,7 @@ export const SkillSelectScreen: React.FC = () => {
                 {relic.name}
               </div>
               <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-tight text-center mb-2 min-h-[3em]">
-                {relic.description}
+                {formatDescription(relic.description)}
               </div>
               <div className="w-full h-[1px] bg-[var(--dungeon-panel-border)] mb-1" />
               <div className="text-[9px] text-[var(--pixel-red)] font-bold mb-1">

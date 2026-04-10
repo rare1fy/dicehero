@@ -7,6 +7,7 @@ import { GameContext } from '../contexts/GameContext';
 import { PixelClose } from './PixelIcons';
 import { ALL_DICE, ELEMENT_EFFECT_DESC } from '../data/dice';
 import { getDiceElementClass } from '../utils/uiHelpers';
+import { formatDescription } from '../utils/richText';
 import type { DiceDef } from '../types/game';
 
 const RARITY_COLORS: Record<string, string> = {
@@ -81,7 +82,7 @@ export const DiceGuideModal: React.FC = () => {
                               <span className={`text-xs font-bold ${RARITY_COLORS[def.rarity]}`}>{def.name}</span>
                               {owned && <span className="text-[10px] text-[var(--pixel-green)] opacity-70">×{ownedCount}</span>}
                             </div>
-                            <div className="text-[10px] text-[var(--dungeon-text-dim)] mt-0.5 leading-tight">{def.description}</div>
+                            <div className="text-[10px] text-[var(--dungeon-text-dim)] mt-0.5 leading-tight">{formatDescription(def.description)}</div>
                             <div className="text-[10px] text-[var(--dungeon-text-dim)] mt-0.5 opacity-60">
                               面: [{def.faces.join(', ')}]
                             </div>
@@ -127,7 +128,7 @@ export const DiceGuideModal: React.FC = () => {
                     }`}>
                       {elem === 'fire' ? '火' : elem === 'ice' ? '冰' : elem === 'thunder' ? '雷' : elem === 'poison' ? '毒' : '圣'}
                     </span>
-                    <span className="text-[var(--dungeon-text-dim)]">{desc}</span>
+                    <span className="text-[var(--dungeon-text-dim)]">{formatDescription(desc)}</span>
                   </div>
                 ))}
               </div>

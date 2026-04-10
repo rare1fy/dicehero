@@ -20,7 +20,7 @@ export const ToastDisplay: React.FC = () => {
             transition={{ duration: 0.15 }}
             className="px-4 py-1.5 text-center"
             style={{
-              background: 'rgba(10,8,6,0.9)',
+              background: 'rgba(10,8,6,0.55)',
               borderRadius: '4px',
               border: '2px solid rgba(255,255,255,0.08)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.5)',

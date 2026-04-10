@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PixelSoulCrystal, PixelClose } from './PixelIcons';
+import { formatDescription } from '../utils/richText';
 import { RelicPixelIcon } from './PixelRelicIcons';
 import { ALL_RELICS } from '../data/relics';
 
@@ -144,7 +145,7 @@ export const SoulShop: React.FC<{ onClose: () => void; ownedRelicIds?: string[] 
                     {ownedInRun && !owned && <span className="text-[8px] text-cyan-400 font-bold">{'\u5F53\u5C40\u5DF2\u6709'}</span>}
                     {justBought && <span className="text-[8px] text-purple-400 font-bold animate-pulse">{'\u521A\u8D2D\u4E70'}</span>}
                   </div>
-                  <p className="text-[9px] text-[var(--dungeon-text-dim)] mt-0.5 leading-relaxed">{relic.description}</p>
+                  <p className="text-[9px] text-[var(--dungeon-text-dim)] mt-0.5 leading-relaxed">{formatDescription(relic.description)}</p>
                 </div>
                 {!owned && (
                   <div className={`flex items-center gap-1 shrink-0 text-xs font-mono font-bold ${canAfford ? 'text-purple-400' : 'text-red-400'}`}>

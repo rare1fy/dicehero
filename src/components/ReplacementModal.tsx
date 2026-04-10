@@ -5,10 +5,7 @@ import React, { useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
 import { PixelZap, PixelCoin } from './PixelIcons';
-
-const formatDescription = (desc: string): string => {
-  return desc.replace(/\{(\w+)\}/g, (_, key) => key);
-};
+import { formatDescription } from '../utils/richText';
 
 export const ReplacementModal: React.FC = () => {
   const { game, setGame, replaceAugment } = useContext(GameContext);

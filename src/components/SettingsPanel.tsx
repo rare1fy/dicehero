@@ -38,6 +38,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, o
   const [sfx, setSfx] = useState(isSfxEnabled());
   const [bgm, setBgm] = useState(isBgmEnabled());
   const [showGM, setShowGM] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [gmSubPanel, setGmSubPanel] = useState<'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice'>('none');
   const [gmFilter, setGmFilter] = useState('');
   const { game, setGame, addToast } = useGameContext();
@@ -211,6 +212,43 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, o
                     <span className="text-[8px] font-bold text-[var(--dungeon-text-dim)]">教程</span>
                   </button>
                 </div>
+
+                {/* 清空游戏数据 */}
+                <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
+                {!showClearConfirm ? (
+                  <button
+                    onClick={() => setShowClearConfirm(true)}
+                    className="w-full py-2 pixel-btn pixel-btn-ghost text-[10px] flex items-center justify-center gap-2 text-[var(--pixel-red)]"
+                  >
+                    ✖ 清空游戏数据
+                  </button>
+                ) : (
+                  <div className="p-2 bg-[rgba(200,40,30,0.1)] border border-[var(--pixel-red-dark)]" style={{ borderRadius: '2px' }}>
+                    <div className="text-[10px] text-[var(--pixel-red)] font-bold text-center mb-2">
+                      确定要清空所有游戏数据吗？
+                    </div>
+                    <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mb-2">
+                      魂晶、解锁的遗物、教程进度将全部重置
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowClearConfirm(false)}
+                        className="flex-1 py-1.5 pixel-btn pixel-btn-ghost text-[9px]"
+                      >
+                        取消
+                      </button>
+                      <button
+                        onClick={() => {
+                          localStorage.clear();
+                          window.location.reload();
+                        }}
+                        className="flex-1 py-1.5 pixel-btn pixel-btn-danger text-[9px]"
+                      >
+                        确认清空
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* GM 调试面板 */}
                 <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
