@@ -150,6 +150,7 @@ export interface Enemy {
   pattern?: (turn: number, self: Enemy, player: GameState) => { type: '攻击' | '防御' | '技能'; value: number; description?: string };
   statuses: StatusEffect[];
   distance: number;  // distance to player: 0=melee, >0=approaching
+  attackCount?: number; // 弓箭手攻击次数计数（伤害递增用）
 }
 
 // ============================================================

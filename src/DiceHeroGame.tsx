@@ -2500,10 +2500,13 @@ export default function DiceHeroGame() {
           if (e.combatType === 'warrior') {
             damage = Math.floor(damage * 1.3);
           }
-          // Ranger: low per-hit damage but attacks twice (total ~0.80x)
+          // Ranger: attacks twice, damage escalates each attack (+1 per hit)
           if (e.combatType === 'ranger') {
-            damage = Math.max(1, Math.floor(damage * 0.40));
-            if (isSlowed) damage = Math.floor(damage * 0.5); // Slowed ranger even weaker
+            const hitCount = e.attackCount || 0;
+            damage = Math.max(1, Math.floor(damage * 0.40) + hitCount);
+            if (isSlowed) damage = Math.floor(damage * 0.5);
+            // 递增攻击计数
+            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, attackCount: hitCount + 2 } : en));
           }
           // Caster: handled above (dot-only, no direct attack)
           const str = e.statuses.find(s => s.type === 'strength');
@@ -2561,10 +2564,11 @@ export default function DiceHeroGame() {
             if (hl) setTimeout(() => showEnemyQuote(e.uid, hl, 2000), 600);
           }
           
-          // Ranger: second hit after short delay
+          // Ranger: second hit after short delay (also escalated)
           if (e.combatType === 'ranger') {
             await new Promise(r => setTimeout(r, 250));
-            const secondHit = Math.max(1, Math.floor(e.attackDmg * 0.40));
+            const hitCount = (e.attackCount || 0);
+            const secondHit = Math.max(1, Math.floor(e.attackDmg * 0.40) + hitCount + 1);
             setGame(prev => {
               let newArmor = prev.armor;
               let newHp = prev.hp;
