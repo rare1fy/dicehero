@@ -1808,7 +1808,7 @@ export default function DiceHeroGame() {
         const isBoss = currentNode?.type === 'boss';
 
         const aidRoll = Math.random();
-        if (aidRoll < 0.3) {
+        if (aidRoll < 0.2) {
           // 效果1：对全场敌人造成大量伤害（基于敌人最大HP的百分比）
           const pct = isBoss ? 0.3 : 0.5;
           const dmgText = `${Math.round(pct * 100)}%`;
@@ -1829,7 +1829,7 @@ export default function DiceHeroGame() {
             setScreenShake(true);
             setTimeout(() => setScreenShake(false), 300);
           }, 800);
-        } else if (aidRoll < 0.5) {
+        } else if (aidRoll < 0.4) {
           // 效果2：全场敌人HP降至N%
           const targetPct = isBoss ? 0.5 : 0.35;
           const pctText = `${Math.round(targetPct * 100)}%`;
@@ -1849,7 +1849,7 @@ export default function DiceHeroGame() {
             setScreenShake(true);
             setTimeout(() => setScreenShake(false), 300);
           }, 800);
-        } else if (aidRoll < 0.7) {
+        } else if (aidRoll < 0.6) {
           // 效果3：全场敌人施加大量灼烧+中毒
           const stacks = 3 + depth + (chapter - 1) * 2;
           addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
@@ -1871,40 +1871,37 @@ export default function DiceHeroGame() {
               setEnemyEffectForUid(e.uid, 'debuff');
             });
           }, 800);
-        } else if (aidRoll < 0.85) {
-          // 效果4：临时增加骰子上限+2，立刻补抽
-          const extraDraw = 2;
+        } else if (aidRoll < 0.8) {
+          // 效果4：本场战斗骰子上限+1，立刻补抽
           addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-          addToast(`◆ 洞察弱点！本场战斗骰子上限+${extraDraw}，立刻补抽！`, 'buff');
-          addLog(`洞察弱点达成！骰子上限+${extraDraw}`);
+          addToast(`◆ 洞察弱点！本场战斗骰子上限+1，立刻补抽！`, 'buff');
+          addLog(`洞察弱点达成！骰子上限+1（本场战斗）`);
           setTimeout(() => {
             setGame(prev => ({
               ...prev,
-              drawCount: prev.drawCount + extraDraw,
+              drawCount: prev.drawCount + 1,
             }));
-            // 立刻补抽额外骰子到手中
+            // 立刻补抽1颗骰子到手中
             setGame(prev => {
               const bag = [...prev.diceBag];
-              const drawn: Die[] = [];
-              for (let i = 0; i < extraDraw && bag.length > 0; i++) {
-                const idx = Math.floor(Math.random() * bag.length);
-                const defId = bag.splice(idx, 1)[0];
-                const def = getDiceDef(defId);
-                const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
-                drawn.push({
-                  id: Date.now() + i + 9000,
-                  diceDefId: defId,
-                  value: rollDiceDef(def),
-                  element: def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : 'normal',
-                  selected: false,
-                  spent: false,
-                  rolling: false,
-                });
-              }
-              setDice(prev2 => [...prev2, ...drawn]);
+              if (bag.length === 0) return prev;
+              const idx = Math.floor(Math.random() * bag.length);
+              const defId = bag.splice(idx, 1)[0];
+              const def = getDiceDef(defId);
+              const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+              const newDie: Die = {
+                id: Date.now() + 9000,
+                diceDefId: defId,
+                value: rollDiceDef(def),
+                element: def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : 'normal',
+                selected: false,
+                spent: false,
+                rolling: false,
+              };
+              setDice(prev2 => [...prev2, newDie]);
               return { ...prev, diceBag: bag };
             });
-            addFloatingText(`+${extraDraw}骰子`, 'text-yellow-300', <PixelDice size={2} />, 'player');
+            addFloatingText(`+1骰子`, 'text-yellow-300', <PixelDice size={2} />, 'player');
           }, 800);
         } else {
           // 效果5：骰子库全部临时替换为随机一种强力骰子
