@@ -47,7 +47,7 @@ const elemental: DiceDef = {
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
   description: '抽到时随机坍缩为火/冰/雷/毒/圣之一，重Roll会重置元素',
-  rarity: 'uncommon',
+  rarity: 'rare',
   isElemental: true,
 };
 
@@ -154,8 +154,8 @@ export const ALL_DICE: Record<string, DiceDef> = {
 
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
   common: [standard],
-  uncommon: [heavy, elemental],
-  rare: [blade, amplify, split, magnet, joker],
+  uncommon: [heavy],
+  rare: [blade, amplify, split, magnet, joker, elemental],
   legendary: [chaos],
   curse: [cursed, cracked],
 };
@@ -224,18 +224,30 @@ export const getElementLevelBonus = (level: number): number => {
 export const DICE_MAX_LEVEL = 3;
 
 // ============================================================
-// 骰子构筑奖励池
+// 骰子构筑奖励池 — 加权随机，所有骰子都有机会
 // ============================================================
 
 export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
-  switch (battleType) {
-    case 'enemy':
-      return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare.slice(0, 2)];
-    case 'elite':
-      return [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare];
-    case 'boss':
-      return [...DICE_BY_RARITY.rare, ...DICE_BY_RARITY.legendary];
+  // 权重表：[普通战, 精英战, Boss战]
+  const weights: Record<string, [number, number, number]> = {
+    heavy:     [4, 3, 1],
+    elemental: [3, 3, 2],
+    blade:     [3, 3, 2],
+    amplify:   [3, 3, 2],
+    split:     [1, 3, 3],
+    magnet:    [1, 3, 3],
+    joker:     [1, 2, 3],
+    chaos:     [0.3, 1, 3],
+  };
+  const idx = battleType === 'enemy' ? 0 : battleType === 'elite' ? 1 : 2;
+  const pool: DiceDef[] = [];
+  for (const [id, w] of Object.entries(weights)) {
+    const def = ALL_DICE[id];
+    if (!def) continue;
+    const count = Math.max(1, Math.round(w[idx]));
+    for (let i = 0; i < count; i++) pool.push(def);
   }
+  return pool;
 };
 
 export const pickRandomDice = (pool: DiceDef[], count: number): DiceDef[] => {

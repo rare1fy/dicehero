@@ -11,7 +11,7 @@ export default defineConfig(({mode}) => {
     plugins: [
       react(), 
       tailwindcss(),
-      ...(isSingleFile ? [viteSingleFile()] : [])
+      ...(isSingleFile ? [viteSingleFile({ removeViteModuleLoader: true })] : [])
     ],
     base: './',  // 相对路径，确保离线打开HTML也能正常工作
     define: {

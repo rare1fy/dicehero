@@ -65,30 +65,64 @@ export const MapScreen: React.FC = () => {
     return ((hash & 0x7fffffff) % 10000) / 10000; // 0~1
   };
 
-  // 为每个节点生成稳定的随机偏移（大幅偏移 + X轴抖动打破等距）
-  const nodeOffsets = useMemo(() => {
-    const offsets: Record<string, { dx: number; dy: number }> = {};
-    game.map.forEach(node => {
-      // 大幅X偏移：±60px
-      const dx = (seededRand(node.id, 0) - 0.5) * 120;
-      // Y偏移：±30px
-      const dy = (seededRand(node.id, 1) - 0.5) * 60;
-      offsets[node.id] = { dx, dy };
-    });
-    return offsets;
-  }, [game.map]);
+  // 为每个节点生成最终位置（保证同层节点间最小距离）
+  const MIN_SAME_LAYER_DIST = 85; // 同层节点最小X间距
+  const MIN_CROSS_LAYER_DIST = 70; // 跨层节点最小欧氏距离
+
+  const nodePositions = useMemo(() => {
+    const positions: Record<string, { x: number; y: number }> = {};
+    // 按层处理
+    const depths = [...new Set(game.map.map(n => n.depth))].sort((a, b) => a - b);
+    
+    for (const depth of depths) {
+      const layerNodes = game.map.filter(n => n.depth === depth);
+      const count = layerNodes.length;
+      const baseY = (maxDepth - depth) * layerHeight + 85;
+      
+      // 为每个节点生成初始位置
+      const layerPositions: { id: string; x: number; y: number }[] = layerNodes.map((node, idx) => {
+        const baseX = (idx + 0.5 + (seededRand(node.id, 2) - 0.5) * 0.35) / count * 100;
+        const dx = (seededRand(node.id, 0) - 0.5) * 90;
+        const dy = (seededRand(node.id, 1) - 0.5) * 44;
+        const x = Math.max(50, Math.min(svgWidth - 50, baseX / 100 * (svgWidth - 140) + 70 + dx));
+        const y = baseY + dy;
+        return { id: node.id, x, y };
+      });
+      
+      // 按X排序后强制最小间距（推开重叠节点）
+      layerPositions.sort((a, b) => a.x - b.x);
+      for (let i = 1; i < layerPositions.length; i++) {
+        const gap = layerPositions[i].x - layerPositions[i - 1].x;
+        if (gap < MIN_SAME_LAYER_DIST) {
+          const push = (MIN_SAME_LAYER_DIST - gap) / 2 + 1;
+          layerPositions[i - 1].x -= push;
+          layerPositions[i].x += push;
+          // 再次限制边界
+          layerPositions[i - 1].x = Math.max(40, layerPositions[i - 1].x);
+          layerPositions[i].x = Math.min(svgWidth - 40, layerPositions[i].x);
+        }
+      }
+      
+      // 跨层检查：与已确定的上一层节点保证最小距离
+      for (const lp of layerPositions) {
+        for (const existingId in positions) {
+          const ep = positions[existingId];
+          const dist = Math.sqrt((lp.x - ep.x) ** 2 + (lp.y - ep.y) ** 2);
+          if (dist < MIN_CROSS_LAYER_DIST) {
+            // 水平推开
+            const angle = Math.atan2(lp.y - ep.y, lp.x - ep.x);
+            const pushX = Math.cos(angle) * (MIN_CROSS_LAYER_DIST - dist + 5);
+            lp.x = Math.max(40, Math.min(svgWidth - 40, lp.x + pushX));
+          }
+        }
+        positions[lp.id] = { x: lp.x, y: lp.y };
+      }
+    }
+    return positions;
+  }, [game.map, maxDepth]);
 
   const getNodePos = (node: MapNode) => {
-    // X轴：在均匀分布基础上添加大幅抖动
-    const layerNodes = game.map.filter(n => n.depth === node.depth);
-    const idx = layerNodes.findIndex(n => n.id === node.id);
-    const count = layerNodes.length;
-    // 不均匀基础分布（加随机偏移到基础位置）
-    const baseX = (idx + 0.5 + (seededRand(node.id, 2) - 0.5) * 0.4) / count * 100;
-    const x = baseX / 100 * (svgWidth - 160) + 80 + (nodeOffsets[node.id]?.dx || 0);
-    const y = (maxDepth - node.depth) * layerHeight + 85 + (nodeOffsets[node.id]?.dy || 0);
-    // 限制边界
-    return { x: Math.max(40, Math.min(svgWidth - 40, x)), y };
+    return nodePositions[node.id] || { x: svgWidth / 2, y: 85 };
   };
 
   const nodeTypeConfig: Record<string, { icon: React.ReactNode; label: string; color: string; bgClass: string }> = {
@@ -107,9 +141,41 @@ export const MapScreen: React.FC = () => {
   const headerGradient = MAP_HEADER_GRADIENTS[chapterIdx];
   const chapterName = CHAPTER_CONFIG.chapterNames[chapterIdx];
 
+  const PARTICLE_CLASSES = ['map-particle-forest', 'map-particle-ice', 'map-particle-lava', 'map-particle-shadow', 'map-particle-eternal'];
+  const particleClass = PARTICLE_CLASSES[chapterIdx];
+
+  // 生成粒子
+  const particles = useMemo(() => {
+    const count = 20;
+    return Array.from({ length: count }, (_, i) => ({
+      left: `${seededRand('particle', i * 3) * 100}%`,
+      top: `${seededRand('particle', i * 3 + 1) * 100}%`,
+      size: 2 + seededRand('particle', i * 3 + 2) * 5,
+      duration: 3 + seededRand('particle', i * 5) * 5,
+      delay: seededRand('particle', i * 7) * 6,
+    }));
+  }, []);
+
   return (
     <div className={`flex flex-col h-full ${mapBgClass} text-[var(--dungeon-text)] relative overflow-hidden`}>
       <div className="absolute inset-0 pixel-dither-overlay" />
+      {/* 章节主题粒子效果 */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
+        {particles.map((p, i) => (
+          <div
+            key={`mp-${i}`}
+            className={`map-particle ${particleClass}`}
+            style={{
+              left: p.left,
+              top: p.top,
+              width: p.size,
+              height: p.size,
+              animationDuration: `${p.duration}s`,
+              animationDelay: `${p.delay}s`,
+            }}
+          />
+        ))}
+      </div>
       
       <div className="absolute top-0 left-0 right-0 z-20 p-4 pb-10 pt-3" style={{background: headerGradient}}>
         <div className="flex justify-between items-end">

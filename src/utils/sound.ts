@@ -1201,38 +1201,56 @@ const fadeInAudio = (audio: HTMLAudioElement, targetVol: number, duration: numbe
   }, interval);
 };
 
+let bgmSwitching = false; // 防止并发切换
+
 export const startBGM = async (type: 'start' | 'explore' | 'battle') => {
   if (!bgmEnabled) return;
-  if (currentBgmType === type && (bgmPlaying || mp3BgmPlaying)) return;
+  // 仅当确实在播放同类型时跳过
+  if (currentBgmType === type && mp3Audio && !mp3Audio.paused && !mp3Audio.ended) return;
+  if (currentBgmType === type && bgmPlaying) return;
+  
+  // 防止并发切换
+  if (bgmSwitching) return;
+  bgmSwitching = true;
   
   // 淡出当前BGM
   if (mp3Audio && mp3BgmPlaying) {
-    const oldAudio = mp3Audio;
-    mp3Audio = null;
-    mp3BgmPlaying = false;
-    await fadeOutAudio(oldAudio, FADE_DURATION);
-  } else {
-    stopBGMImmediate();
-  }
-  
-  const mp3Path = MP3_BGM_MAP[type];
-  if (mp3Path) {
-    currentBgmType = type;
-    mp3BgmPlaying = true;
-    try {
-      mp3Audio = new Audio(mp3Path);
-      mp3Audio.loop = true;
-      fadeInAudio(mp3Audio, masterVolume * BGM_VOLUME_SCALE, FADE_DURATION);
-    } catch (e) {
-      console.error('MP3 BGM error:', e);
+      const oldAudio = mp3Audio;
+      mp3Audio = null;
       mp3BgmPlaying = false;
+      currentBgmType = '';
+      await fadeOutAudio(oldAudio, FADE_DURATION);
+    } else {
+      stopBGMImmediate();
     }
-    return;
-  }
+    
+    const mp3Path = MP3_BGM_MAP[type];
+    if (mp3Path) {
+      currentBgmType = type;
+      mp3BgmPlaying = true;
+      try {
+        mp3Audio = new Audio(mp3Path);
+        mp3Audio.loop = true;
+        // 安全监听：loop失败时重新播放
+        mp3Audio.addEventListener('ended', () => {
+          if (mp3Audio && currentBgmType === type) {
+            mp3Audio.currentTime = 0;
+            mp3Audio.play().catch(() => {});
+          }
+        });
+        fadeInAudio(mp3Audio, masterVolume * BGM_VOLUME_SCALE, FADE_DURATION);
+      } catch (e) {
+        console.error('MP3 BGM error:', e);
+        mp3BgmPlaying = false;
+        currentBgmType = '';
+      }
+      bgmSwitching = false;
+      return;
+    }
   
   // Programmatic BGM fallback (explore等)
   const cfg = BGM_CONFIGS[type];
-  if (!cfg) return;
+  if (!cfg) { bgmSwitching = false; return; }
   
   currentBgmType = type;
   bgmPlaying = true;
@@ -1350,6 +1368,7 @@ export const startBGM = async (type: 'start' | 'explore' | 'battle') => {
       console.error('BGM error:', e);
     }
   }, cfg.tempo);
+  bgmSwitching = false;
 };
 
 // 立即停止（内部用，无淡出）

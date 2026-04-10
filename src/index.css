@@ -2619,60 +2619,133 @@ input[type="range"]::-moz-range-track {
   background-size: 8px 8px, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章1: 幽暗森林 — 深绿+暗棕 */
+/* 章1: 幽暗森林 — 深邃墨绿+暗棕泥土 */
 .map-bg-forest {
-  background-color: #080a06;
+  background-color: #060d04;
   background-image:
     var(--tex-stone),
-    radial-gradient(ellipse at 25% 20%, rgba(40,100,30,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 80%, rgba(60,40,20,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(80,160,60,0.02) 0%, transparent 60%);
-  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+    radial-gradient(ellipse at 25% 20%, rgba(30,90,20,0.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 80%, rgba(50,30,10,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(60,140,40,0.06) 0%, transparent 60%),
+    radial-gradient(circle at 40% 60%, rgba(20,80,15,0.08) 0%, transparent 40%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章2: 冰封山脉 — 冰蓝+银白 */
+/* 章2: 冰封山脉 — 深冰蓝+霜白 */
 .map-bg-ice {
-  background-color: #0a0c10;
+  background-color: #040810;
   background-image:
     var(--tex-stone),
-    radial-gradient(ellipse at 30% 15%, rgba(60,120,200,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 85%, rgba(80,160,240,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(100,180,255,0.02) 0%, transparent 60%);
-  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+    radial-gradient(ellipse at 30% 15%, rgba(50,110,200,0.16) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 85%, rgba(70,150,240,0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(90,170,255,0.06) 0%, transparent 60%),
+    radial-gradient(circle at 60% 30%, rgba(120,200,255,0.04) 0%, transparent 35%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章3: 熔岩深渊 — 暗红+橙 */
+/* 章3: 熔岩深渊 — 暗黑岩底+岩浆裂光 */
 .map-bg-lava {
-  background-color: #0e0806;
+  background-color: #0c0402;
   background-image:
     var(--tex-stone),
-    radial-gradient(ellipse at 25% 80%, rgba(200,60,20,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 20%, rgba(220,120,40,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 60%, rgba(240,80,20,0.03) 0%, transparent 60%);
-  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+    radial-gradient(ellipse at 25% 80%, rgba(200,50,10,0.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 20%, rgba(220,100,30,0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 60%, rgba(240,70,10,0.07) 0%, transparent 55%),
+    radial-gradient(circle at 35% 45%, rgba(255,120,20,0.05) 0%, transparent 30%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章4: 暗影要塞 — 深紫+暗绿 */
+/* 章4: 暗影要塞 — 深渊紫+邪能绿光 */
 .map-bg-shadow {
-  background-color: #08060c;
+  background-color: #06040c;
   background-image:
     var(--tex-stone),
-    radial-gradient(ellipse at 30% 30%, rgba(100,40,160,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 70%, rgba(60,200,80,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(80,20,140,0.02) 0%, transparent 60%);
-  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+    radial-gradient(ellipse at 30% 30%, rgba(90,30,150,0.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 70%, rgba(50,180,70,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(70,15,130,0.06) 0%, transparent 55%),
+    radial-gradient(circle at 65% 40%, rgba(120,40,200,0.04) 0%, transparent 35%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
 }
-/* 章5: 永恒之巅 — 金色+白光 */
+/* 章5: 永恒之巅 — 暗金+天穹白光 */
 .map-bg-eternal {
-  background-color: #0c0a08;
+  background-color: #0a0804;
   background-image:
     var(--tex-stone),
-    radial-gradient(ellipse at 50% 20%, rgba(220,200,100,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 30% 70%, rgba(200,180,80,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 50%, rgba(240,220,140,0.03) 0%, transparent 60%);
-  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%;
+    radial-gradient(ellipse at 50% 20%, rgba(220,190,80,0.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 70%, rgba(200,170,60,0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 50%, rgba(240,220,130,0.06) 0%, transparent 55%),
+    radial-gradient(circle at 50% 35%, rgba(255,240,180,0.04) 0%, transparent 35%);
+  background-size: 8px 8px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   image-rendering: pixelated;
+}
+
+/* 地图粒子效果 — 各章节主题 */
+.map-particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+/* 森林：绿色萤火虫飘浮 */
+.map-particle-forest {
+  background: radial-gradient(circle, rgba(80,200,60,0.8) 0%, rgba(60,160,40,0) 70%);
+  animation-name: mapParticleFloat;
+  filter: blur(1px);
+}
+/* 冰封：白色雪花飘落 */
+.map-particle-ice {
+  background: radial-gradient(circle, rgba(200,230,255,0.9) 0%, rgba(180,210,240,0) 70%);
+  animation-name: mapParticleFall;
+}
+/* 熔岩：橙红火星上升 */
+.map-particle-lava {
+  background: radial-gradient(circle, rgba(255,120,20,0.9) 0%, rgba(200,60,10,0) 70%);
+  animation-name: mapParticleRise;
+}
+/* 暗影：紫色幽魂游荡 */
+.map-particle-shadow {
+  background: radial-gradient(circle, rgba(140,60,220,0.7) 0%, rgba(100,30,180,0) 70%);
+  animation-name: mapParticleWander;
+  filter: blur(2px);
+}
+/* 永恒：金色光尘缓缓下落 */
+.map-particle-eternal {
+  background: radial-gradient(circle, rgba(255,220,100,0.8) 0%, rgba(220,180,60,0) 70%);
+  animation-name: mapParticleShimmer;
+  filter: blur(1px);
+}
+@keyframes mapParticleFloat {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  50% { transform: translateY(-40px) translateX(15px); opacity: 0.6; }
+  90% { opacity: 0.2; }
+  100% { transform: translateY(-80px) translateX(-10px); opacity: 0; }
+}
+@keyframes mapParticleFall {
+  0% { transform: translateY(-20px) translateX(0); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translateY(100px) translateX(20px); opacity: 0; }
+}
+@keyframes mapParticleRise {
+  0% { transform: translateY(20px) scale(1); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-90px) scale(0.3); opacity: 0; }
+}
+@keyframes mapParticleWander {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 0.6; }
+  33% { transform: translate(20px, -15px); }
+  66% { transform: translate(-15px, -30px); }
+  85% { opacity: 0.3; }
+  100% { transform: translate(5px, -50px); opacity: 0; }
+}
+@keyframes mapParticleShimmer {
+  0% { transform: translateY(-10px) scale(0.8); opacity: 0; }
+  20% { opacity: 0.7; }
+  60% { opacity: 0.9; }
+  100% { transform: translateY(60px) scale(0.4); opacity: 0; }
 }
 
 /* ====================================
