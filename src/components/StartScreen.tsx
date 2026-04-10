@@ -127,7 +127,7 @@ export const StartScreen: React.FC = () => {
 
       {/* 魂晶商店 */}
       <AnimatePresence>
-        {showSoulShop && <SoulShop onClose={() => setShowSoulShop(false)} />}
+        {showSoulShop && <SoulShop onClose={() => setShowSoulShop(false)} ownedRelicIds={game.relics.map(r => r.id)} />}
       </AnimatePresence>
     </div>
   );

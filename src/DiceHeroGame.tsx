@@ -885,7 +885,7 @@ export default function DiceHeroGame() {
     let extraDamage = 0;
     let extraArmor = 0;
     let extraHeal = 0;
-    let holyPurify = false;
+    let holyPurify = 0; // 净化debuff数量（0=不净化）
     let pierceDamage = 0;
     let armorBreak = false;
     let multiplier = 1;
@@ -952,6 +952,11 @@ export default function DiceHeroGame() {
       if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
       if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`金币+${res.goldBonus}`); }
       if (res.goldBonus) { /* toast will be shown in playHand */ }
+      // 净化效果：移除玩家负面状态
+      if (res.purifyDebuff) {
+        holyPurify += (typeof res.purifyDebuff === 'number' ? res.purifyDebuff : 1);
+        details.push('净化');
+      }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined, relicId: relic.id, icon: relic.icon });
       }
@@ -1012,7 +1017,7 @@ export default function DiceHeroGame() {
             // 圣光：恢复等同点数的生命值
             extraHeal += Math.floor(diceValue * elementBonus);
             // 标记需要圣光净化（副作用延迟到 playHand 中执行）
-            holyPurify = true;
+            holyPurify += 1;
             break;
         }
         return; // 元素骰子不走普通onPlay
@@ -1634,13 +1639,16 @@ export default function DiceHeroGame() {
     if (killedEnemiesData.length > 0) {
       const currentNode = game.map.find(n => n.id === game.currentNodeId);
       const currentDepth = currentNode?.depth || 0;
-      const depthMult = game.soulCrystalMultiplier + currentDepth * 0.2;
+      const depthMult = game.soulCrystalMultiplier + currentDepth * 0.1;
       let totalSoulGain = 0;
       killedEnemiesData.forEach(killedData => {
         // 首次 = 这次出牌之前从未打过这个敌人（playsBeforeThisPlay为0）
         const playsBefore = playsBeforeThisPlay[killedData.uid] || 0;
         if (playsBefore === 0 && killedData.overkill > 0) {
-          const gain = Math.floor(killedData.overkill * depthMult);
+          // overkill 上限为敌人maxHp（避免超高伤害得到天量魂晶）
+          const enemy = enemies.find(e => e.uid === killedData.uid);
+          const cappedOverkill = Math.min(killedData.overkill, enemy?.maxHp || 50);
+          const gain = Math.max(1, Math.ceil(cappedOverkill * depthMult * 0.5));
           totalSoulGain += gain;
         }
       });
@@ -1672,15 +1680,20 @@ export default function DiceHeroGame() {
 
     // 圣光净化：出牌后才执行副作用（清除负面状态或移除诅咒骰子）
     if (outcome.holyPurify) {
+      const purifyCount = typeof outcome.holyPurify === 'number' ? outcome.holyPurify : 1;
       const negativeStatuses = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
       if (negativeStatuses.length > 0) {
-        const purged = negativeStatuses[Math.floor(Math.random() * negativeStatuses.length)];
+        // 净化数量：purifyCount>=99表示全部净化
+        const toPurge = purifyCount >= 99 ? negativeStatuses : 
+          negativeStatuses.sort(() => Math.random() - 0.5).slice(0, purifyCount);
+        const purgeTypes = new Set(toPurge.map(s => s.type));
         setGame(prev => ({
           ...prev,
-          statuses: prev.statuses.filter(s => s !== purged),
+          statuses: prev.statuses.filter(s => !purgeTypes.has(s.type)),
         }));
-        addLog(`圣光净化！清除了 ${purged.type} 效果`);
-        addToast(`? 净化 ${purged.type}`, 'heal');
+        const purgedNames = toPurge.map(s => s.type).join('、');
+        addLog(`净化！清除了 ${purgedNames}`);
+        addFloatingText(`净化 ${toPurge.length > 1 ? '×' + toPurge.length : purgedNames}`, 'text-cyan-300', undefined, 'player');
       } else {
         const cursedIdx = game.ownedDice.findIndex(d => d.defId === 'cursed' || d.defId === 'cracked');
         if (cursedIdx >= 0) {
@@ -1707,8 +1720,8 @@ export default function DiceHeroGame() {
             });
             return { ...prev, ownedDice: newOwned, diceBag: newBag, discardPile: newDiscard };
           });
-          addLog(`圣光净化！移除了 ${cursedDef.name}`);
-          addToast(`? 净化 ${cursedDef.name}`, 'heal');
+          addLog(`净化！移除了 ${cursedDef.name}`);
+          addFloatingText(`净化 ${cursedDef.name}`, 'text-cyan-300', undefined, 'player');
         }
       }
     }
@@ -2032,7 +2045,7 @@ export default function DiceHeroGame() {
                   return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 3 }] };
                 });
                 addLog(`${e.name} 对你施加了虚弱！`);
-                addFloatingText('虚弱', 'text-purple-400', undefined, 'player');
+                addFloatingText('虚弱!', 'text-purple-400', undefined, 'player');
               } else if (debuffRoll < 0.6) {
                 // Vulnerable
                 setGame(prev => {
@@ -2043,7 +2056,7 @@ export default function DiceHeroGame() {
                   return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 3 }] };
                 });
                 addLog(`${e.name} 对你施加了易伤！`);
-                addFloatingText('易伤', 'text-orange-400', undefined, 'player');
+                addFloatingText('易伤!', 'text-orange-400', undefined, 'player');
               } else {
                 // Insert curse dice
                 const curseDice = Math.random() < 0.5 ? 'cursed' : 'cracked';
@@ -2942,50 +2955,55 @@ useEffect(() => {
                 沉浸式第一人称战斗界面
                 ============================================ */}
 
-            {/* 地牢环境背景层 */}
-            <div className="absolute inset-0 battle-open-bg" />
-            <div className="absolute inset-0 battle-vignette z-[1]" />
-            <div className="absolute inset-0 dungeon-stain pointer-events-none z-[1]" />
-            
-            {/* 远处拱门/石柱轮廓 */}
-            <div className="battle-archway" />
-            
-            {/* 左右火把光源 */}
-            <div className="battle-torch-left battle-torch-flame" />
-            <div className="battle-torch-right battle-torch-flame" style={{ animationDelay: '0.3s' }} />
-            
-            {/* 像素火把SVG — 左侧 */}
-            <div className="absolute left-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75 }}>
-              <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
-                <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
-                <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
-                <rect x="6" y="14" width="6" height="4" fill="#c87c3c" />
-                <rect x="5" y="10" width="8" height="6" fill="#e8a030" />
-                <rect x="6" y="6" width="6" height="6" fill="#f0c848" />
-                <rect x="7" y="3" width="4" height="5" fill="#fff4c0" />
-                <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
-              </svg>
-            </div>
-            {/* 像素火把SVG — 右侧 */}
-            <div className="absolute right-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75, animationDelay: '0.4s' }}>
-              <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
-                <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
-                <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
-                <rect x="6" y="14" width="6" height="4" fill="#c87c3c" />
-                <rect x="5" y="10" width="8" height="6" fill="#e8a030" />
-                <rect x="6" y="6" width="6" height="6" fill="#f0c848" />
-                <rect x="7" y="3" width="4" height="5" fill="#fff4c0" />
-                <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
-              </svg>
-            </div>
-
-            {/* 环境粒子 — 飘散的灰尘/余烬 */}
-            <CSSParticles type="ember" count={8} className="opacity-25 z-[2]" />
-            <CSSParticles type="sparkle" count={4} className="opacity-15 z-[2]" />
-            <CSSParticles type="float" count={4} className="opacity-15 z-[2]" />
-
-            {/* 地面低雾 */}
-            <div className="battle-ground-fog" />
+            {/* 多场景背景层 — 根据层深度切换主题 */}
+            {(() => {
+              const node = game.map.find(n => n.id === game.currentNodeId);
+              const d = node?.depth || 0;
+              // 根据深度选择场景：0-2森林, 3-5冰封, 6-7Boss前+Boss(熔岩), 8-10暗影, 11-14永恒
+              const sceneClass = d <= 2 ? 'battle-scene-forest' : d <= 5 ? 'battle-scene-ice' : d <= 7 ? 'battle-scene-lava' : d <= 10 ? 'battle-scene-shadow' : 'battle-scene-eternal';
+              const vignetteClass = d <= 2 ? 'battle-vignette' : d <= 5 ? 'battle-vignette-cold' : d <= 7 ? 'battle-vignette-warm' : d <= 10 ? 'battle-vignette-purple' : 'battle-vignette';
+              const fogExtra = d <= 2 ? '' : d <= 5 ? 'battle-ground-fog-ice' : d <= 7 ? 'battle-ground-fog-lava' : d <= 10 ? 'battle-ground-fog-shadow' : 'battle-ground-fog-eternal';
+              // 火把颜色
+              const torchColors = d <= 2 ? ['#e8a030','#f0c848','#fff4c0'] : d <= 5 ? ['#60a0e0','#80c0f0','#c0e0ff'] : d <= 7 ? ['#e85020','#f08030','#ffc060'] : d <= 10 ? ['#a040e0','#c060f0','#e0a0ff'] : ['#e0c040','#f0e080','#fffde8'];
+              return (
+                <>
+                  <div className={`absolute inset-0 ${sceneClass}`} />
+                  <div className={`absolute inset-0 ${vignetteClass} z-[1]`} />
+                  <div className="absolute inset-0 dungeon-stain pointer-events-none z-[1]" />
+                  <div className="battle-archway" />
+                  <div className="battle-torch-left battle-torch-flame" />
+                  <div className="battle-torch-right battle-torch-flame" style={{ animationDelay: '0.3s' }} />
+                  {/* 像素火把SVG — 左侧 */}
+                  <div className="absolute left-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75 }}>
+                    <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
+                      <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
+                      <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
+                      <rect x="6" y="14" width="6" height="4" fill={torchColors[0]} />
+                      <rect x="5" y="10" width="8" height="6" fill={torchColors[0]} />
+                      <rect x="6" y="6" width="6" height="6" fill={torchColors[1]} />
+                      <rect x="7" y="3" width="4" height="5" fill={torchColors[2]} />
+                      <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
+                    </svg>
+                  </div>
+                  {/* 像素火把SVG — 右侧 */}
+                  <div className="absolute right-[2%] top-[15%] z-[3] pointer-events-none battle-torch-flame" style={{ opacity: 0.75, animationDelay: '0.4s' }}>
+                    <svg width="18" height="42" viewBox="0 0 18 42" style={{ imageRendering: 'pixelated' as any }}>
+                      <rect x="8" y="18" width="2" height="24" fill="#5a4030" />
+                      <rect x="7" y="16" width="4" height="4" fill="#8b5a2c" />
+                      <rect x="6" y="14" width="6" height="4" fill={torchColors[0]} />
+                      <rect x="5" y="10" width="8" height="6" fill={torchColors[0]} />
+                      <rect x="6" y="6" width="6" height="6" fill={torchColors[1]} />
+                      <rect x="7" y="3" width="4" height="5" fill={torchColors[2]} />
+                      <rect x="8" y="1" width="2" height="3" fill="#fffde8" />
+                    </svg>
+                  </div>
+                  <CSSParticles type="ember" count={8} className="opacity-25 z-[2]" />
+                  <CSSParticles type="sparkle" count={4} className="opacity-15 z-[2]" />
+                  <CSSParticles type="float" count={4} className="opacity-15 z-[2]" />
+                  <div className={`battle-ground-fog ${fogExtra}`} />
+                </>
+              );
+            })()}
 
             {/* 环境雾气层 */}
             <div className="absolute inset-0 z-[2] pointer-events-none">

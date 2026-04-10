@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { StatusEffect } from '../types/game';
 import { STATUS_INFO } from '../data/statusInfo';
@@ -11,6 +11,7 @@ interface StatusIconProps {
 export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center' }) => {
   const info = STATUS_INFO[status.type];
   const [showTooltip, setShowTooltip] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const alignClasses = {
     left: 'left-0 translate-x-0',
@@ -30,6 +31,8 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center'
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       onClick={() => setShowTooltip(!showTooltip)}
+      onTouchStart={() => { timerRef.current = setTimeout(() => setShowTooltip(true), 250); }}
+      onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); setShowTooltip(false); }}
     >
       {/* 像素风状态徽章 */}
       <div className={`p-1 bg-[var(--dungeon-bg)] border-2 border-[var(--dungeon-panel-border)] ${info.color} flex items-center justify-center`}

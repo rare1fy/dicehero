@@ -180,7 +180,7 @@ export const CampfireScreen: React.FC = () => {
           <h2 className="text-lg font-black pixel-text-shadow tracking-wide">◆ 升级骰子 ◆</h2>
         </div>
         <p className="text-[var(--dungeon-text-dim)] mb-5 text-[9px] text-center relative z-10">
-          消耗金币强化骰子，每面点数+1，效果增强50%。最高 Lv.{DICE_MAX_LEVEL}。
+          消耗金币强化骰子，提升特殊效果（伤害/倍率/元素等）。最高 Lv.{DICE_MAX_LEVEL}。
         </p>
         
         <div className="space-y-3 w-full max-w-sm pb-6 relative z-10">

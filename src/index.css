@@ -1313,7 +1313,109 @@ input[type="range"]::-webkit-slider-runnable-track {
   background-color: #0c0a08;
 }
 
-/* === ������ɫ�ռ䱳����Peglin��� === */
+/* ============================================================
+   多场景主题系统 — 根据章节/深度切换
+   ============================================================ */
+
+/* === 场景1：幽暗森林（默认） — 深绿+暗棕+苔藓 === */
+.battle-scene-forest {
+  background:
+    linear-gradient(to bottom, rgba(8,18,8,0.9) 0%, rgba(12,22,12,0.6) 15%, transparent 35%),
+    linear-gradient(to right, rgba(6,12,6,0.5) 0%, transparent 12%, transparent 88%, rgba(6,12,6,0.5) 100%),
+    repeating-linear-gradient(0deg, rgba(30,50,28,0.2) 0px, transparent 1px, transparent 16px),
+    repeating-linear-gradient(90deg, rgba(28,45,25,0.15) 0px, transparent 1px, transparent 24px),
+    radial-gradient(ellipse at 50% 30%, rgba(20,40,15,0.7) 0%, rgba(10,20,8,0.85) 50%, rgba(8,14,6,0.95) 100%),
+    radial-gradient(2px 2px at 20% 8%, rgba(80,160,60,0.15) 0%, transparent 100%),
+    radial-gradient(2px 2px at 70% 12%, rgba(60,140,40,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 40% 5%, rgba(100,180,80,0.08) 0%, transparent 100%),
+    linear-gradient(to top, rgba(18,12,6,0.95) 0%, rgba(14,10,5,0.5) 25%, transparent 50%);
+  background-color: #0a120a;
+}
+
+/* === 场景2：冰封山脉 — 冰蓝+白霜+冷灰 === */
+.battle-scene-ice {
+  background:
+    linear-gradient(to bottom, rgba(8,12,22,0.9) 0%, rgba(14,20,32,0.6) 15%, transparent 35%),
+    linear-gradient(to right, rgba(6,8,18,0.5) 0%, transparent 12%, transparent 88%, rgba(6,8,18,0.5) 100%),
+    repeating-linear-gradient(0deg, rgba(40,55,80,0.18) 0px, transparent 1px, transparent 14px),
+    repeating-linear-gradient(90deg, rgba(35,50,75,0.12) 0px, transparent 1px, transparent 22px),
+    radial-gradient(ellipse at 50% 25%, rgba(20,35,60,0.7) 0%, rgba(12,18,30,0.85) 50%, rgba(8,12,22,0.95) 100%),
+    radial-gradient(1px 1px at 15% 10%, rgba(180,200,240,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 6%, rgba(160,185,220,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 15%, rgba(200,220,255,0.15) 0%, transparent 100%),
+    radial-gradient(2px 2px at 35% 3%, rgba(140,170,210,0.18) 0%, transparent 100%),
+    linear-gradient(to top, rgba(12,16,24,0.95) 0%, rgba(10,14,22,0.5) 25%, transparent 50%);
+  background-color: #0a0e18;
+}
+
+/* === 场景3：熔岩深渊 — 暗红+岩浆橙+熔炉热 === */
+.battle-scene-lava {
+  background:
+    linear-gradient(to bottom, rgba(20,8,4,0.9) 0%, rgba(28,12,6,0.6) 15%, transparent 35%),
+    linear-gradient(to right, rgba(15,5,2,0.5) 0%, transparent 12%, transparent 88%, rgba(15,5,2,0.5) 100%),
+    repeating-linear-gradient(0deg, rgba(60,25,10,0.22) 0px, transparent 1px, transparent 12px),
+    repeating-linear-gradient(90deg, rgba(55,20,8,0.18) 0px, transparent 1px, transparent 20px),
+    radial-gradient(ellipse at 50% 80%, rgba(180,60,20,0.25) 0%, rgba(120,30,10,0.15) 30%, transparent 60%),
+    radial-gradient(ellipse at 30% 90%, rgba(200,80,20,0.2) 0%, transparent 40%),
+    radial-gradient(ellipse at 70% 85%, rgba(220,100,30,0.15) 0%, transparent 35%),
+    radial-gradient(ellipse at 50% 30%, rgba(40,15,8,0.8) 0%, rgba(20,8,4,0.9) 50%, rgba(14,6,3,0.95) 100%),
+    linear-gradient(to top, rgba(30,10,4,0.95) 0%, rgba(20,8,3,0.6) 20%, transparent 45%);
+  background-color: #120604;
+}
+
+/* === 场景4：暗影要塞 — 深紫+暗石+魔法纹 === */
+.battle-scene-shadow {
+  background:
+    linear-gradient(to bottom, rgba(12,6,18,0.9) 0%, rgba(18,10,25,0.6) 15%, transparent 35%),
+    linear-gradient(to right, rgba(8,4,14,0.5) 0%, transparent 12%, transparent 88%, rgba(8,4,14,0.5) 100%),
+    repeating-linear-gradient(0deg, rgba(40,20,60,0.2) 0px, transparent 1px, transparent 14px),
+    repeating-linear-gradient(90deg, rgba(35,18,55,0.15) 0px, transparent 1px, transparent 22px),
+    radial-gradient(ellipse at 50% 25%, rgba(30,12,50,0.7) 0%, rgba(15,6,25,0.85) 50%, rgba(10,4,18,0.95) 100%),
+    radial-gradient(2px 2px at 25% 8%, rgba(140,80,200,0.18) 0%, transparent 100%),
+    radial-gradient(2px 2px at 65% 5%, rgba(120,60,180,0.14) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 12%, rgba(160,100,220,0.1) 0%, transparent 100%),
+    linear-gradient(to top, rgba(14,8,20,0.95) 0%, rgba(10,5,16,0.5) 25%, transparent 50%);
+  background-color: #0a0412;
+}
+
+/* === 场景5：永恒之巅 — 金白+星空+神圣光 === */
+.battle-scene-eternal {
+  background:
+    linear-gradient(to bottom, rgba(4,4,12,0.85) 0%, rgba(8,8,18,0.5) 20%, transparent 40%),
+    linear-gradient(to right, rgba(4,4,10,0.4) 0%, transparent 15%, transparent 85%, rgba(4,4,10,0.4) 100%),
+    radial-gradient(ellipse at 50% 20%, rgba(40,35,60,0.6) 0%, rgba(15,12,28,0.8) 50%, rgba(6,4,14,0.95) 100%),
+    radial-gradient(1px 1px at 10% 5%, rgba(255,220,140,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 10%, rgba(200,180,240,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 3%, rgba(255,240,180,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 8%, rgba(180,160,220,0.22) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 12%, rgba(255,200,120,0.18) 0%, transparent 100%),
+    radial-gradient(2px 2px at 45% 15%, rgba(220,200,255,0.12) 0%, transparent 100%),
+    radial-gradient(ellipse at 50% 95%, rgba(180,140,60,0.15) 0%, transparent 40%),
+    linear-gradient(to top, rgba(10,8,4,0.9) 0%, rgba(8,6,3,0.4) 20%, transparent 45%);
+  background-color: #060410;
+}
+
+/* 场景地面雾气变体 */
+.battle-ground-fog-ice { filter: hue-rotate(200deg) brightness(1.3); }
+.battle-ground-fog-lava { filter: hue-rotate(-30deg) saturate(2) brightness(0.8); }
+.battle-ground-fog-shadow { filter: hue-rotate(270deg) brightness(0.9); }
+.battle-ground-fog-eternal { filter: hue-rotate(40deg) brightness(1.5) saturate(0.7); }
+
+/* 场景暗角变体 */
+.battle-vignette-warm {
+  background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(15,8,4,0.25) 60%, rgba(12,6,3,0.55) 82%, rgba(10,5,2,0.8) 100%);
+  pointer-events: none;
+}
+.battle-vignette-cold {
+  background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(4,8,15,0.25) 60%, rgba(3,6,12,0.55) 82%, rgba(2,4,10,0.8) 100%);
+  pointer-events: none;
+}
+.battle-vignette-purple {
+  background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(10,4,15,0.25) 60%, rgba(8,3,12,0.55) 82%, rgba(6,2,10,0.8) 100%);
+  pointer-events: none;
+}
+
+/* === 原始开放空间背景（兼容旧引用） === */
 .battle-open-bg {
   background:
     /* Զ��ʯǽ��Ӱ �� �Ϸ� */

@@ -53,13 +53,13 @@ const heavyMetalCore: Relic = {
 const chaosPendulum: Relic = {
   id: 'chaos_pendulum',
   name: '混沌摆锤',
-  description: '牌型点数总和为奇数时+12伤害；偶数时回复3HP',
+  description: '点数和为奇数时+12伤害；偶数时回复3HP并净化1个负面状态',
   icon: 'pendulum',
   rarity: 'common',
   trigger: 'on_play',
   effect: (ctx) => {
     const sum = ctx.pointSum || 0;
-    return sum % 2 === 1 ? { damage: 12 } : { heal: 3 };
+    return sum % 2 === 1 ? { damage: 12 } : { heal: 3, purifyDebuff: 1 };
   },
 };
 
@@ -135,12 +135,13 @@ const mirrorPrism: Relic = {
 const elementalResonator: Relic = {
   id: 'elemental_resonator',
   name: '元素共鸣器',
-  description: '本场战斗打出过3种不同元素时，所有伤害x2.5',
+  description: '本场战斗打出过3种不同元素时，所有伤害x2.5，且每次出牌净化全部负面状态',
   icon: 'resonator',
   rarity: 'legendary',
   trigger: 'on_play',
   effect: (ctx) => ({
     multiplier: (ctx.elementsUsedThisBattle?.size || 0) >= 3 ? 2.5 : 1,
+    purifyDebuff: (ctx.elementsUsedThisBattle?.size || 0) >= 3 ? 99 : 0,
   }),
 };
 
@@ -482,17 +483,18 @@ const thickHideRelic: Relic = {
   }),
 };
 
-/** 余烬暖石 - 打出对子时回复4HP+获得5护甲 */
+/** 余烬暖石 - 打出对子时回复4HP+获得5护甲+净化 */
 const warmEmberRelic: Relic = {
   id: 'warm_ember_relic',
   name: '余烬暖石',
-  description: '打出对子时回复4HP并获得5护甲',
+  description: '打出对子时回复4HP、获得5护甲，并净化1个负面状态',
   icon: 'grail',
   rarity: 'uncommon',
   trigger: 'on_play',
   effect: (ctx) => ({
     heal: ctx.handType === '对子' ? 4 : 0,
     armor: ctx.handType === '对子' ? 5 : 0,
+    purifyDebuff: ctx.handType === '对子' ? 1 : 0,
   }),
 };
 
@@ -699,17 +701,28 @@ const minimalistRelic: Relic = {
   }),
 };
 
-/** 血骰契约 - 每次重Roll伤害倍率+0.3 */
+/** 血骰契约 - 每次重Roll伤害倍率+0.2（超模→rare） */
 const bloodDiceRelic: Relic = {
   id: 'blood_dice_relic',
   name: '血骰契约',
-  description: '每次出牌时，本回合每次重Roll使伤害倍率+0.3',
+  description: '每次出牌时，本回合每次重Roll使伤害倍率+0.2',
   icon: 'fangs',
-  rarity: 'uncommon',
+  rarity: 'rare',
   trigger: 'on_play',
   effect: (ctx) => ({
-    multiplier: 1 + (ctx.rerollsThisTurn || 0) * 0.3,
+    multiplier: 1 + (ctx.rerollsThisTurn || 0) * 0.2,
   }),
+};
+
+/** 净化圣水 - 出牌时移除玩家1个负面状态 */
+const purifyWaterRelic: Relic = {
+  id: 'purify_water_relic',
+  name: '净化圣水',
+  description: '每次出牌时，随机移除1个负面状态（虚弱/易伤/中毒/灼烧）',
+  icon: 'grail',
+  rarity: 'rare',
+  trigger: 'on_play',
+  effect: () => ({ purifyDebuff: 1 }),
 };
 
 /** 肾上腺素 - HP越低倍率越高 */
@@ -966,6 +979,7 @@ export const ALL_RELICS: Record<string, Relic> = {
   blood_pact_relic: bloodPactRelic,
   minimalist_relic: minimalistRelic,
   blood_dice_relic: bloodDiceRelic,
+  purify_water_relic: purifyWaterRelic,
   adrenaline_rush_relic: adrenalineRushRelic,
   reroll_frenzy_relic: rerollFrenzyRelic,
   dice_master_relic: diceMasterRelic,
@@ -985,8 +999,8 @@ export const ALL_RELICS: Record<string, Relic> = {
 
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic, navigatorCompass, healingBreeze, sharpEdgeRelic, luckyCoinRelic, thickHideRelic, basicInstinctRelic, treasureMapRelic],
-  uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator, warmEmberRelic, treasureSenseRelic, goldenTouchRelic, hagglerRelic, rapidStrikesRelic, bloodPactRelic, bloodDiceRelic, rerollFrenzyRelic, battleMedicRelic, rageFireRelic],
-  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity],
+  uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator, warmEmberRelic, treasureSenseRelic, goldenTouchRelic, hagglerRelic, rapidStrikesRelic, bloodPactRelic, rerollFrenzyRelic, battleMedicRelic, rageFireRelic],
+  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity, bloodDiceRelic, purifyWaterRelic],
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush, universalPair, doubleStrike],
 };
 
