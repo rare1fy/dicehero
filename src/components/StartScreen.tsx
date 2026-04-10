@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { PixelDice, PixelBook, PixelHeart, PixelRefresh, PixelPlay, PixelSoulCrystal } from './PixelIcons';
+import { PixelDice, PixelBook, PixelSoulCrystal } from './PixelIcons';
 import { CSSParticles } from './ParticleEffects';
 import { TutorialOverlay, isTutorialCompleted } from './TutorialOverlay';
 import { SoulShop } from './SoulShop';
@@ -156,17 +156,7 @@ export const StartScreen: React.FC = () => {
           <PixelBook size={2} /> 查看教程
         </button>
 
-        <div className="flex gap-3 justify-center opacity-40 text-[9px] flex-wrap text-[var(--dungeon-text-dim)]">
-          <div className="flex items-center gap-1"><PixelHeart size={2} /> {game.maxHp}</div>
-          <div className="flex items-center gap-1"><PixelRefresh size={2} /> {game.globalRerolls}</div>
-          <div className="flex items-center gap-1"><PixelDice size={2} /> {game.diceCount}</div>
-          <div className="flex items-center gap-1"><PixelPlay size={2} /> {game.maxPlays}</div>
-          {meta.unlockedStartRelics.length > 0 && (
-            <div className="flex items-center gap-1 text-purple-400">
-              <PixelSoulCrystal size={2} /> {meta.unlockedStartRelics.length}常驻
-            </div>
-          )}
-        </div>
+
       </motion.div>
       
       {/* 教程覆盖层 */}

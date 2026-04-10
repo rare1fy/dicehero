@@ -3790,7 +3790,7 @@ useEffect(() => {
                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                    className="w-full max-w-[340px]"
+                    className="max-w-[340px]"
                   >
                     {/* 一体化预览+激活遗物卡片 */}
                     <div className="relative flex flex-col pointer-events-auto"

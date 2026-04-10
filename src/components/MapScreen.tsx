@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
-import { getNodeX } from '../utils/mapGenerator';
 import { PixelSword, PixelSkull, PixelCrown, PixelShopBag, PixelQuestion, PixelCampfire, PixelHeart, PixelRefresh, PixelTreasure, PixelMerchant } from './PixelIcons';
 import { CHAPTER_CONFIG } from '../config';
 
@@ -55,26 +54,41 @@ export const MapScreen: React.FC = () => {
 
   const maxDepth = Math.max(...game.map.map(n => n.depth));
   const layerHeight = 170;
-  const svgHeight = (maxDepth + 1) * layerHeight + 120;
-  const svgWidth = 680;
+  const svgHeight = (maxDepth + 1) * layerHeight + 140;
+  const svgWidth = 720;
 
-  // 为每个节点生成稳定的随机偏移（基于node.id的hash）
+  // 稳定的伪随机函数（基于种子字符串）
+  const seededRand = (seed: string, index: number = 0) => {
+    let hash = 0;
+    const s = seed + ':' + index;
+    for (let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+    return ((hash & 0x7fffffff) % 10000) / 10000; // 0~1
+  };
+
+  // 为每个节点生成稳定的随机偏移（大幅偏移 + X轴抖动打破等距）
   const nodeOffsets = useMemo(() => {
     const offsets: Record<string, { dx: number; dy: number }> = {};
     game.map.forEach(node => {
-      let hash = 0;
-      for (let i = 0; i < node.id.length; i++) hash = ((hash << 5) - hash + node.id.charCodeAt(i)) | 0;
-      const dx = ((hash & 0xff) / 255 - 0.5) * 40;
-      const dy = (((hash >> 8) & 0xff) / 255 - 0.5) * 24;
+      // 大幅X偏移：±60px
+      const dx = (seededRand(node.id, 0) - 0.5) * 120;
+      // Y偏移：±30px
+      const dy = (seededRand(node.id, 1) - 0.5) * 60;
       offsets[node.id] = { dx, dy };
     });
     return offsets;
   }, [game.map]);
 
   const getNodePos = (node: MapNode) => {
-    const x = getNodeX(node, game.map) / 100 * (svgWidth - 120) + 60 + (nodeOffsets[node.id]?.dx || 0);
-    const y = (maxDepth - node.depth) * layerHeight + 75 + (nodeOffsets[node.id]?.dy || 0);
-    return { x, y };
+    // X轴：在均匀分布基础上添加大幅抖动
+    const layerNodes = game.map.filter(n => n.depth === node.depth);
+    const idx = layerNodes.findIndex(n => n.id === node.id);
+    const count = layerNodes.length;
+    // 不均匀基础分布（加随机偏移到基础位置）
+    const baseX = (idx + 0.5 + (seededRand(node.id, 2) - 0.5) * 0.4) / count * 100;
+    const x = baseX / 100 * (svgWidth - 160) + 80 + (nodeOffsets[node.id]?.dx || 0);
+    const y = (maxDepth - node.depth) * layerHeight + 85 + (nodeOffsets[node.id]?.dy || 0);
+    // 限制边界
+    return { x: Math.max(40, Math.min(svgWidth - 40, x)), y };
   };
 
   const nodeTypeConfig: Record<string, { icon: React.ReactNode; label: string; color: string; bgClass: string }> = {
@@ -134,30 +148,61 @@ export const MapScreen: React.FC = () => {
         }}
       >
         <div className="relative" style={{ width: svgWidth, minHeight: svgHeight, margin: '0 auto', minWidth: 'fit-content' }}>
-          {/* 章节主题像素装饰 */}
-          {chapterIdx === 0 && /* 森林：枯树+蘑菇 */ <>
-            <svg className="absolute pointer-events-none" style={{ left: 20, top: 80, opacity: 0.15, imageRendering: 'pixelated' as any }} width="24" height="40" viewBox="0 0 6 10"><rect x="2" y="0" width="2" height="2" fill="#3a5a2a"/><rect x="1" y="2" width="4" height="2" fill="#4a7a2a"/><rect x="2" y="4" width="2" height="6" fill="#3a2a1a"/></svg>
-            <svg className="absolute pointer-events-none" style={{ right: 30, top: 200, opacity: 0.12, imageRendering: 'pixelated' as any }} width="20" height="36" viewBox="0 0 5 9"><rect x="1" y="0" width="3" height="2" fill="#2a5a1a"/><rect x="0" y="2" width="5" height="2" fill="#3a7a2a"/><rect x="2" y="4" width="1" height="5" fill="#4a3a1a"/></svg>
-            <svg className="absolute pointer-events-none" style={{ left: 60, bottom: 180, opacity: 0.1, imageRendering: 'pixelated' as any }} width="16" height="16" viewBox="0 0 4 4"><rect x="1" y="0" width="2" height="1" fill="#c04040"/><rect x="0" y="1" width="4" height="2" fill="#c04040"/><rect x="1" y="3" width="2" height="1" fill="#8a8060"/></svg>
-          </>}
-          {chapterIdx === 1 && /* 冰封：雪花+冰晶 */ <>
-            <svg className="absolute pointer-events-none" style={{ left: 30, top: 100, opacity: 0.12, imageRendering: 'pixelated' as any }} width="24" height="24" viewBox="0 0 6 6"><rect x="2" y="0" width="2" height="6" fill="#80c0e0"/><rect x="0" y="2" width="6" height="2" fill="#80c0e0"/><rect x="0" y="0" width="2" height="2" fill="#60a0c0"/><rect x="4" y="4" width="2" height="2" fill="#60a0c0"/></svg>
-            <svg className="absolute pointer-events-none" style={{ right: 40, top: 250, opacity: 0.1, imageRendering: 'pixelated' as any }} width="20" height="20" viewBox="0 0 5 5"><rect x="2" y="0" width="1" height="5" fill="#a0d0e8"/><rect x="0" y="2" width="5" height="1" fill="#a0d0e8"/><rect x="1" y="1" width="1" height="1" fill="#80b0d0"/><rect x="3" y="3" width="1" height="1" fill="#80b0d0"/></svg>
-            <svg className="absolute pointer-events-none" style={{ left: 50, bottom: 200, opacity: 0.08, imageRendering: 'pixelated' as any }} width="28" height="36" viewBox="0 0 7 9"><rect x="2" y="0" width="3" height="2" fill="#a0d8f0"/><rect x="1" y="2" width="5" height="3" fill="#80c0e0"/><rect x="0" y="5" width="7" height="2" fill="#60a0c0"/><rect x="1" y="7" width="5" height="2" fill="#4080a0"/></svg>
-          </>}
-          {chapterIdx === 2 && /* 熔岩：火山+岩石 */ <>
-            <svg className="absolute pointer-events-none" style={{ right: 25, top: 120, opacity: 0.12, imageRendering: 'pixelated' as any }} width="32" height="40" viewBox="0 0 8 10"><rect x="3" y="0" width="2" height="2" fill="#e08030"/><rect x="2" y="2" width="4" height="2" fill="#c04020"/><rect x="1" y="4" width="6" height="3" fill="#8a2010"/><rect x="0" y="7" width="8" height="3" fill="#3a2010"/></svg>
-            <svg className="absolute pointer-events-none" style={{ left: 40, top: 280, opacity: 0.1, imageRendering: 'pixelated' as any }} width="20" height="16" viewBox="0 0 5 4"><rect x="0" y="2" width="5" height="2" fill="#4a3a2a"/><rect x="1" y="1" width="3" height="1" fill="#5a4a3a"/><rect x="2" y="0" width="1" height="1" fill="#6a5a4a"/></svg>
-          </>}
-          {chapterIdx === 3 && /* 暗影：魔法阵+紫色火焰 */ <>
-            <svg className="absolute pointer-events-none" style={{ left: 25, top: 140, opacity: 0.1, imageRendering: 'pixelated' as any }} width="28" height="28" viewBox="0 0 7 7"><rect x="2" y="0" width="3" height="1" fill="#6a3a8a"/><rect x="0" y="2" width="1" height="3" fill="#6a3a8a"/><rect x="6" y="2" width="1" height="3" fill="#6a3a8a"/><rect x="2" y="6" width="3" height="1" fill="#6a3a8a"/><rect x="3" y="3" width="1" height="1" fill="#8a4aaa"/></svg>
-            <svg className="absolute pointer-events-none" style={{ right: 35, top: 300, opacity: 0.08, imageRendering: 'pixelated' as any }} width="16" height="28" viewBox="0 0 4 7"><rect x="1" y="0" width="2" height="2" fill="#8a4aaa"/><rect x="0" y="2" width="4" height="2" fill="#6a3a8a"/><rect x="1" y="4" width="2" height="3" fill="#4a2a6a"/></svg>
-          </>}
-          {chapterIdx === 4 && /* 永恒：光柱+星辰 */ <>
-            <svg className="absolute pointer-events-none" style={{ left: 35, top: 100, opacity: 0.1, imageRendering: 'pixelated' as any }} width="12" height="48" viewBox="0 0 3 12"><rect x="1" y="0" width="1" height="12" fill="#e8d068"/><rect x="0" y="2" width="3" height="2" fill="rgba(232,208,104,0.5)"/><rect x="0" y="8" width="3" height="2" fill="rgba(232,208,104,0.3)"/></svg>
-            <svg className="absolute pointer-events-none" style={{ right: 30, top: 180, opacity: 0.12, imageRendering: 'pixelated' as any }} width="16" height="16" viewBox="0 0 4 4"><rect x="1" y="0" width="2" height="1" fill="#e8d068"/><rect x="0" y="1" width="1" height="2" fill="#e8d068"/><rect x="3" y="1" width="1" height="2" fill="#e8d068"/><rect x="1" y="3" width="2" height="1" fill="#e8d068"/><rect x="1" y="1" width="2" height="2" fill="#fff0a0"/></svg>
-            <svg className="absolute pointer-events-none" style={{ left: 80, bottom: 220, opacity: 0.08, imageRendering: 'pixelated' as any }} width="12" height="48" viewBox="0 0 3 12"><rect x="1" y="0" width="1" height="12" fill="#c8a83c"/><rect x="0" y="4" width="3" height="2" fill="rgba(200,168,60,0.4)"/></svg>
-          </>}
+          {/* 章节主题像素装饰 — 散布在地图各处 */}
+          {useMemo(() => {
+            const decos: React.ReactNode[] = [];
+            // 每章的装饰模板
+            const chapterDecos: Record<number, { viewBox: string; w: number; h: number; rects: string; opacity: number }[]> = {
+              0: [ // 森林：枯树、灌木、蘑菇、藤蔓、落叶
+                { viewBox: '0 0 6 10', w: 20, h: 34, opacity: 0.13, rects: '<rect x="2" y="0" width="2" height="2" fill="#3a5a2a"/><rect x="1" y="2" width="4" height="2" fill="#4a7a2a"/><rect x="0" y="3" width="2" height="2" fill="#2a5a1a"/><rect x="2" y="4" width="2" height="6" fill="#3a2a1a"/>' },
+                { viewBox: '0 0 5 4', w: 16, h: 14, opacity: 0.1, rects: '<rect x="1" y="0" width="3" height="2" fill="#3a6a2a"/><rect x="0" y="2" width="5" height="2" fill="#2a4a1a"/>' },
+                { viewBox: '0 0 3 4', w: 10, h: 14, opacity: 0.12, rects: '<rect x="1" y="0" width="1" height="1" fill="#c04040"/><rect x="0" y="1" width="3" height="2" fill="#b83838"/><rect x="1" y="3" width="1" height="1" fill="#8a8060"/>' },
+                { viewBox: '0 0 2 6', w: 6, h: 20, opacity: 0.08, rects: '<rect x="0" y="0" width="1" height="6" fill="#3a6a2a"/><rect x="1" y="1" width="1" height="4" fill="#2a5a1a"/>' },
+                { viewBox: '0 0 3 2', w: 8, h: 6, opacity: 0.1, rects: '<rect x="0" y="0" width="2" height="1" fill="#6a8a2a"/><rect x="1" y="1" width="2" height="1" fill="#5a7a1a"/>' },
+              ],
+              1: [ // 冰封：雪花、冰晶、冰柱、雪堆
+                { viewBox: '0 0 5 5', w: 14, h: 14, opacity: 0.12, rects: '<rect x="2" y="0" width="1" height="5" fill="#90c8e0"/><rect x="0" y="2" width="5" height="1" fill="#90c8e0"/><rect x="1" y="1" width="1" height="1" fill="#70a8c0"/><rect x="3" y="3" width="1" height="1" fill="#70a8c0"/>' },
+                { viewBox: '0 0 3 7', w: 10, h: 24, opacity: 0.1, rects: '<rect x="1" y="0" width="1" height="1" fill="#b0e0f0"/><rect x="0" y="1" width="3" height="2" fill="#90c8e0"/><rect x="0" y="3" width="3" height="4" fill="#70a8c0"/>' },
+                { viewBox: '0 0 5 3', w: 16, h: 10, opacity: 0.09, rects: '<rect x="0" y="1" width="5" height="2" fill="#c0e0f0"/><rect x="1" y="0" width="3" height="1" fill="#d0ecf8"/>' },
+                { viewBox: '0 0 3 3', w: 8, h: 8, opacity: 0.14, rects: '<rect x="1" y="0" width="1" height="1" fill="#d0ecff"/><rect x="0" y="1" width="1" height="1" fill="#d0ecff"/><rect x="2" y="2" width="1" height="1" fill="#d0ecff"/>' },
+              ],
+              2: [ // 熔岩：火山岩、岩石、熔岩裂缝、骷髅
+                { viewBox: '0 0 5 4', w: 16, h: 14, opacity: 0.12, rects: '<rect x="1" y="0" width="3" height="1" fill="#5a3a2a"/><rect x="0" y="1" width="5" height="3" fill="#3a2a1a"/>' },
+                { viewBox: '0 0 4 2', w: 14, h: 8, opacity: 0.1, rects: '<rect x="0" y="0" width="4" height="1" fill="#e06020"/><rect x="0" y="1" width="4" height="1" fill="#c04010"/>' },
+                { viewBox: '0 0 6 8', w: 20, h: 28, opacity: 0.11, rects: '<rect x="2" y="0" width="2" height="2" fill="#e08030"/><rect x="1" y="2" width="4" height="2" fill="#c04020"/><rect x="0" y="4" width="6" height="4" fill="#3a2010"/>' },
+                { viewBox: '0 0 4 4', w: 12, h: 12, opacity: 0.08, rects: '<rect x="1" y="0" width="2" height="1" fill="#a0a090"/><rect x="0" y="1" width="4" height="1" fill="#808070"/><rect x="0" y="2" width="1" height="1" fill="#606050"/><rect x="3" y="2" width="1" height="1" fill="#606050"/>' },
+              ],
+              3: [ // 暗影：魔法符文、紫焰、暗能裂缝、邪眼
+                { viewBox: '0 0 5 5', w: 14, h: 14, opacity: 0.1, rects: '<rect x="1" y="0" width="3" height="1" fill="#6a3a8a"/><rect x="0" y="1" width="1" height="3" fill="#6a3a8a"/><rect x="4" y="1" width="1" height="3" fill="#6a3a8a"/><rect x="1" y="4" width="3" height="1" fill="#6a3a8a"/><rect x="2" y="2" width="1" height="1" fill="#a060d0"/>' },
+                { viewBox: '0 0 3 6', w: 10, h: 20, opacity: 0.09, rects: '<rect x="1" y="0" width="1" height="2" fill="#a060d0"/><rect x="0" y="2" width="3" height="2" fill="#8040b0"/><rect x="1" y="4" width="1" height="2" fill="#6030a0"/>' },
+                { viewBox: '0 0 5 2', w: 16, h: 6, opacity: 0.08, rects: '<rect x="0" y="0" width="5" height="1" fill="#4a2a6a"/><rect x="1" y="1" width="3" height="1" fill="#6a3a8a"/>' },
+                { viewBox: '0 0 3 3', w: 10, h: 10, opacity: 0.12, rects: '<rect x="0" y="1" width="3" height="1" fill="#40c060"/><rect x="1" y="0" width="1" height="3" fill="#40c060"/>' },
+              ],
+              4: [ // 永恒：光柱、星辰、云朵、圣光碎片
+                { viewBox: '0 0 2 10', w: 6, h: 34, opacity: 0.1, rects: '<rect x="0" y="0" width="2" height="10" fill="#e8d068"/><rect x="0" y="3" width="2" height="2" fill="rgba(255,240,140,0.6)"/>' },
+                { viewBox: '0 0 3 3', w: 10, h: 10, opacity: 0.14, rects: '<rect x="1" y="0" width="1" height="1" fill="#ffe080"/><rect x="0" y="1" width="1" height="1" fill="#ffe080"/><rect x="2" y="1" width="1" height="1" fill="#ffe080"/><rect x="1" y="2" width="1" height="1" fill="#ffe080"/><rect x="1" y="1" width="1" height="1" fill="#fff8c0"/>' },
+                { viewBox: '0 0 7 3', w: 22, h: 10, opacity: 0.07, rects: '<rect x="1" y="0" width="5" height="1" fill="#c0b080"/><rect x="0" y="1" width="7" height="1" fill="#a09070"/><rect x="2" y="2" width="3" height="1" fill="#c0b080"/>' },
+                { viewBox: '0 0 2 2', w: 6, h: 6, opacity: 0.16, rects: '<rect x="0" y="0" width="2" height="2" fill="#ffe080"/>' },
+              ],
+            };
+            const templates = chapterDecos[chapterIdx] || chapterDecos[0];
+            // 在地图区域内散布装饰
+            const decoCount = 18 + maxDepth * 3;
+            for (let i = 0; i < decoCount; i++) {
+              const t = templates[i % templates.length];
+              const px = seededRand(`deco-${chapterIdx}`, i * 3) * (svgWidth - 40) + 20;
+              const py = seededRand(`deco-${chapterIdx}`, i * 3 + 1) * (svgHeight - 60) + 30;
+              const scale = 0.7 + seededRand(`deco-${chapterIdx}`, i * 3 + 2) * 0.8;
+              decos.push(
+                <svg key={`deco-${i}`} className="absolute pointer-events-none" style={{
+                  left: px, top: py, opacity: t.opacity * (0.6 + seededRand(`deco-${chapterIdx}`, i * 5) * 0.5),
+                  imageRendering: 'pixelated' as any,
+                  transform: `scale(${scale})`,
+                }} width={t.w} height={t.h} viewBox={t.viewBox} dangerouslySetInnerHTML={{ __html: t.rects }} />
+              );
+            }
+            return <>{decos}</>;
+          }, [chapterIdx, svgHeight, maxDepth])}
 
           <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: svgHeight }} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
             <defs>
