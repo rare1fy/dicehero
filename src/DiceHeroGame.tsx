@@ -1379,17 +1379,19 @@ export default function DiceHeroGame() {
 
     // 如果发生了分裂，重新计算牌型和伤害
 
-    // 磁吸骰子：随机同化一颗同伴骰子的点数为自身点数
+    // 磁吸骰子：随机同化一颗同伴骰子的点数为自身点数（已被影响的不再重复）
     let magnetOccurred = false;
+    const magnetizedIds = new Set<number>(); // 已被磁吸影响的骰子ID
     for (let i = 0; i < settleDice.length; i++) {
       if (settleDice[i].diceDefId === 'magnet' && settleDice.length > 1) {
         const magnetValue = settleDice[i].value;
-        // 找到所有非磁吸的同伴骰子
-        const targets = settleDice.filter((d, idx) => idx !== i && d.diceDefId !== 'magnet');
+        // 找到所有非磁吸且未被磁吸过的同伴骰子
+        const targets = settleDice.filter((d, idx) => idx !== i && d.diceDefId !== 'magnet' && !magnetizedIds.has(d.id));
         if (targets.length > 0) {
           const target = targets[Math.floor(Math.random() * targets.length)];
           const oldValue = target.value;
           target.value = magnetValue;
+          magnetizedIds.add(target.id);
           magnetOccurred = true;
           playSound('augment_activate');
           setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice] } : prev);
@@ -1685,9 +1687,11 @@ export default function DiceHeroGame() {
       // Single target
       let remainingDamage = outcome.damage;
       let enemyArmor = targetEnemy.armor;
-      // 火元素：摧毁护甲
-      if (outcome.armorBreak) { enemyArmor = 0; }
-      if (enemyArmor > 0) {
+      // 火元素：无视护甲，伤害直接作用于HP
+      if (outcome.armorBreak) {
+        // 摧毁全部护甲 + 伤害不被护甲减免
+        enemyArmor = 0;
+      } else if (enemyArmor > 0) {
         const absorbed = Math.min(enemyArmor, remainingDamage);
         enemyArmor -= absorbed;
         remainingDamage -= absorbed;
@@ -1880,6 +1884,7 @@ export default function DiceHeroGame() {
             setGame(prev => ({
               ...prev,
               drawCount: prev.drawCount + 1,
+              tempDrawCountBonus: (prev.tempDrawCountBonus || 0) + 1,
             }));
             // 立刻补抽1颗骰子到手中
             setGame(prev => {
@@ -2836,8 +2841,9 @@ useEffect(() => {
       enemies.some(e => e.hp > 0) && 
       game.hp > 0 &&
       dice.length > 0 &&
+      !dice.some(d => d.rolling) &&
       !dice.some(d => d.playing) &&
-      (game.playsLeft <= 0 || dice.every(d => d.spent))
+      (game.playsLeft <= 0 || (dice.filter(d => !d.spent).length === 0 && dice.length > 0))
     ) {
       const timer = setTimeout(() => {
         endTurn();
@@ -2847,12 +2853,15 @@ useEffect(() => {
   }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft]);
 
   const handleVictory = () => {
-    // 战斗结束：销毁敌人塞的废骰子（cursed/cracked）
+    // 战斗结束：销毁敌人塞的废骰子（cursed/cracked）+ 清除临时drawCount加成
     setGame(prev => ({
       ...prev,
       ownedDice: prev.ownedDice.filter(d => d.defId !== 'cursed' && d.defId !== 'cracked'),
       diceBag: prev.diceBag.filter(id => id !== 'cursed' && id !== 'cracked'),
       discardPile: prev.discardPile.filter(id => id !== 'cursed' && id !== 'cracked'),
+      // 清除洞察弱点临时骰子上限加成
+      drawCount: prev.drawCount - (prev.tempDrawCountBonus || 0),
+      tempDrawCountBonus: 0,
     }));
 
     // 战斗胜利统计
@@ -2920,33 +2929,9 @@ useEffect(() => {
 
     // (augment loot removed - unified into relic drops)
 
-    // 一击必杀挑战奖励：额外宝箱
+    // 一击必杀挑战奖励：额外宝箱（点击后随机开启）
     if (game.instakillCompleted || gameRef.current.instakillCompleted) {
-      const chestRoll = Math.random();
-      if (chestRoll < 0.4) {
-        const bonusGold = 30 + Math.floor(Math.random() * 30);
-        loot.push({ id: 'challenge_chest_gold', type: 'gold', value: bonusGold, collected: false });
-      } else if (chestRoll < 0.7) {
-        loot.push({ id: 'challenge_chest_reroll', type: 'reroll', value: 1, collected: false });
-      } else if (chestRoll < 0.9) {
-        const dicePool = [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || [])];
-        const pick = dicePool[Math.floor(Math.random() * dicePool.length)];
-        if (pick) {
-          loot.push({ id: 'challenge_chest_dice', type: 'specialDice', diceDefId: pick.id, collected: false });
-        } else {
-          loot.push({ id: 'challenge_chest_gold2', type: 'gold', value: 50, collected: false });
-        }
-      } else {
-        const relicPool2 = [...(RELICS_BY_RARITY.common || []), ...(RELICS_BY_RARITY.uncommon || [])];
-        const ownedIds = game.relics.map(r => r.id);
-        const available2 = relicPool2.filter(r => !ownedIds.includes(r.id));
-        if (available2.length > 0) {
-          const pick2 = available2[Math.floor(Math.random() * available2.length)];
-          loot.push({ id: 'challenge_chest_relic', type: 'relic' as any, value: 0, collected: false, relicData: { ...pick2 } });
-        } else {
-          loot.push({ id: 'challenge_chest_gold3', type: 'gold', value: 60, collected: false });
-        }
-      }
+      loot.push({ id: 'challenge_chest', type: 'challengeChest' as any, value: 0, collected: false });
     }
 
 
@@ -3072,6 +3057,40 @@ useEffect(() => {
           nextState.enemyHpMultiplier += 0.25;
         }
         addLog(`获得了 ${item.value} 颗骰子。`);
+      } else if ((item.type as string) === 'challengeChest') {
+        // 挑战宝箱：随机开出奖励
+        playSound('shop_buy');
+        const roll = Math.random();
+        if (roll < 0.4) {
+          const gold = 30 + Math.floor(Math.random() * 40);
+          nextState.souls += gold;
+          addLog(`开启挑战宝箱：获得 ${gold} 金币`);
+          addToast(`🎁 挑战宝箱：+${gold}金币`, 'gold');
+        } else if (roll < 0.75) {
+          const pool = [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || [])];
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          if (pick) {
+            nextState.ownedDice = [...nextState.ownedDice, { defId: pick.id, level: 1 }];
+            addLog(`开启挑战宝箱：获得 ${pick.name}`);
+            addToast(`🎁 挑战宝箱：${pick.name}`, 'buff');
+          } else {
+            nextState.souls += 50;
+            addToast(`🎁 挑战宝箱：+50金币`, 'gold');
+          }
+        } else {
+          const relicPool = [...(RELICS_BY_RARITY.common || []), ...(RELICS_BY_RARITY.uncommon || [])];
+          const ownedIds = nextState.relics.map((r: any) => r.id);
+          const available = relicPool.filter(r => !ownedIds.includes(r.id));
+          if (available.length > 0) {
+            const pick = available[Math.floor(Math.random() * available.length)];
+            nextState.relics = [...nextState.relics, { ...pick }];
+            addLog(`开启挑战宝箱：获得遗物 ${pick.name}`);
+            addToast(`🎁 挑战宝箱：${pick.name}`, 'buff');
+          } else {
+            nextState.souls += 60;
+            addToast(`🎁 挑战宝箱：+60金币`, 'gold');
+          }
+        }
       }
 
       // 遗物拾取

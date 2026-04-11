@@ -423,6 +423,7 @@ export interface GameState {
   instakillCompleted?: boolean;        // 是否已达成一击必杀
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）
   rerollsThisWave?: number;            // 本波重投次数（挑战追踪用）
+  tempDrawCountBonus?: number;         // 洞察弱点临时骰子上限加成（战斗结束清除）
 }
 
 // ============================================================

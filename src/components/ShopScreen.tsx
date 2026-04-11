@@ -15,13 +15,13 @@ import { RARITY_COLORS as DICE_RARITY_COLORS } from './PixelDiceShapes';
 // ============================================================
 // 宝箱配置（宝箱节点使用）
 // ============================================================
-const CHEST_COST = 35;
+const CHEST_COST = 60;
 const UPGRADE_COSTS = [0, 120, 250];
 
 const REWARD_TABLE = {
-  dice:      { weight: 50, label: '骰子' },
-  augment:   { weight: 25, label: '遗物' },
-  reroll:    { weight: 22, label: '重投机会' },
+  dice:      { weight: 55, label: '骰子' },
+  augment:   { weight: 35, label: '遗物' },
+  reroll:    { weight: 8, label: '重投机会' },
   drawCount: { weight: 0.5, label: '手牌上限+1' },
 };
 
@@ -63,7 +63,7 @@ function generateReward(shopLevel: number): ChestReward {
       if (relicPool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
       const pick = relicPool[Math.floor(Math.random() * relicPool.length)];
       const rarity = pick.rarity === 'rare' ? 'rare' as const : pick.rarity === 'uncommon' ? 'uncommon' as const : 'common' as const;
-      return { type: 'augment', augment: { ...pick, condition: () => true } as any, label: pick.name, desc: pick.description, rarity };
+      return { type: 'augment', augment: pick as any, label: pick.name, desc: pick.description, rarity };
     }
 
     case 'reroll':
@@ -353,7 +353,7 @@ const TreasureScreen: React.FC = () => {
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
 
   const shopLevel = game.shopLevel || 1;
-  const cost = Math.floor(CHEST_COST * 0.5 * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
+  const cost = Math.floor(CHEST_COST * (shopLevel >= 3 ? 0.8 : shopLevel >= 2 ? 0.9 : 1));
   const canAfford = game.souls >= cost;
 
   const openChest = useCallback(async () => {
@@ -383,7 +383,10 @@ const TreasureScreen: React.FC = () => {
         }
         break;
       case 'augment':
-        if (reward.augment) { pickReward(reward.augment); addLog('开箱获得模块: ' + reward.label); }
+        if (reward.augment) {
+          setGame(prev => ({ ...prev, relics: [...prev.relics, reward.augment!] }));
+          addLog('开箱获得遗物: ' + reward.label);
+        }
         break;
       case 'reroll':
         setGame(prev => ({ ...prev, freeRerollsPerTurn: prev.freeRerollsPerTurn + 1 }));

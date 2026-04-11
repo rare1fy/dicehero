@@ -163,6 +163,28 @@ export const StartScreen: React.FC = () => {
           <span className="relative z-10 flex items-center justify-center gap-2"><PixelSword size={2} /> 开启征程</span>
         </motion.button>
 
+        {/* 读取存档按钮 */}
+        {localStorage.getItem('dicehero_save') && (
+          <button
+            onClick={() => {
+              try {
+                const raw = localStorage.getItem('dicehero_save');
+                if (!raw) return;
+                const saveData = JSON.parse(raw);
+                playSound('gate_close');
+                setFading(true);
+                setTimeout(() => {
+                  setGame(saveData);
+                }, 1200);
+              } catch { /* ignore */ }
+            }}
+            disabled={fading}
+            className="group relative w-full max-w-[220px] mx-auto py-2.5 pixel-btn pixel-btn-ghost text-[11px] block mb-4 disabled:opacity-50"
+          >
+            <span className="relative z-10 flex items-center justify-center gap-2"><PixelBook size={2} /> 继续上次冒险</span>
+          </button>
+        )}
+
         {/* 魂晶商店按钮 */}
         <button
           onClick={() => setShowSoulShop(true)}

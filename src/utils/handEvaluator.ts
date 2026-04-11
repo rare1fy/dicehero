@@ -37,6 +37,8 @@ export const checkHands = (dice: Die[], options?: { straightUpgrade?: number }):
   if (maxCount === 5 && dice.length === 5) hands.add('五条');
   if (maxCount === 4 && dice.length === 4) hands.add('四条');
   if (maxCount === 3 && dice.length === 3) hands.add('三条');
+  // 3+3 = 6颗骰子，两种点数各3颗 → 识别为葫芦（超级三条）
+  if (maxCount >= 3 && sortedCounts.length >= 2 && sortedCounts[1] >= 3 && dice.length === 6) hands.add('葫芦');
   if (maxCount === 2 && dice.length === 2) hands.add('对子');
   if (isFullHouse && dice.length === 5) hands.add('葫芦');
   if (isTwoPair && dice.length === 4) hands.add('连对');
@@ -72,6 +74,8 @@ export const checkHands = (dice: Die[], options?: { straightUpgrade?: number }):
   else if (maxCount === 5 && dice.length === 5) { activeHands.push('五条'); hasBaseHand = true; }
   else if (maxCount === 4 && dice.length === 4) { activeHands.push('四条'); hasBaseHand = true; }
   else if (isFullHouse && dice.length === 5) { activeHands.push('葫芦'); hasBaseHand = true; }
+  // 3+3 = 6颗骰子两种各3个 → 葫芦
+  else if (maxCount >= 3 && sortedCounts.length >= 2 && sortedCounts[1] >= 3 && dice.length === 6) { activeHands.push('葫芦'); hasBaseHand = true; }
   else if (maxCount === 3 && dice.length === 3) { activeHands.push('三条'); hasBaseHand = true; }
   else if (isThreePair && dice.length === 6) { activeHands.push('三连对'); hasBaseHand = true; }
   else if (isTwoPair && dice.length === 4) { activeHands.push('连对'); hasBaseHand = true; }

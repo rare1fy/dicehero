@@ -213,6 +213,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onResetTutorial, o
                   </button>
                 </div>
 
+                {/* 存档功能 */}
+                <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
+                <button
+                  onClick={() => {
+                    try {
+                      const saveData = JSON.stringify(game);
+                      localStorage.setItem('dicehero_save', saveData);
+                      addToast('✅ 存档成功！', 'buff');
+                    } catch (e) {
+                      addToast('存档失败', 'damage');
+                    }
+                  }}
+                  className="w-full py-2 pixel-btn pixel-btn-ghost text-[10px] flex items-center justify-center gap-2 text-[var(--pixel-green)]"
+                >
+                  ◆ 保存存档
+                </button>
+
                 {/* 清空游戏数据 */}
                 <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
                 {!showClearConfirm ? (
