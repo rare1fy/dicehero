@@ -72,7 +72,7 @@ export const ReplacementModal: React.FC = () => {
               onClick={() => setGame(prev => ({ ...prev, pendingReplacementAugment: null }))}
               className="w-full mt-6 py-3 text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.2em] hover:text-[var(--dungeon-text)] transition-colors"
             >
-              放弃新模块
+              放弃新遗物
             </button>
           </motion.div>
         </div>

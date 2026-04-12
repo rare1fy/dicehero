@@ -100,8 +100,8 @@ export const EventScreen: React.FC = () => {
             for (const subAction of outcome.actions) {
               executeAction({ ...subAction, toast: undefined, log: undefined }, handType);
             }
-            // Only return to map if no battle was started (startBattle sets phase itself)
-            if (!hasBattle) {
+            // Only return to map if no battle/removeDice was started
+            if (!hasBattle && !hasRemoveDice) {
               setGame(prev => ({ ...prev, phase: 'map' }));
             }
             if (outcome.log) addLog(outcome.log);

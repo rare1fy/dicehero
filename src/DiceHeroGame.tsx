@@ -55,6 +55,8 @@ import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
 import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, CHAPTER_CONFIG } from './config';
 import { applyDiceSpecialEffects } from './logic/diceEffects';
+import { createInitialGameState } from './logic/gameInit';
+import { COMBAT_TYPE_DESC } from './logic/battleHelpers';
 import { HandGuideModal } from './components/HandGuideModal';
 import { DiceGuideModal } from './components/DiceGuideModal';
 import { ChapterTransition } from './components/ChapterTransition';
@@ -99,111 +101,7 @@ function highlightRelicDesc(desc: string): React.ReactNode {
 }
 
 export default function DiceHeroGame() {
-  const createInitialGameState = (): GameState => ({
-    hp: PLAYER_INITIAL.hp,
-    maxHp: PLAYER_INITIAL.maxHp,
-    armor: PLAYER_INITIAL.armor,
-    freeRerollsLeft: PLAYER_INITIAL.freeRerollsPerTurn,
-    freeRerollsPerTurn: PLAYER_INITIAL.freeRerollsPerTurn,
-    globalRerolls: PLAYER_INITIAL.globalRerolls,
-    playsLeft: PLAYER_INITIAL.playsPerTurn,
-    maxPlays: PLAYER_INITIAL.playsPerTurn,
-    souls: PLAYER_INITIAL.souls,
-    slots: PLAYER_INITIAL.augmentSlots,
-    ownedDice: INITIAL_DICE_BAG.map(id => ({ defId: id, level: 1 })),
-    diceBag: initDiceBag(INITIAL_DICE_BAG),
-    discardPile: [],
-    drawCount: PLAYER_INITIAL.drawCount,
-    handLevels: {},
-    augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
-    currentNodeId: null,
-    map: generateMap(),
-    phase: 'start',
-    battleTurn: 0,
-    isEnemyTurn: false,
-    logs: ['\u6B22\u8FCE\u6765\u5230 DICE BATTLE\u3002'],
-    shopItems: [],
-    merchantItems: [],
-    shopLevel: 1,
-    statuses: [],
-    lootItems: [],
-    enemyHpMultiplier: 1.0,
-    chapter: 1,
-    stats: { ...INITIAL_STATS },
-    pendingReplacementAugment: null,
-    targetEnemyUid: null,
-    battleWaves: [],
-    currentWaveIndex: 0,
-    relics: [],
-    elementsUsedThisBattle: [],
-    consecutiveNormalAttacks: 0,
-    enemiesKilledThisBattle: 0,
-    hpLostThisBattle: 0,
-    hpLostThisTurn: 0,
-    blackMarketQuota: 0,
-    evacuatedQuota: 0,
-    totalOverkillThisRun: 0,
-    soulCrystalMultiplier: 1.0,
-    playsPerEnemy: {},
-    instakillChallenge: null,
-    instakillCompleted: false,
-    playsThisWave: 0,
-    rerollsThisWave: 0,
-  });
-
-
-  const [game, setGame] = useState<GameState>({
-    hp: PLAYER_INITIAL.hp,
-    maxHp: PLAYER_INITIAL.maxHp,
-    armor: PLAYER_INITIAL.armor,
-    freeRerollsLeft: PLAYER_INITIAL.freeRerollsPerTurn,
-    freeRerollsPerTurn: PLAYER_INITIAL.freeRerollsPerTurn,
-    globalRerolls: PLAYER_INITIAL.globalRerolls,
-    playsLeft: PLAYER_INITIAL.playsPerTurn,
-    maxPlays: PLAYER_INITIAL.playsPerTurn,
-    souls: PLAYER_INITIAL.souls,
-    slots: PLAYER_INITIAL.augmentSlots,
-    ownedDice: INITIAL_DICE_BAG.map(id => ({ defId: id, level: 1 })),
-    diceBag: initDiceBag(INITIAL_DICE_BAG),
-    discardPile: [],
-    drawCount: PLAYER_INITIAL.drawCount,
-    handLevels: {},
-    augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
-    currentNodeId: null,
-    map: generateMap(),
-    phase: 'start',
-    battleTurn: 0,
-    isEnemyTurn: false,
-    logs: ['欢迎来到 DICE BATTLE。'],
-    shopItems: [],
-    merchantItems: [],
-    shopLevel: 1,
-    statuses: [],
-    lootItems: [],
-    enemyHpMultiplier: 1.0,
-    chapter: 1,
-    stats: { ...INITIAL_STATS },
-    pendingReplacementAugment: null,
-    targetEnemyUid: null,
-    battleWaves: [],
-    currentWaveIndex: 0,
-    relics: [],
-    elementsUsedThisBattle: [],
-    consecutiveNormalAttacks: 0,
-    enemiesKilledThisBattle: 0,
-    hpLostThisBattle: 0,
-    hpLostThisTurn: 0,
-    blackMarketQuota: 0,
-    evacuatedQuota: 0,
-    totalOverkillThisRun: 0,
-    soulCrystalMultiplier: 1.0,
-    playsPerEnemy: {},
-    rageFireBonus: 0,
-    instakillChallenge: null,
-    instakillCompleted: false,
-    playsThisWave: 0,
-    rerollsThisWave: 0,
-  });
+  const [game, setGame] = useState<GameState>(createInitialGameState);
 
   const [showHandGuide, setShowHandGuide] = useState(false);
   const [showDiceGuide, setShowDiceGuide] = useState(false);
@@ -1207,7 +1105,7 @@ export default function DiceHeroGame() {
       }
     });
 
-    const totalDamage = Math.floor((baseDamage + extraDamage) * multiplier) + pierceDamage;
+    const totalDamage = Math.floor(baseDamage * multiplier) + extraDamage + pierceDamage;
 
     // Apply status modifiers
     let modifiedDamage = totalDamage;
@@ -1794,6 +1692,21 @@ export default function DiceHeroGame() {
       }
       return { ...prev, playsThisWave: newPlaysWave, instakillChallenge: challenge, rerollsThisWave: 0 };
     });
+
+    // 洞察弱点进度提示（在state更新后检测）
+    setTimeout(() => {
+      const g = gameRef.current;
+      const ch = g.instakillChallenge;
+      if (ch && !ch.completed && ch.progress && ch.progress > 0 && ch.value && ch.value > 0) {
+        addFloatingText(`◆ ${ch.progress}/${ch.value}`, 'text-[var(--pixel-gold)]', undefined, 'enemy');
+        playSound('coin');
+        // 敌人受击反馈：轻微震动
+        enemies.filter(e => e.hp > 0).forEach(e => {
+          setEnemyEffectForUid(e.uid, 'shake');
+          setTimeout(() => setEnemyEffectForUid(e.uid, null), 300);
+        });
+      }
+    }, 400);
 
     // 检测挑战达成 → 触发战斗援助效果
     setTimeout(() => {
@@ -2834,6 +2747,7 @@ useEffect(() => {
   }, [game.phase, game.hp]);
 
 useEffect(() => {
+    const unspentDice = dice.filter(d => !d.spent);
     if (
       game.phase === 'battle' && 
       !game.isEnemyTurn && 
@@ -2843,7 +2757,8 @@ useEffect(() => {
       dice.length > 0 &&
       !dice.some(d => d.rolling) &&
       !dice.some(d => d.playing) &&
-      (game.playsLeft <= 0 || (dice.filter(d => !d.spent).length === 0 && dice.length > 0))
+      // 只在出牌次数耗尽时自动结束，或者所有骰子都用完且确实出过牌(playsLeft < maxPlays)
+      (game.playsLeft <= 0 || (unspentDice.length === 0 && game.playsLeft < game.maxPlays))
     ) {
       const timer = setTimeout(() => {
         endTurn();
@@ -3164,7 +3079,7 @@ useEffect(() => {
       // Find the loot item that triggered this and mark it collected
       const nextLoot = prev.lootItems.map(i => i.type === 'augment' && !i.collected ? { ...i, collected: true } : i);
       
-      addLog(`替换了模块: ${oldAug?.name} -> ${newAug.name}，返还了 ${refund} 金币。`);
+      addLog(`替换了遗物: ${oldAug?.name} -> ${newAug.name}，返还了 ${refund} 金币。`);
       return { 
         ...prev, 
         augments: newAugs, 
@@ -3232,13 +3147,7 @@ useEffect(() => {
   };
 
   
-  const COMBAT_TYPE_DESC: Record<string, { name: string; icon: string; color: string; desc: string }> = {
-    warrior: { name: '战士', icon: '', color: 'var(--pixel-red)', desc: '近战类型，需要接近后才能攻击。每回合逼近1步，到达后每回合普通攻击。' },
-    guardian: { name: '守护者', icon: '', color: 'var(--pixel-blue)', desc: '重装近战类型，需要接近后才能攻击。交替攻击和举盾防御，获得额外护甲。' },
-        ranger: { name: '游侠', icon: '', color: 'var(--pixel-green)', desc: '远程弓箭手，直接攻击两次。每次伤害较低但持续输出。' },
-        caster: { name: '术士', icon: '', color: 'var(--pixel-purple)', desc: '远程施法者，不会直接攻击。专注施加毒素、灼烧等持续伤害效果。' },
-        priest: { name: '牧师', icon: '', color: 'var(--pixel-gold)', desc: '支援型，不会攻击玩家。为队友治疗、加甲、加力量，或给玩家施加虚弱、易伤等减益。' },
-  };
+  // COMBAT_TYPE_DESC 已提取到 logic/battleHelpers.ts
 
   const _getEffectiveAttackDmg = (e: Enemy) => {
     let val = e.attackDmg;
@@ -4211,7 +4120,7 @@ useEffect(() => {
                         </div>
                       </div>
 
-                      {/* 激活遗物+增强模块行 */}
+                      {/* 激活遗物+战斗遗物行 */}
                       {(() => {
                         const outcomeTriggeredRelicIds = new Set(
                           (expectedOutcome?.triggeredAugments || []).filter(ta => ta.relicId).map(ta => ta.relicId!)

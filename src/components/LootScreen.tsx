@@ -31,7 +31,7 @@ export const LootScreen: React.FC = () => {
     {game.lootItems.map((item, i) => {
       const getLootInfo = (type: string) => {
         switch (type) {
-          case 'augment': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-blue-light)]', label: '新模块', borderColor: 'var(--pixel-blue)' };
+          case 'augment': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '遗物', borderColor: 'var(--pixel-purple)' };
           case 'gold': return { icon: <PixelCoin size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '金币', borderColor: 'var(--pixel-gold)' };
           case 'reroll': return { icon: <PixelRefresh size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '重掷强化', borderColor: 'var(--pixel-purple)' };
           case 'maxPlays': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-red-light)]', label: '出牌次数', borderColor: 'var(--pixel-red)' };

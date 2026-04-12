@@ -30,18 +30,18 @@ export const DEPTH_SCALING: { hpMult: number; dmgMult: number }[] = [
   { hpMult: 0.90, dmgMult: 0.40 },  // depth 0: 教学关，轻松过
   { hpMult: 1.10, dmgMult: 0.50 },  // depth 1: 稍有肉感
   { hpMult: 1.25, dmgMult: 0.60 },  // depth 2: 开始有压力
-  { hpMult: 1.70, dmgMult: 0.80 },  // depth 3: 精英层（高HP低伤害）
-  { hpMult: 1.30, dmgMult: 0.70 },  // depth 4: 精英后休息
-  { hpMult: 1.60, dmgMult: 0.85 },  // depth 5: 热身完毕
-  { hpMult: 1.40, dmgMult: 0.75 },  // depth 6: 营火前缓冲
-  { hpMult: 2.00, dmgMult: 1.10 },  // depth 7: 中期Boss
-  { hpMult: 1.20, dmgMult: 0.65 },  // depth 8: Boss后恢复期
-  { hpMult: 1.70, dmgMult: 0.90 },  // depth 9: 重新热身
-  { hpMult: 2.00, dmgMult: 1.10 },  // depth 10: 后期开始
-  { hpMult: 2.40, dmgMult: 1.30 },  // depth 11: 后期巅峰
-  { hpMult: 2.80, dmgMult: 1.50 },  // depth 12: pre-boss精英层
-  { hpMult: 1.60, dmgMult: 1.00 },  // depth 13: 营火前缓冲
-  { hpMult: 3.80, dmgMult: 2.00 },  // depth 14: 最终Boss
+  { hpMult: 1.50, dmgMult: 0.75 },  // depth 3: 精英层
+  { hpMult: 1.20, dmgMult: 0.65 },  // depth 4: 精英后休息
+  { hpMult: 1.40, dmgMult: 0.80 },  // depth 5: 热身完毕
+  { hpMult: 1.20, dmgMult: 0.70 },  // depth 6: 营火前缓冲
+  { hpMult: 1.80, dmgMult: 1.00 },  // depth 7: 中期Boss
+  { hpMult: 1.10, dmgMult: 0.60 },  // depth 8: Boss后恢复期
+  { hpMult: 1.40, dmgMult: 0.80 },  // depth 9: 重新热身
+  { hpMult: 1.60, dmgMult: 0.90 },  // depth 10: 后期开始
+  { hpMult: 1.80, dmgMult: 1.00 },  // depth 11: 后期巅峰
+  { hpMult: 2.00, dmgMult: 1.10 },  // depth 12: pre-boss精英层
+  { hpMult: 1.30, dmgMult: 0.80 },  // depth 13: 营火前缓冲
+  { hpMult: 2.50, dmgMult: 1.30 },  // depth 14: 最终Boss
 ];
 
 /** 获取指定层级的缩放系数 */
