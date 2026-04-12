@@ -61,6 +61,14 @@ import { HandGuideModal } from './components/HandGuideModal';
 import { DiceGuideModal } from './components/DiceGuideModal';
 import { ChapterTransition } from './components/ChapterTransition';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
+import { ClassSelectScreen } from './components/ClassSelectScreen';
+import { ALL_RELICS } from './data/relics';
+
+const META_KEY = 'dicehero_meta';
+const loadMeta = () => {
+  try { const raw = localStorage.getItem(META_KEY); if (raw) return JSON.parse(raw); } catch {}
+  return { permanentQuota: 0, unlockedStartRelics: [], highestOverkill: 0, totalRuns: 0, totalWins: 0 };
+};
 import { ReplacementModal } from './components/ReplacementModal';
 import { ToastDisplay } from './components/ToastDisplay';
 import { EnemyQuoteBubble } from './components/EnemyQuoteBubble';
@@ -3188,8 +3196,28 @@ useEffect(() => {
     resetGame,
   };
 
+
   if (game.phase === 'start') {
     return <GameContext.Provider value={contextValue}><StartScreen /></GameContext.Provider>;
+  }
+
+  if ((game.phase as string) === 'classSelect') {
+    return (
+      <GameContext.Provider value={contextValue}>
+        <ClassSelectScreen onSelect={(classId) => {
+          const newState = createInitialGameState(classId);
+          const meta = loadMeta();
+          const startRelics = (meta.unlockedStartRelics || [])
+            .map((id: string) => ALL_RELICS[id])
+            .filter(Boolean);
+          setGame({
+            ...newState,
+            phase: 'map',
+            relics: startRelics,
+          });
+        }} />
+      </GameContext.Provider>
+    );
   }
 
   if (game.phase === 'gameover') {

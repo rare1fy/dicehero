@@ -144,13 +144,27 @@ const cracked: DiceDef = {
 // 骰子注册表
 // ============================================================
 
-export const ALL_DICE: Record<string, DiceDef> = {
+// ============================================================
+// 骰子注册表（支持动态注册职业骰子）
+// ============================================================
+
+const BASE_DICE: Record<string, DiceDef> = {
   standard,
   heavy, elemental,
   blade, amplify, split, magnet, joker,
   chaos,
   cursed, cracked,
 };
+
+// 可变注册表（包含基础+职业骰子）
+export let ALL_DICE: Record<string, DiceDef> = { ...BASE_DICE };
+
+/** 注册职业骰子到全局注册表 */
+export function registerClassDice(diceList: DiceDef[]) {
+  const updated = { ...ALL_DICE };
+  diceList.forEach(d => { updated[d.id] = d; });
+  ALL_DICE = updated;
+}
 
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
   common: [standard],

@@ -43,20 +43,8 @@ export const StartScreen: React.FC = () => {
   const [fading, setFading] = useState(false);
 
   const startGame = () => {
-    const meta = loadMeta();
-    const startRelics = (meta.unlockedStartRelics || [])
-      .map((id: string) => ALL_RELICS[id])
-      .filter(Boolean);
-
-    if (startRelics.length > 0) {
-      setGame(prev => ({
-        ...prev,
-        phase: 'map',
-        relics: [...prev.relics, ...startRelics],
-      }));
-    } else {
-      setGame(prev => ({ ...prev, phase: 'map' }));
-    }
+    // 进入职业选择界面
+    setGame(prev => ({ ...prev, phase: 'classSelect' as any }));
   };
 
   const handleStart = () => {

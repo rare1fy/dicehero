@@ -1,32 +1,46 @@
 /**
- * gameInit.ts — 游戏状态初始化
- * 
- * 从 DiceHeroGame.tsx 提取的初始化逻辑。
+ * gameInit.ts — 游戏状态初始化（职业系统版）
  */
 
 import type { GameState } from '../types/game';
 import { INITIAL_STATS } from '../types/game';
 import { PLAYER_INITIAL } from '../config';
-import { INITIAL_DICE_BAG } from '../data/dice';
+import { registerClassDice } from '../data/dice';
 import { initDiceBag } from '../data/diceBag';
 import { generateMap } from '../utils/mapGenerator';
+import { CLASS_DEFS, CLASS_DICE, type ClassId } from '../data/classes';
 
-export function createInitialGameState(): GameState {
+export function createInitialGameState(classId?: ClassId): GameState {
+  // 注册职业骰子到全局注册表
+  if (classId) {
+    registerClassDice(CLASS_DICE[classId]);
+  }
+
+  const classDef = classId ? CLASS_DEFS[classId] : null;
+  const initialDice = classDef ? classDef.initialDice : [
+    'standard', 'standard', 'standard', 'standard', 'heavy', 'blade'
+  ];
+
   return {
     hp: PLAYER_INITIAL.hp,
     maxHp: PLAYER_INITIAL.maxHp,
     armor: PLAYER_INITIAL.armor,
-    freeRerollsLeft: PLAYER_INITIAL.freeRerollsPerTurn,
-    freeRerollsPerTurn: PLAYER_INITIAL.freeRerollsPerTurn,
+    freeRerollsLeft: classDef?.freeRerolls ?? PLAYER_INITIAL.freeRerollsPerTurn,
+    freeRerollsPerTurn: classDef?.freeRerolls ?? PLAYER_INITIAL.freeRerollsPerTurn,
     globalRerolls: PLAYER_INITIAL.globalRerolls,
-    playsLeft: PLAYER_INITIAL.playsPerTurn,
-    maxPlays: PLAYER_INITIAL.playsPerTurn,
+    playsLeft: classDef?.maxPlays ?? PLAYER_INITIAL.playsPerTurn,
+    maxPlays: classDef?.maxPlays ?? PLAYER_INITIAL.playsPerTurn,
     souls: PLAYER_INITIAL.souls,
     slots: PLAYER_INITIAL.augmentSlots,
-    ownedDice: INITIAL_DICE_BAG.map(id => ({ defId: id, level: 1 })),
-    diceBag: initDiceBag(INITIAL_DICE_BAG),
+    playerClass: classId,
+    bloodRerollCount: 0,
+    chargeStacks: 0,
+    comboCount: 0,
+    lastPlayHandType: undefined,
+    ownedDice: initialDice.map(id => ({ defId: id, level: 1 })),
+    diceBag: initDiceBag(initialDice),
     discardPile: [],
-    drawCount: PLAYER_INITIAL.drawCount,
+    drawCount: classDef?.drawCount ?? PLAYER_INITIAL.drawCount,
     handLevels: {},
     augments: Array(PLAYER_INITIAL.augmentSlots).fill(null),
     currentNodeId: null,

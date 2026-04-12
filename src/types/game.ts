@@ -26,10 +26,78 @@ export interface DiceDef {
     bonusMult?: number;
     heal?: number;
     pierce?: number;
-    selfDamage?: number;     // 反噬伤害
+    selfDamage?: number;     // 反噬伤害（固定值）
+    selfDamagePercent?: number; // 反噬伤害（最大HP百分比）
     statusToEnemy?: StatusEffect;
     statusToSelf?: StatusEffect;
     aoe?: boolean;
+    armor?: number;          // 获得固定护甲
+    // 战士特殊
+    armorFromValue?: boolean;    // 护甲=骰子点数
+    armorFromTotalPoints?: boolean; // 护甲=选中骰子总点数
+    armorBreak?: boolean;        // 摧毁敌人全部护甲
+    scaleWithHits?: boolean;     // 每受伤一次伤害+2
+    firstPlayOnly?: boolean;     // 仅首次出牌生效
+    scaleWithLostHp?: number;    // 伤害加成=已损失HP×N
+    executeThreshold?: number;   // 斩杀线（敌人HP百分比）
+    executeMult?: number;        // 斩杀倍率
+    aoeDamage?: number;          // 独立AOE伤害
+    healFromValue?: boolean;     // 回血=骰子点数
+    lowHpOverrideValue?: number; // 低血时点数变为N
+    lowHpThreshold?: number;     // 低血判定线
+    bonusDamageFromPoints?: number; // 额外伤害=总点数×N
+    requiresTriple?: boolean;    // 需要三条以上牌型
+    scaleWithBloodRerolls?: boolean; // 卖血次数+1面值
+    selfBerserk?: boolean;       // 自身施加狂暴
+    scaleWithSelfDamage?: boolean;   // 自伤量转伤害
+    damageFromArmor?: number;    // 伤害加成=护甲×N
+    maxHpBonus?: number;         // 最大HP+N
+    purifyAll?: boolean;         // 净化全部负面
+    tauntAll?: boolean;          // 嘲讽全体
+    // 法师特殊
+    reverseValue?: boolean;      // 点数变为7-当前值
+    randomTarget?: boolean;      // 随机目标
+    removeBurn?: number;         // 清除灼烧层数
+    healOnSkip?: number;         // 未出牌回复HP
+    bonusDamagePerElement?: number; // 每颗元素骰子+N伤害
+    copyHighestValue?: boolean;  // 复制最高点数
+    bonusOnKeep?: number;        // 保留到下回合时+N点
+    rerollOnKeep?: boolean;      // 保留时自动重投
+    dualElement?: boolean;       // 双元素
+    copyMajorityElement?: boolean; // 复制多数元素
+    devourDie?: boolean;         // 吞噬骰子
+    healPerCleanse?: number;     // 每净化1种回复N HP
+    bonusMultOnKeep?: number;    // 保留时+N倍率
+    unifyElement?: boolean;      // 统一元素
+    overrideValue?: number;      // 固定点数
+    swapWithUnselected?: boolean; // 与未选中骰子交换
+    freezeBonus?: number;        // 冻结+N回合
+    bonusPerTurnKept?: number;   // 每保留1回合+N点
+    keepBonusCap?: number;       // 保留加成上限
+    armorFromHandSize?: number;  // 护甲=手牌数×N
+    requiresCharge?: number;     // 需要蓄力N回合
+    triggerAllElements?: boolean; // 触发全部元素
+    // 盗贼特殊
+    comboBonus?: number;         // 连击倍率加成
+    poisonInverse?: boolean;     // 毒=7-点数
+    stayInHand?: boolean;        // 出牌后不消耗
+    grantTempDie?: boolean;      // 补充临时骰子
+    critOnSecondPlay?: number;   // 第2次出牌暴击倍率
+    poisonBase?: number;         // 基础毒层
+    poisonBonusIfPoisoned?: number; // 已有毒额外+N
+    alwaysBounce?: boolean;      // 必定弹回
+    bonusDamageOnSecondPlay?: number; // 第2次出牌+N伤害
+    stealArmor?: number;         // 偷取护甲
+    poisonFromPoisonDice?: number; // 毒层=毒系骰子数×N
+    bonusMultOnSecondPlay?: number; // 第2次出牌倍率
+    grantExtraPlay?: boolean;    // 额外出牌机会
+    detonatePoisonPercent?: number; // 引爆毒层百分比
+    wildcard?: boolean;          // 万能骰子
+    transferDebuff?: boolean;    // 转移负面状态
+    detonateAllOnLastPlay?: boolean; // 最后出牌引爆全部
+    escalateDamage?: number;     // 递增伤害百分比
+    // 通用
+    purifyDebuff?: number | boolean; // 净化负面（遗物兼容）
   };
 }
 
@@ -378,6 +446,11 @@ export interface GameState {
   maxPlays: number;
   souls: number;
   slots: number;
+  playerClass?: string;        // 职业ID: 'warrior' | 'mage' | 'rogue'
+  bloodRerollCount?: number;   // 本回合卖血重投次数（战士特权伤害加成）
+  chargeStacks?: number;       // 法师蓄力层数（连续不出牌回合数）
+  comboCount?: number;         // 盗贼本回合已出牌次数（连击计数）
+  lastPlayHandType?: string;   // 盗贼上一次出牌的牌型（连击终结判定）
 
   // 骰子库系统
   ownedDice: OwnedDie[];       // 玩家拥有的所有骰子定义ID列表
@@ -391,7 +464,7 @@ export interface GameState {
   elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
   map: MapNode[];
-  phase: 'start' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure';
+  phase: 'start' | 'classSelect' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure';
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target
