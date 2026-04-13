@@ -620,8 +620,11 @@ export default function DiceHeroGame() {
     
     // 法师：抽取数量 = 手牌上限 - 已保留数量
     const chargeStacks = g.chargeStacks || 0;
-    // 战士：血量≤50%时手牌上限+1
+    // 战士：血量≤50%时手牌上限+1（血量恢复到50%以上时自动恢复正常）
     const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
+    if (warriorBonus > 0) {
+      setTimeout(() => addFloatingText('血怒补牌+1', 'text-red-400', undefined, 'player'), 200);
+    }
     const handLimit = g.playerClass === 'mage' ? Math.min(6, g.drawCount + chargeStacks) : (g.drawCount + warriorBonus);
     const count = Math.max(0, handLimit - keptDice.length) + relicDrawBonus;
     
