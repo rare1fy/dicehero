@@ -4751,7 +4751,7 @@ useEffect(() => {
                   {dice.filter(d => !d.spent).map((die) => {
                     const isHint = !die.selected && handHintIds.has(die.id) && !die.rolling;
                     return (
-                      <div key={`die-wrap-${die.id}`} className={isHint ? 'dice-hand-hint-wrap' : ''}>
+                      <div key={`die-wrap-${die.id}`} className={`relative ${isHint ? 'dice-hand-hint-wrap' : ''}`}>
                       <motion.button
                         key={`die-${die.id}`}
                         initial={false}
@@ -4807,14 +4807,16 @@ useEffect(() => {
                           </div>
                         )}
                       </motion.button>
-                      {/* 选中骰子气泡tips — 浮在骰子上方 */}
-                      {die.selected && !die.spent && !die.rolling && !die.playing && die.diceDefId !== 'standard' && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-[80] pointer-events-none whitespace-nowrap">
-                          <div className="px-2 py-1 bg-[rgba(8,11,14,0.95)] border border-[var(--dungeon-panel-border)] text-center max-w-[180px]" style={{ borderRadius: '2px', whiteSpace: 'normal' }}>
-                            <div className="text-[9px] font-bold text-[var(--dungeon-text-bright)] mb-0.5">{getDiceDef(die.diceDefId).name}</div>
-                            <div className="text-[8px] text-[var(--pixel-orange-light)] leading-snug">{getDiceDef(die.diceDefId).description}</div>
+                      {/* 选中骰子气泡tips */}
+                      {die.selected && !die.spent && !die.rolling && !die.playing && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[80] pointer-events-none" style={{ width: 'max-content', maxWidth: '160px' }}>
+                          <div className="px-1.5 py-1 bg-[rgba(8,11,14,0.75)] backdrop-blur-sm border border-[rgba(255,255,255,0.1)] text-center" style={{ borderRadius: '3px' }}>
+                            <div className="text-[8px] font-bold text-[var(--dungeon-text-bright)] leading-tight">{getDiceDef(die.diceDefId).name}</div>
+                            {getDiceDef(die.diceDefId).description && (
+                              <div className="text-[7px] text-[var(--pixel-orange-light)] leading-snug mt-0.5 opacity-90">{getDiceDef(die.diceDefId).description}</div>
+                            )}
                           </div>
-                          <div className="w-0 h-0 mx-auto border-l-[4px] border-r-[4px] border-t-[4px] border-l-transparent border-r-transparent border-t-[var(--dungeon-panel-border)]" />
+                          <div className="w-0 h-0 mx-auto border-l-[3px] border-r-[3px] border-t-[3px] border-l-transparent border-r-transparent border-t-[rgba(255,255,255,0.1)]" />
                         </div>
                       )}
                       </div>
