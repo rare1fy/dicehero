@@ -1562,8 +1562,8 @@ export default function DiceHeroGame() {
     if (game.playerClass === 'warrior' && latestRageMult > 0) {
       modifiedDamage = Math.floor(modifiedDamage * (1 + latestRageMult));
     }
-    // 盗贼【连击加成】：第2次出牌×1.2
-    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
+    // 盗贼【连击加成】：第2次出牌×1.2（普通攻击不触发）
+    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && bestHand !== '普通攻击') {
       modifiedDamage = Math.floor(modifiedDamage * 1.2);
     }
 
@@ -1633,8 +1633,8 @@ export default function DiceHeroGame() {
       ...prev,
       playsLeft: prev.playsLeft - 1,
       playsPerEnemy: { ...playsPerEnemyRef.current },
-      // 盗贼连击追踪
-      comboCount: (prev.comboCount || 0) + 1,
+      // 盗贼连击追踪（普通攻击不计入连击）
+      comboCount: thisHandType !== '普通攻击' ? (prev.comboCount || 0) + 1 : prev.comboCount || 0,
       lastPlayHandType: thisHandType,
     }));
 
@@ -2399,24 +2399,22 @@ export default function DiceHeroGame() {
     const selectedDiceForSpent = dice.filter(d => d.selected && !d.spent);
     const spentDefIds = selectedDiceForSpent.map(d => d.diceDefId);
     
-    // === 盗贼骰子补充：检查选中骰子是否有 grantTempDie 效果 ===
-    const tempDiceToGrant: Die[] = [];
+    // === 盗贼骰子补充：检查选中骰子是否有 grantTempDie 效果（只补1颗，取第一个触发） ===
+    let tempDieToGrant: Die | null = null;
     if (game.playerClass === 'rogue') {
-      selectedDiceForSpent.forEach(d => {
-        const def = getDiceDef(d.diceDefId);
-        if (def.onPlay?.grantTempDie) {
-          // 补充1颗临时骰子(1-3点)
-          tempDiceToGrant.push({
-            id: Date.now() + 8000 + tempDiceToGrant.length,
-            diceDefId: 'standard',
-            value: Math.floor(Math.random() * 3) + 1,
-            element: 'normal' as any,
-            selected: false,
-            spent: false,
-            rolling: false,
-          });
-        }
-      });
+      const hasTempGrant = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantTempDie);
+      if (hasTempGrant && !tempDieToGrant) {
+        tempDieToGrant = {
+          id: Date.now() + 8000,
+          diceDefId: 'standard',
+          value: Math.floor(Math.random() * 2) + 1, // 点数1-2
+          element: 'normal' as any,
+          selected: false,
+          spent: false,
+          rolling: false,
+          isTemp: true, // 标记为临时骰子，保留到下回合
+        };
+      }
     }
     
     setDice(prev => prev.map(d => {
@@ -2485,11 +2483,11 @@ export default function DiceHeroGame() {
       });
     }
     
-    // 补充临时骰子（延迟显示）
-    if (tempDiceToGrant.length > 0) {
+    // 补充临时骰子（延迟显示，只补1颗）
+    if (tempDieToGrant) {
       setTimeout(() => {
-        setDice(prev => [...prev, ...tempDiceToGrant]);
-        addFloatingText(`+${tempDiceToGrant.length}临时骰子`, 'text-green-300', undefined, 'player');
+        setDice(prev => [...prev, tempDieToGrant!]);
+        addFloatingText('+1临时骰子', 'text-green-300', undefined, 'player');
       }, 300);
     }
     
@@ -3335,8 +3333,16 @@ setGame(prev => {
         discardFromHand = excess.map(d => d.diceDefId);
         remainingDice = remainingDice.slice(remainingDice.length - handLimit);
       }
+    } else if (g2.playerClass === 'rogue') {
+      // 盗贼：保留本回合补充的临时骰子(isTemp且未使用)，其余弃掉
+      const unspent = dice.filter(d => !d.spent);
+      const keptTemp = unspent.filter(d => d.isTemp);
+      const discarded = unspent.filter(d => !d.isTemp);
+      discardFromHand = discarded.map(d => d.diceDefId);
+      // 临时骰子保留到下回合，但清除isTemp标记（只保留一轮）
+      remainingDice = keptTemp.map(d => ({ ...d, isTemp: false }));
     } else {
-      // 战士/盗贼：全部弃掉
+      // 战士：全部弃掉
       discardFromHand = dice.filter(d => !d.spent).map(d => d.diceDefId);
       remainingDice = [];
     }
@@ -5240,7 +5246,7 @@ useEffect(() => {
                     const isHint = !die.selected && handHintIds.has(die.id) && !die.rolling;
                     const isComboReady = game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 && !die.selected && !die.rolling && !die.playing;
                     return (
-                      <div key={`die-wrap-${die.id}`} className={`relative ${isHint ? 'dice-hand-hint-wrap' : ''} ${isComboReady ? 'dice-combo-ready' : ''}`}>
+                      <div key={`die-wrap-${die.id}`} data-die-id={die.id} className={`relative ${isHint ? 'dice-hand-hint-wrap' : ''} ${isComboReady ? 'dice-combo-ready' : ''}`}>
                       <motion.button
                         key={`die-${die.id}`}
                         initial={false}
@@ -5296,35 +5302,41 @@ useEffect(() => {
                           </div>
                         )}
                       </motion.button>
-                      {/* 选中骰子气泡tips — 只显示最后点击的那颗 */}
-                      {die.selected && !die.spent && !die.rolling && !die.playing && die.id === lastTappedDieId && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 z-[80] pointer-events-none" style={{ width: 'max-content', maxWidth: '180px' }}>
-                          <div className="px-2 py-1.5 bg-[rgba(12,10,20,0.92)] backdrop-blur-sm border border-[rgba(255,255,255,0.15)] text-center" style={{ borderRadius: '4px' }}>
-                            <span className="inline-block px-1.5 py-0.5 text-[9px] font-black mb-1"
-                              style={{
-                                color: (() => { const d = getDiceDef(die.diceDefId); const id = d.id; return id.startsWith('w_') ? '#ff6060' : id.startsWith('mage_') ? '#a070ff' : id.startsWith('r_') ? '#60d080' : '#c8c8d0'; })(),
-                                background: (() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? 'rgba(192,64,64,0.2)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.2)' : id.startsWith('r_') ? 'rgba(48,160,80,0.2)' : 'rgba(200,200,200,0.1)'; })(),
-                                border: `1px solid ${(() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? 'rgba(192,64,64,0.4)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.4)' : id.startsWith('r_') ? 'rgba(48,160,80,0.4)' : 'rgba(200,200,200,0.2)'; })()}`,
-                                borderRadius: '2px',
-                              }}
-                            >{getDiceDef(die.diceDefId).name}</span>
-                            {getDiceDef(die.diceDefId).description && (
-                              <div className="text-[9px] text-[var(--dungeon-text)] leading-snug mt-0.5">{formatDescription(getDiceDef(die.diceDefId).description)}</div>
-                            )}
-                            <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-0.5 font-mono opacity-70">
-                              面值: [{getDiceDef(die.diceDefId).faces.join(', ')}]
-                            </div>
-                            {/* 怒火骰子当前叠加伤害 */}
-                            {die.diceDefId === 'w_fury' && (game.furyBonusDamage || 0) > 0 && (
-                              <div className="text-[8px] text-orange-400 mt-0.5 font-bold">
-                                当前叠加: +{game.furyBonusDamage}伤害
+                      {/* 选中骰子气泡tips — Portal渲染避免overflow裁切 */}
+                      {die.selected && !die.spent && !die.rolling && !die.playing && die.id === lastTappedDieId && (() => {
+                        const wrapEl = document.querySelector(`[data-die-id="${die.id}"]`);
+                        if (!wrapEl) return null;
+                        const rect = wrapEl.getBoundingClientRect();
+                        const tipLeft = Math.max(8, Math.min(rect.left + rect.width / 2 - 90, window.innerWidth - 188));
+                        const tipTop = rect.top - 8;
+                        return ReactDOM.createPortal(
+                          <div className="fixed pointer-events-none z-[9999]" style={{ top: tipTop, left: tipLeft, width: '180px', transform: 'translateY(-100%)' }}>
+                            <div className="px-2 py-1.5 bg-[rgba(12,10,20,0.95)] backdrop-blur-sm border border-[rgba(255,255,255,0.15)] text-center" style={{ borderRadius: '4px' }}>
+                              <span className="inline-block px-1.5 py-0.5 text-[9px] font-black mb-1"
+                                style={{
+                                  color: (() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? '#ff6060' : id.startsWith('mage_') ? '#a070ff' : id.startsWith('r_') ? '#60d080' : '#c8c8d0'; })(),
+                                  background: (() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? 'rgba(192,64,64,0.2)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.2)' : id.startsWith('r_') ? 'rgba(48,160,80,0.2)' : 'rgba(200,200,200,0.1)'; })(),
+                                  border: `1px solid ${(() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? 'rgba(192,64,64,0.4)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.4)' : id.startsWith('r_') ? 'rgba(48,160,80,0.4)' : 'rgba(200,200,200,0.2)'; })()}`,
+                                  borderRadius: '2px',
+                                }}
+                              >{getDiceDef(die.diceDefId).name}</span>
+                              {getDiceDef(die.diceDefId).description && (
+                                <div className="text-[9px] text-[var(--dungeon-text)] leading-snug mt-0.5">{formatDescription(getDiceDef(die.diceDefId).description)}</div>
+                              )}
+                              <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-0.5 font-mono opacity-70">
+                                面值: [{getDiceDef(die.diceDefId).faces.join(', ')}]
                               </div>
-                            )}
-                          </div>
-                          {/* 聊天气泡尖角 */}
-                          <div className="w-0 h-0 mx-auto" style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid rgba(12,10,20,0.8)' }} />
-                        </div>
-                      )}
+                              {die.diceDefId === 'w_fury' && (game.furyBonusDamage || 0) > 0 && (
+                                <div className="text-[8px] text-orange-400 mt-0.5 font-bold">
+                                  当前叠加: +{game.furyBonusDamage}伤害
+                                </div>
+                              )}
+                            </div>
+                            <div className="w-0 h-0 mx-auto" style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid rgba(12,10,20,0.85)' }} />
+                          </div>,
+                          document.body
+                        );
+                      })()}
                       </div>
                     );
                   })}

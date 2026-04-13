@@ -126,6 +126,7 @@ export interface Die {
   rolling?: boolean;
   playing?: boolean;
   kept?: boolean;
+  isTemp?: boolean;   // 盗贼临时补充的骰子（保留到下回合）
 }
 
 // ============================================================

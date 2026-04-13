@@ -547,79 +547,82 @@
 .dice-id-r_purifyblade::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2.5' fill='%2340a060'/%3E%3Cpath d='M4 1.5a2.5 2.5 0 010 5a1.25 1.25 0 010-2.5a1.25 1.25 0 000-2.5z' fill='%23fff' opacity='.3'/%3E%3C/svg%3E"); }
 .dice-id-r_deathtouch::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 1.5c-2 0-2 3 0 3h3c1.5 0 1.5-2 0-3' fill='%23c0c0c0' opacity='.5'/%3E%3Crect x='3.5' y='4.5' width='1' height='3' fill='%23806040'/%3E%3C/svg%3E"); }
 .dice-id-r_bladestorm::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l1 3 3 0-3 1 0 3-1-3-3 0 3-1z' fill='%2380ffa0'/%3E%3C/svg%3E"); }
+.dice-id-r_quickdraw::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4h4M5 2l2 2-2 2' stroke='%2380ffa0' stroke-width='1.2' fill='none'/%3E%3Ccircle cx='2' cy='4' r='.8' fill='%2380ffa0'/%3E%3C/svg%3E"); }
+.dice-id-r_combomastery::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 5l2-3 2 3' stroke='%23ffd060' stroke-width='1.2' fill='none'/%3E%3Crect x='3.5' y='5' width='1' height='2' fill='%23ffd060'/%3E%3C/svg%3E"); }
 
-/* ======== 战士骰子 — 职业色系+独特色调区分 ======== */
-/* 每颗骰子继承 pixel-dice-warrior 基底，通过渐变色调偏移+边框色+文字色区分 */
-.dice-id-w_bloodthirst { background: linear-gradient(180deg,#c0706a,#984848,#703030) !important; border-color: #e05050 !important; color: #ff9090 !important; }
-.dice-id-w_thorns { background: linear-gradient(180deg,#a0a8b8,#788898,#586878) !important; border-color: #90a8c0 !important; color: #c0d8f0 !important; }
-.dice-id-w_warcry { background: linear-gradient(180deg,#c8b088,#a89068,#887050) !important; border-color: #d0a870 !important; color: #ffe0a0 !important; }
-.dice-id-w_ironwall { background: linear-gradient(180deg,#90a0b0,#708898,#587080) !important; border-color: #88a0b8 !important; color: #c0d8f0 !important; }
-.dice-id-w_fury { background: linear-gradient(180deg,#c89050,#a87030,#885820) !important; border-color: #d88830 !important; color: #ffa050 !important; }
-.dice-id-w_charge { background: linear-gradient(180deg,#c8b078,#a89058,#887040) !important; border-color: #c8a860 !important; color: #ffe0a0 !important; }
-.dice-id-w_armorbreak { background: linear-gradient(180deg,#c09068,#a07048,#805830) !important; border-color: #d08848 !important; color: #ffb070 !important; }
-.dice-id-w_revenge { background: linear-gradient(180deg,#b07868,#905848,#704030) !important; border-color: #c07050 !important; color: #ff9080 !important; }
-.dice-id-w_roar { background: linear-gradient(180deg,#c0a880,#a08860,#806840) !important; border-color: #c8a060 !important; color: #ffd090 !important; }
-.dice-id-w_lifefurnace { background: linear-gradient(180deg,#b86868,#984848,#783030) !important; border-color: #c06060 !important; color: #ff9898 !important; }
-.dice-id-w_bloodpact { background: linear-gradient(180deg,#982020,#701818,#481010) !important; border-color: #b02828 !important; color: #ff7070 !important; }
-.dice-id-w_execute { background: linear-gradient(180deg,#b8a878,#988858,#786838) !important; border-color: #b89858 !important; color: #ffe0a0 !important; }
-.dice-id-w_quake { background: linear-gradient(180deg,#a89878,#888058,#686040) !important; border-color: #a89060 !important; color: #d8c090 !important; }
-.dice-id-w_leech { background: linear-gradient(180deg,#a84848,#883030,#682020) !important; border-color: #b04040 !important; color: #ffa0a0 !important; }
-.dice-id-w_titanfist { background: linear-gradient(180deg,#882020,#681010,#480808) !important; border-color: #a83030 !important; color: #ff8888 !important; }
-.dice-id-w_unyielding { background: linear-gradient(180deg,#8898b0,#687890,#506078) !important; border-color: #7898b8 !important; color: #b0d0f0 !important; }
-.dice-id-w_warhammer { background: linear-gradient(180deg,#c0a070,#a08050,#806030) !important; border-color: #c09850 !important; color: #ffd8a0 !important; }
-.dice-id-w_bloodblade { background: linear-gradient(180deg,#a87868,#885848,#683828) !important; border-color: #b07060 !important; color: #e8b0a0 !important; }
-.dice-id-w_giantshield { background: linear-gradient(180deg,#7898b8,#588098,#406878) !important; border-color: #7898b0 !important; color: #a8d0f0 !important; }
-.dice-id-w_berserk { background: linear-gradient(180deg,#b84030,#982018,#781010) !important; border-color: #d04030 !important; color: #ff7050 !important; }
-.dice-id-w_bloodgod { background: linear-gradient(180deg,#781818,#581010,#380808) !important; border-color: #a82828 !important; color: #ff8868 !important; }
-.dice-id-w_overlord { background: linear-gradient(180deg,#98a0b0,#788090,#606878) !important; border-color: #a0a8b8 !important; color: #d8e0f0 !important; }
+/* ======== 战士骰子 — 高对比独立色调+左色带 ======== */
+.dice-id-w_bloodthirst { background: linear-gradient(180deg,#d06050,#a03838,#702020) !important; border-color: #ff5050 !important; color: #ffc0c0 !important; }
+.dice-id-w_thorns { background: linear-gradient(180deg,#8898b0,#607888,#405868) !important; border-color: #90b0d0 !important; color: #d8f0ff !important; }
+.dice-id-w_warcry { background: linear-gradient(180deg,#d0a868,#a88048,#786030) !important; border-color: #e0b060 !important; color: #fff0c0 !important; }
+.dice-id-w_ironwall { background: linear-gradient(180deg,#7090a8,#506878,#384858) !important; border-color: #80a8c8 !important; color: #c8e8ff !important; }
+.dice-id-w_fury { background: linear-gradient(180deg,#e09040,#b86820,#884810) !important; border-color: #ff8830 !important; color: #ffe0a0 !important; }
+.dice-id-w_charge { background: linear-gradient(180deg,#d0b060,#a88838,#786020) !important; border-color: #e0c050 !important; color: #fff8c0 !important; }
+.dice-id-w_armorbreak { background: linear-gradient(180deg,#c87848,#a06030,#784820) !important; border-color: #e08838 !important; color: #ffc890 !important; }
+.dice-id-w_revenge { background: linear-gradient(180deg,#c06050,#984038,#703028) !important; border-color: #e06040 !important; color: #ffb0a0 !important; }
+.dice-id-w_roar { background: linear-gradient(180deg,#c8a060,#a08040,#786028) !important; border-color: #d8b050 !important; color: #ffe8b0 !important; }
+.dice-id-w_lifefurnace { background: linear-gradient(180deg,#c05860,#984040,#702828) !important; border-color: #e06068 !important; color: #ffc0c8 !important; }
+.dice-id-w_bloodpact { background: linear-gradient(180deg,#b02020,#801818,#501010) !important; border-color: #e03030 !important; color: #ff9090 !important; }
+.dice-id-w_execute { background: linear-gradient(180deg,#c0a060,#988048,#706030) !important; border-color: #d0a848 !important; color: #ffe8b0 !important; }
+.dice-id-w_quake { background: linear-gradient(180deg,#a89060,#887040,#685028) !important; border-color: #b89848 !important; color: #e8d8a0 !important; }
+.dice-id-w_leech { background: linear-gradient(180deg,#b84040,#902828,#681818) !important; border-color: #d04040 !important; color: #ffb0b0 !important; }
+.dice-id-w_titanfist { background: linear-gradient(180deg,#a02020,#781010,#500808) !important; border-color: #d03030 !important; color: #ffa0a0 !important; }
+.dice-id-w_unyielding { background: linear-gradient(180deg,#7088a8,#506880,#385060) !important; border-color: #78a0c0 !important; color: #c0e0ff !important; }
+.dice-id-w_warhammer { background: linear-gradient(180deg,#c89848,#a07830,#785818) !important; border-color: #d8a840 !important; color: #ffe8a0 !important; }
+.dice-id-w_bloodblade { background: linear-gradient(180deg,#b06850,#885038,#603828) !important; border-color: #c87050 !important; color: #f0c0b0 !important; }
+.dice-id-w_giantshield { background: linear-gradient(180deg,#6088a8,#487090,#305870) !important; border-color: #70a0c0 !important; color: #b8e0ff !important; }
+.dice-id-w_berserk { background: linear-gradient(180deg,#d04030,#a82818,#781010) !important; border-color: #f04838 !important; color: #ff9080 !important; }
+.dice-id-w_bloodgod { background: linear-gradient(180deg,#901818,#681010,#400808) !important; border-color: #c02828 !important; color: #ff9878 !important; }
+.dice-id-w_overlord { background: linear-gradient(180deg,#8890a8,#687080,#506068) !important; border-color: #a0a8c0 !important; color: #e0e8ff !important; }
 
-/* ======== 法师骰子 — 大色差区分（每颗明显不同色调） ======== */
-.dice-id-mage_elemental { background: linear-gradient(135deg,#604080,#406080,#408060,#806040) !important; border-color: #9070c0 !important; color: #f0e0ff !important; }
-.dice-id-mage_reverse { background: linear-gradient(180deg,#704898,#503878,#382060) !important; border-color: #9060c0 !important; color: #e0c0ff !important; }
-.dice-id-mage_missile { background: linear-gradient(180deg,#3848a8,#283890,#182870) !important; border-color: #5868d0 !important; color: #a0b8ff !important; }
-.dice-id-mage_barrier { background: linear-gradient(180deg,#2858a0,#204888,#183868) !important; border-color: #4878c8 !important; color: #90c0ff !important; }
-.dice-id-mage_meditate { background: linear-gradient(180deg,#584078,#403060,#282048) !important; border-color: #7858a0 !important; color: #c8b0e0 !important; }
-.dice-id-mage_amplify { background: linear-gradient(180deg,#6838b0,#502898,#382078) !important; border-color: #8850d0 !important; color: #d0a8ff !important; }
-.dice-id-mage_mirror { background: linear-gradient(180deg,#285888,#204870,#183858) !important; border-color: #4080b0 !important; color: #90c8f0 !important; }
-.dice-id-mage_crystal { background: linear-gradient(180deg,#2868b0,#205898,#184878) !important; border-color: #4090d0 !important; color: #80c0ff !important; }
-.dice-id-mage_temporal { background: linear-gradient(180deg,#685038,#504030,#383020) !important; border-color: #907848 !important; color: #e0c890 !important; }
-.dice-id-mage_prism { background: linear-gradient(135deg,#a03060,#304888,#3880a0) !important; border-color: #c05080 !important; color: #ffa0c8 !important; }
-.dice-id-mage_resonance { background: linear-gradient(180deg,#503068,#382050,#201038) !important; border-color: #704898 !important; color: #c098e0 !important; }
-.dice-id-mage_devour { background: linear-gradient(180deg,#180820,#100418,#080210) !important; border-color: #4020a0 !important; color: #a060ff !important; }
-.dice-id-mage_purify { background: linear-gradient(180deg,#686028,#504818,#383010) !important; border-color: #a09030 !important; color: #f0d860 !important; }
-.dice-id-mage_surge { background: linear-gradient(180deg,#5828a8,#401890,#301070) !important; border-color: #7838d0 !important; color: #c098ff !important; }
-.dice-id-mage_elemstorm { background: linear-gradient(135deg,#a04020,#2868a0,#30a048) !important; border-color: #d06030 !important; color: #ffc090 !important; }
-.dice-id-mage_voideye { background: linear-gradient(180deg,#100428,#080218,#040110) !important; border-color: #3818a0 !important; color: #9060ff !important; }
-.dice-id-mage_weave { background: linear-gradient(180deg,#584060,#403048,#282030) !important; border-color: #785898 !important; color: #c0a0d8 !important; }
-.dice-id-mage_permafrost { background: linear-gradient(180deg,#1858a0,#104888,#0c3868) !important; border-color: #3090d0 !important; color: #70c8ff !important; }
-.dice-id-mage_star { background: linear-gradient(180deg,#483898,#383078,#282060) !important; border-color: #6850c0 !important; color: #d0c0ff !important; }
-.dice-id-mage_shield { background: linear-gradient(180deg,#305898,#284878,#183860) !important; border-color: #4880c0 !important; color: #a0c0f0 !important; }
-.dice-id-mage_meteor { background: linear-gradient(180deg,#802040,#601830,#401020) !important; border-color: #c04060 !important; color: #ff90a0 !important; }
-.dice-id-mage_elemheart { background: linear-gradient(135deg,#e06030,#30a8e0 25%,#f0c830 50%,#60c830 75%,#e0a030) !important; border-color: #c098d0 !important; color: #ffffff !important; }
+/* ======== 法师骰子 — 高对比独立色调+左色带 ======== */
+.dice-id-mage_elemental { background: linear-gradient(135deg,#7850a0,#506090,#508060) !important; border-color: #a080d0 !important; color: #f0e0ff !important; }
+.dice-id-mage_reverse { background: linear-gradient(180deg,#8858b0,#684090,#482870) !important; border-color: #a070d0 !important; color: #e8d0ff !important; }
+.dice-id-mage_missile { background: linear-gradient(180deg,#4858c0,#3040a0,#202880) !important; border-color: #6878e0 !important; color: #b0c8ff !important; }
+.dice-id-mage_barrier { background: linear-gradient(180deg,#3868b8,#285098,#184078) !important; border-color: #5888e0 !important; color: #a0d0ff !important; }
+.dice-id-mage_meditate { background: linear-gradient(180deg,#685090,#504070,#383050) !important; border-color: #8868b0 !important; color: #d8c0f0 !important; }
+.dice-id-mage_amplify { background: linear-gradient(180deg,#7840c0,#5830a0,#402080) !important; border-color: #9858e0 !important; color: #d8b8ff !important; }
+.dice-id-mage_mirror { background: linear-gradient(180deg,#3868a0,#285888,#184868) !important; border-color: #5090c8 !important; color: #a0d8ff !important; }
+.dice-id-mage_crystal { background: linear-gradient(180deg,#3878c8,#2860a8,#184888) !important; border-color: #50a0e0 !important; color: #90d0ff !important; }
+.dice-id-mage_temporal { background: linear-gradient(180deg,#806040,#605030,#484020) !important; border-color: #a88848 !important; color: #f0d8a0 !important; }
+.dice-id-mage_prism { background: linear-gradient(135deg,#c04070,#4058a0,#4898c0) !important; border-color: #e060a0 !important; color: #ffc0e0 !important; }
+.dice-id-mage_resonance { background: linear-gradient(180deg,#604080,#483060,#302040) !important; border-color: #8058b0 !important; color: #d0a8f0 !important; }
+.dice-id-mage_devour { background: linear-gradient(180deg,#281040,#180828,#100418) !important; border-color: #5028c0 !important; color: #b070ff !important; }
+.dice-id-mage_purify { background: linear-gradient(180deg,#807030,#606020,#484810) !important; border-color: #b8a038 !important; color: #ffe870 !important; }
+.dice-id-mage_surge { background: linear-gradient(180deg,#6830c0,#5020a0,#381880) !important; border-color: #8840e0 !important; color: #d0a8ff !important; }
+.dice-id-mage_elemstorm { background: linear-gradient(135deg,#c05030,#3878c0,#40b858) !important; border-color: #e07040 !important; color: #ffd0a0 !important; }
+.dice-id-mage_voideye { background: linear-gradient(180deg,#180840,#100428,#080218) !important; border-color: #4820c0 !important; color: #a070ff !important; }
+.dice-id-mage_weave { background: linear-gradient(180deg,#685078,#504060,#383040) !important; border-color: #8868b0 !important; color: #d0b8e8 !important; }
+.dice-id-mage_permafrost { background: linear-gradient(180deg,#2068b8,#105098,#084080) !important; border-color: #38a0e0 !important; color: #80d8ff !important; }
+.dice-id-mage_star { background: linear-gradient(180deg,#5848b0,#484090,#303070) !important; border-color: #7860d0 !important; color: #e0d0ff !important; }
+.dice-id-mage_shield { background: linear-gradient(180deg,#3868b0,#285890,#184870) !important; border-color: #5898d8 !important; color: #b0d8ff !important; }
+.dice-id-mage_meteor { background: linear-gradient(180deg,#a03050,#782040,#502030) !important; border-color: #d84870 !important; color: #ffa0b8 !important; }
+.dice-id-mage_elemheart { background: linear-gradient(135deg,#f07040,#40b8f0 25%,#f0d840 50%,#70d840 75%,#f0b040) !important; border-color: #d0a8e0 !important; color: #ffffff !important; }
 
-/* ======== 盗贼骰子 — 大色差区分（每颗明显不同色调） ======== */
-.dice-id-r_dagger { background: linear-gradient(180deg,#488838,#306828,#184818) !important; border-color: #68b850 !important; color: #b0ff90 !important; }
-.dice-id-r_envenom { background: linear-gradient(180deg,#285848,#184838,#103028) !important; border-color: #40a870 !important; color: #80ffc0 !important; }
-.dice-id-r_throwing { background: linear-gradient(180deg,#507838,#386028,#284818) !important; border-color: #78b048 !important; color: #c0ff80 !important; }
-.dice-id-r_heavy { background: linear-gradient(180deg,#586068,#485058,#384048) !important; border-color: #788898 !important; color: #d0e0f0 !important; }
-.dice-id-r_poison_vial { background: linear-gradient(180deg,#382848,#282038,#181028) !important; border-color: #7848b0 !important; color: #d090ff !important; }
-.dice-id-r_sleeve { background: linear-gradient(180deg,#387048,#286038,#184828) !important; border-color: #50a860 !important; color: #90ffa0 !important; }
-.dice-id-r_lethal { background: linear-gradient(180deg,#484038,#383028,#282018) !important; border-color: #807040 !important; color: #e0d0a0 !important; }
-.dice-id-r_toxblade { background: linear-gradient(180deg,#283848,#182838,#102028) !important; border-color: #409880 !important; color: #80f0c0 !important; }
-.dice-id-r_shadow_clone { background: linear-gradient(180deg,#306838,#205028,#103818) !important; border-color: #50b060 !important; color: #a0ffa0 !important; }
-.dice-id-r_miasma { background: linear-gradient(180deg,#384828,#283818,#182810) !important; border-color: #589838 !important; color: #a0e070 !important; }
-.dice-id-r_boomerang { background: linear-gradient(180deg,#486838,#385028,#284018) !important; border-color: #68a858 !important; color: #b0e898 !important; }
-.dice-id-r_corrosion { background: linear-gradient(180deg,#402050,#301840,#201030) !important; border-color: #7840a0 !important; color: #c080f0 !important; }
-.dice-id-r_shadow { background: linear-gradient(180deg,#282828,#1c1c1c,#101010) !important; border-color: #505050 !important; color: #a0a0a0 !important; }
-.dice-id-r_steal { background: linear-gradient(180deg,#685828,#504018,#383010) !important; border-color: #a89030 !important; color: #f0d860 !important; }
-.dice-id-r_venomfang { background: linear-gradient(180deg,#204838,#183828,#102818) !important; border-color: #38a060 !important; color: #70ffa0 !important; }
-.dice-id-r_tripleflash { background: linear-gradient(180deg,#507830,#387020,#285810) !important; border-color: #80c040 !important; color: #d0ff80 !important; }
-.dice-id-r_shadowdance { background: linear-gradient(180deg,#305848,#204838,#103828) !important; border-color: #48a878 !important; color: #90f0c0 !important; }
-.dice-id-r_plaguedet { background: linear-gradient(180deg,#402850,#302040,#201030) !important; border-color: #7840a8 !important; color: #c080ff !important; }
-.dice-id-r_phantom { background: linear-gradient(180deg,#385048,#284038,#183028) !important; border-color: #58a870 !important; color: #d0ffe0 !important; }
-.dice-id-r_purifyblade { background: linear-gradient(180deg,#406838,#305828,#204018) !important; border-color: #60b050 !important; color: #c0ffa0 !important; }
-.dice-id-r_deathtouch { background: linear-gradient(180deg,#181818,#101010,#080808) !important; border-color: #408038 !important; color: #80ff80 !important; }
-.dice-id-r_bladestorm { background: linear-gradient(180deg,#204828,#183818,#102810) !important; border-color: #40c060 !important; color: #80ffc0 !important; }
+/* ======== 盗贼骰子 — 高对比独立色调+左色带 ======== */
+.dice-id-r_dagger { background: linear-gradient(180deg,#58a848,#388838,#206820) !important; border-color: #78d060 !important; color: #c0ffa0 !important; }
+.dice-id-r_envenom { background: linear-gradient(180deg,#387060,#285850,#184038) !important; border-color: #50c088 !important; color: #90ffd8 !important; }
+.dice-id-r_throwing { background: linear-gradient(180deg,#609840,#488030,#306820) !important; border-color: #88c850 !important; color: #d8ff90 !important; }
+.dice-id-r_heavy { background: linear-gradient(180deg,#607080,#506068,#404850) !important; border-color: #88a0b0 !important; color: #d8f0ff !important; }
+.dice-id-r_poison_vial { background: linear-gradient(180deg,#503878,#403060,#282048) !important; border-color: #9060d0 !important; color: #e0b0ff !important; }
+.dice-id-r_sleeve { background: linear-gradient(180deg,#489058,#308848,#208038) !important; border-color: #60c870 !important; color: #a0ffb0 !important; }
+.dice-id-r_lethal { background: linear-gradient(180deg,#585040,#484030,#383020) !important; border-color: #988850 !important; color: #f0e0b0 !important; }
+.dice-id-r_toxblade { background: linear-gradient(180deg,#385868,#284858,#183840) !important; border-color: #50b8a0 !important; color: #90ffe0 !important; }
+.dice-id-r_shadow_clone { background: linear-gradient(180deg,#408848,#308038,#207028) !important; border-color: #60d070 !important; color: #b0ffb8 !important; }
+.dice-id-r_miasma { background: linear-gradient(180deg,#486030,#386020,#285018) !important; border-color: #70b040 !important; color: #b8f080 !important; }
+.dice-id-r_boomerang { background: linear-gradient(180deg,#588848,#488038,#306828) !important; border-color: #78c860 !important; color: #c0f8a8 !important; }
+.dice-id-r_corrosion { background: linear-gradient(180deg,#503068,#402858,#302040) !important; border-color: #9050c0 !important; color: #d090ff !important; }
+.dice-id-r_shadow { background: linear-gradient(180deg,#383838,#282828,#181818) !important; border-color: #686868 !important; color: #c0c0c0 !important; }
+.dice-id-r_steal { background: linear-gradient(180deg,#807038,#607028,#486018) !important; border-color: #c0a840 !important; color: #ffe870 !important; }
+.dice-id-r_venomfang { background: linear-gradient(180deg,#306050,#205040,#104030) !important; border-color: #48c878 !important; color: #80ffb8 !important; }
+.dice-id-r_tripleflash { background: linear-gradient(180deg,#60a038,#509028,#408018) !important; border-color: #90e050 !important; color: #e0ff90 !important; }
+.dice-id-r_shadowdance { background: linear-gradient(180deg,#407060,#306858,#205848) !important; border-color: #58c898 !important; color: #a0ffd8 !important; }
+.dice-id-r_plaguedet { background: linear-gradient(180deg,#503868,#403058,#302840) !important; border-color: #8850c8 !important; color: #d098ff !important; }
+.dice-id-r_phantom { background: linear-gradient(180deg,#486860,#386058,#285048) !important; border-color: #68c890 !important; color: #d8fff0 !important; }
+.dice-id-r_purifyblade { background: linear-gradient(180deg,#509848,#408838,#307828) !important; border-color: #70d060 !important; color: #d0ffb0 !important; }
+.dice-id-r_deathtouch { background: linear-gradient(180deg,#282828,#181818,#080808) !important; border-color: #50a050 !important; color: #90ff90 !important; }
+.dice-id-r_bladestorm { background: linear-gradient(180deg,#306838,#205828,#104818) !important; border-color: #50e070 !important; color: #90ffd0 !important; }
+.dice-id-r_quickdraw { background: linear-gradient(180deg,#489858,#388848,#287838) !important; border-color: #68d878 !important; color: #b0ffc0 !important; }
+.dice-id-r_combomastery { background: linear-gradient(180deg,#587040,#487038,#386828) !important; border-color: #90c060 !important; color: #e0ffa0 !important; }
 .pixel-dice-mage {
   background: linear-gradient(180deg, #4a3080 0%, #2c2060 50%, #1a1040 100%) !important;
   border-color: #7050b0 !important;
