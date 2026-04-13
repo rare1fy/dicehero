@@ -176,6 +176,7 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
                     <span className="text-[var(--dungeon-text-dim)]">重投:{cls.freeRerolls}</span>
                     {cls.canBloodReroll && <span style={{ color: cls.colorLight }}>卖血</span>}
                     {cls.keepUnplayed && <span style={{ color: cls.colorLight }}>留牌</span>}
+                    {cid === 'rogue' && <span style={{ color: cls.colorLight }}>连击</span>}
                   </div>
                 </div>
               </motion.button>

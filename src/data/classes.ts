@@ -45,7 +45,7 @@ export interface ClassDef {
 export const CLASS_DEFS: Record<ClassId, ClassDef> = {
   warrior: {
     id: 'warrior',
-    name: '战士',
+    name: '嗜血狂战',
     title: '铁血征服者',
     description: '以鲜血为代价，换取毁天灭地的一击。卖血重投越多，伤害越高。',
     color: '#c04040',
@@ -62,8 +62,8 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
   },
   mage: {
     id: 'mage',
-    name: '法师',
-    title: '星界禁咒',
+    name: '星界魔导',
+    title: '星界禁咒师',
     description: '耐心蓄力，两三回合攒齐完美手牌，打出毁天灭地的大招。',
     color: '#7040c0',
     colorLight: '#a070ff',
@@ -79,9 +79,9 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
   },
   rogue: {
     id: 'rogue',
-    name: '盗贼',
-    title: '暗影连击',
-    description: '一回合出牌两次，连击加成层层递增。触发连击时补充临时骰子。',
+    name: '影锋刺客',
+    title: '暗影连击者',
+    description: '一回合出牌两次，连击加成层层递增。特定骰子触发时补充临时骰子。',
     color: '#30a050',
     colorLight: '#60d080',
     colorDark: '#104020',
@@ -91,7 +91,7 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     canBloodReroll: false,
     keepUnplayed: false,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'r_dagger', 'r_poison_vial'],
-    passiveDesc: '【连击】每回合出牌2次；第2次伤害×1.2；两次牌型不同+25%；第1次出牌弹回最小骰子+补2颗小骰子',
+    passiveDesc: '【连击】每回合出牌2次；第2次伤害×1.2；两次不同牌型+25%；特定骰子触发时补充临时骰子',
     normalAttackMultiSelect: false,
   },
 };

@@ -2002,54 +2002,42 @@ export default function DiceHeroGame() {
     const selectedDiceForSpent = dice.filter(d => d.selected && !d.spent);
     const spentDefIds = selectedDiceForSpent.map(d => d.diceDefId);
     
-    // === 盗贼【灵巧回收】：第1次出牌时弹回点数最小的骰子 ===
-    let bouncedDieId: number | null = null;
-    if (game.playerClass === 'rogue' && (game.comboCount || 0) === 0 && selectedDiceForSpent.length >= 2) {
-      // 找到点数最小的骰子
-      const sorted = [...selectedDiceForSpent].sort((a, b) => a.value - b.value);
-      bouncedDieId = sorted[0].id;
-    }
-    
-    setDice(prev => prev.map(d => {
-      if (!d.selected) return d;
-      if (d.id === bouncedDieId) {
-        // 弹回的骰子：不消耗，取消选中
-        return { ...d, selected: false, playing: false, spent: false };
-      }
-      return { ...d, spent: true, selected: false, playing: false };
-    }));
-    if (bouncedDieId) {
-      const bouncedDie = selectedDiceForSpent.find(d => d.id === bouncedDieId);
-      if (bouncedDie) {
-        addFloatingText(`↩ ${bouncedDie.value}点弹回`, 'text-green-400', undefined, 'player');
-        // 盗贼连击：补充2颗小点数临时骰子(1-3)
-        const tempDice: Die[] = [];
-        for (let ti = 0; ti < 2; ti++) {
-          tempDice.push({
-            id: Date.now() + 8000 + ti,
+    // === 盗贼骰子补充：检查选中骰子是否有 grantTempDie 效果 ===
+    const tempDiceToGrant: Die[] = [];
+    if (game.playerClass === 'rogue') {
+      selectedDiceForSpent.forEach(d => {
+        const def = getDiceDef(d.diceDefId);
+        if (def.onPlay?.grantTempDie) {
+          // 补充1颗临时骰子(1-3点)
+          tempDiceToGrant.push({
+            id: Date.now() + 8000 + tempDiceToGrant.length,
             diceDefId: 'standard',
-            value: Math.floor(Math.random() * 3) + 1, // 1-3
+            value: Math.floor(Math.random() * 3) + 1,
             element: 'normal' as any,
             selected: false,
             spent: false,
             rolling: false,
           });
         }
-        setTimeout(() => {
-          setDice(prev => [...prev, ...tempDice]);
-          addFloatingText(`+2临时骰子`, 'text-green-300', undefined, 'player');
-        }, 300);
-        // 弹回的骰子不放入弃骰库
-        const filteredSpent = spentDefIds.filter((_, i) => selectedDiceForSpent[i].id !== bouncedDieId);
-        const usedElements = selectedDiceForSpent.filter(d => d.id !== bouncedDieId && d.element !== 'normal').map(d => d.element);
-        const isNormalAttackPlay = bestHand === '普通攻击';
-        setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...filteredSpent], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
-      }
-    } else {
-      const usedElements = dice.filter(d => d.selected && !d.spent && d.element !== 'normal').map(d => d.element);
-      const isNormalAttackPlay = bestHand === '普通攻击';
-      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
+      });
     }
+    
+    setDice(prev => prev.map(d => {
+      if (!d.selected) return d;
+      return { ...d, spent: true, selected: false, playing: false };
+    }));
+    
+    // 补充临时骰子（延迟显示）
+    if (tempDiceToGrant.length > 0) {
+      setTimeout(() => {
+        setDice(prev => [...prev, ...tempDiceToGrant]);
+        addFloatingText(`+${tempDiceToGrant.length}临时骰子`, 'text-green-300', undefined, 'player');
+      }, 300);
+    }
+    
+    const usedElements = selectedDiceForSpent.filter(d => d.element !== 'normal').map(d => d.element);
+    const isNormalAttackPlay = bestHand === '普通攻击';
+    setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
 
     let logMsg = `打出 ${bestHand}，造成 ${outcome.damage} 伤害`;
     if (outcome.armor > 0) logMsg += `，获得 ${outcome.armor} 护甲`;
