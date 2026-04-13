@@ -24,7 +24,14 @@ const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string
   cracked:  { bg: '#383838', border: '#585858', dot: '#a0a0a0' },
 };
 
-const getDefColor = (defId: string) => DICE_MINI_COLORS[defId] || DICE_MINI_COLORS.standard;
+const getDefColor = (defId: string) => {
+  if (DICE_MINI_COLORS[defId]) return DICE_MINI_COLORS[defId];
+  // 职业骰子按前缀取色
+  if (defId.startsWith('w_')) return { bg: '#6a4040', border: '#c06060', dot: '#ffe0d0' };
+  if (defId.startsWith('mage_')) return { bg: '#3a2858', border: '#7040b8', dot: '#d0a0ff' };
+  if (defId.startsWith('r_')) return { bg: '#204830', border: '#40a060', dot: '#a0ffc0' };
+  return DICE_MINI_COLORS.standard;
+};
 
 interface DiceBagPanelProps {
   ownedDice: string[];

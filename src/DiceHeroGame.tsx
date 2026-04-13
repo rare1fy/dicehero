@@ -79,6 +79,7 @@ import LavaBossScene from './components/LavaBossScene';
 import ShadowBattleScene from './components/ShadowBattleScene';
 import EternalBossScene from './components/EternalBossScene';
 import { BossEntrance } from './components/BossEntrance';
+import { ClassLeftHand, ClassRightHand } from './components/ClassHands';
 
 
 
@@ -619,7 +620,9 @@ export default function DiceHeroGame() {
     
     // 法师：抽取数量 = 手牌上限 - 已保留数量
     const chargeStacks = g.chargeStacks || 0;
-    const handLimit = g.playerClass === 'mage' ? Math.min(6, g.drawCount + chargeStacks) : g.drawCount;
+    // 战士：血量≤50%时手牌上限+1
+    const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
+    const handLimit = g.playerClass === 'mage' ? Math.min(6, g.drawCount + chargeStacks) : (g.drawCount + warriorBonus);
     const count = Math.max(0, handLimit - keptDice.length) + relicDrawBonus;
     
     // 从骰子库抽取（包含刚放回的手牌骰子）
@@ -2013,6 +2016,23 @@ export default function DiceHeroGame() {
       const bouncedDie = selectedDiceForSpent.find(d => d.id === bouncedDieId);
       if (bouncedDie) {
         addFloatingText(`↩ ${bouncedDie.value}点弹回`, 'text-green-400', undefined, 'player');
+        // 盗贼连击：补充2颗小点数临时骰子(1-3)
+        const tempDice: Die[] = [];
+        for (let ti = 0; ti < 2; ti++) {
+          tempDice.push({
+            id: Date.now() + 8000 + ti,
+            diceDefId: 'standard',
+            value: Math.floor(Math.random() * 3) + 1, // 1-3
+            element: 'normal' as any,
+            selected: false,
+            spent: false,
+            rolling: false,
+          });
+        }
+        setTimeout(() => {
+          setDice(prev => [...prev, ...tempDice]);
+          addFloatingText(`+2临时骰子`, 'text-green-300', undefined, 'player');
+        }, 300);
         // 弹回的骰子不放入弃骰库
         const filteredSpent = spentDefIds.filter((_, i) => selectedDiceForSpent[i].id !== bouncedDieId);
         const usedElements = selectedDiceForSpent.filter(d => d.id !== bouncedDieId && d.element !== 'normal').map(d => d.element);
@@ -3911,157 +3931,13 @@ useEffect(() => {
                     ))}
                   </div>
                 )}
-                {/* ═══ 左手铠甲手套 + 骰子 ═══ */}
+                {/* ═══ 左手 — 职业专属 ═══ */}
                 <div className={`hand-left ${dice.some(d => d.rolling) ? 'hand-left-rolling' : handLeftThrow ? 'hand-left-throw' : ''}`}>
-                  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
-                    {/* ── 魔能骰子（手掌上方，纯像素） ── */}
-                    {/* 投影 */}
-                    <rect x="12" y="6" width="26" height="26" fill="rgba(0,0,0,0.3)" />
-                    {/* 外框 — 像素锯齿圆角 */}
-                    <rect x="12" y="4" width="2" height="2" fill="#1a1430" />
-                    <rect x="34" y="4" width="2" height="2" fill="#1a1430" />
-                    <rect x="12" y="26" width="2" height="2" fill="#1a1430" />
-                    <rect x="34" y="26" width="2" height="2" fill="#1a1430" />
-                    <rect x="14" y="2" width="20" height="2" fill="#1a1430" />
-                    <rect x="14" y="28" width="20" height="2" fill="#1a1430" />
-                    <rect x="10" y="6" width="2" height="20" fill="#1a1430" />
-                    <rect x="36" y="6" width="2" height="20" fill="#1a1430" />
-                    {/* 主体填充 */}
-                    <rect x="12" y="6" width="24" height="20" fill="#2c2050" />
-                    <rect x="14" y="4" width="20" height="2" fill="#2c2050" />
-                    <rect x="14" y="26" width="20" height="2" fill="#2c2050" />
-                    {/* 内层深色 */}
-                    <rect x="14" y="8" width="20" height="16" fill="#342868" />
-                    {/* 能量核心 — 3层像素方块 */}
-                    <rect x="18" y="10" width="12" height="12" fill="#4838a0" />
-                    <rect x="20" y="12" width="8" height="8" fill="#6050c0" />
-                    <rect x="22" y="14" width="4" height="4" fill="#9080ff" />
-                    {/* 核心高光点 */}
-                    <rect x="24" y="16" width="2" height="2" fill="#c0b0ff" />
-                    {/* 顶部高光条 */}
-                    <rect x="14" y="6" width="8" height="2" fill="#4a3c80" />
-                    <rect x="14" y="8" width="4" height="2" fill="#4a3c80" />
-                    {/* 底部暗边 */}
-                    <rect x="14" y="24" width="20" height="2" fill="#1e1840" />
-                    <rect x="34" y="10" width="2" height="16" fill="#1e1840" />
-                    {/* 魔法纹路 — 像素十字 */}
-                    <rect x="16" y="15" width="2" height="2" fill="#7060d0" opacity="0.5" />
-                    <rect x="30" y="15" width="2" height="2" fill="#7060d0" opacity="0.5" />
-                    <rect x="22" y="9" width="2" height="2" fill="#7060d0" opacity="0.4" />
-                    <rect x="22" y="21" width="2" height="2" fill="#7060d0" opacity="0.4" />
-                    {/* 四角能量点 */}
-                    <rect x="14" y="6" width="2" height="2" fill="#8070e0" opacity="0.6" />
-                    <rect x="32" y="6" width="2" height="2" fill="#8070e0" opacity="0.5" />
-                    <rect x="14" y="24" width="2" height="2" fill="#8070e0" opacity="0.5" />
-                    <rect x="32" y="24" width="2" height="2" fill="#8070e0" opacity="0.6" />
-                    {/* ── 手背（直接托住骰子） ── */}
-                    <rect x="8" y="28" width="30" height="14" fill="#58585e" />
-                    <rect x="8" y="28" width="30" height="2" fill="#6a6a72" />
-                    <rect x="8" y="40" width="30" height="2" fill="#3e3e46" />
-                    <rect x="10" y="30" width="5" height="8" fill="#626268" />
-                    <rect x="17" y="30" width="5" height="8" fill="#626268" />
-                    <rect x="24" y="30" width="5" height="8" fill="#626268" />
-                    <rect x="31" y="30" width="5" height="8" fill="#5a5a60" />
-                    {/* 拇指 */}
-                    <rect x="4" y="26" width="6" height="12" fill="#525258" />
-                    <rect x="4" y="26" width="6" height="2" fill="#5e5e66" />
-                    {/* ── 手臂铠甲 ── */}
-                    <rect x="10" y="42" width="28" height="54" fill="#4a4a50" />
-                    <rect x="10" y="42" width="28" height="2" fill="#5a5a62" />
-                    <rect x="10" y="46" width="28" height="2" fill="#3a3a42" />
-                    <rect x="10" y="50" width="28" height="2" fill="#5a5a62" />
-                    <rect x="10" y="54" width="28" height="2" fill="#3a3a42" />
-                    <rect x="10" y="58" width="28" height="2" fill="#5a5a62" />
-                    <rect x="10" y="62" width="28" height="2" fill="#3a3a42" />
-                    <rect x="10" y="66" width="28" height="2" fill="#5a5a62" />
-                    <rect x="10" y="70" width="28" height="2" fill="#3a3a42" />
-                    <rect x="10" y="74" width="28" height="2" fill="#5a5a62" />
-                    <rect x="10" y="78" width="28" height="2" fill="#3a3a42" />
-                    <rect x="10" y="82" width="28" height="2" fill="#5a5a62" />
-                    <rect x="10" y="86" width="28" height="2" fill="#3a3a42" />
-                    <rect x="10" y="90" width="28" height="2" fill="#5a5a62" />
-                    <rect x="12" y="44" width="2" height="52" fill="#5e5e68" />
-                    <rect x="12" y="48" width="2" height="2" fill="#6a6a72" />
-                    <rect x="12" y="60" width="2" height="2" fill="#6a6a72" />
-                    <rect x="12" y="72" width="2" height="2" fill="#6a6a72" />
-                    <rect x="12" y="84" width="2" height="2" fill="#6a6a72" />
-                  </svg>
+                  <ClassLeftHand playerClass={game.playerClass} />
                 </div>
-                {/* 右手 — 铠甲手套持阔剑 */}
+                {/* 右手 — 职业专属武器 */}
                 <div className={`hand-right ${playerEffect === 'attack' ? 'hand-right-attacking' : ''}`}>
-                  <svg width="155" height="215" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
-                    {/* === 剑刃 — 暗黑阔剑 === */}
-                    {/* 剑尖 */}
-                    <rect x="21" y="0" width="6" height="2" fill="#606878" />
-                    <rect x="19" y="2" width="10" height="2" fill="#505868" />
-                    {/* 刃身 — 冷铁色 */}
-                    <rect x="17" y="4" width="14" height="36" fill="#3c4450" />
-                    {/* 刃中线 — 暗银高光 */}
-                    <rect x="22" y="2" width="4" height="38" fill="#4a5566" />
-                    {/* 刃左暗面 */}
-                    <rect x="17" y="4" width="2" height="36" fill="#282e38" />
-                    {/* 刃右暗面 */}
-                    <rect x="29" y="4" width="2" height="36" fill="#303842" />
-                    {/* 刃边冷光 */}
-                    <rect x="19" y="4" width="2" height="36" fill="#4a5260" />
-                    {/* 暗纹蚀刻 */}
-                    <rect x="20" y="10" width="8" height="1" fill="rgba(0,0,0,0.2)" />
-                    <rect x="20" y="20" width="8" height="1" fill="rgba(0,0,0,0.15)" />
-                    <rect x="20" y="30" width="8" height="1" fill="rgba(0,0,0,0.2)" />
-                    {/* 暗红邪能纹 */}
-                    <rect x="22" y="8" width="4" height="2" fill="#8a2020" opacity="0.5" />
-                    <rect x="22" y="18" width="4" height="2" fill="#8a2020" opacity="0.35" />
-                    <rect x="22" y="28" width="4" height="2" fill="#8a2020" opacity="0.45" />
-                    {/* === 护手 — 暗铁 === */}
-                    <rect x="8" y="40" width="32" height="4" fill="#2a2a30" />
-                    <rect x="8" y="40" width="32" height="2" fill="#3a3a42" />
-                    <rect x="8" y="42" width="32" height="2" fill="#1e1e24" />
-                    {/* 护手端饰 — 暗银尖角 */}
-                    <rect x="6" y="40" width="4" height="4" fill="#3e3e48" />
-                    <rect x="38" y="40" width="4" height="4" fill="#3e3e48" />
-                    {/* 护手中央 — 暗红宝石 */}
-                    <rect x="21" y="40" width="6" height="4" fill="#601818" />
-                    <rect x="23" y="40" width="2" height="2" fill="#a03030" />
-                    {/* === 握柄 — 暗黑皮革 === */}
-                    <rect x="18" y="44" width="12" height="14" fill="#1a1418" />
-                    <rect x="18" y="46" width="12" height="2" fill="#241c20" />
-                    <rect x="18" y="50" width="12" height="2" fill="#241c20" />
-                    <rect x="18" y="54" width="12" height="2" fill="#241c20" />
-                    <rect x="20" y="44" width="2" height="14" fill="#201820" />
-                    {/* 柄尾 — 暗铁 */}
-                    <rect x="16" y="58" width="16" height="4" fill="#2a2a30" />
-                    <rect x="16" y="58" width="16" height="2" fill="#3a3a42" />
-                    <rect x="22" y="58" width="4" height="4" fill="#3e3e48" />
-                    {/* === 手部铠甲 === */}
-                    <rect x="12" y="52" width="24" height="10" fill="#4a4a50" />
-                    <rect x="12" y="52" width="24" height="2" fill="#5a5a62" />
-                    <rect x="12" y="56" width="24" height="2" fill="#3a3a42" />
-                    <rect x="14" y="54" width="4" height="6" fill="#525258" />
-                    <rect x="20" y="54" width="4" height="6" fill="#525258" />
-                    <rect x="26" y="54" width="4" height="6" fill="#4e4e56" />
-                    <rect x="32" y="54" width="4" height="6" fill="#484850" />
-                    {/* === 手臂铠甲 — 延长 === */}
-                    <rect x="12" y="62" width="24" height="34" fill="#4a4a50" />
-                    <rect x="12" y="64" width="24" height="2" fill="#5a5a62" />
-                    <rect x="12" y="68" width="24" height="2" fill="#3a3a42" />
-                    <rect x="12" y="72" width="24" height="2" fill="#5a5a62" />
-                    <rect x="12" y="76" width="24" height="2" fill="#3a3a42" />
-                    <rect x="12" y="80" width="24" height="2" fill="#5a5a62" />
-                    <rect x="12" y="84" width="24" height="2" fill="#3a3a42" />
-                    <rect x="14" y="62" width="2" height="34" fill="#5e5e68" />
-                    {/* 铆钉 */}
-                    <rect x="16" y="66" width="2" height="2" fill="#6a6a72" />
-                    <rect x="30" y="74" width="2" height="2" fill="#6a6a72" />
-                    <rect x="16" y="82" width="2" height="2" fill="#6a6a72" />
-                    {/* 攻击发光 */}
-                    {playerEffect === 'attack' && (
-                      <>
-                        <rect x="16" y="4" width="16" height="36" fill="rgba(48,216,208,0.2)" />
-                        <rect x="22" y="0" width="4" height="40" fill="rgba(48,216,208,0.35)" />
-                        <rect x="20" y="0" width="8" height="2" fill="rgba(48,216,208,0.6)" />
-                      </>
-                    )}
-                  </svg>
+                  <ClassRightHand playerClass={game.playerClass} attacking={playerEffect === 'attack'} />
                 </div>
               </div>
 

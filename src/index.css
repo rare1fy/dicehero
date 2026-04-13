@@ -443,6 +443,54 @@
   box-shadow: 0 0 10px rgba(100,100,130,0.4), 0 0 20px rgba(100,100,130,0.2);
 }
 
+/* === 战士骰子 — 骨白底+血红点 === */
+.pixel-dice-warrior {
+  background: linear-gradient(180deg, #d0c0b0 0%, #a08878 50%, #7a6050 100%) !important;
+  border-color: #c0a090 !important;
+  color: #c04040 !important;
+  box-shadow:
+    inset -2px -2px 0 rgba(60,20,10,0.5),
+    inset 2px 2px 0 rgba(255,240,220,0.3),
+    0 3px 0 #4a2010,
+    0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(60,10,10,0.8), 0 0 6px rgba(200,60,40,0.4);
+}
+.dice-glow-warrior {
+  box-shadow: 0 0 10px rgba(200,60,40,0.5), 0 0 20px rgba(200,60,40,0.25) !important;
+}
+
+/* === 法师骰子 — 深紫底+星辉点 === */
+.pixel-dice-mage {
+  background: linear-gradient(180deg, #4a3080 0%, #2c2060 50%, #1a1040 100%) !important;
+  border-color: #7050b0 !important;
+  color: #d0a0ff !important;
+  box-shadow:
+    inset -2px -2px 0 rgba(10,5,30,0.5),
+    inset 2px 2px 0 rgba(180,140,255,0.15),
+    0 3px 0 #100830,
+    0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(20,10,40,0.9), 0 0 8px rgba(160,100,255,0.5);
+}
+.dice-glow-mage {
+  box-shadow: 0 0 10px rgba(140,80,220,0.5), 0 0 20px rgba(140,80,220,0.25) !important;
+}
+
+/* === 盗贼骰子 — 暗绿底+毒光点 === */
+.pixel-dice-rogue {
+  background: linear-gradient(180deg, #306838 0%, #1a4828 50%, #0e3018 100%) !important;
+  border-color: #40a058 !important;
+  color: #80ff90 !important;
+  box-shadow:
+    inset -2px -2px 0 rgba(5,20,10,0.5),
+    inset 2px 2px 0 rgba(100,255,140,0.12),
+    0 3px 0 #062010,
+    0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(5,20,10,0.9), 0 0 6px rgba(60,200,80,0.4);
+}
+.dice-glow-rogue {
+  box-shadow: 0 0 10px rgba(60,200,80,0.5), 0 0 20px rgba(60,200,80,0.25) !important;
+}
+
 .pixel-dice-white {
   background: linear-gradient(180deg, #c0c8d0 0%, #a0a8b0 40%, #888f98 100%);
   border-color: #a8b0b8;

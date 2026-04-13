@@ -239,6 +239,23 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + 'pixel-dice-elemental ' + defaultGlow;
   }
 
+  // === 职业骰子外观 ===
+  // 战士骰子（w_前缀）：骨白底+血红点
+  if (diceDefId?.startsWith('w_')) {
+    const wGlow = selected && !invalid ? 'dice-glow-warrior' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-warrior ' + wGlow;
+  }
+  // 法师骰子（mage_前缀）：深紫底+星辉点
+  if (diceDefId?.startsWith('mage_')) {
+    const mGlow = selected && !invalid ? 'dice-glow-mage' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-mage ' + mGlow;
+  }
+  // 盗贼骰子（r_前缀）：暗绿底+毒光点
+  if (diceDefId?.startsWith('r_')) {
+    const rGlow = selected && !invalid ? 'dice-glow-rogue' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-rogue ' + rGlow;
+  }
+
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
   const glow = selected && !invalid ? style.glowClass : '';
   const effect = !rolling && !invalid ? style.effectClass : '';
