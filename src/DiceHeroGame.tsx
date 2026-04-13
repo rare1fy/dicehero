@@ -80,6 +80,8 @@ import ShadowBattleScene from './components/ShadowBattleScene';
 import EternalBossScene from './components/EternalBossScene';
 import { BossEntrance } from './components/BossEntrance';
 import { ClassLeftHand, ClassRightHand } from './components/ClassHands';
+import { ClassInfoModal } from './components/ClassInfoModal';
+import { CLASS_DEFS, type ClassId } from './data/classes';
 
 
 
@@ -115,6 +117,7 @@ export default function DiceHeroGame() {
   const [showHandGuide, setShowHandGuide] = useState(false);
   const [showDiceGuide, setShowDiceGuide] = useState(false);
   const [showCalcModal, setShowCalcModal] = useState(false);
+  const [showClassInfo, setShowClassInfo] = useState(false);
   const [battleTransition, setBattleTransition] = useState<'none' | 'fadeIn' | 'hold' | 'fadeOut'>('none');
   const [bossEntrance, setBossEntrance] = useState<{ visible: boolean; name: string; chapter: number }>({ visible: false, name: '', chapter: 1 });
   const [pendingLootAugment, setPendingLootAugment] = useState<{id: string, options: Augment[] } | null>(null);
@@ -4341,10 +4344,32 @@ useEffect(() => {
                 <div className="flex items-center gap-1.5 mb-1">
                   <motion.div 
                     animate={hpGained ? { scale: [1, 1.1, 1] } : playerEffect === 'attack' ? { y: [0, -6, 0] } : {}}
-                    className="flex items-center gap-1 shrink-0"
+                    className="flex items-center gap-1 shrink-0 cursor-pointer"
+                    onClick={() => setShowClassInfo(true)}
                   >
-                    <PixelHeart size={1} />
-                    <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
+                    {/* 职业图标 */}
+                    {game.playerClass && CLASS_DEFS[game.playerClass as ClassId] ? (
+                      <>
+                        <div className="w-4 h-4 flex items-center justify-center border shrink-0"
+                          style={{ borderColor: CLASS_DEFS[game.playerClass as ClassId].color, borderRadius: '1px', background: `${CLASS_DEFS[game.playerClass as ClassId].colorDark}80` }}>
+                          {game.playerClass === 'warrior' ? <PixelSword size={1} /> : game.playerClass === 'mage' ? <PixelMagic size={1} /> : <PixelPoison size={1} />}
+                        </div>
+                        <span className="font-bold text-[11px] pixel-text-shadow"
+                          style={{ color: CLASS_DEFS[game.playerClass as ClassId].colorLight }}>
+                          {CLASS_DEFS[game.playerClass as ClassId].name}
+                        </span>
+                        {/* ⓘ 按钮 */}
+                        <div className="w-3.5 h-3.5 flex items-center justify-center border border-[var(--dungeon-text-dim)] text-[var(--dungeon-text-dim)] text-[8px] font-bold leading-none hover:border-[var(--dungeon-text-bright)] hover:text-[var(--dungeon-text-bright)] transition-colors"
+                          style={{ borderRadius: '50%' }}>
+                          i
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <PixelHeart size={1} />
+                        <span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span>
+                      </>
+                    )}
                   </motion.div>
                   {/* 状态图标内联 */}
                   <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
@@ -5116,6 +5141,9 @@ useEffect(() => {
 
         </motion.div>
       )}
+
+      {/* 职业信息弹窗 */}
+      <ClassInfoModal visible={showClassInfo} onClose={() => setShowClassInfo(false)} classId={game.playerClass} />
 
       {/* Toasts */}
       <ToastDisplay />
