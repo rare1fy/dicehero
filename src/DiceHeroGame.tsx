@@ -4894,6 +4894,7 @@ useEffect(() => {
                               value={d.value}
                               size={48}
                               selected={settlementPhase === 'dice' && settlementData.currentEffectIdx >= i}
+                              element={d.collapsedElement || (d.element !== 'normal' ? d.element : undefined)}
                             />
                           </motion.div>
                         ))}
