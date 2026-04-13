@@ -148,16 +148,20 @@ const cracked: DiceDef = {
 // 骰子注册表（支持动态注册职业骰子）
 // ============================================================
 
+// 通用骰子池（不含已移交给职业的骰子：elemental→法师, heavy→盗贼）
 const BASE_DICE: Record<string, DiceDef> = {
   standard,
-  heavy, elemental,
   blade, amplify, split, magnet, joker,
   chaos,
   cursed, cracked,
+  // heavy 和 elemental 保留定义但不放入通用池，仅用于旧存档兼容查询
 };
 
+// 保留旧ID定义供 getDiceDef 回退查找
+const LEGACY_DICE: Record<string, DiceDef> = { heavy, elemental };
+
 // 可变注册表（包含基础+职业骰子）
-export let ALL_DICE: Record<string, DiceDef> = { ...BASE_DICE };
+export let ALL_DICE: Record<string, DiceDef> = { ...BASE_DICE, ...LEGACY_DICE };
 
 /** 注册职业骰子到全局注册表 */
 export function registerClassDice(diceList: DiceDef[]) {
@@ -168,15 +172,14 @@ export function registerClassDice(diceList: DiceDef[]) {
 
 export const DICE_BY_RARITY: Record<DiceRarity, DiceDef[]> = {
   common: [standard],
-  uncommon: [heavy],
-  rare: [blade, amplify, split, magnet, joker, elemental],
+  uncommon: [],
+  rare: [blade, amplify, split, magnet, joker],
   legendary: [chaos],
   curse: [cursed, cracked],
 };
 
 export const INITIAL_DICE_BAG: string[] = [
   'standard', 'standard', 'standard', 'standard',
-  'heavy',
   'blade',
 ];
 
@@ -267,10 +270,8 @@ export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss', player
     }
   }
   
-  // 后备：通用池
+  // 后备：通用池（不含已移交职业的heavy/elemental）
   const weights: Record<string, [number, number, number]> = {
-    heavy:     [4, 3, 1],
-    elemental: [3, 3, 2],
     blade:     [3, 3, 2],
     amplify:   [3, 3, 2],
     split:     [1, 3, 3],

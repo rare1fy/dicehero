@@ -32,8 +32,10 @@ export interface ClassDef {
   // 初始骰子库
   initialDice: string[];   // 普通×4 + 职业骰×2
 
-  // 职业特权描述
+  // 职业特权描述（简短版，用于顶栏等）
   passiveDesc: string;
+  // 职业技能列表（用于职业选择界面详细展示）
+  skills: { name: string; desc: string }[];
   // 普攻特殊规则
   normalAttackMultiSelect: boolean; // 普攻可多选
 }
@@ -57,7 +59,12 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     canBloodReroll: true,
     keepUnplayed: false,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'w_bloodthirst', 'w_thorns'],
-    passiveDesc: '【血怒战意】卖血重投每次+15%最终伤害（叠加）；血量≤50%手牌上限+1；血量<30%狂暴×1.3；普攻可多选',
+    passiveDesc: '【血怒战意】卖血重投每次+15%最终伤害（叠加）；血量≤50%手牌+1；手牌溢出上限时按受伤百分比加伤害倍率；普攻可多选',
+    skills: [
+      { name: '血怒战意', desc: '每次卖血重投，最终伤害+15%（可叠加），以鲜血换取毁灭之力' },
+      { name: '狂暴本能', desc: '血量≤50%时手牌上限+1颗；手牌达到6颗上限时，按受伤百分比获得等比例伤害倍率加成' },
+      { name: '铁拳连打', desc: '普攻牌型可多选骰子，一次打出所有选中骰子的伤害' },
+    ],
     normalAttackMultiSelect: true,
   },
   mage: {
@@ -74,7 +81,12 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     canBloodReroll: false,
     keepUnplayed: true,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'mage_elemental', 'mage_reverse'],
-    passiveDesc: '【星界蓄力】未出牌骰子保留到下回合（3→4→5→6递增）；蓄力回合+6护甲；出牌后重置',
+    passiveDesc: '【星界蓄力】未出牌骰子保留到下回合（3→4→5→6递增）；蓄力回合+6护甲；满6后继续蓄力每次+10%伤害；出牌后重置',
+    skills: [
+      { name: '星界蓄力', desc: '未出牌的骰子保留到下回合，手牌上限逐层递增（3→4→5→6）' },
+      { name: '蓄力护盾', desc: '每次蓄力（不出牌）获得+6护甲，积攒防御' },
+      { name: '过充释放', desc: '手牌满6颗后继续蓄力，每回合额外+10%伤害倍率；出牌后重置' },
+    ],
     normalAttackMultiSelect: false,
   },
   rogue: {
@@ -90,8 +102,13 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     freeRerolls: 1,
     canBloodReroll: false,
     keepUnplayed: false,
-    initialDice: ['standard', 'standard', 'standard', 'standard', 'r_dagger', 'r_poison_vial'],
-    passiveDesc: '【连击】每回合出牌2次；第2次伤害×1.2；两次不同牌型+25%；特定骰子触发时补充临时骰子',
+    initialDice: ['standard', 'standard', 'standard', 'standard', 'r_quickdraw', 'r_combomastery'],
+    passiveDesc: '【连击】每回合出牌2次；第2次伤害×1.2；两次同牌型+25%；特定骰子触发时补充临时骰子',
+    skills: [
+      { name: '双刃连击', desc: '每回合可出牌2次，第2次出牌伤害×1.2' },
+      { name: '精准连击', desc: '两次出牌使用相同牌型时（非普攻），额外+25%伤害加成' },
+      { name: '暗影补充', desc: '特定骰子（袖箭/接应/影舞/影刃风暴）触发时，自动补充1颗临时骰子到手牌' },
+    ],
     normalAttackMultiSelect: false,
   },
 };
@@ -104,7 +121,7 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
 const WARRIOR_DICE: DiceDef[] = [
   // === Common (6) ===
   { id: 'w_bloodthirst', name: '嗜血骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
-    description: '出牌时自伤最大HP的2%，伤害+8', onPlay: { bonusDamage: 8, selfDamagePercent: 0.02 } },
+    description: '出牌时自伤最大HP的2%，额外伤害+8', onPlay: { bonusDamage: 8, selfDamagePercent: 0.02 } },
   { id: 'w_thorns', name: '荆棘骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '出牌时获得等于骰子点数的护甲', onPlay: { armorFromValue: true } },
   { id: 'w_warcry', name: '战吼骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
@@ -112,7 +129,7 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_ironwall', name: '铁壁骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '出牌时获得6护甲', onPlay: { armor: 6 } },
   { id: 'w_fury', name: '怒火骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
-    description: '本场战斗每受伤一次，本骰子伤害+2（永久叠加）', onPlay: { bonusDamage: 0, scaleWithHits: true } },
+    description: '每次受到敌人攻击，本骰子额外基础伤害永久+1（本局游戏叠加，2级+2，3级+3）', onPlay: { scaleWithHits: true } },
   { id: 'w_charge', name: '冲锋骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '每场战斗首次出牌时伤害+12', onPlay: { bonusDamage: 12, firstPlayOnly: true } },
 
@@ -120,15 +137,15 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_armorbreak', name: '破甲骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '出牌时摧毁敌人全部护甲', onPlay: { armorBreak: true } },
   { id: 'w_revenge', name: '复仇骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
-    description: '伤害加成=本场已损失HP×10%', onPlay: { scaleWithLostHp: 0.1 } },
+    description: '额外伤害=本场已损失HP的10%', onPlay: { scaleWithLostHp: 0.1 } },
   { id: 'w_roar', name: '咆哮骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '净化自身全部负面+清除诅咒骰子。代价：嘲讽全体敌人无视距离攻击你', onPlay: { purifyAll: true, tauntAll: true } },
   { id: 'w_lifefurnace', name: '生命熔炉', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '出牌时最大HP永久+3，回复3HP', onPlay: { maxHpBonus: 3, heal: 3 } },
   { id: 'w_bloodpact', name: '鲜血契约', element: 'normal', faces: [6,6,6,6,6,6], rarity: 'uncommon',
-    description: '全6面，出牌时自伤最大HP的6%', onPlay: { selfDamagePercent: 0.06 } },
+    description: '全6面骰子，出牌时自伤最大HP的6%', onPlay: { selfDamagePercent: 0.06 } },
   { id: 'w_execute', name: '处刑骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
-    description: '敌人HP<25%时本骰子伤害×3', onPlay: { executeThreshold: 0.25, executeMult: 3 } },
+    description: '敌人血量低于25%时本骰子伤害×3', onPlay: { executeThreshold: 0.25, executeMult: 3 } },
   { id: 'w_quake', name: '震地骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '出牌时对全体敌人造成3点独立AOE伤害', onPlay: { aoeDamage: 3 } },
   { id: 'w_leech', name: '吸血骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
@@ -136,11 +153,11 @@ const WARRIOR_DICE: DiceDef[] = [
 
   // === Rare (6) ===
   { id: 'w_titanfist', name: '泰坦之拳', element: 'normal', faces: [6,6,6,6,6,6], rarity: 'rare',
-    description: '全6面，出牌时自伤最大HP的10%', onPlay: { selfDamagePercent: 0.10 } },
+    description: '全6面骰子，出牌时自伤最大HP的10%', onPlay: { selfDamagePercent: 0.10 } },
   { id: 'w_unyielding', name: '不屈意志', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
-    description: '血量<30%时点数自动视为6', onPlay: { lowHpOverrideValue: 6, lowHpThreshold: 0.3 } },
+    description: '血量低于30%时点数自动视为6', onPlay: { lowHpOverrideValue: 6, lowHpThreshold: 0.3 } },
   { id: 'w_warhammer', name: '战神之锤', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
-    description: '三条以上牌型时额外伤害+总点数×50%', onPlay: { bonusDamageFromPoints: 0.5, requiresTriple: true } },
+    description: '三条以上牌型时额外伤害+总点数的50%', onPlay: { bonusDamageFromPoints: 0.5, requiresTriple: true } },
   { id: 'w_bloodblade', name: '浴血之刃', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '每次卖血重投本骰子面值永久+1（本场上限+3）', onPlay: { scaleWithBloodRerolls: true } },
   { id: 'w_giantshield', name: '巨人护盾', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
@@ -152,7 +169,7 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_bloodgod', name: '血神之眼', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
     description: '本回合每自伤最大HP的1%，最终伤害+2%', onPlay: { scaleWithSelfDamage: true } },
   { id: 'w_overlord', name: '霸体铠甲', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
-    description: '出牌时获得20护甲+最终伤害加成=当前护甲×20%', onPlay: { armor: 20, damageFromArmor: 0.2 } },
+    description: '出牌时获得20护甲+最终伤害加成=当前护甲的20%', onPlay: { armor: 20, damageFromArmor: 0.2 } },
 ];
 
 // ============================================================
@@ -164,8 +181,8 @@ const MAGE_DICE: DiceDef[] = [
   // === Common (6) ===
   { id: 'mage_elemental', name: '元素骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '抽到时随机坍缩为火/冰/雷/毒/圣之一', isElemental: true },
-  { id: 'mage_reverse', name: '逆转骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
-    description: '结算时点数变为7-当前值（1→6, 2→5）', onPlay: { reverseValue: true } },
+  { id: 'mage_reverse', name: '反转骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
+    description: '出牌时将目标敌人的护甲反转为对其的伤害', onPlay: { armorBreak: true, armorToDamage: true } },
   { id: 'mage_missile', name: '奥术飞弹', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '出牌时额外对随机敌人造成3点独立伤害', onPlay: { aoeDamage: 3, randomTarget: true } },
   { id: 'mage_barrier', name: '魔力屏障', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
@@ -191,7 +208,7 @@ const MAGE_DICE: DiceDef[] = [
   { id: 'mage_purify', name: '净化之光', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '出牌时清除自身全部负面状态，每清除1种回复3HP', onPlay: { purifyAll: true, healPerCleanse: 3 } },
   { id: 'mage_surge', name: '法力涌动', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
-    description: '蓄力（保留到下回合）时下次出牌倍率额外+0.2', onPlay: { bonusMultOnKeep: 0.2 } },
+    description: '蓄力（保留到下回合）时下次出牌倍率额外+20%', onPlay: { bonusMultOnKeep: 0.2 } },
 
   // === Rare (6) ===
   { id: 'mage_elemstorm', name: '元素风暴', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
@@ -220,9 +237,9 @@ const MAGE_DICE: DiceDef[] = [
 // ============================================================
 
 const ROGUE_DICE: DiceDef[] = [
-  // === Common (6) ===
+  // === Common (8) ===
   { id: 'r_dagger', name: '匕首骰子', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'common',
-    description: '参与出牌时连击倍率额外+0.15', onPlay: { comboBonus: 0.15 } },
+    description: '参与出牌时连击倍率额外+15%', onPlay: { comboBonus: 0.15 } },
   { id: 'r_envenom', name: '淬毒骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '施加毒层=7-点数（点数越小毒越猛）', onPlay: { poisonInverse: true } },
   { id: 'r_throwing', name: '飞刀骰子', element: 'normal', faces: [1,2,2,3,3,4], rarity: 'common',
@@ -233,6 +250,10 @@ const ROGUE_DICE: DiceDef[] = [
     description: '出牌时固定施加3层毒', onPlay: { statusToEnemy: { type: 'poison', value: 3 } } },
   { id: 'r_sleeve', name: '袖箭骰子', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'common',
     description: '出牌后补充1颗临时骰子到手牌（随机1-6）', onPlay: { grantTempDie: true } },
+  { id: 'r_quickdraw', name: '接应骰子', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'common',
+    description: '出牌后立即从骰子库补抽1颗骰子到手牌', onPlay: { grantTempDie: true } },
+  { id: 'r_combomastery', name: '连击心得', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
+    description: '成功触发连击（第2次出牌）后，下回合手牌上限+1', onPlay: { comboDrawBonusNextTurn: true } },
 
   // === Uncommon (8) ===
   { id: 'r_lethal', name: '致命骰子', element: 'normal', faces: [3,3,4,4,5,5], rarity: 'uncommon',
@@ -260,7 +281,7 @@ const ROGUE_DICE: DiceDef[] = [
   { id: 'r_shadowdance', name: '影舞骰子', element: 'normal', faces: [3,3,4,4,5,5], rarity: 'rare',
     description: '出牌后获得1次额外出牌机会（本回合限1次）+补充1颗临时骰子', onPlay: { grantExtraPlay: true, grantTempDie: true } },
   { id: 'r_plaguedet', name: '瘟疫引爆', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
-    description: '出牌时引爆敌人50%毒层为即时伤害', onPlay: { detonatePoisonPercent: 0.5 } },
+    description: '出牌时引爆敌人50%的毒层为即时伤害', onPlay: { detonatePoisonPercent: 0.5 } },
   { id: 'r_phantom', name: '幻影骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '万能：结算时视为任意1-6（玩家选择）', onPlay: { wildcard: true } },
   { id: 'r_purifyblade', name: '净化之刃', element: 'normal', faces: [2,3,3,4,4,5], rarity: 'rare',
@@ -270,7 +291,7 @@ const ROGUE_DICE: DiceDef[] = [
   { id: 'r_deathtouch', name: '死神之触', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
     description: '本回合最后一次出牌时引爆敌人全部负面状态', onPlay: { detonateAllOnLastPlay: true } },
   { id: 'r_bladestorm', name: '影刃风暴', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'legendary',
-    description: '每出一次牌后续伤害+40%叠加+补充1颗临时骰子', onPlay: { escalateDamage: 0.4, grantTempDie: true } },
+    description: '每出一次牌后续伤害+40%（可叠加）+补充1颗临时骰子', onPlay: { escalateDamage: 0.4, grantTempDie: true } },
 ];
 
 // ============================================================

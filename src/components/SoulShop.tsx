@@ -29,16 +29,16 @@ const saveMeta = (meta: MetaProgress) => {
 
 /** 魂晶商店可购买的常驻遗物列表（描述从遗物定义自动读取） */
 const SHOP_RELIC_IDS: { relicId: string; cost: number }[] = [
-  { relicId: 'grindstone', cost: 150 },
-  { relicId: 'iron_skin_relic', cost: 120 },
-  { relicId: 'fate_coin', cost: 200 },
-  { relicId: 'greedy_hand', cost: 250 },
-  { relicId: 'crimson_grail', cost: 200 },
-  { relicId: 'schrodinger_bag', cost: 220 },
-  { relicId: 'treasure_sense_relic', cost: 160 },
-  { relicId: 'warm_ember_relic', cost: 130 },
-  { relicId: 'symmetry_seeker', cost: 180 },
-  { relicId: 'iron_banner', cost: 150 },
+  { relicId: 'grindstone', cost: 500 },
+  { relicId: 'iron_skin_relic', cost: 400 },
+  { relicId: 'fate_coin', cost: 650 },
+  { relicId: 'greedy_hand', cost: 800 },
+  { relicId: 'crimson_grail', cost: 700 },
+  { relicId: 'schrodinger_bag', cost: 750 },
+  { relicId: 'treasure_sense_relic', cost: 550 },
+  { relicId: 'warm_ember_relic', cost: 450 },
+  { relicId: 'symmetry_seeker', cost: 600 },
+  { relicId: 'iron_banner', cost: 500 },
 ];
 
 export const SoulShop: React.FC<{ onClose: () => void; ownedRelicIds?: string[] }> = ({ onClose, ownedRelicIds = [] }) => {

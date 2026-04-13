@@ -458,143 +458,168 @@
 .dice-glow-warrior {
   box-shadow: 0 0 10px rgba(200,60,40,0.5), 0 0 20px rgba(200,60,40,0.25) !important;
 }
-/* ======== 战士骰子个性化纹理 ======== */
-/* 嗜血 — 血滴纹 */
-.dice-id-w_bloodthirst { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='3' y='1' width='2' height='3' fill='%23ff404080'/%3E%3Crect x='2' y='4' width='4' height='2' fill='%23ff404060'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 荆棘 — 对角锯齿纹 */
-.dice-id-w_thorns { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 4L4 0L8 4L4 8Z' fill='%2380a0c040'/%3E%3C/svg%3E") !important; background-size: 16px; border-color: #8098b0 !important; color: #c0d8f0 !important; }
-/* 战吼 — 扩散波纹 */
-.dice-id-w_warcry { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='2' fill='none' stroke='%23ffa06040' stroke-width='1'/%3E%3Ccircle cx='5' cy='5' r='4' fill='none' stroke='%23ffa06020' stroke-width='1'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 铁壁 — 砖墙纹 */
-.dice-id-w_ironwall { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Crect x='0' y='0' width='3' height='2' fill='%2370809040'/%3E%3Crect x='4' y='0' width='4' height='2' fill='%2370809040'/%3E%3Crect x='2' y='3' width='3' height='2' fill='%2370809040'/%3E%3Crect x='6' y='3' width='2' height='2' fill='%2370809040'/%3E%3C/svg%3E") !important; background-size: 14px; border-color: #8898a8 !important; color: #b0c8e0 !important; }
-/* 怒火 — 火焰纹 */
-.dice-id-w_fury { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Cpath d='M4 0L6 4L5 3L7 8L4 5L1 8L3 3L2 4Z' fill='%23ff602040'/%3E%3C/svg%3E") !important; background-size: 16px; color: #ff8040 !important; }
-/* 冲锋 — 速度线 */
-.dice-id-w_charge { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6'%3E%3Crect x='0' y='1' width='8' height='1' fill='%23ffc06030'/%3E%3Crect x='2' y='4' width='6' height='1' fill='%23ffc06020'/%3E%3C/svg%3E") !important; background-size: 20px; }
-/* 破甲 — X裂纹 */
-.dice-id-w_armorbreak { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M1 1L7 7M7 1L1 7' stroke='%23ff804060' stroke-width='1'/%3E%3C/svg%3E") !important; background-size: 18px; color: #ffa060 !important; }
-/* 复仇 — 反向箭头 */
-.dice-id-w_revenge { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M4 1L7 4L4 7M4 4H1' stroke='%23ff606050' stroke-width='1' fill='none'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 咆哮 — 声波纹 */
-.dice-id-w_roar { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8'%3E%3Cpath d='M2 2C4 0 6 0 8 2M1 4C3 2 7 2 9 4M2 6C4 4 6 4 8 6' stroke='%23ffc04040' stroke-width='1' fill='none'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 生命熔炉 — 心形 */
-.dice-id-w_lifefurnace { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M4 7L1 4C0 2 2 0 4 2C6 0 8 2 7 4Z' fill='%23ff406030'/%3E%3C/svg%3E") !important; background-size: 14px; color: #ff8080 !important; }
-/* 鲜血契约 — 六芒星 */
-.dice-id-w_bloodpact { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M5 0L7 3.5L10 3.5L8 6L9 10L5 7.5L1 10L2 6L0 3.5L3 3.5Z' fill='%23c0202030'/%3E%3C/svg%3E") !important; background-size: 20px; background: linear-gradient(180deg, #901818 0%, #601010 50%, #400808 100%) !important; color: #ff6060 !important; }
-/* 处刑 — 斧刃 */
-.dice-id-w_execute { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Crect x='3' y='0' width='2' height='10' fill='%23a0804030'/%3E%3Crect x='0' y='2' width='3' height='4' fill='%23b0a09040'/%3E%3Crect x='5' y='2' width='3' height='4' fill='%23b0a09040'/%3E%3C/svg%3E") !important; background-size: 16px; color: #ffe0a0 !important; }
-/* 震地 — 震裂纹 */
-.dice-id-w_quake { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M1 5L3 3L5 6L7 2L9 5' stroke='%23a0806040' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 吸血 — 血月 */
-.dice-id-w_leech { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='3' fill='%23a0303030'/%3E%3Crect x='4' y='2' width='3' height='3' fill='%23d0c0b020'/%3E%3C/svg%3E") !important; background-size: 16px; color: #ff9090 !important; }
-/* 泰坦之拳 — 拳头纹 */
-.dice-id-w_titanfist { background: linear-gradient(180deg, #802020 0%, #601010 50%, #400808 100%) !important; border-color: #a03030 !important; color: #ff8080 !important; }
-/* 不屈意志 — 盾形 */
-.dice-id-w_unyielding { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Cpath d='M1 1H7V6L4 9L1 6Z' fill='%2380a0c030' stroke='%23a0c0e030'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 战神之锤 — 锤头纹 */
-.dice-id-w_warhammer { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Crect x='3' y='4' width='2' height='6' fill='%23a0804030'/%3E%3Crect x='1' y='0' width='6' height='4' fill='%23c0a09040'/%3E%3C/svg%3E") !important; background-size: 14px; color: #ffd0a0 !important; }
-/* 浴血之刃 — 刀锋+血纹 */
-.dice-id-w_bloodblade { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='10'%3E%3Crect x='2' y='0' width='2' height='8' fill='%23a0b0c030'/%3E%3Crect x='1' y='6' width='4' height='2' fill='%23ff404030'/%3E%3C/svg%3E") !important; background-size: 12px; }
-/* 巨人护盾 — 大盾 */
-.dice-id-w_giantshield { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M2 1H8V6L5 9L2 6Z' fill='%2360809040' stroke='%2380a0c040'/%3E%3Crect x='4' y='3' width='2' height='4' fill='%23a0c0e030'/%3E%3C/svg%3E") !important; background-size: 18px; border-color: #7090b0 !important; color: #a0c8f0 !important; }
-/* 狂暴之心 — 裂心 */
-.dice-id-w_berserk { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M4 7L1 4C0 2 2 0 4 2C6 0 8 2 7 4Z' fill='%23ff303040'/%3E%3Cpath d='M4 2V7' stroke='%23ff000030'/%3E%3C/svg%3E") !important; background-size: 16px; color: #ff6040 !important; }
-/* 血神之眼 — 竖瞳 */
-.dice-id-w_bloodgod { background: linear-gradient(180deg, #701818 0%, #501010 50%, #300808 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cellipse cx='5' cy='5' rx='4' ry='3' fill='%23a0202040'/%3E%3Crect x='4' y='2' width='2' height='6' fill='%23ff404050'/%3E%3C/svg%3E") !important; background-size: 20px; color: #ff8060 !important; border-color: #a03030 !important; }
-/* 霸体铠甲 — 铠甲纹 */
-.dice-id-w_overlord { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='4' height='4' fill='%2380a0c020'/%3E%3Crect x='4' y='4' width='4' height='4' fill='%2380a0c020'/%3E%3Crect x='3' y='3' width='2' height='2' fill='%23d4a03030'/%3E%3C/svg%3E") !important; background-size: 14px; border-color: #a0a8b8 !important; color: #d0d8e8 !important; }
+/* ======== 骰子右上角icon指示器 — 利用content覆盖 ======== */
+/* 职业骰子覆盖::after（底部阴影），改为右上角icon */
+[class*="dice-id-w_"]::after,
+[class*="dice-id-mage_"]::after,
+[class*="dice-id-r_"]::after {
+  bottom: auto !important;
+  top: 0px;
+  right: 0px;
+  left: auto !important;
+  width: 11px;
+  height: 11px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  opacity: 0.75;
+  z-index: 2 !important;
+}
+/* ======== 战士骰子icon ======== */
+.dice-id-w_bloodthirst::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1c1 2 2 3 2 5a2 2 0 01-4 0c0-2 1-3 2-5z' fill='%23ff5050'/%3E%3C/svg%3E"); }
+.dice-id-w_thorns::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 7L4 1L7 7' stroke='%23c0d8f0' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-w_warcry::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='1.5' stroke='%23ffc060' fill='none'/%3E%3Ccircle cx='4' cy='4' r='3' stroke='%23ffa040' stroke-width='.5' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-w_ironwall::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='2' y='1' width='4' height='5' rx='.5' fill='%2390a8c0'/%3E%3Crect x='3' y='2' width='2' height='3' fill='%23b0c8e0'/%3E%3C/svg%3E"); }
+.dice-id-w_fury::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l1 3-1-1 2 4-2-2-2 4 2-2-1 1z' fill='%23ff6020'/%3E%3C/svg%3E"); }
+.dice-id-w_charge::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 4h4M6 2l2 2-2 2' stroke='%23ffc060' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-w_armorbreak::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 2l4 4M6 2L2 6' stroke='%23ff8040' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.dice-id-w_revenge::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 4h4' stroke='%23ff6060' stroke-width='1.5'/%3E%3Cpath d='M5 2l2 2-2 2' stroke='%23ff6060' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-w_roar::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 3q3-2 6 0M1 5q3-2 6 0' stroke='%23ffc040' stroke-width='1' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-w_lifefurnace::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 6l-2-2c-1-1 0-3 2-1 2-2 3 0 2 1z' fill='%23ff4060'/%3E%3C/svg%3E"); }
+.dice-id-w_bloodpact::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l1 2.5h2.5l-2 1.5.8 2.5L4 6l-2.3 1.5.8-2.5-2-1.5h2.5z' fill='%23ff4040'/%3E%3C/svg%3E"); }
+.dice-id-w_execute::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='1' width='1' height='6' fill='%23c0a060'/%3E%3Crect x='1.5' y='2' width='2' height='3' fill='%23c0a060'/%3E%3Crect x='4.5' y='2' width='2' height='3' fill='%23c0a060'/%3E%3C/svg%3E"); }
+.dice-id-w_quake::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 5l2-3 2 3 2-4' stroke='%23c0a060' stroke-width='1.2' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-w_leech::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2.5' fill='%23a03030'/%3E%3Ccircle cx='4' cy='4' r='1' fill='%23ff4040'/%3E%3C/svg%3E"); }
+.dice-id-w_titanfist::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='2' y='3' width='4' height='4' rx='1' fill='%23c04040'/%3E%3Crect x='3' y='2' width='1' height='2' fill='%23e06060'/%3E%3Crect x='4' y='1.5' width='1' height='2.5' fill='%23e06060'/%3E%3C/svg%3E"); }
+.dice-id-w_unyielding::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 2h4v3l-2 2-2-2z' fill='%2380a0c0'/%3E%3C/svg%3E"); }
+.dice-id-w_warhammer::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='3' width='1' height='4' fill='%23a08040'/%3E%3Crect x='2' y='1' width='4' height='2.5' rx='.5' fill='%23c0a060'/%3E%3C/svg%3E"); }
+.dice-id-w_bloodblade::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='1' width='1' height='5' fill='%23c0d0e0'/%3E%3Crect x='2.5' y='5.5' width='3' height='1' fill='%23ff4040'/%3E%3C/svg%3E"); }
+.dice-id-w_giantshield::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1.5 1.5h5v3.5l-2.5 2.5-2.5-2.5z' fill='%236090b0'/%3E%3Crect x='3.5' y='2.5' width='1' height='3' fill='%23a0d0f0'/%3E%3C/svg%3E"); }
+.dice-id-w_berserk::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 6l-2-2c-1-1 0-3 2-1 2-2 3 0 2 1z' fill='%23ff3030'/%3E%3Cpath d='M4 2.5v3.5' stroke='%23ff0000' stroke-width='.8'/%3E%3C/svg%3E"); }
+.dice-id-w_bloodgod::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cellipse cx='4' cy='4' rx='3' ry='2' fill='%23a02020'/%3E%3Crect x='3.5' y='1.5' width='1' height='5' fill='%23ff4040'/%3E%3C/svg%3E"); }
+.dice-id-w_overlord::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='2' y='2' width='4' height='5' rx='.5' fill='%2380a0c0'/%3E%3Crect x='3' y='3.5' width='2' height='1' fill='%23d4a030'/%3E%3C/svg%3E"); }
 
-/* ======== 法师骰子个性化纹理 ======== */
-/* 元素 — 棱光彩虹 */
-.dice-id-mage_elemental { background: linear-gradient(135deg, #503080 0%, #305080 33%, #308050 66%, #805030 100%) !important; border-color: #8060c0 !important; }
-/* 逆转 — 旋转箭头 */
-.dice-id-mage_reverse { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M7 2A3 3 0 1 0 7 8M7 2L5 4M7 2L9 4' stroke='%23a080ff40' stroke-width='1' fill='none'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 奥术飞弹 — 小星点散射 */
-.dice-id-mage_missile { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='2' cy='3' r='1' fill='%23d0a0ff40'/%3E%3Ccircle cx='7' cy='2' r='1' fill='%23d0a0ff30'/%3E%3Ccircle cx='5' cy='7' r='1' fill='%23d0a0ff35'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 魔力屏障 — 六角盾 */
-.dice-id-mage_barrier { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M5 1L9 3V7L5 9L1 7V3Z' fill='none' stroke='%2380a0ff30' stroke-width='1'/%3E%3C/svg%3E") !important; background-size: 16px; border-color: #5070b0 !important; }
-/* 冥想 — 静波纹 */
-.dice-id-mage_meditate { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 4Q3 1 6 4T12 4' stroke='%23a080ff20' stroke-width='1' fill='none'/%3E%3C/svg%3E") !important; background-size: 18px; color: #b0a0e0 !important; }
-/* 奥术增幅 — 增益箭头 */
-.dice-id-mage_amplify { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M4 1L7 5H5V7H3V5H1Z' fill='%23d0a0ff30'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 镜像 — 对称线 */
-.dice-id-mage_mirror { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='3' y='0' width='2' height='8' fill='%2380c0ff25'/%3E%3Crect x='1' y='2' width='2' height='2' fill='%2380a0ff20'/%3E%3Crect x='5' y='2' width='2' height='2' fill='%2380a0ff20'/%3E%3C/svg%3E") !important; background-size: 14px; background-color: #283860 !important; color: #a0c0ff !important; }
-/* 水晶 — 菱形结晶 */
-.dice-id-mage_crystal { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M4 0L8 4L4 8L0 4Z' fill='%2380b0ff20' stroke='%23a0c0ff30'/%3E%3C/svg%3E") !important; background-size: 16px; border-color: #5080c0 !important; color: #a0d0ff !important; }
-/* 时光 — 沙漏 */
-.dice-id-mage_temporal { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Cpath d='M1 0H7L4 5L7 10H1L4 5Z' fill='%23a090d030'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 棱镜 — 三角棱光 */
-.dice-id-mage_prism { background: linear-gradient(135deg, #503080 0%, #305080 50%, #308050 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M4 1L7 7H1Z' fill='none' stroke='%23ffffff30'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 共鸣 — 同心环 */
-.dice-id-mage_resonance { background: linear-gradient(180deg, #403070 0%, #282050 50%, #181040 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='2' fill='none' stroke='%23a080ff30'/%3E%3Ccircle cx='5' cy='5' r='4' fill='none' stroke='%23a080ff18'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 吞噬 — 黑洞漩涡 */
-.dice-id-mage_devour { background: linear-gradient(180deg, #201040 0%, #100828 50%, #080418 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='3' fill='%2310002040'/%3E%3Ccircle cx='5' cy='5' r='1' fill='%23a060ff40'/%3E%3C/svg%3E") !important; background-size: 18px; color: #c080ff !important; }
-/* 净化之光 — 十字圣光 */
-.dice-id-mage_purify { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='3' y='0' width='2' height='8' fill='%23ffe08020'/%3E%3Crect x='0' y='3' width='8' height='2' fill='%23ffe08020'/%3E%3C/svg%3E") !important; background-size: 14px; color: #e0c080 !important; }
-/* 法力涌动 — 上升气流 */
-.dice-id-mage_surge { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Cpath d='M2 8L4 2L6 8' stroke='%23b090ff30' fill='none'/%3E%3Cpath d='M3 6L5 0L7 6' stroke='%23b090ff20' fill='none'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 元素风暴 — 旋风 */
-.dice-id-mage_elemstorm { background: linear-gradient(135deg, #503080, #305080, #308050, #805030) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M5 1A4 4 0 0 1 9 5A4 4 0 0 1 5 9' stroke='%23ffffff30' fill='none'/%3E%3Cpath d='M5 3A2 2 0 0 0 3 5A2 2 0 0 0 5 7' stroke='%23ffffff20' fill='none'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 虚空之眼 — 虚空裂隙 */
-.dice-id-mage_voideye { background: linear-gradient(180deg, #180830 0%, #100420 50%, #080210 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cellipse cx='5' cy='5' rx='3' ry='4' fill='%23200840'/%3E%3Crect x='4' y='1' width='2' height='8' fill='%236040a040'/%3E%3C/svg%3E") !important; background-size: 18px; color: #b080ff !important; border-color: #5030a0 !important; }
-/* 命运编织 — 交叉织线 */
-.dice-id-mage_weave { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0L8 8M0 8L8 0' stroke='%23a080ff20'/%3E%3Cpath d='M0 4H8M4 0V8' stroke='%23a080ff15'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 永冻核心 — 雪花 */
-.dice-id-mage_permafrost { background: linear-gradient(180deg, #204060 0%, #183050 50%, #102040 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='3' y='0' width='2' height='8' fill='%2380d0ff25'/%3E%3Crect x='0' y='3' width='8' height='2' fill='%2380d0ff25'/%3E%3Crect x='1' y='1' width='2' height='2' fill='%2380d0ff15'/%3E%3Crect x='5' y='5' width='2' height='2' fill='%2380d0ff15'/%3E%3C/svg%3E") !important; background-size: 14px; color: #80d0ff !important; border-color: #4080b0 !important; }
-/* 星辰 — 星星 */
-.dice-id-mage_star { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M5 0L6 4L10 4L7 6L8 10L5 8L2 10L3 6L0 4L4 4Z' fill='%23d0b0ff20'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 法术护盾 — 能量罩 */
-.dice-id-mage_shield { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M5 1L9 3V7L5 9L1 7V3Z' fill='%234060a030' stroke='%2380a0ff30'/%3E%3C/svg%3E") !important; background-size: 18px; border-color: #5078b0 !important; color: #a0c0ff !important; }
-/* 禁咒·陨星 — 陨石 */
-.dice-id-mage_meteor { background: linear-gradient(180deg, #402060 0%, #281040 50%, #180828 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='3' fill='%23ff604030'/%3E%3Ccircle cx='5' cy='5' r='1.5' fill='%23ffa06040'/%3E%3Cpath d='M5 2L3 0M6 3L8 1' stroke='%23ff806030'/%3E%3C/svg%3E") !important; background-size: 18px; color: #ffa080 !important; }
-/* 元素之心 — 多色核心 */
-.dice-id-mage_elemheart { background: linear-gradient(135deg, #e05020 0%, #30a0d0 25%, #f0c020 50%, #70c030 75%, #d4a030 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='3' fill='%23ffffff20'/%3E%3Ccircle cx='5' cy='5' r='1' fill='%23ffffff40'/%3E%3C/svg%3E") !important; background-size: 18px; color: #ffffff !important; border-color: #a080c0 !important; }
+/* ======== 法师骰子icon ======== */
+.dice-id-mage_elemental::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l2 3h-1.5v2h-1v-2h-1.5z' fill='%23e0d0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_reverse::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M6 3a2.5 2.5 0 11-.5 3' stroke='%23c0a0ff' stroke-width='1.2' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-mage_missile::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='2.5' cy='3' r='1' fill='%23d0a0ff'/%3E%3Ccircle cx='5.5' cy='2.5' r='.8' fill='%23c080ff'/%3E%3Ccircle cx='4' cy='6' r='1.2' fill='%23b080ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_barrier::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1.5l3 1.5v2.5l-3 2-3-2v-2.5z' stroke='%2380a0ff' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-mage_meditate::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2' fill='%23a080ff' opacity='.4'/%3E%3Ccircle cx='4' cy='4' r='1' fill='%23c0a0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_amplify::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1.5l2.5 3.5h-1.5v2h-2v-2h-1.5z' fill='%23d0a0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_mirror::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='1' width='1' height='6' fill='%2380c0ff'/%3E%3Crect x='1' y='3' width='2.5' height='2' fill='%2380a0ff' opacity='.5'/%3E%3Crect x='4.5' y='3' width='2.5' height='2' fill='%2380a0ff' opacity='.5'/%3E%3C/svg%3E"); }
+.dice-id-mage_crystal::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l3 3-3 3-3-3z' fill='%2380b0ff' opacity='.5' stroke='%23a0d0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_temporal::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2.5 1h3l-1.5 3 1.5 3h-3l1.5-3z' fill='%23a090d0'/%3E%3C/svg%3E"); }
+.dice-id-mage_prism::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l3 5.5h-6z' stroke='%23fff' stroke-width='.8' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-mage_resonance::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='1.2' stroke='%23a080ff' fill='none'/%3E%3Ccircle cx='4' cy='4' r='2.5' stroke='%23a080ff' stroke-width='.5' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-mage_devour::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2.5' fill='%23100020'/%3E%3Ccircle cx='4' cy='4' r='.8' fill='%23a060ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_purify::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='1.5' width='1' height='5' fill='%23ffe080'/%3E%3Crect x='1.5' y='3.5' width='5' height='1' fill='%23ffe080'/%3E%3C/svg%3E"); }
+.dice-id-mage_surge::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 7l1-5 1 5' stroke='%23b090ff' stroke-width='1.2' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-mage_elemstorm::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1a3 3 0 013 3' stroke='%23fff' stroke-width='1.2' fill='none'/%3E%3Ccircle cx='4' cy='4' r='1' fill='%23fff'/%3E%3C/svg%3E"); }
+.dice-id-mage_voideye::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cellipse cx='4' cy='4' rx='2.5' ry='3' fill='%23200840'/%3E%3Crect x='3.5' y='1.5' width='1' height='5' fill='%236040a0'/%3E%3C/svg%3E"); }
+.dice-id-mage_weave::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 2l4 4M6 2L2 6' stroke='%23a080ff' stroke-width='.8'/%3E%3C/svg%3E"); }
+.dice-id-mage_permafrost::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='1' width='1' height='6' fill='%2380d0ff'/%3E%3Crect x='1' y='3.5' width='6' height='1' fill='%2380d0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_star::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l1 2.5h2.5l-2 1.5.8 2.5-2.3-1.5-2.3 1.5.8-2.5-2-1.5h2.5z' fill='%23d0b0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_shield::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1.5l3 1.5v2.5l-3 2-3-2v-2.5z' fill='%234060a0' stroke='%2380a0ff'/%3E%3C/svg%3E"); }
+.dice-id-mage_meteor::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4.5' r='2' fill='%23ff6040'/%3E%3Ccircle cx='4' cy='4.5' r='1' fill='%23ffa060'/%3E%3C/svg%3E"); }
+.dice-id-mage_elemheart::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2.5' fill='%23fff' opacity='.4'/%3E%3Ccircle cx='4' cy='4' r='1' fill='%23fff'/%3E%3C/svg%3E"); }
 
-/* ======== 盗贼骰子个性化纹理 ======== */
-/* 匕首 — 对角刃纹 */
-.dice-id-r_dagger { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M1 7L7 1' stroke='%23a0c0d840' stroke-width='2'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 淬毒 — 毒液滴落 */
-.dice-id-r_envenom { background: linear-gradient(180deg, #283848 0%, #1a2838 50%, #0e1828 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='8'%3E%3Cpath d='M3 0L5 4C5 6 4 7 3 7S1 6 1 4Z' fill='%2360ff8030'/%3E%3C/svg%3E") !important; background-size: 12px; color: #80ffa0 !important; }
-/* 飞刀 — 十字飞镖 */
-.dice-id-r_throwing { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='3' y='0' width='2' height='8' fill='%23a0b8c830'/%3E%3Crect x='0' y='3' width='8' height='2' fill='%23a0b8c830'/%3E%3Crect x='3' y='3' width='2' height='2' fill='%23c0d8e840'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 灌铅 — 铅块网格 */
-.dice-id-r_heavy { background: linear-gradient(180deg, #485060 0%, #384050 50%, #283040 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='3' height='3' fill='%23607080'/%3E%3Crect x='3' y='3' width='3' height='3' fill='%23607080'/%3E%3C/svg%3E") !important; background-size: 10px; color: #c0d0e0 !important; border-color: #607080 !important; }
-/* 毒瓶 — 圆瓶轮廓 */
-.dice-id-r_poison_vial { background: linear-gradient(180deg, #282848 0%, #181838 50%, #100828 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Crect x='3' y='0' width='2' height='3' fill='%2360a07030'/%3E%3Crect x='1' y='3' width='6' height='6' rx='2' fill='%23a060ff20'/%3E%3C/svg%3E") !important; background-size: 14px; color: #c080ff !important; border-color: #6040a0 !important; }
-/* 袖箭 — 三角箭头 */
-.dice-id-r_sleeve { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M1 4L4 1L7 4L4 3Z' fill='%2380ffa030'/%3E%3Crect x='3' y='4' width='2' height='3' fill='%2360a06030'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 致命 — 骷髅 */
-.dice-id-r_lethal { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='2' y='1' width='4' height='4' fill='%23e0d0c030'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%2320101040'/%3E%3Crect x='5' y='2' width='1' height='1' fill='%2320101040'/%3E%3Crect x='3' y='6' width='2' height='1' fill='%23e0d0c020'/%3E%3C/svg%3E") !important; background-size: 14px; }
-/* 剧毒匕首 — 双刃毒纹 */
-.dice-id-r_toxblade { background: linear-gradient(180deg, #282040 0%, #181030 50%, #100820 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Cpath d='M2 8L4 0L6 8' stroke='%2380ff8030' fill='none'/%3E%3Crect x='3' y='3' width='2' height='2' fill='%2360ff6020'/%3E%3C/svg%3E") !important; background-size: 14px; color: #a0ffa0 !important; }
-/* 影分身 — 双影 */
-.dice-id-r_shadow_clone { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8'%3E%3Crect x='1' y='1' width='4' height='6' rx='1' fill='%2360d08020'/%3E%3Crect x='5' y='1' width='4' height='6' rx='1' fill='%2360d08015'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 毒雾 — 雾气 */
-.dice-id-r_miasma { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cellipse cx='4' cy='4' rx='3' ry='2' fill='%2360a06015'/%3E%3Cellipse cx='8' cy='4' rx='3' ry='2' fill='%2360a06012'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 回旋 — 弧形箭头 */
-.dice-id-r_boomerang { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M2 8Q1 2 5 2Q9 2 8 8' stroke='%2380c0a030' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 蚀骨毒液 — 腐蚀斑点 */
-.dice-id-r_corrosion { background: linear-gradient(180deg, #302040 0%, #201030 50%, #100820 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='3' cy='3' r='1.5' fill='%23a060ff20'/%3E%3Ccircle cx='7' cy='6' r='1' fill='%23a060ff18'/%3E%3Ccircle cx='5' cy='8' r='1.5' fill='%23a060ff15'/%3E%3C/svg%3E") !important; background-size: 14px; color: #c080ff !important; }
-/* 暗影 — 暗影渐隐 */
-.dice-id-r_shadow { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='8' height='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23000' stop-opacity='0.2'/%3E%3Cstop offset='1' stop-color='%23000' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 偷窃 — 钩爪 */
-.dice-id-r_steal { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M2 2C2 6 6 6 6 2' stroke='%23ffd04030' stroke-width='1' fill='none'/%3E%3Crect x='1' y='1' width='2' height='2' fill='%23ffd04020'/%3E%3C/svg%3E") !important; background-size: 14px; color: #e0c060 !important; }
-/* 毒王之牙 — 毒牙 */
-.dice-id-r_venomfang { background: linear-gradient(180deg, #282040 0%, #181030 50%, #080418 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M2 1L3 6M6 1L5 6' stroke='%2380ff8040' stroke-width='1'/%3E%3Crect x='3' y='5' width='2' height='2' fill='%2360ff6020'/%3E%3C/svg%3E") !important; background-size: 14px; color: #a0ffa0 !important; border-color: #408060 !important; }
-/* 三连闪 — 三道闪光 */
-.dice-id-r_tripleflash { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8'%3E%3Crect x='1' y='2' width='2' height='4' fill='%23c0ff8025'/%3E%3Crect x='4' y='1' width='2' height='6' fill='%23c0ff8030'/%3E%3Crect x='7' y='2' width='2' height='4' fill='%23c0ff8025'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 影舞 — 舞步弧线 */
-.dice-id-r_shadowdance { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M2 8Q5 2 8 8' stroke='%2380ffa030' fill='none'/%3E%3Cpath d='M3 6Q5 0 7 6' stroke='%2380ffa020' fill='none'/%3E%3C/svg%3E") !important; background-size: 16px; }
-/* 瘟疫引爆 — 爆炸星 */
-.dice-id-r_plaguedet { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='2' fill='%23a060ff30'/%3E%3Cpath d='M5 1V3M5 7V9M1 5H3M7 5H9M2 2L3.5 3.5M6.5 6.5L8 8M2 8L3.5 6.5M6.5 3.5L8 2' stroke='%23a060ff25'/%3E%3C/svg%3E") !important; background-size: 18px; color: #c080ff !important; }
-/* 幻影 — 问号迷雾 */
-.dice-id-r_phantom { background: linear-gradient(180deg, #304838 0%, #1a3828 50%, #0e2818 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Cpath d='M2 3C2 1 6 1 6 3C6 4 4 4 4 6' stroke='%23ffffff30' fill='none'/%3E%3Crect x='3' y='7' width='2' height='2' fill='%23ffffff25'/%3E%3C/svg%3E") !important; background-size: 14px; color: #e0ffe0 !important; }
-/* 净化之刃 — 阴阳 */
-.dice-id-r_purifyblade { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Ccircle cx='5' cy='5' r='4' fill='%2340a06020'/%3E%3Cpath d='M5 1A4 4 0 0 1 5 9A2 2 0 0 1 5 5A2 2 0 0 0 5 1' fill='%23ffffff15'/%3E%3C/svg%3E") !important; background-size: 18px; }
-/* 死神之触 — 死神镰刀 */
-.dice-id-r_deathtouch { background: linear-gradient(180deg, #182818 0%, #0e1c0e 50%, #081008 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M3 1C1 1 1 4 3 4L7 4C7 2 5 1 3 1Z' fill='%23c0c0c025'/%3E%3Crect x='4' y='4' width='2' height='5' fill='%2380604020'/%3E%3C/svg%3E") !important; background-size: 16px; color: #c0ffc0 !important; border-color: #408040 !important; }
-/* 影刃风暴 — 旋转多刃 */
-.dice-id-r_bladestorm { background: linear-gradient(180deg, #203828 0%, #102818 50%, #081808 100%) !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z' fill='%2380ffa025'/%3E%3Ccircle cx='5' cy='5' r='1' fill='%23c0ffc040'/%3E%3C/svg%3E") !important; background-size: 18px; color: #a0ffc0 !important; border-color: #40a060 !important; }
+/* ======== 盗贼骰子icon ======== */
+.dice-id-r_dagger::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2.5 6.5L6 2' stroke='%23c0e0d0' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.dice-id-r_envenom::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1.5c1 2 2 3 2 4.5a2 2 0 01-4 0c0-1.5 1-2.5 2-4.5z' fill='%2360ff80'/%3E%3C/svg%3E"); }
+.dice-id-r_throwing::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3.5' y='1' width='1' height='6' fill='%23c0e0d0'/%3E%3Crect x='1' y='3.5' width='6' height='1' fill='%23c0e0d0'/%3E%3C/svg%3E"); }
+.dice-id-r_heavy::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2.5' fill='%23607080'/%3E%3Ccircle cx='4' cy='4' r='1' fill='%23808fa0'/%3E%3C/svg%3E"); }
+.dice-id-r_poison_vial::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='3' y='1' width='2' height='2' fill='%2360a070'/%3E%3Crect x='2' y='3' width='4' height='4' rx='1.5' fill='%23a060ff'/%3E%3C/svg%3E"); }
+.dice-id-r_sleeve::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1.5l2 3h-1.5v2h-1v-2h-1.5z' fill='%2380ffa0'/%3E%3C/svg%3E"); }
+.dice-id-r_lethal::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='2.5' y='2' width='3' height='3' rx='1' fill='%23e0d0c0'/%3E%3Crect x='3' y='2.5' width='1' height='1' fill='%23201010'/%3E%3Crect x='4' y='2.5' width='1' height='1' fill='%23201010'/%3E%3C/svg%3E"); }
+.dice-id-r_toxblade::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 6.5L4 1l1 5.5' stroke='%2380ff80' stroke-width='1' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-r_shadow_clone::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='1' y='2' width='3' height='4' rx='1' fill='%2360d080' opacity='.6'/%3E%3Crect x='4' y='2' width='3' height='4' rx='1' fill='%2360d080' opacity='.4'/%3E%3C/svg%3E"); }
+.dice-id-r_miasma::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cellipse cx='3' cy='4' rx='2' ry='1.5' fill='%2360a060' opacity='.5'/%3E%3Cellipse cx='5.5' cy='3.5' rx='1.5' ry='1' fill='%2360a060' opacity='.4'/%3E%3C/svg%3E"); }
+.dice-id-r_boomerang::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 6q-1-5 2-5t2 5' stroke='%2380c0a0' stroke-width='1.2' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-r_corrosion::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='3' cy='3' r='1.2' fill='%23a060ff' opacity='.5'/%3E%3Ccircle cx='5.5' cy='5' r='1' fill='%23a060ff' opacity='.4'/%3E%3C/svg%3E"); }
+.dice-id-r_shadow::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='1.5' y='1.5' width='5' height='5' rx='1' fill='%23000' opacity='.3'/%3E%3C/svg%3E"); }
+.dice-id-r_steal::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 3c0 3 4 3 4 0' stroke='%23ffd040' stroke-width='1' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-r_venomfang::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 1.5l.8 4M5 1.5l-.8 4' stroke='%2380ff80' stroke-width='1'/%3E%3C/svg%3E"); }
+.dice-id-r_tripleflash::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect x='1.5' y='2.5' width='1.2' height='3' fill='%23c0ff80'/%3E%3Crect x='3.4' y='1.5' width='1.2' height='5' fill='%23c0ff80'/%3E%3Crect x='5.3' y='2.5' width='1.2' height='3' fill='%23c0ff80'/%3E%3C/svg%3E"); }
+.dice-id-r_shadowdance::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 6q3-6 4 0' stroke='%2380ffa0' stroke-width='1.2' fill='none'/%3E%3C/svg%3E"); }
+.dice-id-r_plaguedet::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='1.5' fill='%23a060ff'/%3E%3Cpath d='M4 1v2M4 5v2M1 4h2M5 4h2' stroke='%23a060ff' stroke-width='.8'/%3E%3C/svg%3E"); }
+.dice-id-r_phantom::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 3c0-1.5 3-1.5 3 0s-1.5 1.5-1.5 2.5' stroke='%23fff' stroke-width='1' fill='none'/%3E%3Crect x='4' y='6' width='1' height='1' fill='%23fff'/%3E%3C/svg%3E"); }
+.dice-id-r_purifyblade::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='2.5' fill='%2340a060'/%3E%3Cpath d='M4 1.5a2.5 2.5 0 010 5a1.25 1.25 0 010-2.5a1.25 1.25 0 000-2.5z' fill='%23fff' opacity='.3'/%3E%3C/svg%3E"); }
+.dice-id-r_deathtouch::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M3 1.5c-2 0-2 3 0 3h3c1.5 0 1.5-2 0-3' fill='%23c0c0c0' opacity='.5'/%3E%3Crect x='3.5' y='4.5' width='1' height='3' fill='%23806040'/%3E%3C/svg%3E"); }
+.dice-id-r_bladestorm::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1l1 3 3 0-3 1 0 3-1-3-3 0 3-1z' fill='%2380ffa0'/%3E%3C/svg%3E"); }
+
+/* ======== 战士骰子 — 职业色系+独特色调区分 ======== */
+/* 每颗骰子继承 pixel-dice-warrior 基底，通过渐变色调偏移+边框色+文字色区分 */
+.dice-id-w_bloodthirst { background: linear-gradient(180deg,#c0706a,#984848,#703030) !important; border-color: #e05050 !important; color: #ff9090 !important; }
+.dice-id-w_thorns { background: linear-gradient(180deg,#a0a8b8,#788898,#586878) !important; border-color: #90a8c0 !important; color: #c0d8f0 !important; }
+.dice-id-w_warcry { background: linear-gradient(180deg,#c8b088,#a89068,#887050) !important; border-color: #d0a870 !important; color: #ffe0a0 !important; }
+.dice-id-w_ironwall { background: linear-gradient(180deg,#90a0b0,#708898,#587080) !important; border-color: #88a0b8 !important; color: #c0d8f0 !important; }
+.dice-id-w_fury { background: linear-gradient(180deg,#c89050,#a87030,#885820) !important; border-color: #d88830 !important; color: #ffa050 !important; }
+.dice-id-w_charge { background: linear-gradient(180deg,#c8b078,#a89058,#887040) !important; border-color: #c8a860 !important; color: #ffe0a0 !important; }
+.dice-id-w_armorbreak { background: linear-gradient(180deg,#c09068,#a07048,#805830) !important; border-color: #d08848 !important; color: #ffb070 !important; }
+.dice-id-w_revenge { background: linear-gradient(180deg,#b07868,#905848,#704030) !important; border-color: #c07050 !important; color: #ff9080 !important; }
+.dice-id-w_roar { background: linear-gradient(180deg,#c0a880,#a08860,#806840) !important; border-color: #c8a060 !important; color: #ffd090 !important; }
+.dice-id-w_lifefurnace { background: linear-gradient(180deg,#b86868,#984848,#783030) !important; border-color: #c06060 !important; color: #ff9898 !important; }
+.dice-id-w_bloodpact { background: linear-gradient(180deg,#982020,#701818,#481010) !important; border-color: #b02828 !important; color: #ff7070 !important; }
+.dice-id-w_execute { background: linear-gradient(180deg,#b8a878,#988858,#786838) !important; border-color: #b89858 !important; color: #ffe0a0 !important; }
+.dice-id-w_quake { background: linear-gradient(180deg,#a89878,#888058,#686040) !important; border-color: #a89060 !important; color: #d8c090 !important; }
+.dice-id-w_leech { background: linear-gradient(180deg,#a84848,#883030,#682020) !important; border-color: #b04040 !important; color: #ffa0a0 !important; }
+.dice-id-w_titanfist { background: linear-gradient(180deg,#882020,#681010,#480808) !important; border-color: #a83030 !important; color: #ff8888 !important; }
+.dice-id-w_unyielding { background: linear-gradient(180deg,#8898b0,#687890,#506078) !important; border-color: #7898b8 !important; color: #b0d0f0 !important; }
+.dice-id-w_warhammer { background: linear-gradient(180deg,#c0a070,#a08050,#806030) !important; border-color: #c09850 !important; color: #ffd8a0 !important; }
+.dice-id-w_bloodblade { background: linear-gradient(180deg,#a87868,#885848,#683828) !important; border-color: #b07060 !important; color: #e8b0a0 !important; }
+.dice-id-w_giantshield { background: linear-gradient(180deg,#7898b8,#588098,#406878) !important; border-color: #7898b0 !important; color: #a8d0f0 !important; }
+.dice-id-w_berserk { background: linear-gradient(180deg,#b84030,#982018,#781010) !important; border-color: #d04030 !important; color: #ff7050 !important; }
+.dice-id-w_bloodgod { background: linear-gradient(180deg,#781818,#581010,#380808) !important; border-color: #a82828 !important; color: #ff8868 !important; }
+.dice-id-w_overlord { background: linear-gradient(180deg,#98a0b0,#788090,#606878) !important; border-color: #a0a8b8 !important; color: #d8e0f0 !important; }
+
+/* ======== 法师骰子 — 大色差区分（每颗明显不同色调） ======== */
+.dice-id-mage_elemental { background: linear-gradient(135deg,#604080,#406080,#408060,#806040) !important; border-color: #9070c0 !important; color: #f0e0ff !important; }
+.dice-id-mage_reverse { background: linear-gradient(180deg,#704898,#503878,#382060) !important; border-color: #9060c0 !important; color: #e0c0ff !important; }
+.dice-id-mage_missile { background: linear-gradient(180deg,#3848a8,#283890,#182870) !important; border-color: #5868d0 !important; color: #a0b8ff !important; }
+.dice-id-mage_barrier { background: linear-gradient(180deg,#2858a0,#204888,#183868) !important; border-color: #4878c8 !important; color: #90c0ff !important; }
+.dice-id-mage_meditate { background: linear-gradient(180deg,#584078,#403060,#282048) !important; border-color: #7858a0 !important; color: #c8b0e0 !important; }
+.dice-id-mage_amplify { background: linear-gradient(180deg,#6838b0,#502898,#382078) !important; border-color: #8850d0 !important; color: #d0a8ff !important; }
+.dice-id-mage_mirror { background: linear-gradient(180deg,#285888,#204870,#183858) !important; border-color: #4080b0 !important; color: #90c8f0 !important; }
+.dice-id-mage_crystal { background: linear-gradient(180deg,#2868b0,#205898,#184878) !important; border-color: #4090d0 !important; color: #80c0ff !important; }
+.dice-id-mage_temporal { background: linear-gradient(180deg,#685038,#504030,#383020) !important; border-color: #907848 !important; color: #e0c890 !important; }
+.dice-id-mage_prism { background: linear-gradient(135deg,#a03060,#304888,#3880a0) !important; border-color: #c05080 !important; color: #ffa0c8 !important; }
+.dice-id-mage_resonance { background: linear-gradient(180deg,#503068,#382050,#201038) !important; border-color: #704898 !important; color: #c098e0 !important; }
+.dice-id-mage_devour { background: linear-gradient(180deg,#180820,#100418,#080210) !important; border-color: #4020a0 !important; color: #a060ff !important; }
+.dice-id-mage_purify { background: linear-gradient(180deg,#686028,#504818,#383010) !important; border-color: #a09030 !important; color: #f0d860 !important; }
+.dice-id-mage_surge { background: linear-gradient(180deg,#5828a8,#401890,#301070) !important; border-color: #7838d0 !important; color: #c098ff !important; }
+.dice-id-mage_elemstorm { background: linear-gradient(135deg,#a04020,#2868a0,#30a048) !important; border-color: #d06030 !important; color: #ffc090 !important; }
+.dice-id-mage_voideye { background: linear-gradient(180deg,#100428,#080218,#040110) !important; border-color: #3818a0 !important; color: #9060ff !important; }
+.dice-id-mage_weave { background: linear-gradient(180deg,#584060,#403048,#282030) !important; border-color: #785898 !important; color: #c0a0d8 !important; }
+.dice-id-mage_permafrost { background: linear-gradient(180deg,#1858a0,#104888,#0c3868) !important; border-color: #3090d0 !important; color: #70c8ff !important; }
+.dice-id-mage_star { background: linear-gradient(180deg,#483898,#383078,#282060) !important; border-color: #6850c0 !important; color: #d0c0ff !important; }
+.dice-id-mage_shield { background: linear-gradient(180deg,#305898,#284878,#183860) !important; border-color: #4880c0 !important; color: #a0c0f0 !important; }
+.dice-id-mage_meteor { background: linear-gradient(180deg,#802040,#601830,#401020) !important; border-color: #c04060 !important; color: #ff90a0 !important; }
+.dice-id-mage_elemheart { background: linear-gradient(135deg,#e06030,#30a8e0 25%,#f0c830 50%,#60c830 75%,#e0a030) !important; border-color: #c098d0 !important; color: #ffffff !important; }
+
+/* ======== 盗贼骰子 — 大色差区分（每颗明显不同色调） ======== */
+.dice-id-r_dagger { background: linear-gradient(180deg,#488838,#306828,#184818) !important; border-color: #68b850 !important; color: #b0ff90 !important; }
+.dice-id-r_envenom { background: linear-gradient(180deg,#285848,#184838,#103028) !important; border-color: #40a870 !important; color: #80ffc0 !important; }
+.dice-id-r_throwing { background: linear-gradient(180deg,#507838,#386028,#284818) !important; border-color: #78b048 !important; color: #c0ff80 !important; }
+.dice-id-r_heavy { background: linear-gradient(180deg,#586068,#485058,#384048) !important; border-color: #788898 !important; color: #d0e0f0 !important; }
+.dice-id-r_poison_vial { background: linear-gradient(180deg,#382848,#282038,#181028) !important; border-color: #7848b0 !important; color: #d090ff !important; }
+.dice-id-r_sleeve { background: linear-gradient(180deg,#387048,#286038,#184828) !important; border-color: #50a860 !important; color: #90ffa0 !important; }
+.dice-id-r_lethal { background: linear-gradient(180deg,#484038,#383028,#282018) !important; border-color: #807040 !important; color: #e0d0a0 !important; }
+.dice-id-r_toxblade { background: linear-gradient(180deg,#283848,#182838,#102028) !important; border-color: #409880 !important; color: #80f0c0 !important; }
+.dice-id-r_shadow_clone { background: linear-gradient(180deg,#306838,#205028,#103818) !important; border-color: #50b060 !important; color: #a0ffa0 !important; }
+.dice-id-r_miasma { background: linear-gradient(180deg,#384828,#283818,#182810) !important; border-color: #589838 !important; color: #a0e070 !important; }
+.dice-id-r_boomerang { background: linear-gradient(180deg,#486838,#385028,#284018) !important; border-color: #68a858 !important; color: #b0e898 !important; }
+.dice-id-r_corrosion { background: linear-gradient(180deg,#402050,#301840,#201030) !important; border-color: #7840a0 !important; color: #c080f0 !important; }
+.dice-id-r_shadow { background: linear-gradient(180deg,#282828,#1c1c1c,#101010) !important; border-color: #505050 !important; color: #a0a0a0 !important; }
+.dice-id-r_steal { background: linear-gradient(180deg,#685828,#504018,#383010) !important; border-color: #a89030 !important; color: #f0d860 !important; }
+.dice-id-r_venomfang { background: linear-gradient(180deg,#204838,#183828,#102818) !important; border-color: #38a060 !important; color: #70ffa0 !important; }
+.dice-id-r_tripleflash { background: linear-gradient(180deg,#507830,#387020,#285810) !important; border-color: #80c040 !important; color: #d0ff80 !important; }
+.dice-id-r_shadowdance { background: linear-gradient(180deg,#305848,#204838,#103828) !important; border-color: #48a878 !important; color: #90f0c0 !important; }
+.dice-id-r_plaguedet { background: linear-gradient(180deg,#402850,#302040,#201030) !important; border-color: #7840a8 !important; color: #c080ff !important; }
+.dice-id-r_phantom { background: linear-gradient(180deg,#385048,#284038,#183028) !important; border-color: #58a870 !important; color: #d0ffe0 !important; }
+.dice-id-r_purifyblade { background: linear-gradient(180deg,#406838,#305828,#204018) !important; border-color: #60b050 !important; color: #c0ffa0 !important; }
+.dice-id-r_deathtouch { background: linear-gradient(180deg,#181818,#101010,#080808) !important; border-color: #408038 !important; color: #80ff80 !important; }
+.dice-id-r_bladestorm { background: linear-gradient(180deg,#204828,#183818,#102810) !important; border-color: #40c060 !important; color: #80ffc0 !important; }
 .pixel-dice-mage {
   background: linear-gradient(180deg, #4a3080 0%, #2c2060 50%, #1a1040 100%) !important;
   border-color: #7050b0 !important;
@@ -1008,13 +1033,27 @@
 
 .pixel-dice-selected {
   transform: translateY(-16px) !important;
+  border-color: #e8d068 !important;
   box-shadow: 
     inset -2px -2px 0 rgba(0,0,0,0.3),
-    inset 2px 2px 0 rgba(255,255,255,0.15),
+    inset 2px 2px 0 rgba(255,255,255,0.2),
     0 8px 0 rgba(0,0,0,0.5),
-    0 0 16px currentColor,
-    0 0 30px currentColor !important;
-  filter: brightness(1.2) saturate(1.2);
+    0 0 8px #e8d068,
+    0 0 20px rgba(232,208,104,0.6),
+    0 0 40px rgba(232,208,104,0.3) !important;
+  filter: brightness(1.25) saturate(1.3);
+  animation: dice-selected-pulse 1.2s ease-in-out infinite;
+}
+/* 出牌演出中取消选中效果 */
+.pixel-dice-playing {
+  border-color: inherit !important;
+  box-shadow: none !important;
+  filter: none !important;
+  animation: none !important;
+}
+@keyframes dice-selected-pulse {
+  0%, 100% { box-shadow: inset -2px -2px 0 rgba(0,0,0,0.3), inset 2px 2px 0 rgba(255,255,255,0.2), 0 8px 0 rgba(0,0,0,0.5), 0 0 8px #e8d068, 0 0 20px rgba(232,208,104,0.6), 0 0 40px rgba(232,208,104,0.3); }
+  50% { box-shadow: inset -2px -2px 0 rgba(0,0,0,0.3), inset 2px 2px 0 rgba(255,255,255,0.2), 0 8px 0 rgba(0,0,0,0.5), 0 0 12px #e8d068, 0 0 30px rgba(232,208,104,0.8), 0 0 50px rgba(232,208,104,0.4); }
 }
 
 .pixel-dice-spent {
@@ -2448,6 +2487,37 @@ input[type="range"]::-moz-range-track {
   animation: dice-hint-float 1.6s ease-in-out infinite;
   z-index: 3;
   position: relative;
+}
+
+/* 盗贼连击就绪：剩余骰子绿色脉冲提示 */
+@keyframes dice-combo-ready {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(96,208,128,0.4), 0 0 12px rgba(48,160,80,0.2);
+    filter: brightness(1.05);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(96,208,128,0.8), 0 0 24px rgba(48,160,80,0.4);
+    filter: brightness(1.2) saturate(1.3);
+  }
+}
+.dice-combo-ready {
+  animation: dice-combo-ready 1.2s ease-in-out infinite;
+  border: 2px solid rgba(96,208,128,0.6) !important;
+}
+
+/* 战士血怒面板：血色脉冲边框 */
+@keyframes warrior-rage-border-pulse {
+  0%, 100% {
+    border-color: rgba(200,40,40,0.4);
+    box-shadow: inset 0 0 20px rgba(160,20,20,0.1);
+  }
+  50% {
+    border-color: rgba(220,60,40,0.7);
+    box-shadow: inset 0 0 30px rgba(180,30,20,0.2);
+  }
+}
+.warrior-rage-panel {
+  animation: warrior-rage-border-pulse 2s ease-in-out infinite;
 }
 
 /* ����ȡ��ѡ�� �� ��ʱ���䣬�������� */

@@ -307,6 +307,19 @@ export const PixelDroplet: React.FC<PixelIconProps> = ({ size = 2, className, st
   return <IconBase pixels={p} ps={size} className={className} style={style} />;
 };
 
+// 血滴 — 战士血怒（5x6）
+export const PixelBloodDrop: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
+  const p = [
+    ['', '', '#c8403c', '', ''],
+    ['', '#c8403c', '#e86060', '#c8403c', ''],
+    ['#c8403c', '#e86060', '#ff8080', '#e86060', '#c8403c'],
+    ['#c8403c', '#e86060', '#e86060', '#e86060', '#c8403c'],
+    ['', '#8b1a14', '#c8403c', '#8b1a14', ''],
+    ['', '', '#8b1a14', '', ''],
+  ];
+  return <IconBase pixels={p} ps={size} className={className} style={style} />;
+};
+
 // 房子 — 葫芦（5x6）
 export const PixelHouse: React.FC<PixelIconProps> = ({ size = 2, className, style }) => {
   const p = [

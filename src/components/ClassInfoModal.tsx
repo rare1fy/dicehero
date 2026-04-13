@@ -9,6 +9,7 @@ import { CLASS_DEFS, CLASS_DICE, type ClassId } from '../data/classes';
 import { PixelClose } from './PixelIcons';
 import { ClassIcon } from './ClassIcons';
 import { getDiceElementClass } from '../utils/uiHelpers';
+import { formatDescription } from '../utils/richText';
 
 // 稀有度颜色和标签
 const RARITY_STYLE: Record<string, { color: string; label: string; border: string }> = {
@@ -109,51 +110,34 @@ export const ClassInfoModal: React.FC<ClassInfoModalProps> = ({ visible, onClose
                 {classDef.description}
               </div>
 
-              {/* 职业被动 */}
+              {/* 职业技能 */}
               <div className="p-2 border border-[var(--dungeon-panel-border)] bg-[rgba(0,0,0,0.3)]" style={{ borderRadius: '2px' }}>
-                <div className="text-[9px] font-bold tracking-wider mb-1"
-                  style={{ color: classDef.colorLight }}>◆ 职业特权</div>
-                <div className="text-[10px] text-[var(--dungeon-text-bright)] leading-relaxed">
-                  {highlightKeywords(classDef.passiveDesc)}
+                <div className="text-[9px] font-bold tracking-wider mb-2"
+                  style={{ color: classDef.colorLight }}>◆ 职业技能</div>
+                <div className="flex flex-col gap-1.5">
+                  {classDef.skills.map((skill, i) => (
+                    <div key={i} className="flex gap-1.5 items-start">
+                      <span
+                        className="shrink-0 text-[8px] font-black px-1 py-0.5 leading-tight"
+                        style={{
+                          color: classDef.colorLight,
+                          background: classDef.color + '20',
+                          border: `1px solid ${classDef.color}40`,
+                          borderRadius: '2px',
+                        }}
+                      >
+                        {skill.name}
+                      </span>
+                      <span className="text-[9px] text-[var(--dungeon-text)] leading-relaxed">
+                        {formatDescription(skill.desc)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* 回合规则 */}
-              <div className="p-2 border border-[var(--dungeon-panel-border)] bg-[rgba(0,0,0,0.2)]" style={{ borderRadius: '2px' }}>
-                <div className="text-[9px] font-bold text-[var(--dungeon-text-dim)] tracking-wider mb-1">◆ 回合规则</div>
-                <div className="grid grid-cols-2 gap-1 text-[9px]">
-                  <div className="flex justify-between">
-                    <span className="text-[var(--dungeon-text-dim)]">每回合抽骰</span>
-                    <span className="text-[var(--dungeon-text-bright)] font-bold">{classDef.drawCount}颗</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--dungeon-text-dim)]">出牌次数</span>
-                    <span className="text-[var(--dungeon-text-bright)] font-bold">{classDef.maxPlays}次</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--dungeon-text-dim)]">免费重投</span>
-                    <span className="text-[var(--dungeon-text-bright)] font-bold">{classDef.freeRerolls}次</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--dungeon-text-dim)]">卖血重投</span>
-                    <span className={classDef.canBloodReroll ? 'text-[var(--pixel-red-light)] font-bold' : 'text-[var(--dungeon-text-dim)]'}>
-                      {classDef.canBloodReroll ? '✓ 可用' : '✗ 不可'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--dungeon-text-dim)]">回合结束</span>
-                    <span className="text-[var(--dungeon-text-bright)] font-bold">
-                      {classDef.keepUnplayed ? '保留未出牌' : '全部丢弃'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--dungeon-text-dim)]">普攻多选</span>
-                    <span className={classDef.normalAttackMultiSelect ? 'text-[var(--pixel-gold)] font-bold' : 'text-[var(--dungeon-text-dim)]'}>
-                      {classDef.normalAttackMultiSelect ? '✓ 可多选' : '仅单选'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+
+
 
               {/* 骰子分隔线 */}
               <div className="flex items-center gap-2">
@@ -189,7 +173,7 @@ export const ClassInfoModal: React.FC<ClassInfoModalProps> = ({ visible, onClose
                               {dice.name}
                             </div>
                             <div className="text-[9px] text-[var(--dungeon-text)] leading-snug mt-0.5">
-                              {highlightKeywords(dice.description || '')}
+                              {formatDescription(dice.description || '')}
                             </div>
                             {dice.faces && (
                               <div className="text-[7px] text-[var(--dungeon-text-dim)] font-mono mt-0.5">

@@ -82,6 +82,7 @@ export interface DiceDef {
     poisonInverse?: boolean;     // 毒=7-点数
     stayInHand?: boolean;        // 出牌后不消耗
     grantTempDie?: boolean;      // 补充临时骰子
+    comboDrawBonusNextTurn?: boolean; // 连击成功后下回合手牌+1
     critOnSecondPlay?: number;   // 第2次出牌暴击倍率
     poisonBase?: number;         // 基础毒层
     poisonBonusIfPoisoned?: number; // 已有毒额外+N
@@ -449,6 +450,7 @@ export interface GameState {
   playerClass?: string;        // 职业ID: 'warrior' | 'mage' | 'rogue'
   bloodRerollCount?: number;   // 本回合卖血重投次数（战士特权伤害加成）
   chargeStacks?: number;       // 法师蓄力层数（连续不出牌回合数）
+  mageOverchargeMult?: number; // 法师囤满后继续蓄力的额外伤害倍率加成
   comboCount?: number;         // 盗贼本回合已出牌次数（连击计数）
   lastPlayHandType?: string;   // 盗贼上一次出牌的牌型（连击终结判定）
 
@@ -492,6 +494,10 @@ export interface GameState {
   hpLostThisBattle?: number;          // 本场战斗已损失的HP
   hpLostThisTurn?: number;            // 本回合已损失的HP
   rageFireBonus?: number;              // 怒火燎原遗物：受伤后累积的额外伤害
+  furyBonusDamage?: number;            // 怒火骰子：本局游戏永久叠加的额外基础伤害（受敌人攻击时+N）
+  blackMarketUsedThisTurn?: boolean;   // 黑市合同本回合是否已触发
+  warriorRageMult?: number;            // 战士狂暴本能：受伤百分比对应的伤害倍率加成
+  rogueComboDrawBonus?: number;        // 盗贼连击心得：下回合额外抽牌数
   instakillChallenge?: InstakillChallenge | null; // 一击必杀挑战条件
   instakillCompleted?: boolean;        // 是否已达成一击必杀
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）

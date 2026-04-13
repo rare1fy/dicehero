@@ -52,7 +52,7 @@ export const GlobalTopBar: React.FC = () => {
           <span className="font-bold">{game.blackMarketQuota || 0}</span>
           {soulTip.show && (
             <div className="absolute left-0 top-full mt-1 bg-[var(--dungeon-panel)] border-2 border-purple-500 px-2 py-1 text-[8px] text-purple-300 z-[200] pixel-text-shadow min-w-[180px]" style={{borderRadius:'2px', whiteSpace:'normal'}}>
-              魂晶 — 首次出牌秒杀时获得（溢出伤害×倍率）。撤离转移后倍率归1，不撤离可贪更高倍率，死亡损失60%。
+              魂晶 — 击杀敌人时溢出伤害转化获得（溢出×倍率×15%）。撤离转移后倍率归1，不撤离可贪更高倍率，死亡损失60%。
             </div>
           )}
         </div>

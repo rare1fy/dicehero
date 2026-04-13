@@ -229,12 +229,13 @@ const vampireFangs: Relic = {
 const blackMarketContract: Relic = {
   id: 'black_market_contract',
   name: '黑市合同',
-  description: '每次卖血Roll时，获得等同扣血值的金币',
+  description: '每回合首次卖血Roll时，获得等同roll出骰子点数的金币（每回合一次）',
   icon: 'contract',
   rarity: 'uncommon',
   trigger: 'on_reroll',
   effect: (ctx) => ({
-    goldBonus: ctx.hpLostThisTurn || 0,
+    goldBonus: ctx.diceValue || 0,
+    oncePerTurn: true,
   }),
 };
 

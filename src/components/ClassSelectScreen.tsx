@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { playSound } from '../utils/sound';
 import { CLASS_DEFS, type ClassId } from '../data/classes';
+import { formatDescription } from '../utils/richText';
 import { WarriorClassIcon, MageClassIcon, RogueClassIcon } from './ClassIcons';
 
 // ============================================================
@@ -177,7 +178,7 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
           })}
         </div>
 
-        {/* 选中职业详情 */}
+        {/* 选中职业技能详情 */}
         <AnimatePresence mode="wait">
           {selected && (
             <motion.div
@@ -188,12 +189,29 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
               className="pixel-panel p-3 mb-4"
               style={{ borderColor: CLASS_DEFS[selected].color + '60' }}
             >
-              <div className="text-[8px] font-bold tracking-[0.15em] mb-1" style={{ color: CLASS_DEFS[selected].color }}>
-                ◆ 职业特权 ◆
+              <div className="text-[8px] font-bold tracking-[0.15em] mb-2" style={{ color: CLASS_DEFS[selected].color }}>
+                ◆ 职业技能 ◆
               </div>
-              <p className="text-[9px] text-[var(--dungeon-text)] leading-relaxed">
-                {CLASS_DEFS[selected].passiveDesc}
-              </p>
+              <div className="flex flex-col gap-1.5">
+                {CLASS_DEFS[selected].skills.map((skill, i) => (
+                  <div key={i} className="flex gap-1.5 items-start">
+                    <span
+                      className="shrink-0 text-[8px] font-black px-1 py-0.5 leading-tight"
+                      style={{
+                        color: CLASS_DEFS[selected].colorLight,
+                        background: CLASS_DEFS[selected].color + '20',
+                        border: `1px solid ${CLASS_DEFS[selected].color}40`,
+                        borderRadius: '2px',
+                      }}
+                    >
+                      {skill.name}
+                    </span>
+                    <span className="text-[9px] text-[var(--dungeon-text)] leading-relaxed">
+                      {formatDescription(skill.desc)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

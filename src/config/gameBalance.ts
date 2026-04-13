@@ -213,8 +213,10 @@ export const SOUL_CRYSTAL_CONFIG = {
   baseMult: 1.0,
   /** 每层增加的倍率 */
   multPerDepth: 0.2,
+  /** 溢出伤害转化为魂晶的系数（降低后通过商店涨价控制产销比） */
+  conversionRate: 0.15,
   /** 获取魂晶的条件描述 */
-  description: '首次出牌秒杀敌人时，溢出伤害×当前倍率=魂晶',
+  description: '击杀敌人时，溢出伤害×倍率×15%=魂晶',
 } as const;
 
 /** 计算当前层的魂晶倍率 */

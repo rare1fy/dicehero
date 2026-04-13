@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
-import { ElementBadge, getOnPlayDescription, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
+import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
+import { formatDescription } from '../utils/richText';
 
 import { MiniDice } from './DiceBagPanel';
-import { ELEMENT_COLORS, getDiceElementClass } from '../utils/uiHelpers';
+import { getDiceElementClass } from '../utils/uiHelpers';
 import { playSound } from '../utils/sound';
 import { DICE_REWARD_REFRESH } from '../config/gameBalance';
 import { PixelCoin } from './PixelIcons';
@@ -120,10 +121,6 @@ export const DiceRewardScreen: React.FC = () => {
   const renderDiceCard = (defId: string, level: number, isSelected: boolean, onClick: () => void, showLevel = true) => {
     const def = getDiceDef(defId);
     const faces = getUpgradedFaces(def, level);
-    const avgVal = (faces.reduce((a, b) => a + b, 0) / faces.length).toFixed(1);
-    const _elemColor = ELEMENT_COLORS[def.element] || '#888';
-    const _rarityColor = RARITY_COLORS[def.rarity] || '#666';
-    const onPlayDesc = getOnPlayDescription(def.onPlay);
 
     return (
       <motion.button
@@ -131,7 +128,7 @@ export const DiceRewardScreen: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`relative flex flex-col items-center p-2 border-2 transition-all min-w-[80px] max-w-[100px] flex-1 ${
+        className={`relative flex flex-col items-center p-2 border-2 transition-all min-w-[80px] max-w-[110px] flex-1 ${
           isSelected
             ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
             : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
@@ -172,28 +169,15 @@ export const DiceRewardScreen: React.FC = () => {
           </div>
         )}
 
-        {/* 面值 */}
-        <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-0.5">
-          [{faces.join(',')}] 均值{avgVal}
+        {/* 面值（不显示均值） */}
+        <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-1">
+          [{faces.join(',')}]
         </div>
 
-        {/* onPlay效果 */}
-        {onPlayDesc && (
-          <div className="text-[7px] text-[var(--pixel-cyan)] leading-tight text-center">
-            {onPlayDesc}
-          </div>
-        )}
-
-        {/* 选中标记 */}
-        {isSelected && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-gold)] flex items-center justify-center" style={{ borderRadius: '2px' }}
-          >
-            <span className="text-[8px] text-black font-black">●</span>
-          </motion.div>
-        )}
+        {/* 骰子描述（唯一说明，富文本高亮，字号放大） */}
+        <div className="text-[9px] text-[var(--dungeon-text)] leading-snug text-center">
+          {formatDescription(def.description)}
+        </div>
       </motion.button>
     );
   };

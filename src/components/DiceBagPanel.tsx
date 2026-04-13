@@ -154,109 +154,114 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
 
   const targetList = isLeft ? diceBag : discardPile;
   const title = isLeft ? '骰子库' : '弃骰库';
-  const color = isLeft ? 'var(--pixel-blue)' : 'var(--pixel-red)';
-  const lightColor = isLeft ? 'var(--pixel-blue-light)' : 'var(--pixel-red-light)';
-  const darkColor = isLeft ? 'var(--pixel-blue-dark)' : 'var(--pixel-red-dark)';
+  const accentColor = isLeft ? '#4080c0' : '#c05040';
+  const accentLight = isLeft ? '#60a8e0' : '#e07060';
+  const accentDark = isLeft ? '#203860' : '#602020';
 
   return (
     <>
       <div className="flex items-center">
         <button
           onClick={() => setExpanded(!expanded)}
-          className={`flex items-center gap-1 px-1.5 py-0.5 bg-[var(--dungeon-panel-bg)] border-2 transition-colors ${
-            isLeft
-              ? 'border-[var(--pixel-blue)] hover:border-[var(--pixel-blue-light)]'
-              : 'border-[var(--pixel-red)] hover:border-[var(--pixel-red-light)]'
-          }`}
-          style={{ borderRadius: '2px' }}
-          title={isLeft ? '查看骰子库详情' : '查看弃骰库详情'}
+          className="flex items-center gap-1.5 px-2 py-1 transition-all hover:brightness-125"
+          style={{
+            background: `linear-gradient(180deg, ${accentDark}cc 0%, ${accentDark}88 100%)`,
+            border: `2px solid ${accentColor}80`,
+            borderRadius: '3px',
+            boxShadow: `inset 0 1px 0 ${accentLight}30, 0 2px 0 rgba(0,0,0,0.4)`,
+          }}
+          title={title}
         >
           {isLeft ? (
-            <>
-              <PixelDice size={2} />
-              <span className="text-[9px] font-mono font-bold text-[var(--pixel-blue-light)]">{diceBag.length}</span>
-            </>
+            <PixelDice size={1.5} />
           ) : (
-            <>
-              <svg width="10" height="10" viewBox="0 0 10 10" style={{ imageRendering: 'pixelated' }}><rect x="1" y="1" width="8" height="8" rx="1" fill="var(--pixel-red-dark)" stroke="var(--pixel-red-light)" strokeWidth="1" /><circle cx="3.5" cy="3.5" r="1" fill="var(--pixel-red-light)" /><circle cx="6.5" cy="6.5" r="1" fill="var(--pixel-red-light)" /></svg>
-              <span className="text-[9px] font-mono font-bold text-[var(--pixel-red-light)]">{discardPile.length}</span>
-            </>
+            <svg width="8" height="8" viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
+              <rect x="1" y="1" width="6" height="6" rx="1" fill={accentDark} stroke={accentLight} strokeWidth="0.8" />
+              <circle cx="3" cy="3" r="0.8" fill={accentLight} /><circle cx="5" cy="5" r="0.8" fill={accentLight} />
+            </svg>
           )}
+          <span className="text-[10px] font-black font-mono pixel-text-shadow" style={{ color: accentLight }}>
+            {targetList.length}
+          </span>
         </button>
       </div>
 
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
             onClick={() => setExpanded(false)}
           >
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="w-[90vw] max-w-md max-h-[80vh] overflow-y-auto pixel-panel p-4 bg-[var(--dungeon-bg)]"
+              className="w-[90vw] max-w-md max-h-[80vh] overflow-hidden flex flex-col pixel-panel"
             >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black pixel-text-shadow tracking-wide" style={{ color: lightColor }}>
-                  {title} ({targetList.length})
-                </h3>
-                <button
-                  onClick={() => setExpanded(false)}
-                  className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] text-xs font-bold"
-                >
+              {/* 头部 */}
+              <div className="px-4 py-3 border-b-3 border-[var(--dungeon-panel-border)] flex items-center justify-between shrink-0"
+                style={{ background: `linear-gradient(180deg, ${accentDark}60 0%, var(--dungeon-bg-light) 100%)` }}>
+                <div className="flex items-center gap-2">
+                  {isLeft ? <PixelDice size={2} /> : (
+                    <svg width="14" height="14" viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
+                      <rect x="1" y="1" width="6" height="6" rx="1" fill={accentDark} stroke={accentLight} strokeWidth="0.8" />
+                      <circle cx="3" cy="3" r="0.8" fill={accentLight} /><circle cx="5" cy="5" r="0.8" fill={accentLight} />
+                    </svg>
+                  )}
+                  <div>
+                    <h3 className="text-sm font-black pixel-text-shadow tracking-wide" style={{ color: accentLight }}>
+                      {title}
+                    </h3>
+                    <span className="text-[8px] font-mono" style={{ color: accentColor }}>
+                      共 {targetList.length} 颗骰子
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => setExpanded(false)} className="text-[var(--dungeon-text-dim)] hover:text-white">
                   <PixelClose size={2} />
                 </button>
               </div>
 
-              {/* \u7EDF\u8BA1\u6805 */}
-              <div className="px-2 py-1.5 mb-3 border-2 text-center" style={{ backgroundColor: darkColor, borderColor: color, borderRadius: '2px' }}>
-                <div className="text-[8px] font-bold tracking-wider" style={{ color: lightColor }}>{title}</div>
-                <div className="text-lg font-black" style={{ color: lightColor }}>{targetList.length}</div>
+              {/* 骰子网格 */}
+              <div className="flex-1 overflow-y-auto p-3">
+                {targetList.length === 0 ? (
+                  <div className="text-center py-8 text-[var(--dungeon-text-dim)] text-xs">
+                    {isLeft ? '骰子库已空，弃骰库将洗回' : '弃骰库为空'}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 justify-start">
+                    {targetList.map((defId, idx) => {
+                      const def = getDiceDef(defId);
+                      return (
+                        <motion.div
+                          key={`${defId}-${idx}`}
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.015 }}
+                          className="flex flex-col items-center gap-0.5 p-1.5 border bg-[rgba(0,0,0,0.3)]"
+                          style={{
+                            borderColor: RARITY_COLORS[def.rarity] + '60',
+                            borderRadius: '3px',
+                            minWidth: '56px',
+                          }}
+                        >
+                          <MiniDice defId={defId} size={28} highlight />
+                          <span className="text-[8px] font-bold text-[var(--dungeon-text)] leading-none text-center max-w-[52px] truncate">
+                            {def.name}
+                          </span>
+                          <span className="text-[7px] font-bold" style={{ color: RARITY_TEXT_COLORS[def.rarity] }}>
+                            {RARITY_LABELS[def.rarity]}
+                          </span>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-
-              {/* \u9AB0\u5B50\u961F\u5217\u5217\u8868 - \u6BCF\u4E2A\u9AB0\u5B50\u72EC\u7ACB\u5C55\u793A */}
-              {targetList.length === 0 ? (
-                <div className="text-center py-8 text-[var(--dungeon-text-dim)] text-xs">
-                  {isLeft ? '骰子库已空，弃骰库将洗回' : '弃骰库为空'}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5 justify-start">
-                  {targetList.map((defId, idx) => {
-                    const def = getDiceDef(defId);
-                    const _colors = getDefColor(defId);
-                    return (
-                      <motion.div
-                        key={`${defId}-${idx}`}
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: idx * 0.02 }}
-                        className="flex flex-col items-center gap-0.5 p-1.5 border-2 bg-[var(--dungeon-panel-bg)]"
-                        style={{
-                          borderColor: RARITY_COLORS[def.rarity] + '88',
-                          borderRadius: '3px',
-                          minWidth: '52px',
-                        }}
-                      >
-                        {/* Mini dice - same style as queue */}
-                        <MiniDice defId={defId} size={28} highlight />
-                        {/* \u540D\u79F0 */}
-                        <span className="text-[7px] font-bold text-[var(--dungeon-text)] leading-none text-center max-w-[48px] truncate">
-                          {def.name}
-                        </span>
-                        {/* \u7A00\u6709\u5EA6 */}
-                        <span className="text-[6px] font-bold" style={{ color: RARITY_TEXT_COLORS[def.rarity] }}>
-                          {RARITY_LABELS[def.rarity]}
-                        </span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
             </motion.div>
           </motion.div>
         )}
