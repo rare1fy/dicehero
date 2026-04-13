@@ -458,6 +458,30 @@
 .dice-glow-warrior {
   box-shadow: 0 0 10px rgba(200,60,40,0.5), 0 0 20px rgba(200,60,40,0.25) !important;
 }
+/* 战士 — 自残/血系骰子 */
+.pixel-dice-warrior-blood {
+  background: linear-gradient(180deg, #a04040 0%, #802020 50%, #601010 100%) !important;
+  border-color: #c04040 !important;
+  color: #ffc0a0 !important;
+  box-shadow: inset -2px -2px 0 rgba(40,5,5,0.5), inset 2px 2px 0 rgba(255,160,120,0.2), 0 3px 0 #400808, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(60,5,5,0.9), 0 0 8px rgba(255,60,40,0.5);
+}
+/* 战士 — 护甲系骰子 */
+.pixel-dice-warrior-armor {
+  background: linear-gradient(180deg, #8090a0 0%, #607080 50%, #405060 100%) !important;
+  border-color: #90a0b0 !important;
+  color: #c0d8f0 !important;
+  box-shadow: inset -2px -2px 0 rgba(20,30,40,0.5), inset 2px 2px 0 rgba(200,220,240,0.2), 0 3px 0 #283040, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(10,20,30,0.9), 0 0 6px rgba(100,160,220,0.4);
+}
+/* 战士 — 斩杀系骰子 */
+.pixel-dice-warrior-execute {
+  background: linear-gradient(180deg, #b08060 0%, #804830 50%, #602010 100%) !important;
+  border-color: #c08050 !important;
+  color: #ffe0c0 !important;
+  box-shadow: inset -2px -2px 0 rgba(40,10,0,0.5), inset 2px 2px 0 rgba(255,200,160,0.15), 0 3px 0 #401808, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(40,10,0,0.9), 0 0 6px rgba(220,120,40,0.4);
+}
 
 /* === 法师骰子 — 深紫底+星辉点 === */
 .pixel-dice-mage {
@@ -474,6 +498,22 @@
 .dice-glow-mage {
   box-shadow: 0 0 10px rgba(140,80,220,0.5), 0 0 20px rgba(140,80,220,0.25) !important;
 }
+/* 法师 — 元素系骰子 */
+.pixel-dice-mage-element {
+  background: linear-gradient(135deg, #503080 0%, #305080 33%, #308050 66%, #805030 100%) !important;
+  border-color: #8060c0 !important;
+  color: #e0d0ff !important;
+  box-shadow: inset -2px -2px 0 rgba(10,5,30,0.5), inset 2px 2px 0 rgba(200,180,255,0.15), 0 3px 0 #180840, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(20,10,40,0.9), 0 0 10px rgba(180,140,255,0.6);
+}
+/* 法师 — 操控系骰子 */
+.pixel-dice-mage-control {
+  background: linear-gradient(180deg, #283860 0%, #182848 50%, #101830 100%) !important;
+  border-color: #4060a0 !important;
+  color: #a0c0ff !important;
+  box-shadow: inset -2px -2px 0 rgba(5,10,25,0.5), inset 2px 2px 0 rgba(120,160,255,0.12), 0 3px 0 #081028, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(5,10,30,0.9), 0 0 8px rgba(80,120,255,0.5);
+}
 
 /* === 盗贼骰子 — 暗绿底+毒光点 === */
 .pixel-dice-rogue {
@@ -489,6 +529,22 @@
 }
 .dice-glow-rogue {
   box-shadow: 0 0 10px rgba(60,200,80,0.5), 0 0 20px rgba(60,200,80,0.25) !important;
+}
+/* 盗贼 — 毒系骰子 */
+.pixel-dice-rogue-poison {
+  background: linear-gradient(180deg, #382850 0%, #281840 50%, #180828 100%) !important;
+  border-color: #6040a0 !important;
+  color: #c080ff !important;
+  box-shadow: inset -2px -2px 0 rgba(10,5,20,0.5), inset 2px 2px 0 rgba(160,100,255,0.12), 0 3px 0 #100820, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(10,5,20,0.9), 0 0 8px rgba(140,60,220,0.5);
+}
+/* 盗贼 — 连击系骰子 */
+.pixel-dice-rogue-combo {
+  background: linear-gradient(180deg, #384830 0%, #283820 50%, #182810 100%) !important;
+  border-color: #60a040 !important;
+  color: #c0ff80 !important;
+  box-shadow: inset -2px -2px 0 rgba(10,15,5,0.5), inset 2px 2px 0 rgba(160,255,100,0.12), 0 3px 0 #102008, 0 4px 8px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 rgba(10,15,5,0.9), 0 0 8px rgba(100,220,40,0.5);
 }
 
 .pixel-dice-white {

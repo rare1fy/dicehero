@@ -2182,7 +2182,7 @@ export default function DiceHeroGame() {
     // 法师【星界蓄力】：未出牌时叠加蓄力层+护盾
     const playedThisTurn = game.playsLeft < game.maxPlays; // 本回合是否出过牌
     if (game.playerClass === 'mage' && !playedThisTurn) {
-      const newChargeStacks = Math.min((game.chargeStacks || 0) + 1, 2); // 最多蓄力2回合
+      const newChargeStacks = Math.min((game.chargeStacks || 0) + 1, 3); // 最多蓄力3回合（3→4→5→6）
       setGame(prev => ({
         ...prev, chargeStacks: newChargeStacks, armor: prev.armor + 6,
       }));
@@ -4579,6 +4579,18 @@ useEffect(() => {
                         <span className={`${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
                           {die.rolling ? "?" : die.value}
                         </span>
+                        {/* 职业骰子名称缩写标记 */}
+                        {!die.rolling && die.diceDefId !== 'standard' && (die.diceDefId.startsWith('w_') || die.diceDefId.startsWith('mage_') || die.diceDefId.startsWith('r_')) && (
+                          <div className="absolute bottom-0 left-0.5 pointer-events-none text-[6px] font-bold leading-none opacity-70"
+                            style={{ color: die.diceDefId.startsWith('w_') ? '#ffc0a0' : die.diceDefId.startsWith('mage_') ? '#c0a0ff' : '#a0ffc0' }}>
+                            {(() => {
+                              const def = getDiceDef(die.diceDefId);
+                              const n = def.name || '';
+                              // 取前两个汉字或首字
+                              return n.length >= 2 ? n.slice(0, 2) : n;
+                            })()}
+                          </div>
+                        )}
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (
                           <div className="absolute top-0.5 right-0.5 pointer-events-none">
                             <ElementBadge element={die.element} size={8} />
