@@ -139,7 +139,7 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_ironwall', name: '铁壁骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '出牌时获得6护甲', onPlay: { armor: 6 } },
   { id: 'w_fury', name: '怒火骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
-    description: '每次受到敌人攻击，本骰子额外基础伤害永久+1（本局游戏叠加，2级+2，3级+3）', onPlay: { scaleWithHits: true } },
+    description: '每次受到敌人攻击，本骰子额外基础伤害永久+1', onPlay: { scaleWithHits: true } },
   { id: 'w_charge', name: '冲锋骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '每场战斗首次出牌时伤害+12', onPlay: { bonusDamage: 12, firstPlayOnly: true } },
 

@@ -32,7 +32,7 @@ const RARITY_COLORS: Record<string, string> = {
 
 const RARITY_LABELS: Record<string, string> = {
   common: '普通',
-  uncommon: '进阶',
+  uncommon: '精良',
   rare: '稀有',
   legendary: '传说',
   curse: '诅咒',
@@ -45,9 +45,9 @@ type CategoryId = 'all' | 'universal' | 'warrior' | 'mage' | 'rogue';
 const CATEGORIES: { id: CategoryId; label: string; color: string }[] = [
   { id: 'all', label: '全部', color: 'var(--dungeon-text-bright)' },
   { id: 'universal', label: '通用', color: '#a0a8b8' },
-  { id: 'warrior', label: '战士', color: '#c04040' },
-  { id: 'mage', label: '法师', color: '#a070ff' },
-  { id: 'rogue', label: '盗贼', color: '#60d080' },
+  { id: 'warrior', label: '嗜血狂战', color: '#c04040' },
+  { id: 'mage', label: '星界魔导', color: '#a070ff' },
+  { id: 'rogue', label: '影锋刺客', color: '#60d080' },
 ];
 
 // 已移交给职业的旧通用骰子ID，图鉴中不再展示
@@ -180,7 +180,7 @@ export const DiceGuideModal: React.FC = () => {
                                     <div className="text-[10px] text-[var(--pixel-gold)] mt-0.5">
                                       ⚔ 出牌效果：
                                       {def.onPlay.bonusDamage ? ` 伤害+${def.onPlay.bonusDamage}` : ''}
-                                      {def.onPlay.bonusMult ? ` 倍率×${def.onPlay.bonusMult}` : ''}
+                                      {def.onPlay.bonusMult ? ` 倍率+${Math.round((def.onPlay.bonusMult - 1) * 100)}%` : ''}
                                       {def.onPlay.heal ? ` 回复${def.onPlay.heal}HP` : ''}
                                       {def.onPlay.selfDamage ? ` 自伤${def.onPlay.selfDamage}` : ''}
                                     </div>

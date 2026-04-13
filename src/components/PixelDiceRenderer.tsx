@@ -31,9 +31,9 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   // === 閫氱敤 鈥?涓€х伆/鐗规畩鑹?===
 
-  standard:  { border: '#505860', outer: '#687078', inner: '#808890', highlight: '#b8c0c8', shadow: '#383840', digit: '#1a1e25', digitShadow: '#909098' },
+  standard:  { border: '#687078', outer: '#889098', inner: '#a0a8b0', highlight: '#d0d8e0', shadow: '#484850', digit: '#1a1e25', digitShadow: '#b0b8c0' },
 
-  blade:     { border: '#484850', outer: '#606068', inner: '#787880', highlight: '#a8a8b0', shadow: '#303038', digit: '#e0e0e8', digitShadow: '#404048' },
+  blade:     { border: '#606068', outer: '#787880', inner: '#909098', highlight: '#c0c0c8', shadow: '#404048', digit: '#f0f0f8', digitShadow: '#505058' },
 
   amplify:   { border: '#382058', outer: '#503080', inner: '#6840a0', highlight: '#a070e0', shadow: '#201038', digit: '#d8b8ff', digitShadow: '#302050' },
 
@@ -51,7 +51,7 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   elemental: { border: '#282848', outer: '#383868', inner: '#484888', highlight: '#7070c0', shadow: '#181830', digit: '#c0c0ff', digitShadow: '#282848' },
 
-  heavy:     { border: '#383840', outer: '#505058', inner: '#606068', highlight: '#888890', shadow: '#282830', digit: '#d0d0d8', digitShadow: '#383840' },
+  heavy:     { border: '#505058', outer: '#686870', inner: '#808088', highlight: '#a8a8b0', shadow: '#383840', digit: '#e0e0e8', digitShadow: '#484850' },
 
   // === 鎴樺＋ (22) 鈥?绾?0)/姗?25)/榛?45)/閾?35) ===
 
@@ -121,7 +121,7 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   mage_prism:    { border: '#301050', outer: '#482078', inner: '#6838a0', highlight: '#9058d0', shadow: '#200830', digit: '#d8b0ff', digitShadow: '#280840' },
 
-  mage_resonance:{ border: '#201840', outer: '#383060', inner: '#484880', highlight: '#6868b0', shadow: '#101028', digit: '#c0c0f0', digitShadow: '#181830' },
+  mage_resonance:{ border: '#282850', outer: '#404070', inner: '#585898', highlight: '#8080d0', shadow: '#181838', digit: '#d0d0ff', digitShadow: '#202040' },
 
   mage_devour:   { border: '#180830', outer: '#281050', inner: '#381870', highlight: '#5030a8', shadow: '#100418', digit: '#a870f0', digitShadow: '#180828' },
 
@@ -131,9 +131,9 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   mage_elemstorm:{ border: '#182048', outer: '#283870', inner: '#385098', highlight: '#5070c8', shadow: '#101030', digit: '#b0c8ff', digitShadow: '#182040' },
 
-  mage_voideye:  { border: '#100428', outer: '#200840', inner: '#301060', highlight: '#482898', shadow: '#080210', digit: '#9868e0', digitShadow: '#100420' },
+  mage_voideye:  { border: '#180838', outer: '#301058', inner: '#481880', highlight: '#6838c0', shadow: '#100420', digit: '#b880ff', digitShadow: '#180830' },
 
-  mage_weave:    { border: '#202040', outer: '#383858', inner: '#505070', highlight: '#7070a0', shadow: '#101028', digit: '#c8c8e8', digitShadow: '#181830' },
+  mage_weave:    { border: '#282850', outer: '#404070', inner: '#585890', highlight: '#8080c0', shadow: '#181838', digit: '#d0d0f8', digitShadow: '#202040' },
 
   mage_permafrost:{ border: '#084048', outer: '#106068', inner: '#188088', highlight: '#30b8d0', shadow: '#043030', digit: '#80e8ff', digitShadow: '#083838' },
 
@@ -143,7 +143,7 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   mage_meteor:   { border: '#281040', outer: '#402060', inner: '#603080', highlight: '#8848b8', shadow: '#180828', digit: '#d8a8f0', digitShadow: '#201030' },
 
-  mage_elemheart:{ border: '#182040', outer: '#283858', inner: '#385070', highlight: '#5878a0', shadow: '#101028', digit: '#d0e0ff', digitShadow: '#181830' },
+  mage_elemheart:{ border: '#202850', outer: '#304870', inner: '#406890', highlight: '#6898d0', shadow: '#101838', digit: '#d0e8ff', digitShadow: '#182040' },
 
   // === 鐩楄醇 (24) 鈥?缁?120)/鑽у厜榛勭豢(90)/婀栬摑(170)/缈?150) ===
 
@@ -163,11 +163,11 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   r_combomastery: { border: '#304010', outer: '#486018', inner: '#688828', highlight: '#90c038', shadow: '#202808', digit: '#d0ff70', digitShadow: '#283810' },
 
-  r_lethal:       { border: '#283818', outer: '#405828', inner: '#587838', highlight: '#80a858', shadow: '#182810', digit: '#c0e8a0', digitShadow: '#283018' },
+  r_lethal:       { border: '#284018', outer: '#406028', inner: '#589038', highlight: '#80c858', shadow: '#183010', digit: '#c8ffa0', digitShadow: '#283818' },
 
   r_toxblade:     { border: '#104810', outer: '#186818', inner: '#209828', highlight: '#38d038', shadow: '#083008', digit: '#80ff80', digitShadow: '#104010' },
 
-  r_shadow_clone: { border: '#203020', outer: '#304830', inner: '#406840', highlight: '#609060', shadow: '#102010', digit: '#a0d8a0', digitShadow: '#202820' },
+  r_shadow_clone: { border: '#204020', outer: '#306830', inner: '#409848', highlight: '#60d068', shadow: '#102810', digit: '#b0ffc0', digitShadow: '#203020' },
 
   r_miasma:       { border: '#304010', outer: '#486020', inner: '#688830', highlight: '#98c048', shadow: '#202808', digit: '#d8ff80', digitShadow: '#283810' },
 
@@ -175,7 +175,7 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   r_corrosion:    { border: '#284810', outer: '#406818', inner: '#589828', highlight: '#80d038', shadow: '#183008', digit: '#c0ff68', digitShadow: '#284010' },
 
-  r_shadow:       { border: '#182818', outer: '#284028', inner: '#385838', highlight: '#508050', shadow: '#101810', digit: '#98c898', digitShadow: '#182018' },
+  r_shadow:       { border: '#183818', outer: '#285838', inner: '#388850', highlight: '#58c070', shadow: '#102810', digit: '#a0f8b0', digitShadow: '#183018' },
 
   r_steal:        { border: '#384810', outer: '#506818', inner: '#709828', highlight: '#98d038', shadow: '#283008', digit: '#d8ff70', digitShadow: '#384010' },
 
@@ -191,7 +191,7 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 
   r_purifyblade:  { border: '#184818', outer: '#286828', inner: '#389838', highlight: '#58d058', shadow: '#103010', digit: '#a0ffb0', digitShadow: '#184018' },
 
-  r_deathtouch:   { border: '#182818', outer: '#284028', inner: '#386038', highlight: '#508858', shadow: '#101810', digit: '#90c8a0', digitShadow: '#182018' },
+  r_deathtouch:   { border: '#183818', outer: '#285838', inner: '#388850', highlight: '#58b868', shadow: '#102810', digit: '#a0f0b8', digitShadow: '#183018' },
 
   r_bladestorm:   { border: '#085018', outer: '#107028', inner: '#18a038', highlight: '#30e050', shadow: '#043808', digit: '#80ffa0', digitShadow: '#084818' },
 
@@ -233,7 +233,7 @@ const PixelDiceBody: React.FC<{
       <rect x="4" y="20" width="20" height="2" fill={colors.shadow} opacity="0.35" />
       <rect x="20" y="18" width="2" height="2" fill={colors.shadow} opacity="0.3" />
       {/* 图案 */}
-      {pattern && <g opacity="0.70">{pattern}</g>}
+      {pattern && <g opacity="0.85">{pattern}</g>}
       {/* 数字 */}
       <g>{digitData.map((row, ry) => row.map((px, rx) => {
         if (!px) return null;
@@ -272,24 +272,24 @@ const P: Record<string, React.ReactNode> = {
   heavy: (<><rect x="8" y="8" width="8" height="2" fill="#6a6a78"/><rect x="6" y="10" width="12" height="4" fill="#5a5a68"/><rect x="8" y="14" width="8" height="2" fill="#4a4a58"/><rect x="10" y="10" width="4" height="2" fill="#808090"/></>),
   // --- 战士 (22) ---
   w_bloodthirst: (<><rect x="12" y="4" width="2" height="2" fill="#e06050"/><rect x="10" y="6" width="6" height="2" fill="#c04838"/><rect x="8" y="8" width="10" height="4" fill="#a03828"/><rect x="8" y="12" width="10" height="2" fill="#c04838"/><rect x="10" y="14" width="6" height="2" fill="#a03828"/><rect x="12" y="16" width="2" height="2" fill="#802020"/><rect x="12" y="10" width="2" height="2" fill="#ff8080"/></>),
-  w_thorns: (<><rect x="12" y="4" width="2" height="2" fill="#90b0c0"/><rect x="10" y="6" width="2" height="2" fill="#80a0b0"/><rect x="14" y="6" width="2" height="2" fill="#80a0b0"/><rect x="8" y="8" width="2" height="2" fill="#708898"/><rect x="16" y="8" width="2" height="2" fill="#708898"/><rect x="6" y="16" width="12" height="2" fill="#708898"/><rect x="6" y="10" width="2" height="2" fill="#90b0c0"/><rect x="18" y="10" width="2" height="2" fill="#90b0c0"/></>),
-  w_warcry: (<><rect x="12" y="10" width="2" height="2" fill="#d0b060"/><rect x="10" y="8" width="6" height="2" fill="#c0a050" opacity=".6"/><rect x="8" y="6" width="10" height="2" fill="#b09040" opacity=".4"/><rect x="6" y="14" width="14" height="2" fill="#b09040" opacity=".4"/></>),
-  w_ironwall: (<><rect x="8" y="4" width="10" height="2" fill="#80a0b8"/><rect x="6" y="6" width="14" height="10" fill="#5a7888"/><rect x="8" y="8" width="10" height="6" fill="#70909a"/><rect x="12" y="8" width="2" height="6" fill="#90b0c0"/><rect x="8" y="16" width="10" height="2" fill="#4a6878"/></>),
+  w_thorns: (<><rect x="12" y="4" width="2" height="2" fill="#60d0f0"/><rect x="10" y="6" width="2" height="2" fill="#50b8d8"/><rect x="14" y="6" width="2" height="2" fill="#50b8d8"/><rect x="8" y="8" width="2" height="2" fill="#40a0c0"/><rect x="16" y="8" width="2" height="2" fill="#40a0c0"/><rect x="6" y="16" width="12" height="2" fill="#40a0c0"/><rect x="6" y="10" width="2" height="2" fill="#60d0f0"/><rect x="18" y="10" width="2" height="2" fill="#60d0f0"/></>),
+  w_warcry: (<><rect x="12" y="10" width="2" height="2" fill="#ffe060"/><rect x="10" y="8" width="6" height="2" fill="#e0c050" opacity=".7"/><rect x="8" y="6" width="10" height="2" fill="#d0b040" opacity=".5"/><rect x="6" y="14" width="14" height="2" fill="#d0b040" opacity=".5"/></>),
+  w_ironwall: (<><rect x="8" y="4" width="10" height="2" fill="#80c0e0"/><rect x="6" y="6" width="14" height="10" fill="#5090b8"/><rect x="8" y="8" width="10" height="6" fill="#60a8d0"/><rect x="12" y="8" width="2" height="6" fill="#a0d8f0"/><rect x="8" y="16" width="10" height="2" fill="#4080a0"/></>),
   w_fury: (<><rect x="12" y="4" width="2" height="2" fill="#e09040"/><rect x="10" y="6" width="6" height="2" fill="#d08030"/><rect x="8" y="8" width="10" height="4" fill="#c07028"/><rect x="8" y="12" width="10" height="2" fill="#a06020"/><rect x="10" y="14" width="6" height="2" fill="#884810"/><rect x="12" y="10" width="2" height="2" fill="#ffc060"/></>),
-  w_charge: (<><rect x="6" y="10" width="10" height="4" fill="#d0b858"/><rect x="16" y="8" width="2" height="2" fill="#c8a848"/><rect x="16" y="14" width="2" height="2" fill="#c8a848"/><rect x="18" y="10" width="2" height="4" fill="#e0c860"/><rect x="20" y="11" width="2" height="2" fill="#f0d870"/></>),
-  w_armorbreak: (<><rect x="8" y="6" width="10" height="2" fill="#d08848"/><rect x="6" y="8" width="14" height="8" fill="#a06030"/><rect x="8" y="8" width="2" height="8" fill="#c87838" opacity=".6"/><rect x="8" y="8" width="10" height="2" fill="#c87838" opacity=".4"/><rect x="10" y="10" width="6" height="4" fill="transparent"/></>),
-  w_revenge: (<><rect x="6" y="10" width="10" height="4" fill="#c86050"/><rect x="16" y="8" width="2" height="2" fill="#e06040"/><rect x="16" y="14" width="2" height="2" fill="#e06040"/><rect x="18" y="10" width="2" height="4" fill="#e07050"/></>),
-  w_roar: (<><rect x="4" y="8" width="18" height="2" fill="#c0a858"/><rect x="4" y="14" width="18" height="2" fill="#b09848" opacity=".7"/><rect x="6" y="10" width="14" height="2" fill="#a08838" opacity=".4"/></>),
+  w_charge: (<><rect x="6" y="10" width="10" height="4" fill="#f0d860"/><rect x="16" y="8" width="2" height="2" fill="#e8c848"/><rect x="16" y="14" width="2" height="2" fill="#e8c848"/><rect x="18" y="10" width="2" height="4" fill="#ffe870"/><rect x="20" y="11" width="2" height="2" fill="#fff8a0"/></>),
+  w_armorbreak: (<><rect x="8" y="6" width="10" height="2" fill="#f0a050"/><rect x="6" y="8" width="14" height="8" fill="#d08030"/><rect x="8" y="8" width="2" height="8" fill="#e89040" opacity=".7"/><rect x="8" y="8" width="10" height="2" fill="#e89040" opacity=".5"/><rect x="10" y="10" width="6" height="4" fill="transparent"/></>),
+  w_revenge: (<><rect x="6" y="10" width="10" height="4" fill="#f06050"/><rect x="16" y="8" width="2" height="2" fill="#ff7060"/><rect x="16" y="14" width="2" height="2" fill="#ff7060"/><rect x="18" y="10" width="2" height="4" fill="#ff8070"/></>),
+  w_roar: (<><rect x="4" y="8" width="18" height="2" fill="#ffe060"/><rect x="4" y="14" width="18" height="2" fill="#e0c850" opacity=".8"/><rect x="6" y="10" width="14" height="2" fill="#d0b840" opacity=".5"/></>),
   w_lifefurnace: (<><rect x="10" y="6" width="2" height="2" fill="#c85860"/><rect x="14" y="6" width="2" height="2" fill="#c85860"/><rect x="8" y="8" width="4" height="4" fill="#b04850"/><rect x="14" y="8" width="4" height="4" fill="#b04850"/><rect x="12" y="10" width="2" height="2" fill="#e06068"/><rect x="10" y="12" width="6" height="4" fill="#984048"/><rect x="12" y="16" width="2" height="2" fill="#803038"/></>),
   w_bloodpact: (<><rect x="12" y="4" width="2" height="2" fill="#c03030"/><rect x="10" y="6" width="2" height="2" fill="#b02828"/><rect x="14" y="6" width="2" height="2" fill="#b02828"/><rect x="8" y="8" width="2" height="2" fill="#e03030"/><rect x="16" y="8" width="2" height="2" fill="#e03030"/><rect x="10" y="10" width="6" height="2" fill="#c02828"/><rect x="12" y="12" width="2" height="2" fill="#ff4040"/><rect x="10" y="14" width="2" height="2" fill="#b02020"/><rect x="14" y="14" width="2" height="2" fill="#b02020"/></>),
-  w_execute: (<><rect x="12" y="4" width="2" height="14" fill="#b89850"/><rect x="6" y="6" width="6" height="6" fill="#c8a858"/><rect x="14" y="6" width="6" height="6" fill="#c8a858"/><rect x="8" y="8" width="2" height="2" fill="#d8b868"/><rect x="16" y="8" width="2" height="2" fill="#d8b868"/></>),
-  w_quake: (<><rect x="4" y="14" width="2" height="2" fill="#a88848"/><rect x="6" y="10" width="2" height="4" fill="#b89850"/><rect x="8" y="14" width="2" height="2" fill="#a88848"/><rect x="10" y="8" width="2" height="6" fill="#c0a858"/><rect x="12" y="14" width="2" height="2" fill="#a88848"/><rect x="14" y="6" width="2" height="8" fill="#d0b868"/><rect x="16" y="14" width="2" height="2" fill="#a88848"/><rect x="18" y="10" width="2" height="4" fill="#b89850"/></>),
+  w_execute: (<><rect x="12" y="4" width="2" height="14" fill="#d0b0ff"/><rect x="6" y="6" width="6" height="6" fill="#b090e0"/><rect x="14" y="6" width="6" height="6" fill="#b090e0"/><rect x="8" y="8" width="2" height="2" fill="#d0b8f0"/><rect x="16" y="8" width="2" height="2" fill="#d0b8f0"/></>),
+  w_quake: (<><rect x="4" y="14" width="2" height="2" fill="#80d060"/><rect x="6" y="10" width="2" height="4" fill="#70c050"/><rect x="8" y="14" width="2" height="2" fill="#80d060"/><rect x="10" y="8" width="2" height="6" fill="#90e060"/><rect x="12" y="14" width="2" height="2" fill="#80d060"/><rect x="14" y="6" width="2" height="8" fill="#a0f070"/><rect x="16" y="14" width="2" height="2" fill="#80d060"/><rect x="18" y="10" width="2" height="4" fill="#70c050"/></>),
   w_leech: (<><rect x="10" y="8" width="6" height="2" fill="#b84848"/><rect x="8" y="10" width="10" height="4" fill="#903030"/><rect x="10" y="14" width="6" height="2" fill="#b84848"/><rect x="12" y="10" width="2" height="4" fill="#ff6060"/></>),
   w_titanfist: (<><rect x="8" y="10" width="10" height="8" fill="#a02020"/><rect x="10" y="6" width="2" height="6" fill="#b03030"/><rect x="12" y="4" width="2" height="8" fill="#c03838"/><rect x="14" y="6" width="2" height="6" fill="#b03030"/><rect x="16" y="8" width="2" height="4" fill="#982020"/></>),
-  w_unyielding: (<><rect x="10" y="4" width="6" height="2" fill="#80a0b8"/><rect x="8" y="6" width="10" height="8" fill="#6088a0"/><rect x="10" y="8" width="6" height="4" fill="#7898b0"/><rect x="12" y="14" width="2" height="4" fill="#80a0b8"/></>),
+  w_unyielding: (<><rect x="10" y="4" width="6" height="2" fill="#a0d0e8"/><rect x="8" y="6" width="10" height="8" fill="#70a8c8"/><rect x="10" y="8" width="6" height="4" fill="#90c0d8"/><rect x="12" y="14" width="2" height="4" fill="#a0d0e8"/></>),
   w_warhammer: (<><rect x="12" y="10" width="2" height="10" fill="#c8a048"/><rect x="6" y="4" width="14" height="6" fill="#b89040"/><rect x="8" y="6" width="10" height="2" fill="#d8b060"/></>),
   w_bloodblade: (<><rect x="12" y="4" width="2" height="10" fill="#a87050"/><rect x="11" y="4" width="4" height="2" fill="#c08060"/><rect x="8" y="14" width="10" height="2" fill="#906040"/><rect x="10" y="16" width="6" height="2" fill="#785030"/></>),
-  w_giantshield: (<><rect x="6" y="4" width="14" height="2" fill="#70a0b8"/><rect x="4" y="6" width="18" height="10" fill="#5888a0"/><rect x="6" y="8" width="14" height="6" fill="#6898b0"/><rect x="12" y="8" width="2" height="6" fill="#90c0d8"/><rect x="8" y="10" width="10" height="2" fill="#90c0d8" opacity=".5"/><rect x="8" y="16" width="10" height="2" fill="#4878a0"/></>),
+  w_giantshield: (<><rect x="6" y="4" width="14" height="2" fill="#80d0e8"/><rect x="4" y="6" width="18" height="10" fill="#5098c0"/><rect x="6" y="8" width="14" height="6" fill="#60b0d8"/><rect x="12" y="8" width="2" height="6" fill="#a0e0f8"/><rect x="8" y="10" width="10" height="2" fill="#a0e0f8" opacity=".5"/><rect x="8" y="16" width="10" height="2" fill="#4088b0"/></>),
   w_berserk: (<><rect x="10" y="6" width="2" height="2" fill="#e04030"/><rect x="14" y="6" width="2" height="2" fill="#e04030"/><rect x="8" y="8" width="4" height="4" fill="#c03020"/><rect x="14" y="8" width="4" height="4" fill="#c03020"/><rect x="12" y="10" width="2" height="2" fill="#ff5040"/><rect x="10" y="12" width="6" height="4" fill="#a02818"/><rect x="12" y="6" width="2" height="12" fill="#ff3020" opacity=".4"/></>),
   w_bloodgod: (<><rect x="6" y="10" width="14" height="4" fill="#882020"/><rect x="8" y="8" width="10" height="2" fill="#701818"/><rect x="8" y="14" width="10" height="2" fill="#701818"/><rect x="12" y="6" width="2" height="12" fill="#c02828"/><rect x="12" y="10" width="2" height="4" fill="#ff4040"/></>),
   w_overlord: (<><rect x="6" y="4" width="14" height="4" fill="#607078"/><rect x="4" y="8" width="18" height="8" fill="#506068"/><rect x="6" y="10" width="14" height="2" fill="#708088"/><rect x="10" y="12" width="6" height="2" fill="#8898a8"/><rect x="6" y="16" width="14" height="2" fill="#405058"/></>),

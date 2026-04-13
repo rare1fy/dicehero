@@ -7,9 +7,9 @@ import { formatDescription } from '../utils/richText';
 import type { Relic, RelicRarity } from '../types/game';
 
 const RARITY_CONFIG: Record<RelicRarity, { label: string; color: string; border: string }> = {
-  common: { label: '普通', color: 'text-green-400', border: 'border-green-500' },
-  uncommon: { label: '精良', color: 'text-blue-400', border: 'border-blue-500' },
-  rare: { label: '稀有', color: 'text-purple-400', border: 'border-purple-500' },
+  common: { label: '普通', color: 'text-gray-300', border: 'border-gray-500' },
+  uncommon: { label: '精良', color: 'text-green-400', border: 'border-green-500' },
+  rare: { label: '稀有', color: 'text-blue-400', border: 'border-blue-500' },
   legendary: { label: '传说', color: 'text-orange-400', border: 'border-orange-500' },
 };
 
@@ -74,7 +74,7 @@ export const RelicGuideModal: React.FC<RelicGuideModalProps> = ({ isOpen, onClos
             {/* 稀有度筛选 */}
             <div className="flex gap-1 p-2 border-b-2 border-[var(--dungeon-panel-border)] bg-[var(--dungeon-bg)] shrink-0">
               <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} label="全部" color="text-[var(--dungeon-text)]" />
-              <FilterBtn active={filter === 'common'} onClick={() => setFilter('common')} label="普通" color="text-gray-200" />
+              <FilterBtn active={filter === 'common'} onClick={() => setFilter('common')} label="普通" color="text-gray-300" />
               <FilterBtn active={filter === 'uncommon'} onClick={() => setFilter('uncommon')} label="精良" color="text-green-400" />
               <FilterBtn active={filter === 'rare'} onClick={() => setFilter('rare')} label="稀有" color="text-blue-400" />
               <FilterBtn active={filter === 'legendary'} onClick={() => setFilter('legendary')} label="传说" color="text-orange-400" />

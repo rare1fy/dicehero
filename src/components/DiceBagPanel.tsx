@@ -1,10 +1,11 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getDiceDef } from '../data/dice';
+import { getDiceDef, getUpgradedFaces } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { DiceFacePattern } from './DiceFacePattern';
 import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { PixelDice, PixelClose } from './PixelIcons';
+import { formatDescription } from '../utils/richText';
 
 /** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
 const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
@@ -163,6 +164,7 @@ export const DiceQueueThumbnail: React.FC<{
  */
 export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDice, diceBag, discardPile, position = 'left' }) => {
   const [expanded, setExpanded] = useState(false);
+  const [tooltipDef, setTooltipDef] = useState<string | null>(null);
   const isLeft = position === 'left';
 
   const targetList = isLeft ? diceBag : discardPile;
@@ -249,18 +251,20 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                   <div className="flex flex-wrap gap-1.5 justify-start">
                     {targetList.map((defId, idx) => {
                       const def = getDiceDef(defId);
+                      const isTooltipActive = tooltipDef === `${defId}-${idx}`;
                       return (
                         <motion.div
                           key={`${defId}-${idx}`}
                           initial={{ opacity: 0, scale: 0.5 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.015 }}
-                          className="flex flex-col items-center gap-0.5 p-1.5 border bg-[rgba(0,0,0,0.3)]"
+                          className={`flex flex-col items-center gap-0.5 p-1.5 border bg-[rgba(0,0,0,0.3)] cursor-pointer transition-all ${isTooltipActive ? 'ring-1 ring-[var(--pixel-gold)]' : 'hover:brightness-125'}`}
                           style={{
                             borderColor: RARITY_COLORS[def.rarity] + '60',
                             borderRadius: '3px',
                             minWidth: '56px',
                           }}
+                          onClick={(e) => { e.stopPropagation(); setTooltipDef(isTooltipActive ? null : `${defId}-${idx}`); }}
                         >
                           <MiniDice defId={defId} size={28} highlight />
                           <span className="text-[8px] font-bold text-[var(--dungeon-text)] leading-none text-center max-w-[52px] truncate">
@@ -269,6 +273,13 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                           <span className="text-[7px] font-bold" style={{ color: RARITY_TEXT_COLORS[def.rarity] }}>
                             {RARITY_LABELS[def.rarity]}
                           </span>
+                          {isTooltipActive && (
+                            <div className="w-full mt-1 p-1.5 rounded-sm text-[8px] leading-snug text-center"
+                              style={{ background: 'rgba(0,0,0,0.6)', border: `1px solid ${RARITY_COLORS[def.rarity]}40` }}>
+                              <div className="text-[var(--dungeon-text-dim)] mb-0.5">[{getUpgradedFaces(def, 1).join(',')}]</div>
+                              <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
+                            </div>
+                          )}
                         </motion.div>
                       );
                     })}

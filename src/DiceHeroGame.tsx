@@ -5597,7 +5597,7 @@ useEffect(() => {
                         const ELEM_DESCS: Record<string, string> = { fire: '造成额外灼烧伤害（持续2回合）', ice: '冻结敌人，令其跳过1回合行动', thunder: '雷击造成AOE范围伤害', poison: '施加毒素持续掉血', holy: '治疗自身并净化负面状态' };
                         const ELEM_COLORS: Record<string, string> = { fire: '#ff8040', ice: '#60c0f0', thunder: '#e0d040', poison: '#60e060', holy: '#e0d8a0', shadow: '#a080d0' };
                         const tipName = def.isElemental && collapsed ? ELEM_NAMES[collapsed] || def.name : def.name;
-                        const tipDesc = def.isElemental && collapsed ? ELEM_DESCS[collapsed] || def.description : def.description;
+                        const tipDesc = def.isElemental && collapsed ? ELEM_DESCS[collapsed] || def.description : (def.onPlay?.scaleWithHits ? `${def.description}（当前累计+${game.furyBonusDamage || 0}伤害）` : def.description);
                         const tipColor = def.isElemental && collapsed ? (ELEM_COLORS[collapsed] || '#c8c8d0') : (() => { const id = def.id; return id.startsWith('w_') ? '#ff6060' : id.startsWith('mage_') ? '#a070ff' : id.startsWith('r_') ? '#60d080' : '#c8c8d0'; })();
                         const tipBg = def.isElemental && collapsed ? `${tipColor}22` : (() => { const id = def.id; return id.startsWith('w_') ? 'rgba(192,64,64,0.2)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.2)' : id.startsWith('r_') ? 'rgba(48,160,80,0.2)' : 'rgba(200,200,200,0.1)'; })();
                         const tipBorder = def.isElemental && collapsed ? `${tipColor}66` : (() => { const id = def.id; return id.startsWith('w_') ? 'rgba(192,64,64,0.4)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.4)' : id.startsWith('r_') ? 'rgba(48,160,80,0.4)' : 'rgba(200,200,200,0.2)'; })();
