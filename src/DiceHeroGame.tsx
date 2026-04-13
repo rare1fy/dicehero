@@ -819,16 +819,6 @@ export default function DiceHeroGame() {
       const next = prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
       const newSelected = next.filter(d => d.selected && !d.spent);
       
-      // === 非战士普攻单选限制 ===
-      if (game.playerClass !== 'warrior' && !isCurrentlySelected && newSelected.length > 1) {
-        const handResult = checkHands(newSelected, { straightUpgrade: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
-        if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
-          // 非战士多选普攻：禁止，只保留最新选的
-          setTimeout(() => addToast('不成牌型时只能选1颗骰子', 'info'), 50);
-          return prev.map(d => d.id === id ? { ...d, selected: true } : { ...d, selected: false });
-        }
-      }
-      
       // 战士多选普攻提示
       if (game.playerClass === 'warrior' && !isCurrentlySelected && newSelected.length > 1) {
         const hasSpecial = newSelected.some(d => {
@@ -862,6 +852,8 @@ export default function DiceHeroGame() {
     const selected = dice.filter(d => d.selected && !d.spent);
     return selected.length > 1 && currentHands.activeHands.includes('普通攻击') && currentHands.activeHands.length === 1;
   }, [dice, currentHands]);
+  // 非战士多选普攻：出牌按钮禁用
+  const isNonWarriorMultiNormal = isNormalAttackMulti && game.playerClass !== 'warrior';
 
   // 牌型提示：哪些骰子可以组成牌型（发光+漂浮）
   const handHintIds = useMemo(() => {
@@ -4934,14 +4926,13 @@ useEffect(() => {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
-                        onClick={playHand}
-                        disabled={dice.some(d => d.playing) || game.playsLeft <= 0 || false /* always allow play */}
-                        className={`flex-1 py-2.5 ${false /* always allow play */ ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
-                        style={{boxShadow: 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}
+                        onClick={isNonWarriorMultiNormal ? () => addToast('不成牌型时只能出1颗骰子', 'info') : playHand}
+                        disabled={dice.some(d => d.playing) || game.playsLeft <= 0 || isNonWarriorMultiNormal}
+                        className={`flex-1 py-2.5 ${isNonWarriorMultiNormal ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`}
+                        style={{boxShadow: isNonWarriorMultiNormal ? 'none' : 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}
                       >
-                        <PixelPlay size={2} /> {game.playsLeft > 0 ? (false /* always allow play */ ? '普通攻击' : `出牌: ${currentHands.bestHand}`) : '出牌次数耗尽'}
-                      </motion.button>
-                    ) : (dice.every(d => d.spent) || game.playsLeft <= 0) ? (
+                        <PixelPlay size={2} /> {isNonWarriorMultiNormal ? '不成牌型（仅限选1颗）' : game.playsLeft > 0 ? `出牌: ${currentHands.bestHand}` : '出牌次数耗尽'}
+                      </motion.button>) : (dice.every(d => d.spent) || game.playsLeft <= 0) ? (
                       <motion.button
                         key="end"
                         initial={{ opacity: 0, x: 10 }}
