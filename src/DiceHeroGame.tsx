@@ -4555,10 +4555,7 @@ useEffect(() => {
                     {/* 职业图标 */}
                     {game.playerClass && CLASS_DEFS[game.playerClass as ClassId] ? (
                       <>
-                        <div className="w-4 h-4 flex items-center justify-center border shrink-0"
-                          style={{ borderColor: CLASS_DEFS[game.playerClass as ClassId].color, borderRadius: '1px', background: `${CLASS_DEFS[game.playerClass as ClassId].colorDark}80` }}>
-                          <ClassIcon classId={game.playerClass} size={1} />
-                        </div>
+                        <ClassIcon classId={game.playerClass} size={1.2} />
                         <span className="font-bold text-[11px] pixel-text-shadow"
                           style={{ color: CLASS_DEFS[game.playerClass as ClassId].colorLight }}>
                           {CLASS_DEFS[game.playerClass as ClassId].name}
@@ -4796,12 +4793,6 @@ useEffect(() => {
                         <span className={`${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
                           {die.rolling ? "?" : die.value}
                         </span>
-                        {/* 职业骰子标记icon */}
-                        {!die.rolling && die.diceDefId !== 'standard' && (die.diceDefId.startsWith('w_') || die.diceDefId.startsWith('mage_') || die.diceDefId.startsWith('r_')) && (
-                          <div className="absolute bottom-0 left-0 pointer-events-none opacity-60" style={{ transform: 'scale(0.7)', transformOrigin: 'bottom left' }}>
-                            <ClassIcon classId={die.diceDefId.startsWith('w_') ? 'warrior' : die.diceDefId.startsWith('mage_') ? 'mage' : 'rogue'} size={1.2} />
-                          </div>
-                        )}
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (
                           <div className="absolute top-0.5 right-0.5 pointer-events-none">
                             <ElementBadge element={die.element} size={8} />
@@ -4825,8 +4816,8 @@ useEffect(() => {
                 </div>
 
 
-{/* 选中骰子tips - 固定高度占位，避免布局跳动 */}
-                <div className="relative h-[22px] mx-1 mb-0.5">
+{/* 选中骰子tips - 显示完整效果描述 */}
+                <div className="relative min-h-[22px] mx-1 mb-0.5">
                   {(() => {
                     const selectedDice = dice.filter(d => d.selected && !d.spent);
                     if (selectedDice.length === 0) return null;
@@ -4834,20 +4825,20 @@ useEffect(() => {
                     const def = getDiceDef(lastSelected.diceDefId);
                     const showAsNormal = isNormalAttackMulti && (def.element !== 'normal' || !!def.onPlay);
                     return (
-                      <div className="absolute inset-0 px-2 py-0.5 bg-[rgba(8,11,14,0.85)] border border-[var(--dungeon-panel-border)] overflow-hidden" style={{borderRadius:'2px'}}>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? '普通骰子' : def.name}</span>
-                          <span className="text-[9px] text-[var(--dungeon-text-dim)]">[{def.faces.join(',')}]</span>
+                      <div className="px-2 py-1 bg-[rgba(8,11,14,0.9)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? '普通骰子' : def.name}</span>
+                          <span className="text-[8px] text-[var(--dungeon-text-dim)] font-mono">[{def.faces.join(',')}]</span>
                           {def.element !== 'normal' && (
-                            <span className="text-[9px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
+                            <span className="text-[8px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
                           )}
-                          {def.onPlay && (
-                            <span className="text-[9px] text-[var(--pixel-orange-light)] ml-1">{getOnPlayDescription(def.onPlay)}</span>
-                          )}
-                      {showAsNormal && (
-                        <span className="text-[9px] text-[var(--pixel-orange)] ml-1">效果已禁用</span>
-                      )}
                         </div>
+                        {def.description && !showAsNormal && (
+                          <div className="text-[9px] text-[var(--pixel-orange-light)] leading-snug">{def.description}</div>
+                        )}
+                        {showAsNormal && (
+                          <div className="text-[9px] text-[var(--pixel-orange)]">多选普通攻击：特殊效果已禁用</div>
+                        )}
                       </div>
                     );
                   })()}

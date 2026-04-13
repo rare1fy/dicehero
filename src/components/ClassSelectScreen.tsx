@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { playSound } from '../utils/sound';
 import { CLASS_DEFS, type ClassId } from '../data/classes';
-import { PixelSword, PixelMagic, PixelPoison } from './PixelIcons';
+import { WarriorClassIcon, MageClassIcon, RogueClassIcon } from './ClassIcons';
 
 // ============================================================
 // 职业图标SVG — 像素风格
@@ -72,17 +72,11 @@ const RogueDiceIcon: React.FC<{ size?: number }> = ({ size = 6 }) => {
   );
 };
 
-/** 职业武器图标 */
-const ClassWeaponIcon: React.FC<{ classId: ClassId; size?: number }> = ({ classId, size = 3 }) => {
-  if (classId === 'warrior') return <PixelSword size={size} />;
-  if (classId === 'mage') return <PixelMagic size={size} />;
-  return <PixelPoison size={size} />;
-};
-
-const ClassDiceIcon: React.FC<{ classId: ClassId; size?: number }> = ({ classId, size = 6 }) => {
-  if (classId === 'warrior') return <WarriorDiceIcon size={size} />;
-  if (classId === 'mage') return <MageDiceIcon size={size} />;
-  return <RogueDiceIcon size={size} />;
+/** 职业大图标 — 用于选择界面 */
+const ClassBigIcon: React.FC<{ classId: ClassId; size?: number }> = ({ classId, size = 5 }) => {
+  if (classId === 'warrior') return <WarriorClassIcon size={size} />;
+  if (classId === 'mage') return <MageClassIcon size={size} />;
+  return <RogueClassIcon size={size} />;
 };
 
 // ============================================================
@@ -155,11 +149,10 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
                 }}
               >
                 <div className="shrink-0" style={{ filter: isSelected ? `drop-shadow(0 0 6px ${cls.color}80)` : undefined }}>
-                  <ClassDiceIcon classId={cid} size={5} />
+                  <ClassBigIcon classId={cid} size={5} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <ClassWeaponIcon classId={cid} size={2} />
                     <span className="text-sm font-black pixel-text-shadow" style={{ color: cls.colorLight }}>
                       {cls.name}
                     </span>

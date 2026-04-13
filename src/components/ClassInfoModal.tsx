@@ -6,14 +6,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CLASS_DEFS, CLASS_DICE, type ClassId } from '../data/classes';
-import { PixelClose, PixelSword, PixelMagic, PixelPoison } from './PixelIcons';
-
-// 职业图标映射
-const CLASS_ICONS: Record<string, React.ReactNode> = {
-  warrior: <PixelSword size={2} />,
-  mage: <PixelMagic size={2} />,
-  rogue: <PixelPoison size={2} />,
-};
+import { PixelClose } from './PixelIcons';
+import { ClassIcon } from './ClassIcons';
 
 // 稀有度颜色和标签
 const RARITY_STYLE: Record<string, { color: string; label: string; border: string }> = {
@@ -94,9 +88,8 @@ export const ClassInfoModal: React.FC<ClassInfoModalProps> = ({ visible, onClose
             <div className="p-3 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center shrink-0"
               style={{ background: `linear-gradient(180deg, ${classDef.colorDark}40 0%, var(--dungeon-bg-light) 100%)` }}>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 flex items-center justify-center border-2 shrink-0"
-                  style={{ borderColor: classDef.color, borderRadius: '2px', background: `${classDef.colorDark}80` }}>
-                  {CLASS_ICONS[classId]}
+                <div className="shrink-0">
+                  <ClassIcon classId={classId} size={2} />
                 </div>
                 <div>
                   <h3 className="text-[13px] font-bold tracking-[0.1em] pixel-text-shadow"
