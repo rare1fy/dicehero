@@ -81,6 +81,7 @@ import EternalBossScene from './components/EternalBossScene';
 import { BossEntrance } from './components/BossEntrance';
 import { ClassLeftHand, ClassRightHand } from './components/ClassHands';
 import { ClassInfoModal } from './components/ClassInfoModal';
+import { ClassIcon } from './components/ClassIcons';
 import { CLASS_DEFS, type ClassId } from './data/classes';
 
 
@@ -4564,7 +4565,7 @@ useEffect(() => {
                       <>
                         <div className="w-4 h-4 flex items-center justify-center border shrink-0"
                           style={{ borderColor: CLASS_DEFS[game.playerClass as ClassId].color, borderRadius: '1px', background: `${CLASS_DEFS[game.playerClass as ClassId].colorDark}80` }}>
-                          {game.playerClass === 'warrior' ? <PixelSword size={1} /> : game.playerClass === 'mage' ? <PixelMagic size={1} /> : <PixelPoison size={1} />}
+                          <ClassIcon classId={game.playerClass} size={1} />
                         </div>
                         <span className="font-bold text-[11px] pixel-text-shadow"
                           style={{ color: CLASS_DEFS[game.playerClass as ClassId].colorLight }}>
@@ -4803,16 +4804,10 @@ useEffect(() => {
                         <span className={`${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
                           {die.rolling ? "?" : die.value}
                         </span>
-                        {/* 职业骰子名称缩写标记 */}
+                        {/* 职业骰子标记icon */}
                         {!die.rolling && die.diceDefId !== 'standard' && (die.diceDefId.startsWith('w_') || die.diceDefId.startsWith('mage_') || die.diceDefId.startsWith('r_')) && (
-                          <div className="absolute bottom-0 left-0.5 pointer-events-none text-[6px] font-bold leading-none opacity-70"
-                            style={{ color: die.diceDefId.startsWith('w_') ? '#ffc0a0' : die.diceDefId.startsWith('mage_') ? '#c0a0ff' : '#a0ffc0' }}>
-                            {(() => {
-                              const def = getDiceDef(die.diceDefId);
-                              const n = def.name || '';
-                              // 取前两个汉字或首字
-                              return n.length >= 2 ? n.slice(0, 2) : n;
-                            })()}
+                          <div className="absolute bottom-0 left-0 pointer-events-none opacity-60" style={{ transform: 'scale(0.7)', transformOrigin: 'bottom left' }}>
+                            <ClassIcon classId={die.diceDefId.startsWith('w_') ? 'warrior' : die.diceDefId.startsWith('mage_') ? 'mage' : 'rogue'} size={1.2} />
                           </div>
                         )}
                         {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (

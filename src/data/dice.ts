@@ -254,8 +254,12 @@ export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss', player
         const count = Math.max(1, Math.round(rarityWeight[idx]));
         for (let i = 0; i < count; i++) pool.push(d);
       });
-      // 混入少量通用骰子
-      const universalDice = [ALL_DICE['split'], ALL_DICE['magnet'], ALL_DICE['joker'], ALL_DICE['chaos']].filter(Boolean);
+      // 混入通用骰子（所有职业都可能获得的经典骰子）
+      const universalDice = [
+        ALL_DICE['heavy'], ALL_DICE['blade'], ALL_DICE['amplify'],
+        ALL_DICE['elemental'], ALL_DICE['split'], ALL_DICE['magnet'],
+        ALL_DICE['joker'], ALL_DICE['chaos']
+      ].filter(Boolean);
       universalDice.forEach(d => {
         if (d) pool.push(d);
       });

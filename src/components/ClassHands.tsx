@@ -11,31 +11,35 @@ import React from 'react';
 // ============================================================
 const WarriorLeftHand: React.FC = () => (
   <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
-    {/* 骷髅骰子 */}
+    {/* 血色骰子 — 暗红能量核心 */}
     <rect x="12" y="6" width="26" height="26" fill="rgba(0,0,0,0.3)" />
-    <rect x="14" y="2" width="20" height="2" fill="#4a2020" />
-    <rect x="14" y="28" width="20" height="2" fill="#4a2020" />
-    <rect x="10" y="6" width="2" height="20" fill="#4a2020" />
-    <rect x="36" y="6" width="2" height="20" fill="#4a2020" />
-    <rect x="12" y="4" width="2" height="2" fill="#4a2020" />
-    <rect x="34" y="4" width="2" height="2" fill="#4a2020" />
-    <rect x="12" y="26" width="2" height="2" fill="#4a2020" />
-    <rect x="34" y="26" width="2" height="2" fill="#4a2020" />
-    <rect x="12" y="6" width="24" height="20" fill="#d0c0b0" />
-    <rect x="14" y="4" width="20" height="2" fill="#d0c0b0" />
-    <rect x="14" y="26" width="20" height="2" fill="#b0a090" />
-    <rect x="14" y="8" width="20" height="16" fill="#c0b0a0" />
-    {/* 骷髅图案 */}
-    <rect x="18" y="10" width="12" height="10" fill="#a08870" />
-    <rect x="20" y="12" width="3" height="3" fill="#301010" />
-    <rect x="25" y="12" width="3" height="3" fill="#301010" />
-    <rect x="22" y="17" width="4" height="2" fill="#301010" />
-    <rect x="21" y="19" width="1" height="1" fill="#301010" />
-    <rect x="23" y="19" width="1" height="1" fill="#301010" />
-    <rect x="26" y="19" width="1" height="1" fill="#301010" />
+    <rect x="12" y="4" width="2" height="2" fill="#4a1818" />
+    <rect x="34" y="4" width="2" height="2" fill="#4a1818" />
+    <rect x="12" y="26" width="2" height="2" fill="#4a1818" />
+    <rect x="34" y="26" width="2" height="2" fill="#4a1818" />
+    <rect x="14" y="2" width="20" height="2" fill="#4a1818" />
+    <rect x="14" y="28" width="20" height="2" fill="#4a1818" />
+    <rect x="10" y="6" width="2" height="20" fill="#4a1818" />
+    <rect x="36" y="6" width="2" height="20" fill="#4a1818" />
+    {/* 骰子主体 — 深红渐变 */}
+    <rect x="12" y="6" width="24" height="20" fill="#601818" />
+    <rect x="14" y="4" width="20" height="2" fill="#702020" />
+    <rect x="14" y="26" width="20" height="2" fill="#501010" />
+    <rect x="14" y="8" width="20" height="16" fill="#802828" />
+    {/* 能量核心 — 3层 */}
+    <rect x="18" y="10" width="12" height="12" fill="#a03030" />
+    <rect x="20" y="12" width="8" height="8" fill="#c04040" />
+    <rect x="22" y="14" width="4" height="4" fill="#ff6060" />
+    {/* 核心高光 */}
+    <rect x="24" y="16" width="2" height="2" fill="#ffa0a0" />
     {/* 顶部高光 */}
-    <rect x="14" y="6" width="8" height="2" fill="#d8c8b8" />
-    <rect x="34" y="10" width="2" height="16" fill="#8a7a6a" />
+    <rect x="14" y="6" width="8" height="2" fill="#903030" />
+    {/* 底部暗边 */}
+    <rect x="14" y="24" width="20" height="2" fill="#400c0c" />
+    <rect x="34" y="10" width="2" height="16" fill="#400c0c" />
+    {/* 血色纹路 */}
+    <rect x="16" y="15" width="2" height="2" fill="#c05050" opacity="0.5" />
+    <rect x="30" y="15" width="2" height="2" fill="#c05050" opacity="0.5" />
     {/* 铁甲手 */}
     <rect x="8" y="28" width="30" height="14" fill="#6a6a70" />
     <rect x="8" y="28" width="30" height="2" fill="#7a7a82" />
