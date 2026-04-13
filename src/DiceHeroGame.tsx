@@ -1139,29 +1139,229 @@ export default function DiceHeroGame() {
         return; // 元素骰子不走普通onPlay
       }
       
-      // 碎裂骰子：反噬伤害
+      // 碎裂骰子：反噬伤害（固定值）
       if (def.onPlay?.selfDamage) {
-        extraHeal -= def.onPlay.selfDamage; // 负回血 = 自伤
+        extraHeal -= def.onPlay.selfDamage;
       }
       
       if (!def.onPlay) return;
       const upgradedOp = getUpgradedOnPlay(def, diceLevel);
       const op = upgradedOp || def.onPlay;
-      // 深度缩放：根据战斗阶段提升骰子onPlay效果（每3层+15%基础伤害，每5层+0.05倍率）
       const depthDmgBonus = 1 + Math.floor((game.depth || 0) / 3) * 0.15;
       const depthMultBonus = Math.floor((game.depth || 0) / 5) * 0.05;
-      if (op.bonusDamage) extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
-      if (op.bonusMult) multiplier *= (1 + (op.bonusMult - 1 + depthMultBonus) * elementBonus);
+      
+      // === 基础效果（已有） ===
+      if (op.bonusDamage && !op.firstPlayOnly && !op.requiresTriple) {
+        extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
+      }
+      if (op.bonusMult && !op.requiresCharge) multiplier *= (1 + (op.bonusMult - 1 + depthMultBonus) * elementBonus);
       if (op.heal) extraHeal += Math.floor(op.heal * elementBonus);
       if (op.pierce) pierceDamage += Math.floor(op.pierce * elementBonus);
       if (op.statusToEnemy) {
         const boostedValue = Math.floor(op.statusToEnemy.value * elementBonus);
         const existing = statusEffects.find(es => es.type === op.statusToEnemy!.type);
-        if (existing) {
-          existing.value += boostedValue;
-        } else {
-          statusEffects.push({ ...op.statusToEnemy, value: boostedValue });
+        if (existing) { existing.value += boostedValue; }
+        else { statusEffects.push({ ...op.statusToEnemy, value: boostedValue }); }
+      }
+      
+      // === 战士效果 ===
+      // 自伤（百分比HP）
+      if (op.selfDamagePercent) {
+        extraHeal -= Math.ceil(game.maxHp * op.selfDamagePercent);
+      }
+      // 固定护甲
+      if (op.armor) {
+        extraArmor += op.armor;
+      }
+      // 护甲=骰子点数（荆棘骰子）
+      if (op.armorFromValue) {
+        extraArmor += d.value;
+      }
+      // 护甲=选中骰子总点数（巨人护盾）
+      if (op.armorFromTotalPoints) {
+        extraArmor += selected.reduce((sum, sd) => sum + sd.value, 0);
+      }
+      // 破甲（摧毁敌人全部护甲）
+      if (op.armorBreak) {
+        armorBreak = true;
+      }
+      // 受伤次数叠加伤害（怒火骰子）
+      if (op.scaleWithHits) {
+        const hitCount = game.stats?.damageTaken || 0; // 用已受伤次数近似
+        extraDamage += hitCount * 2;
+      }
+      // 首次出牌限定（冲锋骰子）
+      if (op.firstPlayOnly && op.bonusDamage) {
+        const isFirstPlay = (game.comboCount || 0) === 0 && game.battleTurn <= 1;
+        if (isFirstPlay) {
+          extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
         }
+      }
+      // 已损失HP百分比加成（复仇骰子）
+      if (op.scaleWithLostHp) {
+        const lostHp = game.maxHp - game.hp;
+        extraDamage += Math.floor(lostHp * op.scaleWithLostHp);
+      }
+      // 斩杀（敌人HP低于阈值时伤害×N）
+      if (op.executeThreshold && op.executeMult && targetEnemy) {
+        if (targetEnemy.hp / targetEnemy.maxHp < op.executeThreshold) {
+          multiplier *= op.executeMult;
+        }
+      }
+      // 独立AOE伤害（震地骰子/奥术飞弹）
+      if (op.aoeDamage) {
+        extraDamage += op.aoeDamage; // 在预览中显示为额外伤害
+      }
+      // 回血=骰子点数（吸血骰子）
+      if (op.healFromValue) {
+        extraHeal += d.value;
+      }
+      // 最大HP+N（生命熔炉）
+      if (op.maxHpBonus) {
+        extraHeal += op.maxHpBonus; // 回血部分在heal中体现
+      }
+      // 低血时点数覆盖（不屈意志）— 已在骰子值层面处理，此处加成
+      if (op.lowHpOverrideValue && op.lowHpThreshold) {
+        if (game.hp / game.maxHp < op.lowHpThreshold && d.value < op.lowHpOverrideValue) {
+          // 差值作为额外伤害（因为点数已固定，需要补偿）
+          extraDamage += (op.lowHpOverrideValue - d.value);
+        }
+      }
+      // 三条以上牌型加成（战神之锤）
+      if (op.requiresTriple && op.bonusDamageFromPoints) {
+        const tripleHands = ['三条', '四条', '五条', '六条', '葫芦'];
+        if (activeHands.some((h: string) => tripleHands.includes(h))) {
+          const totalPoints = selected.reduce((sum, sd) => sum + sd.value, 0);
+          extraDamage += Math.floor(totalPoints * op.bonusDamageFromPoints);
+        }
+      }
+      // 卖血重投叠加面值（浴血之刃）
+      if (op.scaleWithBloodRerolls && game.bloodRerollCount) {
+        const faceBonus = Math.min(game.bloodRerollCount, 3);
+        extraDamage += faceBonus; // 每次卖血+1面值≈+1伤害
+      }
+      // 自施狂暴（狂暴之心）
+      if (op.selfBerserk) {
+        multiplier *= 1.3; // 伤害+30%
+        extraHeal -= Math.ceil(game.maxHp * 0.05); // 受伤+20%近似为自伤5%
+      }
+      // 自伤量转伤害（血神之眼）
+      if (op.scaleWithSelfDamage) {
+        // 本回合自伤量转化为伤害加成
+        const selfDmgThisTurn = (game.bloodRerollCount || 0) * 2; // 近似卖血总消耗
+        multiplier *= (1 + selfDmgThisTurn * 0.02);
+      }
+      // 护甲转伤害（霸体铠甲）
+      if (op.damageFromArmor) {
+        extraDamage += Math.floor((game.armor + extraArmor) * op.damageFromArmor);
+      }
+      // 净化全部负面（咆哮/净化之光）
+      if (op.purifyAll) {
+        holyPurify += 99; // 大数=全部净化
+      }
+      
+      // === 法师效果 ===
+      // 逆转点数（结算时点数=7-当前值）
+      if (op.reverseValue) {
+        const reversed = 7 - d.value;
+        if (reversed > d.value) {
+          extraDamage += (reversed - d.value); // 差值补偿
+        }
+      }
+      // 复制最高点数（镜像骰子）
+      if (op.copyHighestValue) {
+        const maxVal = Math.max(...selected.map(sd => sd.value));
+        if (maxVal > d.value) {
+          extraDamage += (maxVal - d.value);
+        }
+      }
+      // 固定点数覆盖（虚空之眼=7）
+      if (op.overrideValue) {
+        if (op.overrideValue > d.value) {
+          extraDamage += (op.overrideValue - d.value);
+        }
+      }
+      // 每颗元素骰子+N伤害（奥术增幅）
+      if (op.bonusDamagePerElement) {
+        const elemCount = dice.filter(dd => !dd.spent && dd.element !== 'normal').length;
+        extraDamage += elemCount * op.bonusDamagePerElement;
+      }
+      // 护甲=手牌数×N（法术护盾）
+      if (op.armorFromHandSize) {
+        const handSize = dice.filter(dd => !dd.spent).length;
+        extraArmor += handSize * op.armorFromHandSize;
+      }
+      // 蓄力加成（禁咒·陨星）
+      if (op.requiresCharge && op.bonusMult) {
+        if ((game.chargeStacks || 0) >= op.requiresCharge) {
+          multiplier *= op.bonusMult;
+        }
+      }
+      // 清除灼烧（魔力屏障）
+      if (op.removeBurn) {
+        holyPurify += 1; // 近似为净化1层
+      }
+      
+      // === 盗贼效果 ===
+      // 连击倍率加成（匕首骰子）
+      if (op.comboBonus) {
+        multiplier *= (1 + op.comboBonus);
+      }
+      // 毒=7-点数（淬毒骰子）
+      if (op.poisonInverse) {
+        const poisonVal = Math.max(1, 7 - d.value);
+        const existing = statusEffects.find(es => es.type === 'poison');
+        if (existing) { existing.value += poisonVal; }
+        else { statusEffects.push({ type: 'poison', value: poisonVal }); }
+      }
+      // 基础毒层+已有毒加成（剧毒匕首）
+      if (op.poisonBase) {
+        let poisonVal = d.value + op.poisonBase;
+        if (op.poisonBonusIfPoisoned && targetEnemy?.statuses.some(s => s.type === 'poison')) {
+          poisonVal += op.poisonBonusIfPoisoned;
+        }
+        const existing = statusEffects.find(es => es.type === 'poison');
+        if (existing) { existing.value += poisonVal; }
+        else { statusEffects.push({ type: 'poison', value: poisonVal }); }
+      }
+      // 第2次出牌暴击（致命骰子）
+      if (op.critOnSecondPlay && (game.comboCount || 0) >= 1) {
+        multiplier *= op.critOnSecondPlay;
+      }
+      // 第2次出牌额外伤害（暗影骰子）
+      if (op.bonusDamageOnSecondPlay && (game.comboCount || 0) >= 1) {
+        extraDamage += op.bonusDamageOnSecondPlay;
+      }
+      // 第2次出牌倍率加成（三连闪）
+      if (op.bonusMultOnSecondPlay && (game.comboCount || 0) >= 1) {
+        multiplier *= op.bonusMultOnSecondPlay;
+      }
+      // 偷取护甲（偷窃骰子）
+      if (op.stealArmor && targetEnemy) {
+        const stolen = Math.min(targetEnemy.armor, op.stealArmor);
+        extraArmor += stolen;
+      }
+      // 毒层=毒系骰子数×N（毒王之牙）
+      if (op.poisonFromPoisonDice) {
+        const poisonDiceCount = selected.filter(sd => {
+          const dd = getDiceDef(sd.diceDefId);
+          return dd.onPlay?.poisonInverse || dd.onPlay?.poisonBase || dd.onPlay?.statusToEnemy?.type === 'poison';
+        }).length;
+        const poisonVal = poisonDiceCount * op.poisonFromPoisonDice;
+        if (poisonVal > 0) {
+          const existing = statusEffects.find(es => es.type === 'poison');
+          if (existing) { existing.value += poisonVal; }
+          else { statusEffects.push({ type: 'poison', value: poisonVal }); }
+        }
+      }
+      // 引爆毒层百分比（瘟疫引爆）
+      if (op.detonatePoisonPercent && targetEnemy) {
+        const currentPoison = targetEnemy.statuses.find(s => s.type === 'poison')?.value || 0;
+        extraDamage += Math.floor(currentPoison * op.detonatePoisonPercent);
+      }
+      // 递增伤害叠加（影刃风暴）
+      if (op.escalateDamage) {
+        multiplier *= (1 + (game.comboCount || 0) * op.escalateDamage);
       }
     });
 
@@ -2024,8 +2224,32 @@ export default function DiceHeroGame() {
     
     setDice(prev => prev.map(d => {
       if (!d.selected) return d;
+      const def = getDiceDef(d.diceDefId);
+      // stayInHand: 飞刀骰子出牌后不消耗（每回合限1次）
+      if (def.onPlay?.stayInHand) {
+        return { ...d, selected: false, playing: false, spent: false };
+      }
+      // alwaysBounce: 回旋骰子出牌后弹回手牌
+      if (def.onPlay?.alwaysBounce) {
+        return { ...d, selected: false, playing: false, spent: false };
+      }
       return { ...d, spent: true, selected: false, playing: false };
     }));
+    
+    // grantExtraPlay: 影舞骰子给予额外出牌机会
+    const hasExtraPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantExtraPlay);
+    if (hasExtraPlay) {
+      setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
+      addFloatingText('+1出牌机会', 'text-green-400', undefined, 'player');
+    }
+    
+    // maxHpBonus: 生命熔炉永久+maxHP
+    selectedDiceForSpent.forEach(d => {
+      const def = getDiceDef(d.diceDefId);
+      if (def.onPlay?.maxHpBonus) {
+        setGame(prev => ({ ...prev, maxHp: prev.maxHp + def.onPlay!.maxHpBonus! }));
+      }
+    });
     
     // 补充临时骰子（延迟显示）
     if (tempDiceToGrant.length > 0) {
