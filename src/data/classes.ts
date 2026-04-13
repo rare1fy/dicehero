@@ -29,6 +29,10 @@ export interface ClassDef {
   canBloodReroll: boolean; // 卖血重投
   keepUnplayed: boolean;   // 保留未出牌骰子
 
+  // 生命值
+  hp: number;              // 初始血量
+  maxHp: number;           // 最大血量
+
   // 初始骰子库
   initialDice: string[];   // 普通×4 + 职业骰×2
 
@@ -58,6 +62,8 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     freeRerolls: 1,
     canBloodReroll: true,
     keepUnplayed: false,
+    hp: 120,
+    maxHp: 120,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'w_bloodthirst', 'w_thorns'],
     passiveDesc: '【血怒战意】卖血重投每次+15%最终伤害（叠加）；血量≤50%手牌+1；手牌溢出上限时按受伤百分比加伤害倍率；普攻可多选',
     skills: [
@@ -80,11 +86,13 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     freeRerolls: 1,
     canBloodReroll: false,
     keepUnplayed: true,
+    hp: 100,
+    maxHp: 100,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'mage_elemental', 'mage_reverse'],
-    passiveDesc: '【星界蓄力】未出牌骰子保留到下回合（3→4→5→6递增）；蓄力回合+6护甲；满6后继续蓄力每次+10%伤害；出牌后重置',
+    passiveDesc: '【星界蓄力】未出牌骰子保留到下回合（3→4→5→6递增）；蓄力回合获得递增护甲；满6后继续蓄力每次+10%伤害；出牌后重置',
     skills: [
       { name: '星界蓄力', desc: '未出牌的骰子保留到下回合，手牌上限逐层递增（3→4→5→6）' },
-      { name: '蓄力护盾', desc: '每次蓄力（不出牌）获得+6护甲，积攒防御' },
+      { name: '蓄力护盾', desc: '每次蓄力（不出牌）获得递增护甲（6/8/10/12...），层数越高护甲越厚' },
       { name: '过充释放', desc: '手牌满6颗后继续蓄力，每回合额外+10%伤害倍率；出牌后重置' },
     ],
     normalAttackMultiSelect: false,
@@ -102,6 +110,8 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     freeRerolls: 1,
     canBloodReroll: false,
     keepUnplayed: false,
+    hp: 90,
+    maxHp: 90,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'r_quickdraw', 'r_combomastery'],
     passiveDesc: '【连击】每回合出牌2次；第2次伤害×1.2；两次同牌型+25%；特定骰子触发时补充临时骰子',
     skills: [
@@ -153,7 +163,7 @@ const WARRIOR_DICE: DiceDef[] = [
 
   // === Rare (6) ===
   { id: 'w_titanfist', name: '泰坦之拳', element: 'normal', faces: [6,6,6,6,6,6], rarity: 'rare',
-    description: '全6面骰子，出牌时自伤最大HP的10%', onPlay: { selfDamagePercent: 0.10 } },
+    description: '全6面骰子，出牌时自伤最大HP的10%，摧毁敌人护甲并额外+15伤害', onPlay: { selfDamagePercent: 0.10, armorBreak: true, bonusDamage: 15 } },
   { id: 'w_unyielding', name: '不屈意志', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '血量低于30%时点数自动视为6', onPlay: { lowHpOverrideValue: 6, lowHpThreshold: 0.3 } },
   { id: 'w_warhammer', name: '战神之锤', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
@@ -226,7 +236,7 @@ const MAGE_DICE: DiceDef[] = [
 
   // === Legendary (2) ===
   { id: 'mage_meteor', name: '禁咒·陨星', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
-    description: '蓄力2回合后出牌时伤害×1.8', onPlay: { bonusMult: 1.8, requiresCharge: 2 } },
+    description: '蓄力2回合后出牌时伤害+80%', onPlay: { bonusMult: 1.8, requiresCharge: 2 } },
   { id: 'mage_elemheart', name: '元素之心', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
     description: '出牌时触发手牌中所有不同元素的效果（即使未选中）', isElemental: true, onPlay: { triggerAllElements: true } },
 ];
@@ -244,24 +254,24 @@ const ROGUE_DICE: DiceDef[] = [
     description: '施加毒层=7-点数（点数越小毒越猛）', onPlay: { poisonInverse: true } },
   { id: 'r_throwing', name: '飞刀骰子', element: 'normal', faces: [1,2,2,3,3,4], rarity: 'common',
     description: '出牌后不消耗留在手牌（每回合限1次）', onPlay: { stayInHand: true } },
-  { id: 'r_heavy', name: '灌铅骰子', element: 'normal', faces: [4,4,5,5,6,6], rarity: 'common',
-    description: '高下限，凑对子/三条基石' },
+  { id: 'r_pursuit', name: '追击骰子', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'common',
+    description: '触发连击时额外+1出牌机会', onPlay: { grantPlayOnCombo: true } },
   { id: 'r_poison_vial', name: '毒瓶骰子', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'common',
     description: '出牌时固定施加3层毒', onPlay: { statusToEnemy: { type: 'poison', value: 3 } } },
   { id: 'r_sleeve', name: '袖箭骰子', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'common',
     description: '出牌后补充1颗临时骰子到手牌（随机1-6）', onPlay: { grantTempDie: true } },
   { id: 'r_quickdraw', name: '接应骰子', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'common',
-    description: '出牌后立即从骰子库补抽1颗骰子到手牌', onPlay: { grantTempDie: true } },
+    description: '出牌后立即从骰子库补抽1颗骰子到手牌', onPlay: { drawFromBag: 1 } },
   { id: 'r_combomastery', name: '连击心得', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
-    description: '成功触发连击（第2次出牌）后，下回合手牌上限+1', onPlay: { comboDrawBonusNextTurn: true } },
+    description: '成功触发连击后，下回合手牌上限+1（多颗只生效1次）', onPlay: { comboDrawBonusNextTurn: true } },
 
   // === Uncommon (8) ===
   { id: 'r_lethal', name: '致命骰子', element: 'normal', faces: [3,3,4,4,5,5], rarity: 'uncommon',
-    description: '第2次出牌时暴击（伤害×1.4）', onPlay: { critOnSecondPlay: 1.4 } },
+    description: '第2次出牌时暴击（伤害+40%）', onPlay: { critOnSecondPlay: 1.4 } },
   { id: 'r_toxblade', name: '剧毒匕首', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'uncommon',
     description: '施加毒=点数+3，敌人已有毒再+2', onPlay: { poisonBase: 3, poisonBonusIfPoisoned: 2 } },
   { id: 'r_shadow_clone', name: '影分身', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'uncommon',
-    description: '结算时复制自身（多1颗同点数参与计算）' },
+    description: '结算时复制自身点数，额外计算一次伤害', onPlay: { cloneSelf: true } },
   { id: 'r_miasma', name: '毒雾骰子', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '出牌时对全体敌人施加2层毒', onPlay: { aoeDamage: 0, statusToEnemy: { type: 'poison', value: 2 }, aoe: true } },
   { id: 'r_boomerang', name: '回旋骰子', element: 'normal', faces: [2,3,3,4,4,5], rarity: 'uncommon',
@@ -275,9 +285,9 @@ const ROGUE_DICE: DiceDef[] = [
 
   // === Rare (6) ===
   { id: 'r_venomfang', name: '毒王之牙', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'rare',
-    description: '施加毒层=手牌中毒系骰子数×3', onPlay: { poisonFromPoisonDice: 3 } },
+    description: '施加毒层=手牌中毒系骰子数每颗3层', onPlay: { poisonFromPoisonDice: 3 } },
   { id: 'r_tripleflash', name: '三连闪', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'rare',
-    description: '第2次出牌时伤害×1.6', onPlay: { bonusMultOnSecondPlay: 1.6 } },
+    description: '第2次出牌时伤害+60%', onPlay: { bonusMultOnSecondPlay: 1.6 } },
   { id: 'r_shadowdance', name: '影舞骰子', element: 'normal', faces: [3,3,4,4,5,5], rarity: 'rare',
     description: '出牌后获得1次额外出牌机会（本回合限1次）+补充1颗临时骰子', onPlay: { grantExtraPlay: true, grantTempDie: true } },
   { id: 'r_plaguedet', name: '瘟疫引爆', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',

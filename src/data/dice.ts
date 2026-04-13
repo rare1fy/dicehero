@@ -70,7 +70,7 @@ const amplify: DiceDef = {
   name: '倍增骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时总伤害 x1.2，随战斗阶段升级增加',
+  description: '出牌时总伤害 +20%，随战斗阶段升级增加',
   rarity: 'rare',
   onPlay: { bonusMult: 1.2 },
 };
@@ -160,8 +160,14 @@ const BASE_DICE: Record<string, DiceDef> = {
 // 保留旧ID定义供 getDiceDef 回退查找
 const LEGACY_DICE: Record<string, DiceDef> = { heavy, elemental };
 
+// 盗贼临时骰子（连击/技能奖励，1回合后销毁）
+const temp_rogue: DiceDef = {
+  id: 'temp_rogue', name: '暗影残骰', element: 'normal', faces: [1, 1, 2, 2, 1, 2], rarity: 'common',
+  description: '连击奖励的临时骰子，本回合未使用则销毁',
+};
+
 // 可变注册表（包含基础+职业骰子）
-export let ALL_DICE: Record<string, DiceDef> = { ...BASE_DICE, ...LEGACY_DICE };
+export let ALL_DICE: Record<string, DiceDef> = { ...BASE_DICE, ...LEGACY_DICE, temp_rogue };
 
 /** 注册职业骰子到全局注册表 */
 export function registerClassDice(diceList: DiceDef[]) {

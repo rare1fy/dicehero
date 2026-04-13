@@ -137,7 +137,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'endgame',
     condition: 'pair',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (0.8 * getScale(level)) }),
-    description: '对子: 最终伤害 ×1.5',
+    description: '对子: 最终伤害 +50%',
   },
   {
     id: 'element_overload',
@@ -146,7 +146,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'endgame',
     condition: 'same_element',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (1.2 * getScale(level)) }),
-    description: '同元素: 最终伤害 ×2.2',
+    description: '同元素: 最终伤害 +120%',
   },
   {
     id: 'full_house_blast',
@@ -155,7 +155,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'endgame',
     condition: 'full_house',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 2.5 * getScale(level)), armor: Math.floor(10 * getScale(level)) }),
-    description: '葫芦: 造成 X×2.5 伤害并获得 10 护甲',
+    description: '葫芦: 造成 X的250% 伤害并获得 10 护甲',
   },
   {
     id: 'chain_lightning',
@@ -164,7 +164,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'endgame',
     condition: 'straight',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 1.5 * getScale(level)), statusEffects: [{ type: 'burn', value: Math.floor(2 * getScale(level)) }] }),
-    description: '顺子: 额外造成 X×1.5 伤害并附加 2 层灼热',
+    description: '顺子: 额外造成 X的150% 伤害并附加 2 层灼热',
   },
   {
     id: 'void_echo',
@@ -173,7 +173,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'endgame',
     condition: 'two_pair',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (0.8 * getScale(level)) }),
-    description: '连对: 最终伤害 ×1.8',
+    description: '连对: 最终伤害 +80%',
   },
   {
     id: 'frost_barrier',
@@ -191,7 +191,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'endgame',
     condition: 'n_of_a_kind',
     effect: (x, _dice, level) => ({ heal: Math.floor((x * 0.5) * getScale(level)), damage: Math.floor(x * 2 * getScale(level)) }),
-    description: '多条: 造成 X×2 伤害并回复 X×0.5 HP',
+    description: '多条: 造成 X的200% 伤害并回复 X的50% HP',
   },
   {
     id: 'pressure_point',
@@ -213,7 +213,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'normal_attack',
     condition: 'high_card',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 1.5 * getScale(level)) }),
-    description: '普通攻击: 额外造成 X×1.5 伤害',
+    description: '普通攻击: 额外造成 X的150% 伤害',
   },
   {
     id: 'rapid_strikes',
@@ -222,7 +222,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'normal_attack',
     condition: 'high_card',
     effect: (_x, _dice, level) => ({ multiplier: 1 + (0.4 * getScale(level)) }),
-    description: '普通攻击: 最终伤害 ×1.4',
+    description: '普通攻击: 最终伤害 +40%',
   },
   {
     id: 'blood_pact',
@@ -231,7 +231,7 @@ export const AUGMENTS_POOL: Augment[] = [
     category: 'normal_attack',
     condition: 'high_card',
     effect: (x, _dice, level) => ({ damage: Math.floor(x * 2 * getScale(level)), heal: -Math.floor(3 * getScale(level)) }),
-    description: '普通攻击: 额外 X×2 伤害，但损失 3 HP',
+    description: '普通攻击: 额外 X的200% 伤害，但损失 3 HP',
   },
   {
     id: 'combo_master',
@@ -243,7 +243,7 @@ export const AUGMENTS_POOL: Augment[] = [
       damage: Math.floor((context?.consecutiveNormalAttacks || 0) * 4),
       multiplier: 1 + (context?.consecutiveNormalAttacks || 0) * 0.1,
     }),
-    description: '普通攻击: 连续使用普攻，每次伤害 +4 且倍率 +0.1（每回合结束重置）',
+    description: '普通攻击: 连续使用普攻，每次伤害 +4 且倍率 +10%（每回合结束重置）',
   },
   {
     id: 'minimalist',
@@ -255,7 +255,7 @@ export const AUGMENTS_POOL: Augment[] = [
       damage: dice.length === 1 ? Math.floor(15 * getScale(level)) : 0,
       multiplier: dice.length === 1 ? 1 + (1.0 * getScale(level)) : 1,
     }),
-    description: '普通攻击(单骰): 只选 1 颗骰子时，+15 伤害且 ×2.0',
+    description: '普通攻击(单骰): 只选 1 颗骰子时，+15 伤害且 +100%',
   },
   {
     id: 'scattershot',
@@ -281,7 +281,7 @@ export const AUGMENTS_POOL: Augment[] = [
     effect: (_x, _dice, _level, context) => ({
       multiplier: 1 + (context?.rerollsThisTurn || 0) * 0.3,
     }),
-    description: '每次出牌: 本回合每次重掷，伤害倍率 +0.3',
+    description: '每次出牌: 本回合每次重掷，伤害倍率 +30%',
   },
   {
     id: 'pain_amplifier',
@@ -305,7 +305,7 @@ export const AUGMENTS_POOL: Augment[] = [
       const bonus = hpPercent < 0.3 ? 2.0 : hpPercent < 0.5 ? 1.5 : hpPercent < 0.7 ? 1.2 : 1.0;
       return { multiplier: bonus };
     },
-    description: '每次出牌: HP越低倍率越高（70%→×1.2, 50%→×1.5, 30%→×2.0）',
+    description: '每次出牌: HP越低倍率越高（70%→+20%, 50%→+50%, 30%→+100%）',
   },
   {
     id: 'reroll_frenzy',
@@ -340,7 +340,7 @@ export const AUGMENTS_POOL: Augment[] = [
       multiplier: 1 + (0.8 * getScale(level)),
       heal: -8,
     }),
-    description: '每次出牌: 伤害 ×1.8，但损失 8 HP',
+    description: '每次出牌: 伤害 +80%，但损失 8 HP',
   },
 ];
 

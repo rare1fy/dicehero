@@ -24,6 +24,8 @@ import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getUpgradedO
 import { drawFromBag, initDiceBag } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
+import { DiceFacePattern } from './components/DiceFacePattern';
+import { PixelDiceRenderer, hasPixelRenderer } from './components/PixelDiceRenderer';
 import { getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from './data/relics';
 // augments import removed - unified into relics
 import { getEnemiesForNode } from './data/enemies';
@@ -495,6 +497,10 @@ export default function DiceHeroGame() {
       bloodRerollCount: 0,
       comboCount: 0,
       lastPlayHandType: undefined,
+      fortuneWheelUsed: false,
+      relicKeepHighest: 0,
+      relicTempDrawBonus: 0,
+      relicTempExtraPlay: 0,
       battleWaves: waves,
       currentWaveIndex: 0,
       targetEnemyUid: (firstWave.find(e => e.combatType === 'guardian') || firstWave[0])?.uid || null,
@@ -702,7 +708,7 @@ export default function DiceHeroGame() {
       setTimeout(() => addFloatingText(`连击心得+${rogueDrawBonus}手牌`, 'text-green-300', undefined, 'player'), 300);
       setGame(prev => ({ ...prev, rogueComboDrawBonus: 0 }));
     }
-    const count = Math.max(0, handLimit - keptDice.length) + relicDrawBonus + rogueDrawBonus;
+    const count = Math.max(0, handLimit - keptDice.filter(d => d.diceDefId !== 'temp_rogue' && !d.isBonusDraw).length) + relicDrawBonus + rogueDrawBonus;
     
     // 从骰子库抽取（包含刚放回的手牌骰子）
     const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, currentDiscard, count);
@@ -735,6 +741,8 @@ export default function DiceHeroGame() {
 
     // 落定 — 使用预先抽取的结果
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
+    // 元素骰子坍缩 + 小丑骰子1-9随机（每回合刷新）
+    setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') }));
     playSound('dice_lock');
     addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
@@ -745,10 +753,12 @@ export default function DiceHeroGame() {
     const extraFreeRerolls = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
     const freeCount = (game.freeRerollsPerTurn || 1) + extraFreeRerolls;
     if (count < freeCount) return 0;
-    // 非战士无法卖血重投
-    if (game.playerClass !== 'warrior') return -1; // -1表示不可用
+    // 嗜血骰袋遗物：非战士也能卖血重投（代价2倍）
+    const hasBloodRerollRelic = game.relics.some(r => r.id === 'extra_free_reroll');
+    if (game.playerClass !== 'warrior' && !hasBloodRerollRelic) return -1;
     const paidIndex = count - freeCount;
-    return Math.pow(2, paidIndex + 1); // 2, 4, 8, 16, 32...
+    const baseCost = Math.pow(2, paidIndex + 1); // 2, 4, 8, 16, 32...
+    return game.playerClass !== 'warrior' ? baseCost * 2 : baseCost; // 非战士代价翻倍
   };
   const currentRerollCost = getRerollHpCost(rerollCount);
   const canReroll = currentRerollCost !== -1; // 非战士免费次数用完后不可重投
@@ -832,12 +842,13 @@ export default function DiceHeroGame() {
       }));
     }
 
-    // 落定：将选中骰子弃置，从骰子库抽新的替换
-    const rerollDefIds = toReroll.map(d => d.diceDefId);
+    // 落定：将选中骰子弃置，从骰子库抽新的替换（临时骰子只重投点数，不从库抽替换）
+    const tempRerollIds = new Set(toReroll.filter(d => d.isTemp).map(d => d.id));
+    const normalRerollDefIds = toReroll.filter(d => !d.isTemp).map(d => d.diceDefId);
 
     setGame(prev => {
-      const newDiscard = [...prev.discardPile, ...rerollDefIds];
-      const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, rerollDefIds.length);
+      const newDiscard = [...prev.discardPile, ...normalRerollDefIds];
+      const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, normalRerollDefIds.length);
       if (shuffled) {
         setShuffleAnimating(true);
         setTimeout(() => setShuffleAnimating(false), 800);
@@ -850,6 +861,12 @@ export default function DiceHeroGame() {
           let drawIdx = 0;
           const newDice = prevDice.map(d => {
             if (!rerollIds.has(d.id)) return { ...d, rolling: false };
+            // 临时骰子：只重投点数，保持isTemp和diceDefId
+            if (tempRerollIds.has(d.id)) {
+              const def = getDiceDef(d.diceDefId);
+              return { ...d, value: rollDiceDef(def), rolling: false, selected: false };
+            }
+            // 普通骰子：从库抽新的替换
             if (drawIdx < drawn.length) {
               const newDie = drawn[drawIdx];
               drawIdx++;
@@ -873,7 +890,21 @@ export default function DiceHeroGame() {
     playSound('dice_lock');
     await new Promise(r => setTimeout(r, 200));
     setDice(prev => [...prev].map(d => ({ ...d, rolling: false })));
-    setRerollCount(prev => prev + 1);
+    // 狂掷风暴：30%概率不消耗重投次数
+    const freeChance = game.relics.filter(r => r.trigger === 'on_reroll').reduce((c, r) => c + (r.effect({}).freeRerollChance || 0), 0);
+    if (freeChance > 0 && Math.random() < freeChance) {
+      addFloatingText('幸运! 不消耗重投', 'text-yellow-300', undefined, 'player');
+    } else {
+      setRerollCount(prev => prev + 1);
+    }
+    // 血铸铠甲：on_reroll 给护甲
+    game.relics.filter(r => r.trigger === 'on_reroll').forEach(relic => {
+      const res = relic.effect({});
+      if (res.armor) {
+        setGame(prev => ({ ...prev, armor: prev.armor + res.armor }));
+        addFloatingText(`+${res.armor}护甲`, 'text-blue-400', undefined, 'player');
+      }
+    });
     // 追踪本波重投次数（洞察弱点用）
     setGame(prev => ({
       ...prev, rerollsThisWave: (prev.rerollsThisWave || 0) + 1
@@ -1112,6 +1143,17 @@ export default function DiceHeroGame() {
 
     // --- Relic on_play effects ---
     game.relics.filter(r => r.trigger === 'on_play').forEach(relic => {
+      // counter 机制（铁血战旗等计数型遗物）
+      if (relic.maxCounter !== undefined) {
+        const currentCounter = game.relics.find(r2 => r2.id === relic.id)?.counter || 0;
+        const newCounter = currentCounter + 1;
+        if (newCounter < relic.maxCounter) {
+          setGame(prev => ({ ...prev, relics: prev.relics.map(r => r.id === relic.id ? { ...r, counter: newCounter } : r) }));
+          return; // 未到触发条件，跳过
+        }
+        // 达到触发条件，重置counter
+        setGame(prev => ({ ...prev, relics: prev.relics.map(r => r.id === relic.id ? { ...r, counter: 0 } : r) }));
+      }
       const relicCtx = {
         handType: bestHand,
         diceCount: selected.length,
@@ -1147,6 +1189,26 @@ export default function DiceHeroGame() {
         holyPurify += (typeof res.purifyDebuff === 'number' ? res.purifyDebuff : 1);
         details.push('净化');
       }
+      // 魔法手套：下回合临时+1手牌
+      if (res.tempDrawBonus) {
+        setGame(prev => ({ ...prev, relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + res.tempDrawBonus }));
+        details.push('下回合+1手牌');
+      }
+      // 铁血战旗/磨砺石：额外出牌机会
+      if (res.grantExtraPlay) {
+        setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + res.grantExtraPlay }));
+        details.push(`+${res.grantExtraPlay}出牌`);
+      }
+      // 稳健之心/连击本能：免费重投
+      if (res.grantFreeReroll) {
+        setRerollCount(prev => Math.max(0, prev - res.grantFreeReroll));
+        details.push(`+${res.grantFreeReroll}免费重投`);
+      }
+      // 血之契约：保留最高点骰子
+      if (res.keepHighestDie) {
+        setGame(prev => ({ ...prev, relicKeepHighest: (prev.relicKeepHighest || 0) + res.keepHighestDie }));
+        details.push('保留最高点骰子');
+      }
       if (details.length > 0) {
         triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined, relicId: relic.id, icon: relic.icon });
       }
@@ -1167,6 +1229,10 @@ export default function DiceHeroGame() {
     const isRoyalElement = activeHands.some((h) => h === '皇家元素顺');
     const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0); // 同元素时效果×2
     
+    // unifyElement (元素风暴): 出牌时将所有选中骰子强制变为同一随机元素
+    const hasUnify = selected.some(d => getDiceDef(d.diceDefId).onPlay?.unifyElement);
+    const unifiedElement = hasUnify && !skipOnPlay ? (['fire', 'ice', 'thunder', 'poison', 'holy'] as const)[Math.floor(Math.random() * 5)] : null;
+
     selected.forEach(d => {
       if (skipOnPlay) return;
       const def = getDiceDef(d.diceDefId);
@@ -1174,10 +1240,11 @@ export default function DiceHeroGame() {
       const levelBonus = getElementLevelBonus(diceLevel);
       const totalElementBonus = elementBonus * levelBonus;
       
-      // 元素骰子：根据坍缩后的元素产生不同效果
-      if (def.isElemental && d.collapsedElement) {
+      // 元素骰子：根据坍缩后的元素产生不同效果（元素风暴时使用统一元素）
+      const activeElement = unifiedElement || d.collapsedElement;
+      if (def.isElemental && activeElement) {
         const diceValue = d.value;
-        switch (d.collapsedElement) {
+        switch (activeElement) {
           case 'fire':
             // 火：摧毁敌人所有护甲 + 基于点数的真实伤害 + 点数灼烧
             pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
@@ -1416,10 +1483,34 @@ export default function DiceHeroGame() {
         const negCount = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type)).length;
         extraHeal += negCount * op.healPerCleanse;
       }
-      // 双元素（棱镜骰子）— 标记为isElemental，坍缩时给两个元素
-      // dualElement 在元素坍缩和元素效果触发时处理
-      // 复制多数元素（共鸣骰子）— 在元素坍缩时处理
-      // copyMajorityElement 在坍缩逻辑中处理
+      // 双元素（棱镜骰子）— 触发第二元素效果
+      if (def.isElemental && d.secondElement && d.secondElement !== d.collapsedElement) {
+        const diceValue = d.value;
+        switch (d.secondElement) {
+          case 'fire':
+            pierceDamage += Math.floor(diceValue * totalElementBonus);
+            statusEffects.push({ type: 'burn', value: Math.max(1, Math.floor(diceValue / 2)) });
+            break;
+          case 'ice':
+            if (!targetEnemy?.statuses?.some(s => (s.type as string) === 'freeze_immune')) {
+              statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
+            }
+            break;
+          case 'thunder':
+            pierceDamage += Math.floor(diceValue * totalElementBonus);
+            break;
+          case 'poison': {
+            const pStacks = Math.floor((diceValue + 1) * totalElementBonus);
+            const ep = statusEffects.find(es => es.type === 'poison');
+            if (ep) ep.value += pStacks; else statusEffects.push({ type: 'poison', value: pStacks });
+            break;
+          }
+          case 'holy':
+            extraHeal += Math.floor(diceValue * 0.5 * elementBonus);
+            break;
+        }
+      }
+      // 复制多数元素（共鸣骰子）— 已在坍缩时处理，此处不需额外逻辑
       // 统一元素（元素风暴）— 出牌时将所有选中骰子变为同一元素
       // unifyElement 在出牌结算前处理元素
       // 与未选中骰子交换点数（命运编织）— 自动找最高点数的未选中骰子交换
@@ -1470,6 +1561,10 @@ export default function DiceHeroGame() {
       // 第2次出牌暴击（致命骰子）
       if (op.critOnSecondPlay && (game.comboCount || 0) >= 1) {
         multiplier *= op.critOnSecondPlay;
+      }
+      // 影分身（复制自身点数额外加伤）
+      if (op.cloneSelf) {
+        extraDamage += d.value;
       }
       // 第2次出牌额外伤害（暗影骰子）
       if (op.bonusDamageOnSecondPlay && (game.comboCount || 0) >= 1) {
@@ -1562,7 +1657,7 @@ export default function DiceHeroGame() {
     if (game.playerClass === 'warrior' && latestRageMult > 0) {
       modifiedDamage = Math.floor(modifiedDamage * (1 + latestRageMult));
     }
-    // 盗贼【连击加成】：第2次出牌×1.2（普通攻击不触发）
+    // 盗贼【连击加成】：第2次出牌+20%伤害（普通攻击不触发）
     if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && bestHand !== '普通攻击') {
       modifiedDamage = Math.floor(modifiedDamage * 1.2);
     }
@@ -1633,10 +1728,25 @@ export default function DiceHeroGame() {
       ...prev,
       playsLeft: prev.playsLeft - 1,
       playsPerEnemy: { ...playsPerEnemyRef.current },
-      // 盗贼连击追踪（普通攻击不计入连击）
-      comboCount: thisHandType !== '普通攻击' ? (prev.comboCount || 0) + 1 : prev.comboCount || 0,
+      // 盗贼连击追踪（任何牌型都计入连击）
+      comboCount: (prev.comboCount || 0) + 1,
       lastPlayHandType: thisHandType,
     }));
+
+    // === 盗贼连击预备：第1次出牌后赠送1次免费重投（给第2手准备） ===
+    if (game.playerClass === 'rogue' && currentCombo === 0) {
+      setTimeout(() => {
+        setRerollCount(prev => Math.max(0, prev - 1));
+        addFloatingText('连击预备: +1免费重投', 'text-cyan-300', undefined, 'player');
+      }, 200);
+    }
+
+    // === 盗贼连击触发提示（+20%伤害已在伤害计算中处理） ===
+    if (game.playerClass === 'rogue' && currentCombo === 1 && thisHandType !== '普通攻击') {
+      setTimeout(() => {
+        addFloatingText('连击! +20%伤害', 'text-cyan-300', undefined, 'player');
+      }, 200);
+    }
 
     const outcome = expectedOutcome;
     if (!outcome) return;
@@ -1869,7 +1979,7 @@ export default function DiceHeroGame() {
       const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
       const op = getUpgradedOnPlay(def, diceLevel) || def.onPlay;
       if (op.bonusDamage) allEffects.push({ name: def.name, rawValue: op.bonusDamage, detail: `伤害+${op.bonusDamage}`, type: 'damage' });
-      if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `倍率${Math.round(op.bonusMult * 100)}%`, type: 'mult' });
+      if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `倍率+${Math.round((op.bonusMult - 1) * 100)}%`, type: 'mult' });
       if (op.scaleWithHits) {
         const furyBonus = gameRef.current.furyBonusDamage || 0;
         if (furyBonus > 0) allEffects.push({ name: def.name, rawValue: furyBonus, detail: `怒火+${furyBonus}`, type: 'damage' });
@@ -1879,6 +1989,75 @@ export default function DiceHeroGame() {
       if (op.statusToEnemy) {
         const info = STATUS_INFO[op.statusToEnemy.type];
         allEffects.push({ name: def.name, detail: `${info.label}+${op.statusToEnemy.value}`, type: 'status' });
+      }
+      // 以下是之前缺失的效果展示
+      if (op.armor) allEffects.push({ name: def.name, detail: `护甲+${op.armor}`, type: 'armor' });
+      if (op.armorFromValue) allEffects.push({ name: def.name, detail: `护甲+${d.value}(点数)`, type: 'armor' });
+      if (op.armorFromTotalPoints) {
+        const totalPts = selected.reduce((s, dd) => s + dd.value, 0);
+        allEffects.push({ name: def.name, detail: `护甲+${totalPts}(总点数)`, type: 'armor' });
+      }
+      if (op.armorFromHandSize) {
+        const handSize = dice.filter(dd => !dd.spent).length;
+        allEffects.push({ name: def.name, detail: `护甲+${handSize * op.armorFromHandSize}(${handSize}×${op.armorFromHandSize})`, type: 'armor' });
+      }
+      if (op.armorBreak) allEffects.push({ name: def.name, detail: op.armorToDamage ? '破甲→伤害' : '摧毁护甲', type: 'damage' });
+      if (op.aoeDamage) allEffects.push({ name: def.name, detail: `AOE ${op.aoeDamage}伤害`, type: 'damage' });
+      if (op.selfDamagePercent) allEffects.push({ name: def.name, detail: `自伤${Math.round(op.selfDamagePercent * 100)}%`, type: 'status' });
+      if (op.scaleWithLostHp) {
+        const lostHp = game.maxHp - game.hp;
+        allEffects.push({ name: def.name, detail: `已损失HP ${Math.round(lostHp * op.scaleWithLostHp)}伤害`, type: 'damage' });
+      }
+      if (op.executeThreshold) allEffects.push({ name: def.name, detail: `斩杀线${Math.round(op.executeThreshold * 100)}%→${Math.round(op.executeMult! * 100)}%伤害`, type: 'mult' });
+      if (op.healFromValue) allEffects.push({ name: def.name, detail: `回复${d.value}HP(点数)`, type: 'heal' });
+      if (op.maxHpBonus) allEffects.push({ name: def.name, detail: `最大HP+${op.maxHpBonus}`, type: 'heal' });
+      if (op.bonusDamagePerElement) {
+        const elemCount = dice.filter(dd => !dd.spent && dd.element !== 'normal').length;
+        if (elemCount > 0) allEffects.push({ name: def.name, detail: `元素加成+${elemCount * op.bonusDamagePerElement}(${elemCount}×${op.bonusDamagePerElement})`, type: 'damage' });
+      }
+      if (op.bonusDamageFromPoints) allEffects.push({ name: def.name, detail: `总点数${Math.round(op.bonusDamageFromPoints * 100)}%加成`, type: 'damage' });
+      if (op.damageFromArmor) allEffects.push({ name: def.name, detail: `护甲${Math.round(op.damageFromArmor * 100)}%→伤害`, type: 'damage' });
+      if (op.overrideValue) allEffects.push({ name: def.name, detail: `点数→${op.overrideValue}`, type: 'damage' });
+      if (op.copyHighestValue) allEffects.push({ name: def.name, detail: '复制最高点数', type: 'damage' });
+      if (op.devourDie) allEffects.push({ name: def.name, detail: '吞噬+点数', type: 'damage' });
+      if (op.poisonInverse) allEffects.push({ name: def.name, detail: `毒层${7 - d.value}`, type: 'status' });
+      if (op.comboBonus) allEffects.push({ name: def.name, detail: `连击+${Math.round(op.comboBonus * 100)}%`, type: 'mult' });
+      if (op.selfBerserk) allEffects.push({ name: def.name, detail: '狂暴: 伤害+30%/受伤+20%', type: 'status' });
+      if (op.purifyAll) allEffects.push({ name: def.name, detail: '净化负面状态', type: 'heal' });
+      if (op.stayInHand) allEffects.push({ name: def.name, detail: '不消耗留在手牌', type: 'status' });
+      if (op.grantTempDie) allEffects.push({ name: def.name, detail: '+1临时骰子', type: 'status' });
+      if (op.drawFromBag) allEffects.push({ name: def.name, detail: `补抽${op.drawFromBag}颗骰子`, type: 'status' });
+      if (op.grantExtraPlay) allEffects.push({ name: def.name, detail: '+1出牌机会', type: 'status' });
+      if (op.comboDrawBonusNextTurn) allEffects.push({ name: def.name, detail: '下回合+1手牌', type: 'status' });
+      if (op.grantPlayOnCombo && (game.comboCount || 0) >= 1) allEffects.push({ name: def.name, detail: '追击: +1出牌', type: 'status' });
+      if (op.cloneSelf) allEffects.push({ name: def.name, detail: `分身+${d.value}伤害`, type: 'damage' });
+      if (op.unifyElement) allEffects.push({ name: def.name, detail: '统一元素', type: 'status' });
+      if (def.isElemental && d.secondElement) allEffects.push({ name: def.name, detail: `双元素: ${d.secondElement}`, type: 'status' });
+      if (op.critOnSecondPlay && (game.comboCount || 0) >= 1) allEffects.push({ name: def.name, detail: `暴击+${Math.round((op.critOnSecondPlay - 1) * 100)}%`, type: 'mult', rawMult: op.critOnSecondPlay });
+      if (op.bonusDamageOnSecondPlay && (game.comboCount || 0) >= 1) allEffects.push({ name: def.name, rawValue: op.bonusDamageOnSecondPlay, detail: `第2击+${op.bonusDamageOnSecondPlay}`, type: 'damage' });
+      if (op.bonusMultOnSecondPlay && (game.comboCount || 0) >= 1) allEffects.push({ name: def.name, rawMult: op.bonusMultOnSecondPlay, detail: `第2击+${Math.round((op.bonusMultOnSecondPlay - 1) * 100)}%`, type: 'mult' });
+      if (op.stealArmor) allEffects.push({ name: def.name, detail: `偷取护甲(≤${op.stealArmor})`, type: 'armor' });
+      if (op.poisonBase) allEffects.push({ name: def.name, detail: `毒${d.value + op.poisonBase}${op.poisonBonusIfPoisoned ? '(已毒+' + op.poisonBonusIfPoisoned + ')' : ''}`, type: 'status' });
+      if (op.poisonFromPoisonDice) allEffects.push({ name: def.name, detail: `毒系骰子×${op.poisonFromPoisonDice}毒层`, type: 'status' });
+      if (op.detonatePoisonPercent) allEffects.push({ name: def.name, detail: `引爆${Math.round(op.detonatePoisonPercent * 100)}%毒层`, type: 'damage' });
+      if (op.escalateDamage) allEffects.push({ name: def.name, detail: `递增+${Math.round(op.escalateDamage * 100)}%`, type: 'mult' });
+      if (op.wildcard) allEffects.push({ name: def.name, detail: '万能→最优点数', type: 'damage' });
+      if (op.transferDebuff) allEffects.push({ name: def.name, detail: '转移负面→敌人', type: 'status' });
+      if (op.detonateAllOnLastPlay) allEffects.push({ name: def.name, detail: '引爆全部负面', type: 'damage' });
+      if (op.alwaysBounce) allEffects.push({ name: def.name, detail: '弹回手牌', type: 'status' });
+      if (op.lowHpOverrideValue && op.lowHpThreshold && game.hp / game.maxHp < op.lowHpThreshold) allEffects.push({ name: def.name, detail: `低血→点数${op.lowHpOverrideValue}`, type: 'damage' });
+      if (op.scaleWithBloodRerolls && game.bloodRerollCount) allEffects.push({ name: def.name, detail: `卖血+${Math.min(game.bloodRerollCount, 3)}面值`, type: 'damage' });
+      if (op.scaleWithSelfDamage) allEffects.push({ name: def.name, detail: '自伤→伤害加成', type: 'mult' });
+      if (op.tauntAll) allEffects.push({ name: def.name, detail: '嘲讽全体敌人', type: 'status' });
+      if (op.freezeBonus) allEffects.push({ name: def.name, detail: `冻结+${op.freezeBonus}回合`, type: 'status' });
+      if (op.swapWithUnselected) allEffects.push({ name: def.name, detail: '交换最高点数', type: 'damage' });
+      if (op.triggerAllElements) allEffects.push({ name: def.name, detail: '触发全部元素', type: 'status' });
+      if (op.removeBurn) allEffects.push({ name: def.name, detail: `清除${op.removeBurn}层灼烧`, type: 'heal' });
+      if (op.healPerCleanse) allEffects.push({ name: def.name, detail: `每净化+${op.healPerCleanse}HP`, type: 'heal' });
+      // 元素骰子坍缩效果
+      if (def.isElemental && d.collapsedElement) {
+        const elemNames: Record<string, string> = { fire: '灼烧', ice: '冻结', thunder: '雷击AOE', poison: '中毒', holy: '治疗' };
+        allEffects.push({ name: def.name, detail: `${elemNames[d.collapsedElement] || d.collapsedElement}`, type: d.collapsedElement === 'holy' ? 'heal' : 'status' });
       }
     });
     
@@ -2278,35 +2457,23 @@ export default function DiceHeroGame() {
         } else if (aidRoll < 0.8) {
           // 效果4：本场战斗骰子上限+1，立刻补抽
           addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-          addToast(`◆ 洞察弱点！本场战斗骰子上限+1，立刻补抽！`, 'buff');
-          addLog(`洞察弱点达成！骰子上限+1（本场战斗）`);
+          addToast(`◆ 洞察弱点！立刻补抽1颗骰子！`, 'buff');
+          addLog(`洞察弱点达成！立刻补抽1颗骰子`);
           setTimeout(() => {
-            setGame(prev => ({
-              ...prev,
-              drawCount: prev.drawCount + 1,
-              tempDrawCountBonus: (prev.tempDrawCountBonus || 0) + 1,
-            }));
-            // 立刻补抽1颗骰子到手中
-            setGame(prev => {
-              const bag = [...prev.diceBag];
-              if (bag.length === 0) return prev;
-              const idx = Math.floor(Math.random() * bag.length);
-              const defId = bag.splice(idx, 1)[0];
-              const def = getDiceDef(defId);
-              const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
+            const g = gameRef.current;
+            const { drawn, newBag, newDiscard } = drawFromBag(g.diceBag, g.discardPile, 1);
+            if (drawn.length > 0) {
+              setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
               const newDie: Die = {
+                ...drawn[0],
                 id: Date.now() + 9000,
-                diceDefId: defId,
-                value: rollDiceDef(def),
-                element: def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : 'normal',
-                selected: false,
-                spent: false,
-                rolling: false,
+                selected: false, spent: false, rolling: false, justAdded: true, isBonusDraw: true,
               };
-              setDice(prev2 => [...prev2, newDie]);
-              return { ...prev, diceBag: bag };
-            });
-            addFloatingText(`+1骰子`, 'text-yellow-300', <PixelDice size={2} />, 'player');
+              const processed = applyDiceSpecialEffects([newDie], { hasLimitBreaker: g.relics.some(r => r.id === 'limit_breaker') });
+              setDice(prev => [...prev, ...processed.map(d => ({ ...d, justAdded: true }))]);
+              setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
+              addFloatingText(`+1骰子`, 'text-yellow-300', undefined, 'player');
+            }
           }, 800);
         } else {
           // 效果5：骰子库全部临时替换为随机一种强力骰子
@@ -2344,7 +2511,14 @@ export default function DiceHeroGame() {
             if (res.heal && res.heal > 0) {
               setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + res.heal) }));
               addToast(` ${relic.name}: +${res.heal}HP`, 'heal');
-
+            }
+            if (res.grantExtraPlay) {
+              setGame(prev => ({ ...prev, relicTempExtraPlay: (prev.relicTempExtraPlay || 0) + res.grantExtraPlay }));
+              addToast(`${relic.name}: 下回合+${res.grantExtraPlay}出牌`, 'buff');
+            }
+            if (res.grantFreeReroll) {
+              setRerollCount(prev => Math.max(0, prev - res.grantFreeReroll));
+              addToast(`${relic.name}: +${res.grantFreeReroll}免费重投`, 'buff');
             }
           });
         });
@@ -2406,15 +2580,38 @@ export default function DiceHeroGame() {
       if (hasTempGrant && !tempDieToGrant) {
         tempDieToGrant = {
           id: Date.now() + 8000,
-          diceDefId: 'standard',
+          diceDefId: 'temp_rogue',
           value: Math.floor(Math.random() * 2) + 1, // 点数1-2
           element: 'normal' as any,
           selected: false,
           spent: false,
           rolling: false,
-          isTemp: true, // 标记为临时骰子，保留到下回合
+          isTemp: true, // 标记为临时骰子，下回合未使用则销毁
         };
       }
+    }
+
+    // === 接应骰子：从骰子库补抽正式骰子 ===
+    const bagDrawCount = selectedDiceForSpent.reduce((sum, d) => {
+      const def = getDiceDef(d.diceDefId);
+      return sum + (def.onPlay?.drawFromBag || 0);
+    }, 0);
+    if (bagDrawCount > 0) {
+      setTimeout(() => {
+        const g = gameRef.current;
+        const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, g.discardPile, bagDrawCount);
+        if (shuffled) { addToast('弃骰库洗回骰子库', 'info'); }
+        setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
+        const newDice: Die[] = drawn.map(d => ({
+          ...d,
+          id: Date.now() + Math.floor(Math.random() * 10000),
+          rolling: false, selected: false, spent: false, justAdded: true, isBonusDraw: true,
+        }));
+        const processed = applyDiceSpecialEffects(newDice, { hasLimitBreaker: g.relics.some(r => r.id === 'limit_breaker') });
+        setDice(pd => [...pd, ...processed.map(d => ({ ...d, justAdded: true }))]);
+        setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
+        addFloatingText(`接应: +${bagDrawCount}骰子`, 'text-cyan-300', undefined, 'player');
+      }, 300);
     }
     
     setDice(prev => prev.map(d => {
@@ -2438,12 +2635,21 @@ export default function DiceHeroGame() {
       addFloatingText('+1出牌机会', 'text-green-400', undefined, 'player');
     }
 
-    // comboDrawBonusNextTurn: 连击心得 — 成功触发连击时下回合手牌+1
-    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
+    // comboDrawBonusNextTurn: 连击心得 — 成功触发连击时下回合手牌+1（只生效1颗）
+    if (game.playerClass === 'rogue' && currentCombo >= 1 && thisHandType !== '普通攻击') {
       const hasComboMastery = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboDrawBonusNextTurn);
       if (hasComboMastery) {
         setGame(prev => ({ ...prev, rogueComboDrawBonus: (prev.rogueComboDrawBonus || 0) + 1 }));
         addFloatingText('连击心得: 下回合+1手牌', 'text-green-300', undefined, 'player');
+      }
+    }
+
+    // grantPlayOnCombo: 追击骰子 — 连击触发时+1出牌机会（只生效1次）
+    if (game.playerClass === 'rogue' && currentCombo >= 1 && thisHandType !== '普通攻击') {
+      const hasComboPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantPlayOnCombo);
+      if (hasComboPlay) {
+        setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
+        addFloatingText('追击: +1出牌!', 'text-green-400', undefined, 'player');
       }
     }
     
@@ -2485,8 +2691,10 @@ export default function DiceHeroGame() {
     
     // 补充临时骰子（延迟显示，只补1颗）
     if (tempDieToGrant) {
+      const tmpDie = tempDieToGrant;
       setTimeout(() => {
-        setDice(prev => [...prev, tempDieToGrant!]);
+        setDice(prev => [...prev, { ...tmpDie, justAdded: true }]);
+        setTimeout(() => setDice(pd => pd.map(d => d.id === tmpDie.id ? { ...d, justAdded: false } : d)), 600);
         addFloatingText('+1临时骰子', 'text-green-300', undefined, 'player');
       }, 300);
     }
@@ -2644,23 +2852,25 @@ export default function DiceHeroGame() {
       if (currentCharge >= maxChargeForHand) {
         // 手牌上限已达6颗，继续蓄力给伤害倍率加成（每次+10%）
         const overchargeBonus = 0.1;
+        const chargeArmor = 6 + currentCharge * 2;
         setGame(prev => ({
           ...prev,
           chargeStacks: currentCharge + 1,
           mageOverchargeMult: (prev.mageOverchargeMult || 0) + overchargeBonus,
-          armor: prev.armor + 6,
+          armor: prev.armor + chargeArmor,
         }));
         addFloatingText(`过充! 伤害+${Math.round(((game.mageOverchargeMult || 0) + overchargeBonus) * 100)}%`, 'text-purple-400', undefined, 'player');
-        addFloatingText('+6护甲', 'text-blue-400', undefined, 'player');
+        addFloatingText(`+${chargeArmor}护甲`, 'text-blue-400', undefined, 'player');
       } else {
         // 正常蓄力：手牌上限+1
         const newChargeStacks = currentCharge + 1;
         const newHandLimit = Math.min(6, game.drawCount + newChargeStacks);
+        const chargeArmor = 6 + currentCharge * 2;
         setGame(prev => ({
-          ...prev, chargeStacks: newChargeStacks, armor: prev.armor + 6,
+          ...prev, chargeStacks: newChargeStacks, armor: prev.armor + chargeArmor,
         }));
         addFloatingText(`蓄力 ${newHandLimit}/6`, 'text-purple-400', undefined, 'player');
-        addFloatingText('+6护甲', 'text-blue-400', undefined, 'player');
+        addFloatingText(`+${chargeArmor}护甲`, 'text-blue-400', undefined, 'player');
       }
     } else if (game.playerClass === 'mage' && playedThisTurn) {
       // 出了牌就重置蓄力和过充倍率
@@ -3121,6 +3331,10 @@ export default function DiceHeroGame() {
               setGame(prev => ({ ...prev, rageFireBonus: (prev.rageFireBonus || 0) + res.damage }));
               addToast(`${relic.name}: 下次出牌+${res.damage}伤害`, 'buff');
             }
+            if (res.tempDrawBonus) {
+              setGame(prev => ({ ...prev, relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + res.tempDrawBonus }));
+              addToast(`${relic.name}: 下回合+${res.tempDrawBonus}手牌`, 'buff');
+            }
           });
           // --- 怒火骰子：受到敌人攻击时永久叠加额外伤害 ---
           const furyDice = game.ownedDice.find(od => od.defId === 'w_fury');
@@ -3324,14 +3538,22 @@ setGame(prev => {
     let discardFromHand: string[] = [];
     
     if (g2.playerClass === 'mage') {
-      // 法师：未使用的骰子保留，按蓄力层上限裁剪（硬顶6）
-      const chargeStacks = g2.chargeStacks || 0;
-      const handLimit = Math.min(6, g2.drawCount + chargeStacks);
-      remainingDice = dice.filter(d => !d.spent);
-      if (remainingDice.length > handLimit) {
-        const excess = remainingDice.slice(0, remainingDice.length - handLimit);
-        discardFromHand = excess.map(d => d.diceDefId);
-        remainingDice = remainingDice.slice(remainingDice.length - handLimit);
+      // 法师：蓄力回合（未出牌）保留手牌，出过牌的回合弃掉所有手牌
+      const playedThisTurnCheck = g2.playsLeft < g2.maxPlays;
+      if (playedThisTurnCheck) {
+        // 出过牌 → 弃掉所有手牌（和战士一样）
+        discardFromHand = dice.filter(d => !d.spent).map(d => d.diceDefId);
+        remainingDice = [];
+      } else {
+        // 蓄力（未出牌）→ 保留手牌，按蓄力层上限裁剪
+        const chargeStacks = g2.chargeStacks || 0;
+        const handLimit = Math.min(6, g2.drawCount + chargeStacks);
+        remainingDice = dice.filter(d => !d.spent);
+        if (remainingDice.length > handLimit) {
+          const excess = remainingDice.slice(0, remainingDice.length - handLimit);
+          discardFromHand = excess.map(d => d.diceDefId);
+          remainingDice = remainingDice.slice(remainingDice.length - handLimit);
+        }
       }
     } else if (g2.playerClass === 'rogue') {
       // 盗贼：保留本回合补充的临时骰子(isTemp且未使用)，其余弃掉
@@ -3342,9 +3564,34 @@ setGame(prev => {
       // 临时骰子保留到下回合，但清除isTemp标记（只保留一轮）
       remainingDice = keptTemp.map(d => ({ ...d, isTemp: false }));
     } else {
-      // 战士：全部弃掉
-      discardFromHand = dice.filter(d => !d.spent).map(d => d.diceDefId);
-      remainingDice = [];
+      // 战士/其他：默认全部弃掉
+      // 命运之轮：首次出牌后保留手牌1次
+      const hasKeepOnce = g2.relics.some(r => r.id === 'fortune_wheel_relic') && !(g2.fortuneWheelUsed);
+      if (hasKeepOnce && g2.playsLeft < g2.maxPlays) {
+        remainingDice = dice.filter(d => !d.spent);
+        discardFromHand = [];
+        setGame(prev => ({ ...prev, fortuneWheelUsed: true }));
+        addFloatingText('命运之轮: 保留手牌!', 'text-yellow-300', undefined, 'player');
+      } else {
+        discardFromHand = dice.filter(d => !d.spent).map(d => d.diceDefId);
+        remainingDice = [];
+      }
+    }
+
+    // 血之契约遗物：保留最高点骰子（任何职业，在弃牌后追加保留）
+    const keepHighest = g2.relicKeepHighest || 0;
+    if (keepHighest > 0 && discardFromHand.length > 0) {
+      const unspent = dice.filter(d => !d.spent).sort((a, b) => b.value - a.value);
+      const toKeep = unspent.slice(0, keepHighest);
+      toKeep.forEach(d => {
+        const idx = discardFromHand.indexOf(d.diceDefId);
+        if (idx >= 0) {
+          discardFromHand.splice(idx, 1);
+          remainingDice.push(d);
+        }
+      });
+      setGame(prev => ({ ...prev, relicKeepHighest: 0 }));
+      if (toKeep.length > 0) addFloatingText(`保留${toKeep.map(d => d.value).join(',')}点骰子`, 'text-cyan-300', undefined, 'player');
     }
     
     // 把弃掉的手牌放入弃骰库
@@ -3386,7 +3633,13 @@ setGame(prev => {
         addFloatingText(`连击心得+${rogueDrawBonus2}手牌`, 'text-green-300', undefined, 'player');
         setGame(prev => ({ ...prev, rogueComboDrawBonus: 0 }));
       }
-      const needDraw = Math.max(0, targetHandSize + schrodingerBonus + rogueDrawBonus2 - remainingCount);
+      // 魔法手套遗物临时手牌加成
+      const relicDrawBonus2 = g.relicTempDrawBonus || 0;
+      if (relicDrawBonus2 > 0) {
+        addFloatingText(`魔法手套+${relicDrawBonus2}手牌`, 'text-cyan-300', undefined, 'player');
+        setGame(prev => ({ ...prev, relicTempDrawBonus: 0 }));
+      }
+      const needDraw = Math.max(0, targetHandSize + schrodingerBonus + rogueDrawBonus2 + relicDrawBonus2 - (remainingCount - remainingDice.filter(d => d.diceDefId === 'temp_rogue' || d.isBonusDraw).length));
       
       // 直接从 gameRef.current 读取最新状态进行抽牌计算
       // setTimeout 保证之前的 setGame 已 flush，gameRef.current 是最新值
@@ -3417,12 +3670,22 @@ setGame(prev => {
           newValue = Math.min(6, newValue + def.onPlay.bonusOnKeep);
           addFloatingText(`${def.name}+${def.onPlay.bonusOnKeep}点`, 'text-cyan-400', undefined, 'player');
         }
-        // bonusPerTurnKept: 星辰骰子 — 每保留1回合+N点（有上限）
+        // bonusPerTurnKept: 星辰骰子 — 每保留1回合+N点（累积有上限）
         if (def.onPlay?.bonusPerTurnKept) {
           const cap = def.onPlay.keepBonusCap || 99;
-          const bonus = Math.min(def.onPlay.bonusPerTurnKept, cap);
-          newValue = Math.min(6, newValue + bonus);
-          addFloatingText(`${def.name}+${bonus}点`, 'text-purple-400', undefined, 'player');
+          const accumulated = d.keptBonusAccum || 0;
+          if (accumulated < cap) {
+            const bonus = Math.min(def.onPlay.bonusPerTurnKept, cap - accumulated);
+            newValue = Math.min(6, newValue + bonus);
+            addFloatingText(`${def.name}+${bonus}点(${accumulated + bonus}/${cap})`, 'text-purple-400', undefined, 'player');
+            return {
+              ...d,
+              value: newValue,
+              selected: false,
+              kept: true,
+              keptBonusAccum: accumulated + bonus,
+            };
+          }
         }
         return {
           ...d,
@@ -4048,6 +4311,7 @@ useEffect(() => {
           <motion.div 
             animate={screenShake ? { x: [-10, 10, -10, 10, 0] } : {}}
             className="flex flex-col h-full relative"
+            onClick={() => lastTappedDieId && setLastTappedDieId(null)}
           >
             {/* ============================================
                 沉浸式第一人称战斗界面
@@ -4620,18 +4884,17 @@ useEffect(() => {
                             initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: settlementPhase === 'dice' && settlementData.currentEffectIdx >= i ? 1.1 : 1, rotate: 0 }}
                             transition={{ delay: i * 0.08, duration: 0.3, type: 'spring', stiffness: 300 }}
-                            className={`relative ${getDiceElementClass(d.element, settlementPhase === 'dice' && settlementData.currentEffectIdx >= i, false, false, d.diceDefId)}`}
+                            className="relative"
                             style={{
-                              fontSize: '20px', width: '48px', height: '48px',
-                              boxShadow: settlementPhase === 'dice' && settlementData.currentEffectIdx >= i
-                                ? '0 0 16px rgba(212,160,48,0.7), 0 0 4px rgba(212,160,48,0.4)' : 'none',
+                              filter: settlementPhase === 'dice' && settlementData.currentEffectIdx >= i
+                                ? 'drop-shadow(0 0 8px rgba(212,160,48,0.7))' : 'none',
                             }}>
-                            <span className={`${d.element === 'normal' ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>{d.value}</span>
-                            {d.element !== 'normal' && (
-                              <div className="absolute top-0.5 right-0.5 pointer-events-none">
-                                <ElementBadge element={d.element} size={7} />
-                              </div>
-                            )}
+                            <PixelDiceRenderer
+                              diceDefId={d.diceDefId}
+                              value={d.value}
+                              size={48}
+                              selected={settlementPhase === 'dice' && settlementData.currentEffectIdx >= i}
+                            />
                           </motion.div>
                         ))}
                       </div>
@@ -5244,12 +5507,13 @@ useEffect(() => {
                 <div className="flex justify-center gap-2.5 mb-1.5 min-h-[80px] items-end relative pt-[20px]">
                   {dice.filter(d => !d.spent).map((die) => {
                     const isHint = !die.selected && handHintIds.has(die.id) && !die.rolling;
-                    const isComboReady = game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 && !die.selected && !die.rolling && !die.playing;
+                    const isComboReady = game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 && !die.selected && !die.rolling && !die.playing && handHintIds.has(die.id);
+                    const usePixelRender = hasPixelRenderer(die.diceDefId) || (isNormalAttackMulti && die.selected && hasPixelRenderer('standard'));
                     return (
-                      <div key={`die-wrap-${die.id}`} data-die-id={die.id} className={`relative ${isHint ? 'dice-hand-hint-wrap' : ''} ${isComboReady ? 'dice-combo-ready' : ''}`}>
+                      <div key={`die-wrap-${die.id}`} data-die-id={die.id} className={`relative ${isHint ? 'dice-hand-hint-wrap' : ''} ${isComboReady ? 'dice-combo-ready' : ''} ${die.diceDefId === 'temp_rogue' ? 'dice-temp-ghost' : ''}`}>
                       <motion.button
                         key={`die-${die.id}`}
-                        initial={false}
+                        initial={die.justAdded ? { scale: 0, y: 60, opacity: 0, rotate: -180 } : false}
                         animate={diceDiscardAnim && !die.spent ? {
                           y: -100,
                           x: 80,
@@ -5272,24 +5536,42 @@ useEffect(() => {
                           rotate: 0
                         } : { rotate: 0, scale: 1, y: 0, opacity: 1 }}
                         transition={diceDiscardAnim && !die.spent ? { duration: 0.25, ease: 'easeIn' } : die.rolling ? { repeat: Infinity, duration: 0.15, ease: 'linear' } : die.playing ? { duration: 0.4, ease: 'easeOut' } : die.selected ? { duration: 0.12, type: 'spring', stiffness: 500, damping: 25 } : { duration: 0.06, ease: 'easeOut' }}
-                        onClick={() => !die.rolling && !game.isEnemyTurn && game.playsLeft > 0 && toggleSelect(die.id)}
+                        onClick={(e) => { e.stopPropagation(); !die.rolling && !game.isEnemyTurn && game.playsLeft > 0 && toggleSelect(die.id); }}
                         onDoubleClick={(e) => { e.stopPropagation(); toggleLock(die.id); }}
-                        className={`${getDiceElementClass(
+                        className={`${usePixelRender ? '' : getDiceElementClass(
                           isNormalAttackMulti && die.selected && die.element !== 'normal' ? 'normal' : die.element,
                           die.selected, die.rolling, invalidDiceIds.has(die.id),
                           isNormalAttackMulti && die.selected ? undefined : die.diceDefId
-                        )} ${die.selected && !die.playing ? 'dice-selected-enhanced' : ''} ${die.playing ? 'pixel-dice-playing' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''}`}
+                        )} ${!usePixelRender && die.selected && !die.playing ? 'dice-selected-enhanced' : ''} ${die.playing ? 'pixel-dice-playing' : ''} ${(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0)) ? 'pointer-events-none' : ''} ${usePixelRender ? 'cursor-pointer relative flex items-center justify-center' : ''}`}
                         style={{ 
-                          fontSize: '26px', width: '56px', height: '56px',
-                          ...(die.locked ? { boxShadow: '0 0 6px rgba(234,179,8,0.6)', borderColor: '#eab308' } : {}),
-                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : invalidDiceIds.has(die.id) && !die.selected && !handHintIds.has(die.id) ? { filter: 'grayscale(0.4) brightness(0.7)', opacity: 0.65 } : {})
+                          width: '56px', height: '56px',
+                          ...(usePixelRender ? { background: 'transparent', border: 'none', padding: 0, boxShadow: 'none', fontSize: 0, outline: 'none', borderRadius: 0 } : { fontSize: '26px' }),
+                          ...(die.locked && !usePixelRender ? { boxShadow: '0 0 6px rgba(234,179,8,0.6)', borderColor: '#eab308' } : {}),
+                          ...(!die.selected && (game.isEnemyTurn || game.playsLeft <= 0) ? { filter: 'grayscale(0.5) brightness(0.7)', opacity: 0.6 } : dice.some(dd => dd.selected && !dd.spent) && invalidDiceIds.has(die.id) && !die.selected && !handHintIds.has(die.id) ? { filter: 'brightness(0.85)', opacity: 0.8 } : {})
                         }}
                       >
-                        <span className={`${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`}>
+                        {usePixelRender ? (
+                          <PixelDiceRenderer
+                            diceDefId={isNormalAttackMulti && die.selected ? 'standard' : die.diceDefId}
+                            value={die.value}
+                            size={56}
+                            selected={die.selected}
+                            rolling={die.rolling}
+                            element={!isNormalAttackMulti || !die.selected ? (die.collapsedElement || (die.element !== 'normal' ? die.element : undefined)) : undefined}
+                          />
+                        ) : (
+                          <>
+                        {/* 职业骰子底层图案（非像素渲染的骰子） */}
+                        {!die.rolling && !die.playing && die.diceDefId !== 'standard' && !(isNormalAttackMulti && die.selected) && (
+                          <DiceFacePattern diceDefId={die.diceDefId} />
+                        )}
+                        <span className={`relative z-[2] ${(die.element === 'normal' || (isNormalAttackMulti && die.selected)) ? 'font-semibold' : 'font-black pixel-text-shadow'}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.5)' }}>
                           {die.rolling ? "?" : die.value}
                         </span>
-                        {!die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (
-                          <div className="absolute top-0.5 right-0.5 pointer-events-none">
+                          </>
+                        )}
+                        {!usePixelRender && !die.rolling && die.element !== 'normal' && !(isNormalAttackMulti && die.selected) && (
+                          <div className="absolute top-0.5 right-0.5 pointer-events-none z-[3]">
                             <ElementBadge element={die.element} size={8} />
                           </div>
                         )}
@@ -5308,23 +5590,33 @@ useEffect(() => {
                         if (!wrapEl) return null;
                         const rect = wrapEl.getBoundingClientRect();
                         const tipLeft = Math.max(8, Math.min(rect.left + rect.width / 2 - 90, window.innerWidth - 188));
-                        const tipTop = rect.top - 8;
+                        const tipTop = rect.top - 20;
+                        const def = getDiceDef(die.diceDefId);
+                        const collapsed = die.collapsedElement || (die.element !== 'normal' ? die.element : null);
+                        const ELEM_NAMES: Record<string, string> = { fire: '火焰骰子', ice: '冰霜骰子', thunder: '雷电骰子', poison: '剧毒骰子', holy: '神圣骰子', shadow: '暗影骰子' };
+                        const ELEM_DESCS: Record<string, string> = { fire: '造成额外灼烧伤害（持续2回合）', ice: '冻结敌人，令其跳过1回合行动', thunder: '雷击造成AOE范围伤害', poison: '施加毒素持续掉血', holy: '治疗自身并净化负面状态' };
+                        const ELEM_COLORS: Record<string, string> = { fire: '#ff8040', ice: '#60c0f0', thunder: '#e0d040', poison: '#60e060', holy: '#e0d8a0', shadow: '#a080d0' };
+                        const tipName = def.isElemental && collapsed ? ELEM_NAMES[collapsed] || def.name : def.name;
+                        const tipDesc = def.isElemental && collapsed ? ELEM_DESCS[collapsed] || def.description : def.description;
+                        const tipColor = def.isElemental && collapsed ? (ELEM_COLORS[collapsed] || '#c8c8d0') : (() => { const id = def.id; return id.startsWith('w_') ? '#ff6060' : id.startsWith('mage_') ? '#a070ff' : id.startsWith('r_') ? '#60d080' : '#c8c8d0'; })();
+                        const tipBg = def.isElemental && collapsed ? `${tipColor}22` : (() => { const id = def.id; return id.startsWith('w_') ? 'rgba(192,64,64,0.2)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.2)' : id.startsWith('r_') ? 'rgba(48,160,80,0.2)' : 'rgba(200,200,200,0.1)'; })();
+                        const tipBorder = def.isElemental && collapsed ? `${tipColor}66` : (() => { const id = def.id; return id.startsWith('w_') ? 'rgba(192,64,64,0.4)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.4)' : id.startsWith('r_') ? 'rgba(48,160,80,0.4)' : 'rgba(200,200,200,0.2)'; })();
                         return ReactDOM.createPortal(
-                          <div className="fixed pointer-events-none z-[9999]" style={{ top: tipTop, left: tipLeft, width: '180px', transform: 'translateY(-100%)' }}>
+                          <div className="fixed pointer-events-none z-[150]" style={{ top: tipTop, left: tipLeft, width: '180px', transform: 'translateY(-100%)' }}>
                             <div className="px-2 py-1.5 bg-[rgba(12,10,20,0.95)] backdrop-blur-sm border border-[rgba(255,255,255,0.15)] text-center" style={{ borderRadius: '4px' }}>
                               <span className="inline-block px-1.5 py-0.5 text-[9px] font-black mb-1"
                                 style={{
-                                  color: (() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? '#ff6060' : id.startsWith('mage_') ? '#a070ff' : id.startsWith('r_') ? '#60d080' : '#c8c8d0'; })(),
-                                  background: (() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? 'rgba(192,64,64,0.2)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.2)' : id.startsWith('r_') ? 'rgba(48,160,80,0.2)' : 'rgba(200,200,200,0.1)'; })(),
-                                  border: `1px solid ${(() => { const id = getDiceDef(die.diceDefId).id; return id.startsWith('w_') ? 'rgba(192,64,64,0.4)' : id.startsWith('mage_') ? 'rgba(112,64,192,0.4)' : id.startsWith('r_') ? 'rgba(48,160,80,0.4)' : 'rgba(200,200,200,0.2)'; })()}`,
+                                  color: tipColor,
+                                  background: tipBg,
+                                  border: `1px solid ${tipBorder}`,
                                   borderRadius: '2px',
                                 }}
-                              >{getDiceDef(die.diceDefId).name}</span>
-                              {getDiceDef(die.diceDefId).description && (
-                                <div className="text-[9px] text-[var(--dungeon-text)] leading-snug mt-0.5">{formatDescription(getDiceDef(die.diceDefId).description)}</div>
+                              >{tipName}</span>
+                              {tipDesc && (
+                                <div className="text-[9px] text-[var(--dungeon-text)] leading-snug mt-0.5">{formatDescription(tipDesc)}</div>
                               )}
                               <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-0.5 font-mono opacity-70">
-                                面值: [{getDiceDef(die.diceDefId).faces.join(', ')}]
+                                面值: [{def.faces.join(', ')}]
                               </div>
                               {die.diceDefId === 'w_fury' && (game.furyBonusDamage || 0) > 0 && (
                                 <div className="text-[8px] text-orange-400 mt-0.5 font-bold">
@@ -5363,22 +5655,42 @@ useEffect(() => {
                     className={`h-10 px-3 ${currentRerollCost <= 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : currentRerollCost <= 4 ? 'bg-[#4a1a1a] border-[#c04040] text-[#ff8080]' : 'bg-[#5a0a0a] border-[#ff2020] text-[#ff4040]'} disabled:opacity-30 border-3 flex items-center justify-center gap-1.5 transition-all shrink-0 relative overflow-hidden`}
                     style={{boxShadow: currentRerollCost <= 0 ? 'inset 0 2px 0 rgba(60,200,100,0.3), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5)' : `inset 0 2px 0 rgba(255,60,60,0.25), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5), 0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)})`}}
                   >
-                    {/* Blood drip particles when cost > 0 */}
+                    {/* 战士卖血像素血滴粒子 */}
                     {currentRerollCost > 0 && (
                       <>
-                        {[...Array(Math.min(6, Math.floor(currentRerollCost / 2) + 2))].map((_, i) => (
-                          <span
+                        {[...Array(Math.min(8, Math.floor(currentRerollCost / 2) + 3))].map((_, i) => (
+                          <motion.div
                             key={i}
-                            className="absolute rounded-full animate-pulse"
+                            className="absolute"
                             style={{
-                              width: `${2 + Math.random() * 2}px`,
-                              height: `${2 + Math.random() * 2}px`,
-                              backgroundColor: `rgba(255, ${30 + Math.random() * 40}, ${30 + Math.random() * 40}, ${0.4 + Math.random() * 0.4})`,
-                              left: `${10 + Math.random() * 80}%`,
-                              top: `${10 + Math.random() * 80}%`,
-                              animationDelay: `${Math.random() * 2}s`,
-                              animationDuration: `${0.8 + Math.random() * 1.2}s`,
+                              width: 3, height: 3,
+                              background: `rgb(${200 + Math.floor(Math.random() * 55)}, ${20 + Math.floor(Math.random() * 30)}, ${20 + Math.floor(Math.random() * 30)})`,
+                              imageRendering: 'pixelated',
+                              left: `${10 + i * 10}%`,
                             }}
+                            initial={{ y: -8, opacity: 0 }}
+                            animate={{ y: [- 8, 16], opacity: [0, 1, 1, 0], scale: [1, 1, 0.5] }}
+                            transition={{ duration: 0.8 + i * 0.1, repeat: Infinity, delay: i * 0.12, ease: 'linear' }}
+                          />
+                        ))}
+                      </>
+                    )}
+                    {/* 免费重投时绿色方块粒子 */}
+                    {currentRerollCost <= 0 && freeRerollsRemaining > 0 && (
+                      <>
+                        {[...Array(3)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="absolute"
+                            style={{
+                              width: 2, height: 2,
+                              background: '#60c880',
+                              imageRendering: 'pixelated',
+                              left: `${20 + i * 25}%`,
+                            }}
+                            initial={{ y: 12, opacity: 0 }}
+                            animate={{ y: -8, opacity: [0, 0.8, 0] }}
+                            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.3, ease: 'linear' }}
                           />
                         ))}
                       </>
@@ -5447,13 +5759,19 @@ useEffect(() => {
                           game.playerClass === 'mage' && game.playsLeft === game.maxPlays
                             ? 'bg-[#503080] border-[#201040] text-[#d0b0ff]'
                             : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0
-                              ? 'bg-[#303830] border-[#1a201a] text-[#608068] opacity-60'
+                              ? 'bg-[#184038] border-[#0a2018] text-[#40f0e0]'
                               : 'bg-[#907020] border-[#2a2008] text-[#fff0c0]'
                         } disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn relative overflow-hidden`}
                         style={{boxShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays
                           ? 'inset 0 2px 0 #7850b0, inset 0 -2px 0 #281060, inset 2px 0 0 #6040a0, inset -2px 0 0 #381870, 0 4px 0 #100828'
-                          : 'inset 0 2px 0 #c8a040, inset 0 -2px 0 #604008, inset 2px 0 0 #b09030, inset -2px 0 0 #705010, 0 4px 0 #1a1404',
-                          textShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? '1px 1px 0 #201040, 0 0 8px rgba(160,100,255,0.6)' : '1px 1px 0 #2a2008'}}
+                          : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0
+                            ? 'inset 0 2px 0 #306858, inset 0 -2px 0 #082818, inset 2px 0 0 #285848, inset -2px 0 0 #103828, 0 4px 0 #041810'
+                            : 'inset 0 2px 0 #c8a040, inset 0 -2px 0 #604008, inset 2px 0 0 #b09030, inset -2px 0 0 #705010, 0 4px 0 #1a1404',
+                          textShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays
+                            ? '1px 1px 0 #201040, 0 0 8px rgba(160,100,255,0.6)'
+                            : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0
+                              ? '1px 1px 0 #082018, 0 0 8px rgba(64,240,224,0.5)'
+                              : '1px 1px 0 #2a2008'}}
                       >
                         {game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? (
                           <>
@@ -5467,6 +5785,22 @@ useEffect(() => {
                                 initial={{ x: Math.random() * 100 - 50, y: 20, opacity: 0 }}
                                 animate={{ y: -20, opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                                 transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.25, ease: 'easeOut' }}
+                              />
+                            ))}
+                          </>
+                        ) : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? (
+                          <>
+                            <PixelArrowUp size={2} />
+                            <span>选骰连击</span>
+                            {/* 连击粒子特效 — 青色方块 */}
+                            {[...Array(6)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                className="absolute"
+                                style={{ width: 3, height: 3, background: '#40f0f0', imageRendering: 'pixelated' }}
+                                initial={{ x: Math.random() * 120 - 60, y: 16, opacity: 0 }}
+                                animate={{ y: -16, opacity: [0, 1, 0], scale: [1, 1, 0.5] }}
+                                transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: 'linear' }}
                               />
                             ))}
                           </>
@@ -5684,8 +6018,8 @@ useEffect(() => {
                       <div className="flex justify-between items-center">
                         <span className="text-[12px] text-[var(--dungeon-text-dim)]">选中骰子</span>
                         <div className="flex gap-1">
-                          {expectedOutcome.selectedValues.map((v, i) => (
-                            <span key={i} className="w-5 h-5 flex items-center justify-center bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] text-[11px] font-bold text-[var(--dungeon-text-bright)]" style={{borderRadius:'2px'}}>{v}</span>
+                          {dice.filter(d => d.selected && !d.spent).map((d, i) => (
+                            <PixelDiceRenderer key={i} diceDefId={d.diceDefId} value={d.value} size={22} element={d.collapsedElement || (d.element !== 'normal' ? d.element : undefined)} />
                           ))}
                         </div>
                       </div>

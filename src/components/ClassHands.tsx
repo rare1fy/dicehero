@@ -10,7 +10,7 @@ import React from 'react';
 // 战士左手 — 铁甲手套 + 骷髅骰子
 // ============================================================
 const WarriorLeftHand: React.FC = () => (
-  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))' }}>
     {/* 血色骰子 — 暗红能量核心 */}
     <rect x="12" y="6" width="26" height="26" fill="rgba(0,0,0,0.3)" />
     <rect x="12" y="4" width="2" height="2" fill="#4a1818" />
@@ -159,7 +159,7 @@ const WarriorRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
 // 法师左手 — 紫色法袍袖 + 星界骰子
 // ============================================================
 const MageLeftHand: React.FC = () => (
-  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))' }}>
     {/* 星界骰子 */}
     <rect x="12" y="6" width="26" height="26" fill="rgba(0,0,0,0.3)" />
     <rect x="12" y="4" width="2" height="2" fill="#1a1430" />
@@ -294,7 +294,7 @@ const MageRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
 // 盗贼左手 — 皮革手套 + 淬毒骰子
 // ============================================================
 const RogueLeftHand: React.FC = () => (
-  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+  <svg width="150" height="210" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))' }}>
     {/* 淬毒骰子 */}
     <rect x="12" y="6" width="26" height="26" fill="rgba(0,0,0,0.3)" />
     <rect x="12" y="4" width="2" height="2" fill="#103020" />

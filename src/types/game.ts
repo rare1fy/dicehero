@@ -82,7 +82,10 @@ export interface DiceDef {
     poisonInverse?: boolean;     // 毒=7-点数
     stayInHand?: boolean;        // 出牌后不消耗
     grantTempDie?: boolean;      // 补充临时骰子
+    drawFromBag?: number;        // 从骰子库补抽N颗正式骰子
     comboDrawBonusNextTurn?: boolean; // 连击成功后下回合手牌+1
+    grantPlayOnCombo?: boolean;      // 连击时+1出牌机会
+    cloneSelf?: boolean;             // 影分身：复制自身点数额外加伤
     critOnSecondPlay?: number;   // 第2次出牌暴击倍率
     poisonBase?: number;         // 基础毒层
     poisonBonusIfPoisoned?: number; // 已有毒额外+N
@@ -121,6 +124,10 @@ export interface Die {
   value: number;
   element: DiceElement;
   collapsedElement?: DiceElement;  // 元素骰子坍缩后的实际元素
+  secondElement?: DiceElement;     // 棱镜骰子第二元素
+  keptBonusAccum?: number;         // 星辰骰子：已累积的保留加成
+  justAdded?: boolean;             // 刚加入手牌（入场动画用）
+  isBonusDraw?: boolean;           // 技能补抽的骰子（不占手牌上限）
   selected: boolean;
   spent: boolean;
   rolling?: boolean;
@@ -396,6 +403,11 @@ export interface RelicContext {
   // 地图进度
   currentDepth?: number;           // 当前节点深度
   floorsCleared?: number;          // 已通过的战斗层数（层厅征服者用）
+  didNotPlay?: boolean;            // 本回合是否未出牌（蓄力晶核用）
+  handSize?: number;               // 当前手牌数（满溢魔力用）
+  isComboPlay?: boolean;           // 是否为连击出牌（暗影吸取用）
+  targetPoisonStacks?: number;     // 目标毒层数（毒爆晶石用）
+  playsThisTurn?: number;          // 本回合已出牌次数（连击本能用）
 }
 
 export interface RelicEffect {
@@ -421,6 +433,15 @@ export interface RelicEffect {
   extraPlay?: number;            // 每回合额外出牌次数
   extraReroll?: number;          // 每回合额外免费重投次数
   normalElementChance?: number;  // 普通骰子获得元素概率
+  tempDrawBonus?: number;        // 下回合临时+N手牌（魔法手套）
+  unlockBloodReroll?: boolean;   // 解锁卖血重投（嗜血骰袋）
+  grantFreeReroll?: number;      // 获得N次免费重投
+  grantExtraPlay?: number;       // 获得N次额外出牌
+  keepUnplayedOnce?: boolean;    // 本场战斗保留未使用骰子1次（命运之轮）
+  keepHighestDie?: number;       // 保留点数最高的N颗骰子到下回合
+  freeRerollChance?: number;     // 重投时N%概率不消耗次数
+  oncePerTurn?: boolean;         // 每回合只触发一次
+  purifyDebuff?: number;         // 净化N个负面状态
 }
 
 export interface Relic {
@@ -499,6 +520,10 @@ export interface GameState {
   blackMarketUsedThisTurn?: boolean;   // 黑市合同本回合是否已触发
   warriorRageMult?: number;            // 战士狂暴本能：受伤百分比对应的伤害倍率加成
   rogueComboDrawBonus?: number;        // 盗贼连击心得：下回合额外抽牌数
+  relicTempDrawBonus?: number;         // 魔法手套遗物：下回合临时+N手牌
+  relicKeepHighest?: number;           // 血之契约遗物：保留N颗最高点骰子
+  relicTempExtraPlay?: number;         // 磨砺石遗物：下回合临时+N出牌
+  fortuneWheelUsed?: boolean;          // 命运之轮遗物：本场是否已用过
   instakillChallenge?: InstakillChallenge | null; // 一击必杀挑战条件
   instakillCompleted?: boolean;        // 是否已达成一击必杀
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）

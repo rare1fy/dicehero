@@ -8,6 +8,7 @@ import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
 import { MiniDice } from './DiceBagPanel';
 import { getDiceElementClass } from '../utils/uiHelpers';
+import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { formatDescription } from '../utils/richText';
 import { ElementBadge } from './PixelDiceShapes';
 import { RARITY_COLORS as DICE_RARITY_COLORS } from './PixelDiceShapes';
@@ -199,14 +200,20 @@ const MerchantScreen: React.FC = () => {
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setRemoveDiceIdx(isSelected ? null : d.index)}
-                className={`relative flex flex-col items-center ${getDiceElementClass(def.element, isSelected, false, false, def.id)}`}
+                className={`relative flex flex-col items-center ${hasPixelRenderer(def.id) ? '' : getDiceElementClass(def.element, isSelected, false, false, def.id)}`}
                 style={{
-                  width: '64px', height: '72px', fontSize: '18px',
-                  borderColor: isSelected ? 'var(--pixel-red)' : undefined,
-                  boxShadow: isSelected ? '0 0 14px rgba(224,60,49,0.5)' : undefined,
+                  width: '64px', height: '72px', fontSize: hasPixelRenderer(def.id) ? '0' : '18px',
+                  ...(hasPixelRenderer(def.id) ? { background: 'transparent', border: isSelected ? '2px solid var(--pixel-red)' : 'none', boxShadow: isSelected ? '0 0 14px rgba(224,60,49,0.5)' : 'none' } : {
+                    borderColor: isSelected ? 'var(--pixel-red)' : undefined,
+                    boxShadow: isSelected ? '0 0 14px rgba(224,60,49,0.5)' : undefined,
+                  }),
                 }}
               >
-                <span className="font-bold">{avgVal}</span>
+                {hasPixelRenderer(def.id) ? (
+                  <PixelDiceRenderer diceDefId={def.id} value={avgVal} size={48} selected={isSelected} />
+                ) : (
+                  <span className="font-bold">{avgVal}</span>
+                )}
                 <span className="text-[7px] text-[var(--dungeon-text-dim)] mt-0.5">{def.name}</span>
                 <span className="text-[6px] text-[var(--dungeon-text-dim)]">Lv.{d.level}</span>
                 {def.element !== 'normal' && (

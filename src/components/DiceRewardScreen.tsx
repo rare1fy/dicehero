@@ -7,6 +7,7 @@ import { formatDescription } from '../utils/richText';
 
 import { MiniDice } from './DiceBagPanel';
 import { getDiceElementClass } from '../utils/uiHelpers';
+import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { playSound } from '../utils/sound';
 import { DICE_REWARD_REFRESH } from '../config/gameBalance';
 import { PixelCoin } from './PixelIcons';
@@ -58,6 +59,7 @@ export const DiceRewardScreen: React.FC = () => {
 
   // 骰子选项状态（支持刷新）
   const [diceOptions, setDiceOptions] = useState(() => generateDiceOptions());
+  const [refreshRolling, setRefreshRolling] = useState(false);
 
   // 刷新价格计算
   const refreshPrice = refreshCount === 0 && DICE_REWARD_REFRESH.firstFree
@@ -67,7 +69,7 @@ export const DiceRewardScreen: React.FC = () => {
 
   // 刷新骰子选项
   const handleRefresh = () => {
-    if (confirmed) return;
+    if (confirmed || refreshRolling) return;
     if (refreshPrice > 0 && !canAffordRefresh) return;
     
     playSound('select');
@@ -84,8 +86,23 @@ export const DiceRewardScreen: React.FC = () => {
       addToast('免费刷新!', 'buff');
     }
     
-    setDiceOptions(generateDiceOptions());
+    // 播放roll动画
+    setRefreshRolling(true);
     setSelectedNewDice(null);
+    
+    // 快速翻滚：每100ms换一批随机骰子，共5帧
+    let frame = 0;
+    const rollInterval = setInterval(() => {
+      frame++;
+      setDiceOptions(generateDiceOptions());
+      if (frame >= 5) {
+        clearInterval(rollInterval);
+        setDiceOptions(generateDiceOptions());
+        setRefreshRolling(false);
+        playSound('dice_lock');
+      }
+    }, 80);
+    
     setRefreshCount(prev => prev + 1);
   };
 
@@ -128,7 +145,7 @@ export const DiceRewardScreen: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`relative flex flex-col items-center p-2 border-2 transition-all min-w-[80px] max-w-[110px] flex-1 ${
+        className={`relative flex flex-col items-center p-2 border-2 transition-all w-[110px] h-full ${
           isSelected
             ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
             : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
@@ -140,15 +157,19 @@ export const DiceRewardScreen: React.FC = () => {
           {RARITY_LABELS[def.rarity] || def.rarity}
         </div>
 
-        {/* 骰子 - 用真实游戏内样式渲染 */}
+        {/* 骰子 - 像素风渲染 */}
         <div className="relative mb-1.5">
+          {hasPixelRenderer(defId) ? (
+            <PixelDiceRenderer diceDefId={defId} value="?" size={40} selected={isSelected} />
+          ) : (
           <div
             className={`${getDiceElementClass(def.element, isSelected, false, false, defId)} relative flex items-center justify-center`}
             style={{ width: '40px', height: '40px', fontSize: '18px', lineHeight: '40px' }}
           >
             {'?'}
           </div>
-          {def.element !== 'normal' && (
+          )}
+          {!hasPixelRenderer(defId) && def.element !== 'normal' && (
             <div className="absolute -top-1 -right-1 z-10">
               <ElementBadge element={def.element} size={14} />
             </div>
@@ -175,7 +196,7 @@ export const DiceRewardScreen: React.FC = () => {
         </div>
 
         {/* 骰子描述（唯一说明，富文本高亮，字号放大） */}
-        <div className="text-[9px] text-[var(--dungeon-text)] leading-snug text-center">
+        <div className="text-[9px] text-[var(--dungeon-text)] leading-snug text-center flex-1">
           {formatDescription(def.description)}
         </div>
       </motion.button>
@@ -221,12 +242,25 @@ export const DiceRewardScreen: React.FC = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex justify-center gap-2 px-1"
+              className="flex justify-center items-stretch gap-2 px-1"
             >
-              {diceOptions.map(def => renderDiceCard(
-                def.id, 1, selectedNewDice === def.id,
-                () => setSelectedNewDice(selectedNewDice === def.id ? null : def.id),
-                false
+              {diceOptions.map((def, idx) => (
+                <motion.div
+                  key={refreshRolling ? `roll-${def.id}-${idx}` : def.id}
+                  animate={refreshRolling ? {
+                    rotate: [0, -10, 10, -8, 6, 0],
+                    scale: [1, 1.05, 0.95, 1.05, 1],
+                    y: [0, -4, 2, -3, 0],
+                  } : { rotate: 0, scale: 1, y: 0 }}
+                  transition={refreshRolling ? { duration: 0.3, ease: 'linear' } : { duration: 0.2 }}
+                  style={{ pointerEvents: refreshRolling ? 'none' : 'auto', opacity: refreshRolling ? 0.7 : 1 }}
+                >
+                  {renderDiceCard(
+                    def.id, 1, !refreshRolling && selectedNewDice === def.id,
+                    () => !refreshRolling && setSelectedNewDice(selectedNewDice === def.id ? null : def.id),
+                    false
+                  )}
+                </motion.div>
               ))}
             </motion.div>
           )}

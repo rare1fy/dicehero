@@ -10,6 +10,8 @@ import { PixelClose } from './PixelIcons';
 import { ClassIcon } from './ClassIcons';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
+import { DiceFacePattern } from './DiceFacePattern';
+import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 
 // 稀有度颜色和标签
 const RARITY_STYLE: Record<string, { color: string; label: string; border: string }> = {
@@ -161,13 +163,22 @@ export const ClassInfoModal: React.FC<ClassInfoModalProps> = ({ visible, onClose
                         <div key={dice.id}
                           className={`p-1.5 border bg-[rgba(0,0,0,0.25)] flex gap-2 items-start ${rs.border}`}
                           style={{ borderRadius: '2px', borderWidth: '1px' }}>
-                          {/* 骰子迷你预览 — 使用实际游戏样式 */}
-                          <div className={`w-8 h-8 shrink-0 flex items-center justify-center text-[10px] font-bold ${getDiceElementClass(dice.element || 'normal', false, false, false, dice.id)}`}
+                          {/* 骰子迷你预览 — 使用实际游戏样式+图案 */}
+                          {hasPixelRenderer(dice.id) ? (
+                            <div className="w-8 h-8 shrink-0">
+                              <PixelDiceRenderer diceDefId={dice.id} value={dice.faces[0] === dice.faces[5] ? dice.faces[0] : '?'} size={32} />
+                            </div>
+                          ) : (
+                          <div className={`w-8 h-8 shrink-0 flex items-center justify-center text-[10px] font-bold relative ${getDiceElementClass(dice.element || 'normal', false, false, false, dice.id)}`}
                             style={{ fontSize: '10px', width: '32px', height: '32px' }}>
-                            {dice.faces ? (
-                              dice.faces[0] === dice.faces[5] ? dice.faces[0] : '?'
-                            ) : '?'}
+                            <DiceFacePattern diceDefId={dice.id} />
+                            <span className="relative z-[2]" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+                              {dice.faces ? (
+                                dice.faces[0] === dice.faces[5] ? dice.faces[0] : '?'
+                              ) : '?'}
+                            </span>
                           </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] leading-tight">
                               {dice.name}

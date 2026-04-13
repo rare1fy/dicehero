@@ -7,6 +7,7 @@ import { playSound } from '../utils/sound';
 import { PixelCampfire, PixelHeart, PixelDice, PixelFlame, PixelSoulCrystal } from './PixelIcons';
 import { ElementBadge, getOnPlayDescription, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { getDiceElementClass } from '../utils/uiHelpers';
+import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { CAMPFIRE_CONFIG } from '../config';
 
 export const CampfireScreen: React.FC = () => {

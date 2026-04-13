@@ -247,6 +247,12 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + `pixel-dice-${classPrefix} dice-id-${diceDefId} ` + classGlow;
   }
 
+  // 盗贼临时骰子（暗影残骰）
+  if (diceDefId === 'temp_rogue') {
+    const tempGlow = selected && !invalid ? 'dice-glow-rogue' : '';
+    return base + selection + rollAnim + invalidStyle + 'pixel-dice-rogue dice-id-temp_rogue ' + tempGlow;
+  }
+
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;
   const glow = selected && !invalid ? style.glowClass : '';
   const effect = !rolling && !invalid ? style.effectClass : '';

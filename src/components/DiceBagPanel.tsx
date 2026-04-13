@@ -2,6 +2,8 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
+import { DiceFacePattern } from './DiceFacePattern';
+import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { PixelDice, PixelClose } from './PixelIcons';
 
 /** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
@@ -50,6 +52,11 @@ export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: bool
   const hasElement = def.element !== 'normal';
   const s = size;
   const inner = Math.max(6, s - 4);
+
+  // 像素渲染器模式（盗贼骰子等）
+  if (hasPixelRenderer(defId)) {
+    return <PixelDiceRenderer diceDefId={defId} value="?" size={s} />;
+  }
 
   return (
     <div
@@ -100,6 +107,12 @@ export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: bool
         <svg width={inner} height={inner} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' }}>
           <circle cx="4" cy="4" r="2" fill={colors.dot} />
         </svg>
+      )}
+      {/* 职业骰子图案 (size >= 20 时显示) */}
+      {s >= 20 && defId !== 'standard' && defId !== 'elemental' && defId !== 'magnet' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.25, padding: '2px' }}>
+          <DiceFacePattern diceDefId={defId} />
+        </div>
       )}
       {/* 元素标记 */}
       {hasElement && s >= 14 && (

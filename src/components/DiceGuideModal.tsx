@@ -9,6 +9,8 @@ import { ALL_DICE, ELEMENT_EFFECT_DESC } from '../data/dice';
 import { CLASS_DICE } from '../data/classes';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
+import { DiceFacePattern } from './DiceFacePattern';
+import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import type { DiceDef } from '../types/game';
 
 // 合并所有骰子（通用 + 全职业），用于图鉴展示
@@ -150,9 +152,16 @@ export const DiceGuideModal: React.FC = () => {
                             const ownedCount = (game.ownedDice || []).filter(d => (typeof d === 'string' ? d : d.defId) === def.id).length;
                             return (
                               <div key={def.id} className={`flex items-start gap-2 py-2 px-2 border-b border-[rgba(255,255,255,0.05)] ${!owned ? 'opacity-50' : ''}`}>
-                                <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center text-sm font-bold ${getDiceElementClass(def.element, false, false, false, def.id)}`}>
-                                  ?
+                                {hasPixelRenderer(def.id) ? (
+                                  <div className="flex-shrink-0 w-9 h-9">
+                                    <PixelDiceRenderer diceDefId={def.id} value="?" size={36} />
+                                  </div>
+                                ) : (
+                                <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center text-sm font-bold relative ${getDiceElementClass(def.element, false, false, false, def.id)}`}>
+                                  <DiceFacePattern diceDefId={def.id} />
+                                  <span className="relative z-[2]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>?</span>
                                 </div>
+                                )}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className={`text-xs font-bold ${RARITY_COLORS[def.rarity]}`}>{def.name}</span>
