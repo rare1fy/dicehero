@@ -106,7 +106,7 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-md mx-auto p-4 bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] relative overflow-hidden sm:border-x-3 border-[var(--dungeon-panel-border)] scanlines">
       <div className="absolute inset-0 pixel-grid-bg opacity-20 pointer-events-none" />
       <div className="absolute inset-0 dungeon-bg pointer-events-none" />
 

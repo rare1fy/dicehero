@@ -241,8 +241,29 @@ export const DICE_MAX_LEVEL = 3;
 // 骰子构筑奖励池 — 加权随机，所有骰子都有机会
 // ============================================================
 
-export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss'): DiceDef[] => {
-  // 权重表：[普通战, 精英战, Boss战]
+export const getDiceRewardPool = (battleType: 'enemy' | 'elite' | 'boss', playerClass?: string): DiceDef[] => {
+  // 优先使用职业专属骰子池
+  if (playerClass) {
+    const classDice = Object.values(ALL_DICE).filter(d => d.id.startsWith(playerClass === 'warrior' ? 'w_' : playerClass === 'mage' ? 'mage_' : 'r_'));
+    if (classDice.length > 0) {
+      const idx = battleType === 'enemy' ? 0 : battleType === 'elite' ? 1 : 2;
+      const pool: DiceDef[] = [];
+      classDice.forEach(d => {
+        // 按稀有度设置权重
+        const rarityWeight = d.rarity === 'common' ? [4,3,1] : d.rarity === 'uncommon' ? [3,3,2] : d.rarity === 'rare' ? [1,2,3] : [0.3,1,3];
+        const count = Math.max(1, Math.round(rarityWeight[idx]));
+        for (let i = 0; i < count; i++) pool.push(d);
+      });
+      // 混入少量通用骰子
+      const universalDice = [ALL_DICE['split'], ALL_DICE['magnet'], ALL_DICE['joker'], ALL_DICE['chaos']].filter(Boolean);
+      universalDice.forEach(d => {
+        if (d) pool.push(d);
+      });
+      return pool;
+    }
+  }
+  
+  // 后备：通用池
   const weights: Record<string, [number, number, number]> = {
     heavy:     [4, 3, 1],
     elemental: [3, 3, 2],

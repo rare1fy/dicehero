@@ -27,7 +27,7 @@ export const DiceRewardScreen: React.FC = () => {
 
   // 生成骰子选项的函数
   const generateDiceOptions = () => {
-    const pool = getDiceRewardPool(battleType);
+    const pool = getDiceRewardPool(battleType, game.playerClass);
     const result: typeof pool = [];
     
     const ownedSpecialIds = new Set(

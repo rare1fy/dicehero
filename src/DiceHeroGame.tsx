@@ -594,13 +594,33 @@ export default function DiceHeroGame() {
 
   const rollAllDice = async () => {
     playSound('roll');
-    // 使用 gameRef.current 读取最新状态，避免闭包中 game 的过期值
     const g = gameRef.current;
-    // 先把当前手牌中未使用的骰子放回弃骰库（防止骰子丢失）
-    const handDefIds = dice.filter(d => !d.spent).map(d => d.diceDefId);
+    
+    // === 法师【星界蓄力】：保留未出牌骰子 ===
+    let keptDice: Die[] = [];
+    if (g.playerClass === 'mage') {
+      keptDice = dice.filter(d => !d.spent); // 保留所有未使用的骰子
+      // 蓄力手牌上限：4→5→6
+      const chargeStacks = g.chargeStacks || 0;
+      const handLimit = Math.min(6, g.drawCount + chargeStacks);
+      if (keptDice.length > handLimit) {
+        // 超出上限：丢弃多余的（保留最后获得的）
+        const excess = keptDice.slice(0, keptDice.length - handLimit);
+        keptDice = keptDice.slice(keptDice.length - handLimit);
+        // 多余骰子放回弃骰库
+        setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...excess.map(d => d.diceDefId)] }));
+      }
+    }
+    
+    // 非法师或法师无保留时：全部丢弃
+    const handDefIds = (g.playerClass === 'mage' ? [] : dice.filter(d => !d.spent)).map(d => d.diceDefId);
     const currentDiscard = [...g.discardPile, ...handDefIds];
     const relicDrawBonus = g.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
-    const count = g.drawCount + relicDrawBonus;
+    
+    // 法师：抽取数量 = 手牌上限 - 已保留数量
+    const chargeStacks = g.chargeStacks || 0;
+    const handLimit = g.playerClass === 'mage' ? Math.min(6, g.drawCount + chargeStacks) : g.drawCount;
+    const count = Math.max(0, handLimit - keptDice.length) + relicDrawBonus;
     
     // 从骰子库抽取（包含刚放回的手牌骰子）
     const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, currentDiscard, count);
@@ -615,8 +635,8 @@ export default function DiceHeroGame() {
     // 原子更新骰子库状态
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
 
-    // 设置rolling状态（动画）
-    setDice(drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
+    // 设置rolling状态（动画）— 法师保留的骰子不rolling
+    setDice([...keptDice, ...drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 }))]);
 
     // 快速翻滚动画 — 8帧，递减速度
     const frameTimes = [30, 40, 50, 60, 80, 100, 120, 150];
@@ -637,16 +657,20 @@ export default function DiceHeroGame() {
     addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
 
-  // Calculate reroll HP cost: first N rerolls free (N = freeRerollsPerTurn), then 2, 4, 8, 16...
+  // Calculate reroll HP cost: first N rerolls free, then 2, 4, 8, 16...
+  // 非战士职业：超过免费次数后不允许重投（不再卖血）
   const getRerollHpCost = (count: number): number => {
     const extraFreeRerolls = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
     const freeCount = (game.freeRerollsPerTurn || 1) + extraFreeRerolls;
-    if (count < freeCount) return 0; // free rerolls
-    const paidIndex = count - freeCount; // 0, 1, 2, 3...
+    if (count < freeCount) return 0;
+    // 非战士无法卖血重投
+    if (game.playerClass !== 'warrior') return -1; // -1表示不可用
+    const paidIndex = count - freeCount;
     return Math.pow(2, paidIndex + 1); // 2, 4, 8, 16, 32...
   };
   const currentRerollCost = getRerollHpCost(rerollCount);
-  const canAffordReroll = game.hp > currentRerollCost;
+  const canReroll = currentRerollCost !== -1; // 非战士免费次数用完后不可重投
+  const canAffordReroll = canReroll && (currentRerollCost <= 0 || game.hp > currentRerollCost);
   const extraFreeRerollsForDisplay = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
   const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) + extraFreeRerollsForDisplay - rerollCount);
 
@@ -662,6 +686,10 @@ export default function DiceHeroGame() {
 
     // Check HP cost
     let hpCost = getRerollHpCost(rerollCount);
+    if (hpCost === -1) {
+      addToast('免费重投次数已用完', 'info');
+      return;
+    }
     // 诅咒骰子：要重roll的骰子中有诅咒骰子时，代价翻倍
     const hasCursedInReroll = toReroll.some(d => getDiceDef(d.diceDefId).isCursed);
     if (hasCursedInReroll) hpCost *= 2;
@@ -672,7 +700,7 @@ export default function DiceHeroGame() {
       return;
     }
 
-    // Apply HP cost
+    // Apply HP cost + 战士血怒叠加
     if (hpCost > 0) {
       setGame(prev => {
         let goldBonus = 0;
@@ -680,9 +708,14 @@ export default function DiceHeroGame() {
           const res = relic.effect({ hpLostThisTurn: hpCost });
           if (res.goldBonus) goldBonus += res.goldBonus;
         });
-        return { ...prev, hp: prev.hp - hpCost, souls: prev.souls + goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldBonus } };
+        // 战士【血怒战意】：卖血重投次数+1，用于伤害计算
+        const newBloodRerolls = (prev.bloodRerollCount || 0) + 1;
+        return { ...prev, hp: prev.hp - hpCost, bloodRerollCount: newBloodRerolls, souls: prev.souls + goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldBonus } };
       });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
+      // 显示血怒加成
+      const newCount = (game.bloodRerollCount || 0) + 1;
+      addFloatingText(`血怒+${newCount * 15}%`, 'text-orange-400', undefined, 'player');
       const rerollGoldBonus = game.relics.filter(r => r.trigger === 'on_reroll').reduce((sum, relic) => {
         const res = relic.effect({ hpLostThisTurn: hpCost });
         return sum + (res.goldBonus || 0);
@@ -690,7 +723,7 @@ export default function DiceHeroGame() {
       if (rerollGoldBonus > 0) {
         setTimeout(() => addFloatingText(`+${rerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
       }
-      addLog(`重掷消耗 ${hpCost} HP`);
+      addLog(`重掷消耗 ${hpCost} HP（血怒+${newCount * 15}%伤害）`);
     }
     
     playSound('roll');
@@ -769,24 +802,34 @@ export default function DiceHeroGame() {
     if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
     if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
     
-    const _selectedCount = dice.filter(d => d.selected && !d.spent).length;
     const isCurrentlySelected = die.selected;
-
-    // 不限制选择数量，只要能组成牌型即可
 
     playSound('select');
     setDice(prev => {
       const next = prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
-      // 检查新状态下是否为多选普通攻击
       const newSelected = next.filter(d => d.selected && !d.spent);
-      const hasSpecial = newSelected.some(d => {
-        const def = getDiceDef(d.diceDefId);
-        return def.element !== 'normal' || !!def.onPlay;
-      });
-      if (!isCurrentlySelected && newSelected.length > 1 && hasSpecial) {
+      
+      // === 非战士普攻单选限制 ===
+      if (game.playerClass !== 'warrior' && !isCurrentlySelected && newSelected.length > 1) {
         const handResult = checkHands(newSelected, { straightUpgrade: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
         if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
-          setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
+          // 非战士多选普攻：禁止，只保留最新选的
+          setTimeout(() => addToast('不成牌型时只能选1颗骰子', 'info'), 50);
+          return prev.map(d => d.id === id ? { ...d, selected: true } : { ...d, selected: false });
+        }
+      }
+      
+      // 战士多选普攻提示
+      if (game.playerClass === 'warrior' && !isCurrentlySelected && newSelected.length > 1) {
+        const hasSpecial = newSelected.some(d => {
+          const def = getDiceDef(d.diceDefId);
+          return def.element !== 'normal' || !!def.onPlay;
+        });
+        if (hasSpecial) {
+          const handResult = checkHands(newSelected, { straightUpgrade: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
+          if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
+            setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
+          }
         }
       }
       return next;
@@ -1123,6 +1166,20 @@ export default function DiceHeroGame() {
     const enemyVulnerable = targetEnemy?.statuses.find(s => s.type === 'vulnerable');
     if (enemyVulnerable) modifiedDamage = Math.floor(modifiedDamage * 1.5);
 
+    // === 职业伤害加成 ===
+    // 战士【血怒战意】：每次卖血重投+15%伤害
+    if (game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0) {
+      modifiedDamage = Math.floor(modifiedDamage * (1 + (game.bloodRerollCount || 0) * 0.15));
+    }
+    // 战士【狂暴】：血量<30%时伤害×1.3
+    if (game.playerClass === 'warrior' && game.hp < game.maxHp * 0.3) {
+      modifiedDamage = Math.floor(modifiedDamage * 1.3);
+    }
+    // 盗贼【连击加成】：第2次出牌×1.2
+    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
+      modifiedDamage = Math.floor(modifiedDamage * 1.2);
+    }
+
     return {
       damage: modifiedDamage,
       armor: Math.floor(baseArmor + extraArmor),
@@ -1174,10 +1231,24 @@ export default function DiceHeroGame() {
     const targetUidForTracking = targetEnemy.uid;
     const playsBefore = playsPerEnemyRef.current[targetUidForTracking] || 0;
     playsPerEnemyRef.current = { ...playsPerEnemyRef.current, [targetUidForTracking]: playsBefore + 1 };
+    
+    // === 盗贼连击终结判定 ===
+    const currentCombo = game.comboCount || 0;
+    const lastHandType = game.lastPlayHandType;
+    const thisHandType = currentHands.bestHand;
+    // 连击终结：两次不同牌型（不含普通攻击）+25%
+    let comboFinisherBonus = 0;
+    if (game.playerClass === 'rogue' && currentCombo >= 1 && lastHandType && lastHandType !== thisHandType && lastHandType !== '普通攻击' && thisHandType !== '普通攻击') {
+      comboFinisherBonus = 0.25;
+    }
+
     setGame(prev => ({
       ...prev,
       playsLeft: prev.playsLeft - 1,
       playsPerEnemy: { ...playsPerEnemyRef.current },
+      // 盗贼连击追踪
+      comboCount: (prev.comboCount || 0) + 1,
+      lastPlayHandType: thisHandType,
     }));
 
     const outcome = expectedOutcome;
@@ -1919,11 +1990,40 @@ export default function DiceHeroGame() {
     }
 
     // Mark dice as spent & add to discard pile
-    const spentDefIds = dice.filter(d => d.selected && !d.spent).map(d => d.diceDefId);
-    setDice(prev => prev.map(d => d.selected ? { ...d, spent: true, selected: false, playing: false } : d));
-    const usedElements = dice.filter(d => d.selected && !d.spent && d.element !== 'normal').map(d => d.element);
-    const isNormalAttackPlay = bestHand === '普通攻击';
-    setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
+    const selectedDiceForSpent = dice.filter(d => d.selected && !d.spent);
+    const spentDefIds = selectedDiceForSpent.map(d => d.diceDefId);
+    
+    // === 盗贼【灵巧回收】：第1次出牌时弹回点数最小的骰子 ===
+    let bouncedDieId: number | null = null;
+    if (game.playerClass === 'rogue' && (game.comboCount || 0) === 0 && selectedDiceForSpent.length >= 2) {
+      // 找到点数最小的骰子
+      const sorted = [...selectedDiceForSpent].sort((a, b) => a.value - b.value);
+      bouncedDieId = sorted[0].id;
+    }
+    
+    setDice(prev => prev.map(d => {
+      if (!d.selected) return d;
+      if (d.id === bouncedDieId) {
+        // 弹回的骰子：不消耗，取消选中
+        return { ...d, selected: false, playing: false, spent: false };
+      }
+      return { ...d, spent: true, selected: false, playing: false };
+    }));
+    if (bouncedDieId) {
+      const bouncedDie = selectedDiceForSpent.find(d => d.id === bouncedDieId);
+      if (bouncedDie) {
+        addFloatingText(`↩ ${bouncedDie.value}点弹回`, 'text-green-400', undefined, 'player');
+        // 弹回的骰子不放入弃骰库
+        const filteredSpent = spentDefIds.filter((_, i) => selectedDiceForSpent[i].id !== bouncedDieId);
+        const usedElements = selectedDiceForSpent.filter(d => d.id !== bouncedDieId && d.element !== 'normal').map(d => d.element);
+        const isNormalAttackPlay = bestHand === '普通攻击';
+        setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...filteredSpent], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
+      }
+    } else {
+      const usedElements = dice.filter(d => d.selected && !d.spent && d.element !== 'normal').map(d => d.element);
+      const isNormalAttackPlay = bestHand === '普通攻击';
+      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...spentDefIds], elementsUsedThisBattle: [...new Set([...(prev.elementsUsedThisBattle || []), ...usedElements])], consecutiveNormalAttacks: isNormalAttackPlay ? (prev.consecutiveNormalAttacks || 0) + 1 : 0 }));
+    }
 
     let logMsg = `打出 ${bestHand}，造成 ${outcome.damage} 伤害`;
     if (outcome.armor > 0) logMsg += `，获得 ${outcome.armor} 护甲`;
@@ -2064,7 +2164,23 @@ export default function DiceHeroGame() {
     const aliveEnemies = enemies.filter(e => e.hp > 0);
     if (aliveEnemies.length === 0 || game.isEnemyTurn || dice.some(d => d.playing)) return;
 
-    setGame(prev => ({ ...prev, isEnemyTurn: true }));
+    // === 职业回合结束处理 ===
+    // 法师【星界蓄力】：未出牌时叠加蓄力层+护盾
+    const playedThisTurn = game.playsLeft < game.maxPlays; // 本回合是否出过牌
+    if (game.playerClass === 'mage' && !playedThisTurn) {
+      const newChargeStacks = Math.min((game.chargeStacks || 0) + 1, 2); // 最多蓄力2回合
+      setGame(prev => ({
+        ...prev, chargeStacks: newChargeStacks, armor: prev.armor + 6,
+      }));
+      addFloatingText(`蓄力 Lv.${(game.chargeStacks || 0) + 1}`, 'text-purple-400', undefined, 'player');
+      addFloatingText('+6护甲', 'text-blue-400', undefined, 'player');
+    } else if (game.playerClass === 'mage' && playedThisTurn) {
+      // 出了牌就重置蓄力
+      setGame(prev => ({ ...prev, chargeStacks: 0 }));
+    }
+
+    // 重置战士血怒/盗贼连击计数
+    setGame(prev => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined }));
 
     // --- Helper: tick status durations ---
     const tickStatuses = (statuses: StatusEffect[]): StatusEffect[] => {
@@ -4624,14 +4740,15 @@ useEffect(() => {
 
                 {/* 操作按钮行 */}
                 <div className="flex gap-1.5 items-center">
-                  {/* 重掷按钮 - 选中骰子后点击重roll */}
+                  {/* 重掷按钮 */}
                   <motion.button
-                    disabled={!dice.some(d => d.selected && !d.spent) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0 || (!canAffordReroll && currentRerollCost > 0)}
+                    disabled={!dice.some(d => d.selected && !d.spent) || game.isEnemyTurn || dice.some(d => d.playing) || game.playsLeft <= 0 || !canAffordReroll}
                     onClick={() => {
-                      if (game.isEnemyTurn) { addToast('敵人回合中，无法操作'); return; }
+                      if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
                       if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
                       if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
                       if (!dice.some(d => d.selected && !d.spent)) { addToast('请先选中要重掷的骰子'); return; }
+                      if (!canReroll) { addToast('免费重投次数已用完'); return; }
                       rerollSelected();
                     }}
                     whileHover={{ scale: 1.05 }}
