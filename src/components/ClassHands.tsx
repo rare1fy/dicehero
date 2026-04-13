@@ -57,67 +57,88 @@ const WarriorLeftHand: React.FC = () => (
 );
 
 // ============================================================
-// 战士右手 — 铁甲手套 + 双刃战斧
+// 战士右手 — 铁甲手套 + 双刃战斧（斧刃紧贴柄身）
 // ============================================================
 const WarriorRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
-  <svg width="155" height="215" viewBox="0 0 50 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
-    {/* === 左斧刃 — 弧形斧头 === */}
-    <rect x="6" y="6" width="2" height="2" fill="#48546a" />
-    <rect x="4" y="8" width="4" height="2" fill="#48546a" />
-    <rect x="2" y="10" width="6" height="2" fill="#505c72" />
-    <rect x="2" y="12" width="8" height="2" fill="#586478" />
-    <rect x="2" y="14" width="10" height="2" fill="#606c80" />
-    <rect x="2" y="16" width="12" height="2" fill="#687488" />
-    <rect x="4" y="18" width="12" height="2" fill="#606c80" />
-    <rect x="6" y="20" width="12" height="2" fill="#586478" />
-    <rect x="8" y="22" width="12" height="2" fill="#505c72" />
-    <rect x="12" y="24" width="10" height="2" fill="#48546a" />
-    {/* 左刃高光 */}
-    <rect x="4" y="12" width="2" height="6" fill="#7a8698" />
-    <rect x="6" y="14" width="2" height="4" fill="#8a96a8" />
-    {/* 左刃锋利边缘 */}
-    <rect x="2" y="12" width="2" height="8" fill="#8898b0" />
+  <svg width="155" height="215" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+    {/* === 斧柄（从顶到底贯穿整把斧） === */}
+    {/* 柄顶尖 */}
+    <rect x="21" y="0" width="6" height="2" fill="#4a3828" />
+    {/* 柄上段（穿过斧头区域） */}
+    <rect x="20" y="2" width="8" height="28" fill="#3e3028" />
+    <rect x="22" y="2" width="4" height="28" fill="#5a4838" />
+    <rect x="24" y="2" width="2" height="28" fill="#6a5848" />
+
+    {/* === 左斧刃 — 从柄紧密展开 === */}
+    {/* 斧刃是从柄(x=20)向左展开 */}
+    {/* 顶部窄 */}
+    <rect x="14" y="4" width="6" height="2" fill="#505c72" />
+    {/* 逐渐变宽 */}
+    <rect x="10" y="6" width="10" height="2" fill="#586478" />
+    <rect x="6" y="8" width="14" height="2" fill="#606c82" />
+    <rect x="4" y="10" width="16" height="2" fill="#687490" />
+    <rect x="2" y="12" width="18" height="2" fill="#708098" />
+    {/* 最宽处 */}
+    <rect x="2" y="14" width="18" height="2" fill="#7888a0" />
+    <rect x="2" y="16" width="18" height="2" fill="#708098" />
+    {/* 逐渐收窄 */}
+    <rect x="4" y="18" width="16" height="2" fill="#687490" />
+    <rect x="6" y="20" width="14" height="2" fill="#606c82" />
+    <rect x="10" y="22" width="10" height="2" fill="#586478" />
+    <rect x="14" y="24" width="6" height="2" fill="#505c72" />
+    {/* 左刃锋利外边缘高光 */}
+    <rect x="2" y="12" width="2" height="6" fill="#98a8c0" />
+    <rect x="4" y="10" width="2" height="2" fill="#8898b0" />
+    <rect x="4" y="18" width="2" height="2" fill="#8898b0" />
+    {/* 左刃内部高光 */}
+    <rect x="10" y="10" width="6" height="2" fill="#8090a8" />
+    <rect x="8" y="12" width="4" height="4" fill="#8898b0" />
+    {/* 左刃暗面（底部） */}
+    <rect x="6" y="20" width="10" height="2" fill="#4a5668" />
     {/* 血痕 */}
-    <rect x="6" y="16" width="4" height="2" fill="#8a2020" opacity="0.45" />
-    <rect x="4" y="12" width="3" height="1" fill="#8a2020" opacity="0.35" />
+    <rect x="4" y="14" width="4" height="2" fill="#8a2020" opacity="0.4" />
+    <rect x="6" y="10" width="3" height="1" fill="#8a2020" opacity="0.3" />
 
-    {/* === 右斧刃 — 镜像弧形 === */}
-    <rect x="40" y="6" width="2" height="2" fill="#48546a" />
-    <rect x="40" y="8" width="4" height="2" fill="#48546a" />
-    <rect x="40" y="10" width="6" height="2" fill="#505c72" />
-    <rect x="38" y="12" width="8" height="2" fill="#586478" />
-    <rect x="36" y="14" width="10" height="2" fill="#606c80" />
-    <rect x="34" y="16" width="12" height="2" fill="#687488" />
-    <rect x="32" y="18" width="12" height="2" fill="#606c80" />
-    <rect x="30" y="20" width="12" height="2" fill="#586478" />
-    <rect x="28" y="22" width="12" height="2" fill="#505c72" />
-    <rect x="26" y="24" width="10" height="2" fill="#48546a" />
-    {/* 右刃高光 */}
-    <rect x="42" y="12" width="2" height="6" fill="#7a8698" />
-    <rect x="40" y="14" width="2" height="4" fill="#8a96a8" />
-    {/* 右刃锋利边缘 */}
-    <rect x="44" y="12" width="2" height="8" fill="#8898b0" />
+    {/* === 右斧刃 — 从柄紧密展开（镜像） === */}
+    {/* 斧刃从柄(x=28)向右展开 */}
+    <rect x="28" y="4" width="6" height="2" fill="#505c72" />
+    <rect x="28" y="6" width="10" height="2" fill="#586478" />
+    <rect x="28" y="8" width="14" height="2" fill="#606c82" />
+    <rect x="28" y="10" width="16" height="2" fill="#687490" />
+    <rect x="28" y="12" width="18" height="2" fill="#708098" />
+    <rect x="28" y="14" width="18" height="2" fill="#7888a0" />
+    <rect x="28" y="16" width="18" height="2" fill="#708098" />
+    <rect x="28" y="18" width="16" height="2" fill="#687490" />
+    <rect x="28" y="20" width="14" height="2" fill="#606c82" />
+    <rect x="28" y="22" width="10" height="2" fill="#586478" />
+    <rect x="28" y="24" width="6" height="2" fill="#505c72" />
+    {/* 右刃锋利外边缘高光 */}
+    <rect x="44" y="12" width="2" height="6" fill="#98a8c0" />
+    <rect x="42" y="10" width="2" height="2" fill="#8898b0" />
+    <rect x="42" y="18" width="2" height="2" fill="#8898b0" />
+    {/* 右刃内部高光 */}
+    <rect x="32" y="10" width="6" height="2" fill="#8090a8" />
+    <rect x="36" y="12" width="4" height="4" fill="#8898b0" />
+    {/* 右刃暗面 */}
+    <rect x="32" y="20" width="10" height="2" fill="#4a5668" />
 
-    {/* === 斧柄中心连接 === */}
-    <rect x="20" y="4" width="8" height="24" fill="#3e3028" />
-    <rect x="22" y="4" width="4" height="24" fill="#4e4038" />
-    {/* 斧眼装饰 — 铆钉 */}
-    <rect x="22" y="8" width="4" height="2" fill="#6a6a72" />
-    <rect x="23" y="9" width="2" height="1" fill="#8a8a92" />
-    {/* 柄上暗纹 */}
-    <rect x="20" y="14" width="8" height="1" fill="#2a1810" opacity="0.6" />
-    <rect x="20" y="20" width="8" height="1" fill="#2a1810" opacity="0.6" />
+    {/* === 斧头中心铁箍（连接两片刃+柄） === */}
+    <rect x="16" y="8" width="16" height="2" fill="#3a3a44" />
+    <rect x="16" y="18" width="16" height="2" fill="#3a3a44" />
+    <rect x="18" y="10" width="12" height="8" fill="#4a4a56" />
+    {/* 中心铆钉 */}
+    <rect x="22" y="12" width="4" height="4" fill="#6a6a78" />
+    <rect x="23" y="13" width="2" height="2" fill="#8a8a98" />
 
-    {/* === 斧柄（下半段到手部） === */}
-    <rect x="20" y="28" width="8" height="26" fill="#3a2820" />
-    <rect x="22" y="28" width="4" height="26" fill="#4a3828" />
+    {/* === 斧柄下半段 === */}
+    <rect x="20" y="30" width="8" height="24" fill="#3a2820" />
+    <rect x="22" y="30" width="4" height="24" fill="#4a3828" />
     {/* 皮革缠绕 */}
-    <rect x="20" y="32" width="8" height="2" fill="#524030" />
-    <rect x="20" y="38" width="8" height="2" fill="#524030" />
-    <rect x="20" y="44" width="8" height="2" fill="#524030" />
+    <rect x="20" y="34" width="8" height="2" fill="#524030" />
+    <rect x="20" y="40" width="8" height="2" fill="#524030" />
+    <rect x="20" y="46" width="8" height="2" fill="#524030" />
     {/* 柄底铁箍 */}
-    <rect x="18" y="50" width="12" height="2" fill="#4a4a52" />
-    <rect x="18" y="52" width="12" height="2" fill="#5a5a62" />
+    <rect x="18" y="52" width="12" height="2" fill="#4a4a52" />
 
     {/* === 铁甲手 === */}
     <rect x="12" y="54" width="24" height="10" fill="#5a5a62" />
@@ -134,7 +155,6 @@ const WarriorRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
       <rect key={y} x="12" y={y} width="24" height="2" fill={y % 8 === 2 ? '#6a6a72' : '#4a4a52'} />
     ))}
     <rect x="14" y="64" width="2" height="32" fill="#6e6e78" />
-    {/* 铆钉 */}
     <rect x="16" y="68" width="2" height="2" fill="#7a7a82" />
     <rect x="30" y="76" width="2" height="2" fill="#7a7a82" />
     <rect x="16" y="84" width="2" height="2" fill="#7a7a82" />
@@ -142,9 +162,9 @@ const WarriorRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
     {/* 攻击时发光 */}
     {attacking && (
       <>
-        <rect x="2" y="10" width="44" height="16" fill="rgba(200,60,40,0.2)" />
-        <rect x="2" y="14" width="44" height="6" fill="rgba(200,60,40,0.35)" />
-        <rect x="20" y="4" width="8" height="6" fill="rgba(255,100,60,0.3)" />
+        <rect x="2" y="10" width="44" height="10" fill="rgba(200,60,40,0.2)" />
+        <rect x="2" y="12" width="44" height="6" fill="rgba(200,60,40,0.35)" />
+        <rect x="20" y="2" width="8" height="8" fill="rgba(255,100,60,0.25)" />
       </>
     )}
   </svg>
@@ -336,41 +356,80 @@ const RogueLeftHand: React.FC = () => (
 );
 
 // ============================================================
-// 盗贼右手 — 皮革手套 + 匕首
+// 盗贼右手 — 皮革手套 + 大号淬毒匕首
 // ============================================================
 const RogueRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
-  <svg width="155" height="215" viewBox="0 0 44 88" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
-    {/* 匕首刃 */}
-    <rect x="22" y="0" width="4" height="2" fill="#90a0b0" />
-    <rect x="21" y="2" width="6" height="28" fill="#708090" />
-    <rect x="23" y="2" width="2" height="28" fill="#90a8b8" />
-    <rect x="21" y="2" width="1" height="28" fill="#506070" />
-    {/* 毒液涂层 */}
-    <rect x="22" y="6" width="4" height="2" fill="#40c060" opacity="0.4" />
-    <rect x="22" y="14" width="4" height="2" fill="#40c060" opacity="0.3" />
-    <rect x="22" y="22" width="4" height="2" fill="#40c060" opacity="0.35" />
-    {/* 护手 */}
-    <rect x="16" y="30" width="16" height="4" fill="#3a2818" />
-    <rect x="16" y="30" width="16" height="2" fill="#4a3828" />
-    {/* 柄 */}
-    <rect x="20" y="34" width="8" height="16" fill="#2a1808" />
-    <rect x="22" y="36" width="4" height="12" fill="#3a2818" />
-    <rect x="20" y="38" width="8" height="1" fill="#1a0800" />
-    <rect x="20" y="42" width="8" height="1" fill="#1a0800" />
-    <rect x="20" y="46" width="8" height="1" fill="#1a0800" />
-    {/* 手 */}
-    <rect x="14" y="46" width="20" height="10" fill="#4a3828" />
-    <rect x="14" y="46" width="20" height="2" fill="#5a4838" />
-    {/* 皮革臂 */}
-    <rect x="12" y="56" width="24" height="38" fill="#3a2818" />
-    <rect x="12" y="56" width="24" height="2" fill="#4a3828" />
-    {[60,64,68,72,76,80,84,88].map(y => (
-      <rect key={y} x="12" y={y} width="24" height="2" fill={y % 8 === 0 ? '#4a3828' : '#2a1808'} />
+  <svg width="155" height="215" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+    {/* === 匕首刃 — 加长加宽的毒刃 === */}
+    {/* 刃尖 */}
+    <rect x="21" y="0" width="2" height="2" fill="#a0b0c0" />
+    <rect x="19" y="2" width="6" height="2" fill="#90a0b0" />
+    {/* 刃身主体 — 宽刃 */}
+    <rect x="17" y="4" width="10" height="2" fill="#708090" />
+    <rect x="16" y="6" width="12" height="30" fill="#607080" />
+    {/* 刃中线高光 */}
+    <rect x="20" y="4" width="4" height="32" fill="#8898a8" />
+    <rect x="22" y="2" width="2" height="34" fill="#98a8b8" />
+    {/* 刃左暗面 */}
+    <rect x="16" y="6" width="2" height="30" fill="#506068" />
+    {/* 刃右暗面 */}
+    <rect x="26" y="6" width="2" height="30" fill="#586878" />
+    {/* 毒液涂层 — 绿色条纹 */}
+    <rect x="18" y="8" width="8" height="2" fill="#40c060" opacity="0.35" />
+    <rect x="18" y="14" width="8" height="2" fill="#40c060" opacity="0.4" />
+    <rect x="18" y="20" width="8" height="2" fill="#40c060" opacity="0.35" />
+    <rect x="18" y="26" width="8" height="2" fill="#40c060" opacity="0.3" />
+    <rect x="18" y="32" width="8" height="2" fill="#40c060" opacity="0.25" />
+    {/* 毒液滴落 */}
+    <rect x="17" y="12" width="2" height="3" fill="#50d070" opacity="0.5" />
+    <rect x="25" y="22" width="2" height="3" fill="#50d070" opacity="0.45" />
+    {/* 刃底斜收 */}
+    <rect x="18" y="36" width="8" height="2" fill="#586878" />
+
+    {/* === 护手 — 弯曲十字护手 === */}
+    <rect x="10" y="38" width="24" height="2" fill="#3a3a44" />
+    <rect x="8" y="40" width="28" height="2" fill="#4a4a56" />
+    <rect x="10" y="42" width="24" height="2" fill="#3a3a44" />
+    {/* 护手两端装饰 */}
+    <rect x="8" y="38" width="2" height="4" fill="#4a4a56" />
+    <rect x="34" y="38" width="2" height="4" fill="#4a4a56" />
+    {/* 护手中心宝石 */}
+    <rect x="20" y="39" width="4" height="3" fill="#30a050" />
+    <rect x="21" y="40" width="2" height="1" fill="#60ff80" />
+
+    {/* === 柄 === */}
+    <rect x="18" y="44" width="8" height="14" fill="#2a1808" />
+    <rect x="20" y="44" width="4" height="14" fill="#3a2818" />
+    {/* 缠皮纹路 */}
+    <rect x="18" y="46" width="8" height="1" fill="#1a0800" />
+    <rect x="18" y="50" width="8" height="1" fill="#1a0800" />
+    <rect x="18" y="54" width="8" height="1" fill="#1a0800" />
+    {/* 柄底 */}
+    <rect x="20" y="58" width="4" height="2" fill="#4a4a56" />
+
+    {/* === 皮革手 === */}
+    <rect x="12" y="56" width="20" height="10" fill="#4a3828" />
+    <rect x="12" y="56" width="20" height="2" fill="#5a4838" />
+    <rect x="14" y="58" width="4" height="6" fill="#524030" />
+    <rect x="20" y="58" width="4" height="6" fill="#524030" />
+    <rect x="26" y="58" width="4" height="6" fill="#4a3828" />
+
+    {/* === 皮革臂 === */}
+    <rect x="12" y="66" width="24" height="30" fill="#3a2818" />
+    <rect x="12" y="66" width="24" height="2" fill="#4a3828" />
+    {[70,74,78,82,86,90].map(y => (
+      <rect key={y} x="12" y={y} width="24" height="2" fill={y % 8 === 2 ? '#4a3828' : '#2a1808'} />
     ))}
+    {/* 缠带 */}
+    <rect x="14" y="72" width="20" height="2" fill="#5a4838" opacity="0.5" />
+    <rect x="14" y="82" width="20" height="2" fill="#5a4838" opacity="0.5" />
+
+    {/* 攻击时绿色毒光 */}
     {attacking && (
       <>
-        <rect x="21" y="2" width="6" height="28" fill="rgba(60,200,80,0.25)" />
-        <rect x="22" y="0" width="4" height="4" fill="rgba(60,200,80,0.5)" />
+        <rect x="16" y="4" width="12" height="34" fill="rgba(60,200,80,0.2)" />
+        <rect x="20" y="0" width="4" height="38" fill="rgba(60,200,80,0.4)" />
+        <rect x="19" y="0" width="6" height="4" fill="rgba(80,255,100,0.5)" />
       </>
     )}
   </svg>
