@@ -3008,9 +3008,32 @@ setGame(prev => {
       consecutiveNormalAttacks: 0,
     }));
 
-    // === 留手牌机制 ===
-    // 未使用的骰子留在手中，下回合只补抽到 drawCount 上限
-    const remainingDice = dice.filter(d => !d.spent);
+    // === 回合结束留手牌机制（职业差异） ===
+    const g2 = gameRef.current;
+    let remainingDice: Die[];
+    let discardFromHand: string[] = [];
+    
+    if (g2.playerClass === 'mage') {
+      // 法师：未使用的骰子保留，按蓄力层上限裁剪
+      const chargeStacks = g2.chargeStacks || 0;
+      const handLimit = Math.min(6, g2.drawCount + chargeStacks);
+      remainingDice = dice.filter(d => !d.spent);
+      if (remainingDice.length > handLimit) {
+        const excess = remainingDice.slice(0, remainingDice.length - handLimit);
+        discardFromHand = excess.map(d => d.diceDefId);
+        remainingDice = remainingDice.slice(remainingDice.length - handLimit);
+      }
+    } else {
+      // 战士/盗贼：全部弃掉
+      discardFromHand = dice.filter(d => !d.spent).map(d => d.diceDefId);
+      remainingDice = [];
+    }
+    
+    // 把弃掉的手牌放入弃骰库
+    if (discardFromHand.length > 0) {
+      setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...discardFromHand] }));
+    }
+    
     const remainingCount = remainingDice.length;
     
     // Capture schrodinger bonus before entering setTimeout (closure captures value)
@@ -3019,8 +3042,15 @@ setGame(prev => {
     setTimeout(() => {
       // Read latest game state from ref (setTimeout ensures prior setGame calls are flushed)
       const g = gameRef.current;
-      setRerollCount(0); // Reset reroll count for new turn
-      const needDraw = Math.max(0, g.drawCount + schrodingerBonus - remainingCount);
+      setRerollCount(0);
+      // 计算抽牌数：法师按蓄力上限，战士可能+1
+      const chargeBonus = g.playerClass === 'mage' ? (g.chargeStacks || 0) : 0;
+      const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
+      if (warriorBonus > 0) {
+        addFloatingText('血怒补牌+1', 'text-red-400', undefined, 'player');
+      }
+      const targetHandSize = Math.min(6, g.drawCount + chargeBonus + warriorBonus);
+      const needDraw = Math.max(0, targetHandSize + schrodingerBonus - remainingCount);
       
       // 直接从 gameRef.current 读取最新状态进行抽牌计算
       // setTimeout 保证之前的 setGame 已 flush，gameRef.current 是最新值
@@ -4809,14 +4839,15 @@ useEffect(() => {
                       </motion.button>
                       {/* 选中骰子气泡tips */}
                       {die.selected && !die.spent && !die.rolling && !die.playing && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[80] pointer-events-none" style={{ width: 'max-content', maxWidth: '160px' }}>
-                          <div className="px-1.5 py-1 bg-[rgba(8,11,14,0.75)] backdrop-blur-sm border border-[rgba(255,255,255,0.1)] text-center" style={{ borderRadius: '3px' }}>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 z-[80] pointer-events-none" style={{ width: 'max-content', maxWidth: '160px' }}>
+                          <div className="px-1.5 py-1 bg-[rgba(12,10,20,0.8)] backdrop-blur-sm border border-[rgba(255,255,255,0.12)] text-center" style={{ borderRadius: '4px' }}>
                             <div className="text-[8px] font-bold text-[var(--dungeon-text-bright)] leading-tight">{getDiceDef(die.diceDefId).name}</div>
                             {getDiceDef(die.diceDefId).description && (
                               <div className="text-[7px] text-[var(--pixel-orange-light)] leading-snug mt-0.5 opacity-90">{getDiceDef(die.diceDefId).description}</div>
                             )}
                           </div>
-                          <div className="w-0 h-0 mx-auto border-l-[3px] border-r-[3px] border-t-[3px] border-l-transparent border-r-transparent border-t-[rgba(255,255,255,0.1)]" />
+                          {/* 聊天气泡尖角 */}
+                          <div className="w-0 h-0 mx-auto" style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid rgba(12,10,20,0.8)' }} />
                         </div>
                       )}
                       </div>
