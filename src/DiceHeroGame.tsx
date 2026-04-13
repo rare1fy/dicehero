@@ -4807,41 +4807,22 @@ useEffect(() => {
                           </div>
                         )}
                       </motion.button>
+                      {/* 选中骰子气泡tips — 浮在骰子上方 */}
+                      {die.selected && !die.spent && !die.rolling && !die.playing && die.diceDefId !== 'standard' && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-[80] pointer-events-none whitespace-nowrap">
+                          <div className="px-2 py-1 bg-[rgba(8,11,14,0.95)] border border-[var(--dungeon-panel-border)] text-center max-w-[180px]" style={{ borderRadius: '2px', whiteSpace: 'normal' }}>
+                            <div className="text-[9px] font-bold text-[var(--dungeon-text-bright)] mb-0.5">{getDiceDef(die.diceDefId).name}</div>
+                            <div className="text-[8px] text-[var(--pixel-orange-light)] leading-snug">{getDiceDef(die.diceDefId).description}</div>
+                          </div>
+                          <div className="w-0 h-0 mx-auto border-l-[4px] border-r-[4px] border-t-[4px] border-l-transparent border-r-transparent border-t-[var(--dungeon-panel-border)]" />
+                        </div>
+                      )}
                       </div>
                     );
                   })}
                   {dice.every(d => d.spent) && (
                     <div className="text-[var(--dungeon-text-dim)] text-[11px] font-bold py-4">所有骰子已使用</div>
                   )}
-                </div>
-
-
-{/* 选中骰子tips - 显示完整效果描述 */}
-                <div className="relative min-h-[22px] mx-1 mb-0.5">
-                  {(() => {
-                    const selectedDice = dice.filter(d => d.selected && !d.spent);
-                    if (selectedDice.length === 0) return null;
-                    const lastSelected = selectedDice[selectedDice.length - 1];
-                    const def = getDiceDef(lastSelected.diceDefId);
-                    const showAsNormal = isNormalAttackMulti && (def.element !== 'normal' || !!def.onPlay);
-                    return (
-                      <div className="px-2 py-1 bg-[rgba(8,11,14,0.9)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[10px] font-bold text-[var(--dungeon-text-bright)]">{showAsNormal ? '普通骰子' : def.name}</span>
-                          <span className="text-[8px] text-[var(--dungeon-text-dim)] font-mono">[{def.faces.join(',')}]</span>
-                          {def.element !== 'normal' && (
-                            <span className="text-[8px]" style={{ color: ELEMENT_COLORS[def.element] }}>{ELEMENT_NAMES[def.element]}</span>
-                          )}
-                        </div>
-                        {def.description && !showAsNormal && (
-                          <div className="text-[9px] text-[var(--pixel-orange-light)] leading-snug">{def.description}</div>
-                        )}
-                        {showAsNormal && (
-                          <div className="text-[9px] text-[var(--pixel-orange)]">多选普通攻击：特殊效果已禁用</div>
-                        )}
-                      </div>
-                    );
-                  })()}
                 </div>
 
                 {/* 操作按钮行 */}

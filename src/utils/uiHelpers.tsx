@@ -239,38 +239,12 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
     return base + selection + rollAnim + invalidStyle + 'pixel-dice-elemental ' + defaultGlow;
   }
 
-  // === 职业骰子外观 ===
-  // 战士骰子（w_前缀）
-  if (diceDefId?.startsWith('w_')) {
-    const wGlow = selected && !invalid ? 'dice-glow-warrior' : '';
-    // 自残系骰子（血色脉冲）
-    const isSelfDamage = ['w_bloodthirst', 'w_bloodpact', 'w_titanfist', 'w_berserkheart', 'w_bloodeye'].includes(diceDefId);
-    // 护甲系骰子（铁蓝金属）
-    const isArmor = ['w_thorns', 'w_ironwall', 'w_giantshield', 'w_hegemon'].includes(diceDefId);
-    // 斩杀系（暗红锋利）
-    const isExecute = ['w_execute', 'w_armorbreak', 'w_warhammer'].includes(diceDefId);
-    const subClass = isSelfDamage ? 'pixel-dice-warrior-blood' : isArmor ? 'pixel-dice-warrior-armor' : isExecute ? 'pixel-dice-warrior-execute' : 'pixel-dice-warrior';
-    return base + selection + rollAnim + invalidStyle + subClass + ' ' + wGlow;
-  }
-  // 法师骰子（mage_前缀）
-  if (diceDefId?.startsWith('mage_')) {
-    const mGlow = selected && !invalid ? 'dice-glow-mage' : '';
-    // 元素系骰子（彩虹棱光）
-    const isElement = ['mage_elemental', 'mage_prism', 'mage_resonance', 'mage_elemstorm', 'mage_elemheart'].includes(diceDefId);
-    // 操控系骰子（暗蓝星纹）
-    const isControl = ['mage_reverse', 'mage_mirror', 'mage_crystal', 'mage_timeshift', 'mage_voidseye', 'mage_weaver', 'mage_stardie'].includes(diceDefId);
-    const subClass = isElement ? 'pixel-dice-mage-element' : isControl ? 'pixel-dice-mage-control' : 'pixel-dice-mage';
-    return base + selection + rollAnim + invalidStyle + subClass + ' ' + mGlow;
-  }
-  // 盗贼骰子（r_前缀）
-  if (diceDefId?.startsWith('r_')) {
-    const rGlow = selected && !invalid ? 'dice-glow-rogue' : '';
-    // 毒系骰子（深紫毒液）
-    const isPoison = ['r_poison_coat', 'r_poison_vial', 'r_venom_blade', 'r_poisonfog', 'r_corrosion', 'r_poisonking', 'r_plaguedet', 'r_deathtch'].includes(diceDefId);
-    // 连击系骰子（闪光速度线）
-    const isCombo = ['r_dagger', 'r_shadow', 'r_lethal', 'r_triple', 'r_shadowdance', 'r_bladestorm'].includes(diceDefId);
-    const subClass = isPoison ? 'pixel-dice-rogue-poison' : isCombo ? 'pixel-dice-rogue-combo' : 'pixel-dice-rogue';
-    return base + selection + rollAnim + invalidStyle + subClass + ' ' + rGlow;
+  // === 职业骰子外观 — 每个骰子独特样式 ===
+  if (diceDefId?.startsWith('w_') || diceDefId?.startsWith('mage_') || diceDefId?.startsWith('r_')) {
+    const classPrefix = diceDefId.startsWith('w_') ? 'warrior' : diceDefId.startsWith('mage_') ? 'mage' : 'rogue';
+    const classGlow = selected && !invalid ? `dice-glow-${classPrefix}` : '';
+    // 每个骰子有独立CSS class: dice-id-{diceDefId}
+    return base + selection + rollAnim + invalidStyle + `pixel-dice-${classPrefix} dice-id-${diceDefId} ` + classGlow;
   }
 
   const style = ELEMENT_STYLE_MAP[element] || ELEMENT_STYLE_MAP.normal;

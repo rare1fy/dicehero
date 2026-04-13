@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CLASS_DEFS, CLASS_DICE, type ClassId } from '../data/classes';
 import { PixelClose } from './PixelIcons';
 import { ClassIcon } from './ClassIcons';
+import { getDiceElementClass } from '../utils/uiHelpers';
 
 // 稀有度颜色和标签
 const RARITY_STYLE: Record<string, { color: string; label: string; border: string }> = {
@@ -176,14 +177,11 @@ export const ClassInfoModal: React.FC<ClassInfoModalProps> = ({ visible, onClose
                         <div key={dice.id}
                           className={`p-1.5 border bg-[rgba(0,0,0,0.25)] flex gap-2 items-start ${rs.border}`}
                           style={{ borderRadius: '2px', borderWidth: '1px' }}>
-                          {/* 骰子面值迷你预览 */}
-                          <div className="w-8 h-8 shrink-0 flex items-center justify-center text-[8px] font-mono font-bold border border-[var(--dungeon-panel-border)] bg-[rgba(0,0,0,0.3)]"
-                            style={{
-                              borderRadius: '2px',
-                              color: classId === 'warrior' ? '#c04040' : classId === 'mage' ? '#a070ff' : '#60d080',
-                            }}>
+                          {/* 骰子迷你预览 — 使用实际游戏样式 */}
+                          <div className={`w-8 h-8 shrink-0 flex items-center justify-center text-[10px] font-bold ${getDiceElementClass(dice.element || 'normal', false, false, false, dice.id)}`}
+                            style={{ fontSize: '10px', width: '32px', height: '32px' }}>
                             {dice.faces ? (
-                              dice.faces[0] === dice.faces[5] ? `[${dice.faces[0]}]` : `${dice.faces[0]}-${dice.faces[5]}`
+                              dice.faces[0] === dice.faces[5] ? dice.faces[0] : '?'
                             ) : '?'}
                           </div>
                           <div className="flex-1 min-w-0">
