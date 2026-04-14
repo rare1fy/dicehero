@@ -23,16 +23,15 @@ const REWARD_TABLE = {
   dice:      { weight: 55, label: '骰子' },
   augment:   { weight: 35, label: '遗物' },
   reroll:    { weight: 8, label: '重投机会' },
-  drawCount: { weight: 0.5, label: '手牌上限+1' },
+  drawCount: { weight: 0.5, label: '抽骰+1' },
 };
 
 function getAdjustedWeights(shopLevel: number) {
-  const bonus = (shopLevel - 1) * 3;
+  const bonus = (shopLevel - 1) * 2;
   return {
-    dice:      REWARD_TABLE.dice.weight,
+    dice:      REWARD_TABLE.dice.weight - bonus * 0.5,
     augment:   REWARD_TABLE.augment.weight + bonus,
-    reroll:    REWARD_TABLE.reroll.weight - bonus * 0.5,
-    drawCount: REWARD_TABLE.drawCount.weight,
+    reroll:    Math.max(0.3, REWARD_TABLE.reroll.weight - bonus * 0.05),
   };
 }
 
@@ -69,8 +68,8 @@ function generateReward(shopLevel: number): ChestReward {
 
     case 'reroll':
       return { type: 'reroll', value: 1, label: '+1 重投', desc: '永久增加每回合免费重投次数', rarity: 'uncommon' };
-    case 'drawCount':
-      return { type: 'maxPlays', value: 1, label: '手牌+1', desc: '每回合多抽1颗骰子（敌人也会变强）', rarity: 'rare' };
+
+
   }
 }
 
@@ -399,10 +398,6 @@ const TreasureScreen: React.FC = () => {
         setGame(prev => ({ ...prev, freeRerollsPerTurn: prev.freeRerollsPerTurn + 1 }));
         addLog('开箱获得 +1 重投');
         break;
-      case 'maxPlays':
-        setGame(prev => ({ ...prev, drawCount: Math.min(6, prev.drawCount + 1), enemyHpMultiplier: (prev.enemyHpMultiplier || 1) + 0.25 }));
-        addLog('开箱获得 手牌上限+1');
-        break;
     }
     playSound('coin');
     setOpeningChest(false);
@@ -479,7 +474,7 @@ const TreasureScreen: React.FC = () => {
                 {Object.entries(weights).map(([key, w]) => {
                   const pct = ((w / totalW) * 100).toFixed(1);
                   const info = REWARD_TABLE[key as keyof typeof REWARD_TABLE];
-                  const barColor = key === 'drawCount' ? '#60a5fa' : key === 'augment' ? '#34d399' : key === 'reroll' ? '#a78bfa' : '#9ca3af';
+                  const barColor = key === 'augment' ? '#34d399' : key === 'reroll' ? '#a78bfa' : '#9ca3af';
                   return (
                     <div key={key} className="flex items-center gap-2 mb-1.5">
                       <span className="text-[8px] w-16 text-right font-bold" style={{ color: barColor }}>{info.label}</span>
@@ -527,7 +522,7 @@ const TreasureScreen: React.FC = () => {
                         {reward.type === 'dice' && reward.diceDefId ? <MiniDice defId={reward.diceDefId} size={36} /> : reward.type === 'dice' && <PixelDice size={5} />}
                         {reward.type === 'augment' && <PixelStar size={5} />}
                         {reward.type === 'reroll' && <PixelDice size={5} />}
-                        {reward.type === 'maxPlays' && <PixelStar size={5} />}
+                        {reward.type === 'augment' && <PixelStar size={5} />}
                       </div>
                       <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{reward.label}</div>
                       <div className="text-[9px] text-[var(--dungeon-text-dim)]">{formatDescription(reward.desc)}</div>

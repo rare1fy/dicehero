@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 
 /**
  * DiceFacePattern - 每颗职业骰子的独特像素图案
@@ -154,6 +154,28 @@ const W_overlord = () => ( // 霸体铠甲 → 胸甲
 // ============================================================
 // 法师骰子图案 (22)
 // ============================================================
+
+const W_whirlwind = () => ( // 旋风斩 → 旋风
+  <svg width="100%" height="100%" viewBox="0 0 24 24" shapeRendering={S}>
+    <path d="M12 4 C16 4 20 7 19 12 C18 15 15 16 12 16 C9 16 7 14 8 11 C9 9 11 9 13 10 C14 11 13 13 12 13" stroke="currentColor" strokeWidth="2" fill="none"/>
+    <path d="M12 20 C8 20 4 17 5 12 C6 9 9 8 12 8 C15 8 17 10 16 13" stroke="currentColor" strokeWidth="2" fill="none" opacity=".5"/>
+  </svg>
+);
+const W_splinter = () => ( // 破甲劈斩 → 斧刃+破盾
+  <svg width="100%" height="100%" viewBox="0 0 24 24" shapeRendering={S}>
+    {/* 盾牌轮廓（被劈碎） */}
+    <rect x="4" y="4" width="7" height="10" fill="currentColor" opacity=".5" rx="1"/>
+    <rect x="4" y="14" width="7" height="4" fill="currentColor" opacity=".3" rx="1"/>
+    {/* 裂缝 */}
+    <rect x="8" y="4" width="2" height="14" fill="currentColor" opacity=".0"/>
+    <rect x="7" y="8" width="4" height="2" fill="currentColor" opacity=".9"/>
+    {/* 斧刃 */}
+    <rect x="13" y="2" width="2" height="20" fill="currentColor"/>
+    <rect x="15" y="5" width="5" height="4" fill="currentColor" opacity=".8"/>
+    <rect x="15" y="14" width="5" height="4" fill="currentColor" opacity=".8"/>
+    <rect x="17" y="9" width="3" height="5" fill="currentColor" opacity=".5"/>
+  </svg>
+);
 
 const M_elemental = () => ( // 元素 → 四元素方块
   <svg width="100%" height="100%" viewBox="0 0 24 24" shapeRendering={S}>
@@ -430,6 +452,15 @@ const R_toxblade = () => ( // 剧毒匕首 → 绿刃+毒滴 — 翡翠绿
     <rect x="14" y="18" width="2" height="2" fill="#40c060"/>
   </svg>
 );
+const R_chain_strike = () => ( // 连锁打击 → 链条
+  <svg width="100%" height="100%" viewBox="0 0 24 24" shapeRendering={S}>
+    <rect x="6" y="11" width="4" height="2" fill="currentColor"/>
+    <rect x="10" y="9" width="2" height="6" fill="currentColor" opacity=".7" rx="1"/>
+    <rect x="12" y="11" width="4" height="2" fill="currentColor"/>
+    <rect x="4" y="9" width="2" height="6" fill="currentColor" opacity=".7" rx="1"/>
+    <rect x="16" y="9" width="2" height="6" fill="currentColor" opacity=".7" rx="1"/>
+  </svg>
+);
 const R_shadow_clone = () => ( // 影分身 → 双影 — 深灰绿
   <svg width="100%" height="100%" viewBox="0 0 24 24" shapeRendering={S}>
     <rect x="4" y="6" width="6" height="12" fill="#305838"/>
@@ -588,30 +619,28 @@ const R_bladestorm = () => ( // 影刃风暴 → 四刃旋风 — 翠绿辐射
 
 const PATTERN_MAP: Record<string, React.FC> = {
   // 战士
-  w_bloodthirst: W_bloodthirst, w_thorns: W_thorns, w_warcry: W_warcry,
-  w_ironwall: W_ironwall, w_fury: W_fury, w_charge: W_charge,
+  w_bloodthirst: W_bloodthirst, w_ironwall: W_thorns, w_warcry: W_warcry, w_fury: W_fury,
   w_armorbreak: W_armorbreak, w_revenge: W_revenge, w_roar: W_roar,
-  w_lifefurnace: W_lifefurnace, w_bloodpact: W_bloodpact, w_execute: W_execute,
-  w_quake: W_quake, w_leech: W_leech, w_titanfist: W_titanfist,
+  w_lifefurnace: W_lifefurnace, w_execute: W_execute, w_leech: W_leech, w_titanfist: W_titanfist,
   w_unyielding: W_unyielding, w_warhammer: W_warhammer, w_bloodblade: W_bloodblade,
   w_giantshield: W_giantshield, w_berserk: W_berserk, w_bloodgod: W_bloodgod,
   w_overlord: W_overlord,
+  // 新增战士
+  w_whirlwind: W_whirlwind, w_cleave: W_splinter,
+
   // 法师
   mage_elemental: M_elemental, mage_reverse: M_reverse, mage_missile: M_missile,
   mage_barrier: M_barrier, mage_meditate: M_meditate, mage_amplify: M_amplify,
   mage_mirror: M_mirror, mage_crystal: M_crystal, mage_temporal: M_temporal,
   mage_prism: M_prism, mage_resonance: M_resonance, mage_devour: M_devour,
   mage_purify: M_purify, mage_surge: M_surge, mage_elemstorm: M_elemstorm,
-  mage_voideye: M_voideye, mage_weave: M_weave, mage_permafrost: M_permafrost,
-  mage_star: M_star, mage_shield: M_shield, mage_meteor: M_meteor,
+  mage_burnecho: M_voideye,
+  mage_star: M_star, mage_frostecho: M_shield, mage_meteor: M_meteor,
   mage_elemheart: M_elemheart,
-  // 盗贼
-  r_dagger: R_dagger, r_envenom: R_envenom, r_throwing: R_throwing,
-  r_pursuit: R_pursuit, r_poison_vial: R_poison_vial, r_sleeve: R_sleeve,
-  r_quickdraw: R_quickdraw, r_combomastery: R_combomastery,
-  r_lethal: R_lethal, r_toxblade: R_toxblade, r_shadow_clone: R_shadow_clone,
-  r_miasma: R_miasma, r_boomerang: R_boomerang, r_corrosion: R_corrosion,
-  r_shadow: R_shadow, r_steal: R_steal, r_venomfang: R_venomfang,
+  // 盗贼, r_envenom: R_envenom, r_throwing: R_throwing,
+  r_pursuit: R_pursuit, r_sleeve: R_sleeve,
+  r_quickdraw: R_quickdraw, r_combomastery: R_combomastery, r_toxblade: R_toxblade, r_shadow_clone: R_shadow_clone, r_boomerang: R_boomerang, r_corrosion: R_corrosion,
+  r_chain_strike: R_chain_strike, r_shadowstrike: R_pursuit, r_venomfang: R_venomfang,
   r_tripleflash: R_tripleflash, r_shadowdance: R_shadowdance,
   r_plaguedet: R_plaguedet, r_phantom: R_phantom, r_purifyblade: R_purifyblade,
   r_deathtouch: R_deathtouch, r_bladestorm: R_bladestorm,

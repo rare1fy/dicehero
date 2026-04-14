@@ -24,7 +24,7 @@ const standard: DiceDef = {
   name: '普通骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '标准六面骰，均值3.5',
+  description: '标准六面骰，点数1到6均匀分布',
   rarity: 'common',
 };
 
@@ -37,7 +37,7 @@ const heavy: DiceDef = {
   name: '灌铅骰子',
   element: 'normal',
   faces: [4, 4, 5, 5, 6, 6],
-  description: '只能掷出4/5/6，稳定性极高的底牌',
+  description: '只会掷出4、5、6，稳定的高点数骰子',
   rarity: 'uncommon',
 };
 
@@ -46,7 +46,7 @@ const elemental: DiceDef = {
   name: '元素骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '抽到时随机坍缩为火/冰/雷/毒/圣之一，重Roll会重置元素',
+  description: '每回合随机变为火、冰、雷、毒、圣元素之一；重投会重新随机',
   rarity: 'rare',
   isElemental: true,
 };
@@ -60,7 +60,7 @@ const blade: DiceDef = {
   name: '锋刃骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时额外 +5 基础伤害，随战斗阶段升级增加',
+  description: '出牌时追加5点固定伤害，随战斗阶段升级提升',
   rarity: 'rare',
   onPlay: { bonusDamage: 5 },
 };
@@ -70,7 +70,7 @@ const amplify: DiceDef = {
   name: '倍增骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时总伤害 +20%，随战斗阶段升级增加',
+  description: '出牌时最终伤害提升20%，随战斗阶段升级提升',
   rarity: 'rare',
   onPlay: { bonusMult: 1.2 },
 };
@@ -80,7 +80,7 @@ const split: DiceDef = {
   name: '分裂骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时分裂出一个相同点数的临时骰子加入结算',
+  description: '出牌时分裂出1颗相同点数的临时骰子一同结算',
   rarity: 'rare',
 };
 
@@ -90,7 +90,7 @@ const magnet: DiceDef = {
   name: '磁吸骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6],
-  description: '出牌时随机同化一颗同伴骰子的点数为自身点数，实时影响牌型',
+  description: '出牌时随机将1颗同伴骰子的点数变为与本骰子相同',
   rarity: 'rare',
 };
 const joker: DiceDef = {
@@ -98,7 +98,7 @@ const joker: DiceDef = {
   name: '小丑骰子',
   element: 'normal',
   faces: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  description: '点数1-9随机，突破六面限制',
+  description: '点数在1到9之间随机，突破六面骰的限制',
   rarity: 'rare',
 };
 
@@ -111,7 +111,7 @@ const chaos: DiceDef = {
   name: '混沌骰子',
   element: 'normal',
   faces: [1, 1, 1, 6, 6, 6],
-  description: '只能掷出1和6，专为凑满堂红/多条服务',
+  description: '只会掷出1或6，适合凑满堂红和多条牌型',
   rarity: 'legendary',
 };
 
@@ -124,7 +124,7 @@ const cursed: DiceDef = {
   name: '诅咒骰子',
   element: 'normal',
   faces: [0, 0, 0, 0, 0, 0],
-  description: '点数永远为0，重Roll代价翻倍',
+  description: '点数固定为0，重投代价翻倍',
   rarity: 'curse',
   isCursed: true,
 };
@@ -134,7 +134,7 @@ const cracked: DiceDef = {
   name: '碎裂骰子',
   element: 'normal',
   faces: [1, 1, 1, 2, 2, 2],
-  description: '打出后受到3点反噬伤害。回合结束时若未打出则自行销毁',
+  description: '出牌后受到3点反噬伤害；回合结束时若未打出则自动销毁',
   rarity: 'curse',
   onPlay: { selfDamage: 2 },
   isCracked: true,
@@ -163,7 +163,7 @@ const LEGACY_DICE: Record<string, DiceDef> = { heavy, elemental };
 // 盗贼临时骰子（连击/技能奖励，1回合后销毁）
 const temp_rogue: DiceDef = {
   id: 'temp_rogue', name: '暗影残骰', element: 'normal', faces: [1, 1, 2, 2, 1, 2], rarity: 'common',
-  description: '连击奖励的临时骰子，本回合未使用则销毁',
+  description: '连击奖励的临时骰子，回合结束未使用则自动销毁',
 };
 
 // 可变注册表（包含基础+职业骰子）

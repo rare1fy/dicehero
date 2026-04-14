@@ -1,12 +1,12 @@
-/**
+﻿/**
  * 骰子特殊效果处理 - 元素坍缩 + 小丑随机 + 法师元素操控
  */
 import type { Die, DiceElement } from '../types/game';
 import { getDiceDef, collapseElement, ELEMENTAL_COLLAPSE_ELEMENTS } from '../data/dice';
 
-export const applyDiceSpecialEffects = (diceArr: Die[], options?: { hasLimitBreaker?: boolean }): Die[] => {
+export const applyDiceSpecialEffects = (diceArr: Die[], options?: { hasLimitBreaker?: boolean; lockedElement?: string }): Die[] => {
   const hasElemental = diceArr.some(d => getDiceDef(d.diceDefId).isElemental);
-  const sharedElement = hasElemental ? collapseElement() : null;
+  const sharedElement = hasElemental ? (options?.lockedElement as DiceElement || collapseElement()) : null;
   // 第二元素（给棱镜骰子用）
   let secondElement: DiceElement | null = null;
   if (sharedElement) {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * gameBalance.ts - 游戏平衡数值配置表
  * 
  * 所有关于影响游戏平衡的数值配置。
@@ -59,17 +59,15 @@ export const BATTLE_SCALING = {
 
 // ============================================================
 // 商店配置
-// ============================================================
 export const SHOP_CONFIG = {
-  /** 商店增幅模块数量 */
-  augmentCount: 2,
+  /** 商店遗物数量 */
+  augmentCount: 3,
   /** 商品价格范围 [min, max] */
   priceRange: [20, 80] as [number, number],
   /** 删除骰子固定价格 */
   removeDicePrice: 30,
-  /** 固定商品列表 */
+  /** 固定商品列表（重投强化已移至遗物池随机产出） */
   fixedItems: [
-    { id: 'reroll', type: 'reroll' as const, label: '重投强化', desc: '永久增加每回合 +1 重投机会' },
     { id: 'removeDice', type: 'removeDice' as const, label: '骰子净化', desc: '移除一个骰子，精简构筑' },
   ],
 } as const;
@@ -112,9 +110,12 @@ export const LOOT_CONFIG = {
   /** 增幅选择数量 */
   augmentChoiceCount: 3,
   /** 精英额外奖励 */
+  /** 精英额外奖励：40%概率获得+1每回合重投，60%获得金币 */
   eliteRewards: [
     { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合重投' },
-    { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合重投机会' },
+    { type: 'gold' as const, value: 40, label: '+40 金币' },
+    { type: 'gold' as const, value: 40, label: '+40 金币' },
+    { type: 'gold' as const, value: 50, label: '+50 金币' },
   ],
 } as const;
 

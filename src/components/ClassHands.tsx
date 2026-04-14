@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ClassHands.tsx — 职业专属第一人称双手像素SVG
  * 战士：铁甲手套+骨骷髅骰子+战斧
  * 法师：紫色法袍袖+星界骰子+法杖
@@ -63,8 +63,8 @@ const WarriorLeftHand: React.FC = () => (
 // ============================================================
 // 战士右手 — 铁甲手套 + 双刃战斧（斧刃紧贴柄身）
 // ============================================================
-const WarriorRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
-  <svg width="155" height="215" viewBox="0 0 52 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
+const WarriorRightHand: React.FC<{ attacking?: boolean; glowing?: boolean }> = ({ attacking, glowing }) => (
+  <svg width="155" height="215" viewBox="0 0 52 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))' }}>
     {/* === 斧柄（竖直贯穿） === */}
     <rect x="24" y="0" width="4" height="2" fill="#6a5848" />
     <rect x="23" y="2" width="6" height="36" fill="#3e3028" />
@@ -144,6 +144,14 @@ const WarriorRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
     <rect x="32" y="76" width="2" height="2" fill="#7a7a82" />
     <rect x="18" y="84" width="2" height="2" fill="#7a7a82" />
 
+    {/* 血怒增伤红色光效 */}
+    {glowing && (
+      <>
+        <rect x="0" y="4" width="52" height="26" fill="rgba(200,40,30,0.18)" className="weapon-glow-warrior" />
+        <rect x="4" y="8" width="44" height="18" fill="rgba(255,60,40,0.12)" className="weapon-glow-warrior" />
+        <rect x="0" y="14" width="52" height="4" fill="rgba(255,80,50,0.25)" className="weapon-glow-warrior" />
+      </>
+    )}
     {/* 攻击时发光 */}
     {attacking && (
       <>
@@ -206,7 +214,7 @@ const MageLeftHand: React.FC = () => (
 // ============================================================
 // 法师右手 — 法袍袖 + 粗壮水晶法杖
 // ============================================================
-const MageRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
+const MageRightHand: React.FC<{ attacking?: boolean; glowing?: boolean }> = ({ attacking, glowing }) => (
   <svg width="155" height="215" viewBox="0 0 50 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
     {/* === 杖顶 — 水晶座架 === */}
     {/* 外层金属座 */}
@@ -287,7 +295,14 @@ const MageRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
         <rect x="22" y="0" width="4" height="2" fill="rgba(180,120,255,0.4)" />
       </>
     )}
-  </svg>
+      {/* 吟唱状态紫色呼吸光效 */}
+    {glowing && (
+      <>
+        <rect x="16" y="0" width="18" height="14" fill="rgba(120,60,220,0.25)" className="weapon-glow-mage" />
+        <rect x="10" y="2" width="30" height="40" fill="rgba(100,50,200,0.12)" className="weapon-glow-mage" />
+      </>
+    )}
+</svg>
 );
 
 // ============================================================
@@ -343,7 +358,7 @@ const RogueLeftHand: React.FC = () => (
 // ============================================================
 // 盗贼右手 — 皮革手套 + 大号淬毒匕首
 // ============================================================
-const RogueRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
+const RogueRightHand: React.FC<{ attacking?: boolean; glowing?: boolean }> = ({ attacking, glowing }) => (
   <svg width="155" height="215" viewBox="0 0 48 96" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))', transform: 'scaleX(-1)' }}>
     {/* === 匕首刃 — 加长加宽的毒刃 === */}
     {/* 刃尖 */}
@@ -417,6 +432,13 @@ const RogueRightHand: React.FC<{ attacking?: boolean }> = ({ attacking }) => (
         <rect x="19" y="0" width="6" height="4" fill="rgba(80,255,100,0.5)" />
       </>
     )}
+    {/* 连击就绪绿色光效 */}
+    {glowing && (
+      <>
+        <rect x="8" y="2" width="14" height="40" fill="rgba(40,220,80,0.15)" className="weapon-glow-rogue" />
+        <rect x="12" y="6" width="6" height="30" fill="rgba(60,255,100,0.1)" className="weapon-glow-rogue" />
+      </>
+    )}
   </svg>
 );
 
@@ -429,8 +451,8 @@ export const ClassLeftHand: React.FC<{ playerClass?: string }> = ({ playerClass 
   return <MageLeftHand />; // 默认法师（也兼容无职业的旧存档）
 };
 
-export const ClassRightHand: React.FC<{ playerClass?: string; attacking?: boolean }> = ({ playerClass, attacking }) => {
-  if (playerClass === 'warrior') return <WarriorRightHand attacking={attacking} />;
-  if (playerClass === 'rogue') return <RogueRightHand attacking={attacking} />;
-  return <MageRightHand attacking={attacking} />;
+export const ClassRightHand: React.FC<{ playerClass?: string; attacking?: boolean; glowing?: boolean }> = ({ playerClass, attacking, glowing }) => {
+  if (playerClass === 'warrior') return <WarriorRightHand attacking={attacking} glowing={glowing} />;
+  if (playerClass === 'rogue') return <RogueRightHand attacking={attacking} glowing={glowing} />;
+  return <MageRightHand attacking={attacking} glowing={glowing} />;
 };

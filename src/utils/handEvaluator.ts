@@ -1,10 +1,13 @@
 ﻿import { Die, HandType, HandResult } from '../types/game';
+import { getDiceDef } from '../data/dice';
 
 export const checkHands = (dice: Die[], options?: { straightUpgrade?: number }): HandResult => {
   const straightUpgrade = options?.straightUpgrade || 0;
   if (dice.length === 0) return { bestHand: '普通攻击', allHands: [], activeHands: ['普通攻击'] };
 
-  const values = dice.map(d => d.value).sort((a, b) => a - b);
+  // ignoreForHandType: 镜像骰子等不参与牌型判定，但其点数仍计入总点数
+  const handDice = dice.filter(d => !getDiceDef(d.diceDefId).onPlay?.ignoreForHandType);
+  const values = (handDice.length > 0 ? handDice : dice).map(d => d.value).sort((a, b) => a - b);
   const elements = dice.map(d => d.element);
   const uniqueElements = new Set(elements);
 
@@ -41,6 +44,8 @@ export const checkHands = (dice: Die[], options?: { straightUpgrade?: number }):
   if (maxCount >= 3 && sortedCounts.length >= 2 && sortedCounts[1] >= 3 && dice.length === 6) hands.add('葫芦');
   if (maxCount === 2 && dice.length === 2) hands.add('对子');
   if (isFullHouse && dice.length === 5) hands.add('葫芦');
+  // 4+2 = 6颗葫芦
+  if (sortedCounts.length >= 2 && sortedCounts[0] === 4 && sortedCounts[1] === 2 && dice.length === 6) hands.add('葫芦');
   if (isTwoPair && dice.length === 4) hands.add('连对');
   if (isThreePair && dice.length === 6) hands.add('三连对');
   
@@ -76,6 +81,8 @@ export const checkHands = (dice: Die[], options?: { straightUpgrade?: number }):
   else if (isFullHouse && dice.length === 5) { activeHands.push('葫芦'); hasBaseHand = true; }
   // 3+3 = 6颗骰子两种各3个 → 葫芦
   else if (maxCount >= 3 && sortedCounts.length >= 2 && sortedCounts[1] >= 3 && dice.length === 6) { activeHands.push('葫芦'); hasBaseHand = true; }
+  // 4+2 = 6颗葫芦
+  else if (sortedCounts.length >= 2 && sortedCounts[0] === 4 && sortedCounts[1] === 2 && dice.length === 6) { activeHands.push('葫芦'); hasBaseHand = true; }
   else if (maxCount === 3 && dice.length === 3) { activeHands.push('三条'); hasBaseHand = true; }
   else if (isThreePair && dice.length === 6) { activeHands.push('三连对'); hasBaseHand = true; }
   else if (isTwoPair && dice.length === 4) { activeHands.push('连对'); hasBaseHand = true; }

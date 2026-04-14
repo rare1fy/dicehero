@@ -176,15 +176,7 @@ export const DiceGuideModal: React.FC = () => {
                                       ⚡ 元素效果：抽到时随机坍缩
                                     </div>
                                   )}
-                                  {def.onPlay && (
-                                    <div className="text-[10px] text-[var(--pixel-gold)] mt-0.5">
-                                      ⚔ 出牌效果：
-                                      {def.onPlay.bonusDamage ? ` 伤害+${def.onPlay.bonusDamage}` : ''}
-                                      {def.onPlay.bonusMult ? ` 倍率+${Math.round((def.onPlay.bonusMult - 1) * 100)}%` : ''}
-                                      {def.onPlay.heal ? ` 回复${def.onPlay.heal}HP` : ''}
-                                      {def.onPlay.selfDamage ? ` 自伤${def.onPlay.selfDamage}` : ''}
-                                    </div>
-                                  )}
+
                                   {def.id === 'split' && (
                                     <div className="text-[10px] text-[var(--pixel-cyan)] mt-0.5">
                                       ✦ 结算时分裂出一颗随机点数骰子

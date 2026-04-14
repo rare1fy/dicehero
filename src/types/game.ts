@@ -75,7 +75,15 @@ export interface DiceDef {
     bonusPerTurnKept?: number;   // 每保留1回合+N点
     keepBonusCap?: number;       // 保留加成上限
     armorFromHandSize?: number;  // 护甲=手牌数×N
-    requiresCharge?: number;     // 需要蓄力N回合
+    requiresCharge?: number;     // 需要吟唱N回合
+    bonusMultPerExtraCharge?: number; // 每多1层吟唱额外+N倍率（禁咒·陨星）
+    chainBlast?: boolean;        // 废弃，改用chainBolt
+    chainBolt?: boolean;         // 奥术飞弹：对每个存活敌人各造成一次等于自身点数的独立伤害
+    maxHpBonusEvery?: number;    // 生命熔炉：每N次出牌+maxHP
+    splashToRandom?: boolean;    // 对场上随机另一敌人造成同等点数伤害
+    aoeDamagePercent?: number;   // 对全体敌人造成点数×比例的AOE伤害（旋风斩）
+    splinterDamage?: number;     // 溢出伤害×比例传导给随机其他敌人
+    comboSplashDamage?: boolean;  // 连锁打击：第2次及以上连击时对随机另一敌人造成本骰子点数独立伤害
     triggerAllElements?: boolean; // 触发全部元素
     // 盗贼特殊
     comboBonus?: number;         // 连击倍率加成
@@ -96,10 +104,46 @@ export interface DiceDef {
     bonusMultOnSecondPlay?: number; // 第2次出牌倍率
     grantExtraPlay?: boolean;    // 额外出牌机会
     detonatePoisonPercent?: number; // 引爆毒层百分比
+    detonateExtraPerPlay?: number; // 每额外出牌多引爆N%毒层
     wildcard?: boolean;          // 万能骰子
     transferDebuff?: boolean;    // 转移负面状态
     detonateAllOnLastPlay?: boolean; // 最后出牌引爆全部
     escalateDamage?: number;     // 递增伤害百分比
+    grantTempDieFixed?: number[]; // 补充固定面值分布的临时骰子（每颗触发1次）
+    multOnThirdPlay?: number;    // 第3次及以上出牌伤害倍率
+    bounceAndGrow?: boolean;     // 弹回手牌且每次出牌点数+1（上限+3）
+    shadowClonePlay?: boolean;   // 影分身：自动触发一次50%伤害的额外出牌
+    boomerangPlay?: boolean;     // 回旋：首次出牌弹回+下次出牌不消耗出牌次数
+    doublePoisonOnCombo?: boolean; // 连击时目标毒层翻倍
+    grantShadowRemnant?: boolean;   // 补充1颗临时暗影残骰（当回合可用，回合结束销毁）
+    grantPersistentShadowRemnant?: boolean; // 连击时补充1颗持久暗影残骰（跨回合保留）
+    grantExtraPlayOnCombo?: boolean; // 连击时补充1次出牌机会
+    // v3新增 — 战士
+    healOrMaxHp?: boolean;           // 生命熔炉：未满血回点数HP，满血+3最大HP（上限+20）
+    executeHeal?: number;            // 斩杀回血
+    purifyOne?: boolean;             // 净化1层负面
+    // v3新增 — 法师
+    damageShield?: boolean;          // 免伤护盾=点数×2（非护甲，不被毒绕过）
+    purifyOneOnSkip?: boolean;       // 吟唱回合净化1层
+    multPerElement?: number;         // 每颗元素骰子+N%最终伤害倍率
+    ignoreForHandType?: boolean;     // 不参与牌型判定（镜像）
+    boostLowestOnKeep?: number;      // 保留时手牌最低点骰子+N
+    lockElement?: boolean;           // 锁定元素坍缩到下回合
+    multiElementBlast?: boolean;     // 元素风暴：每颗选中骰子各触发随机元素
+    burnEcho?: boolean;              // 灼烧共鸣：目标灼烧层×5伤害+延长1回合
+    frostEchoDamage?: number;        // 冰封余韵：目标上回合曾冻结时+N%伤害
+    armorToDamage?: boolean;         // 反转护甲为伤害
+    // v3新增 — 盗贼
+    grantShadowDie?: boolean;        // 补充1颗暗影残骰
+    comboPersistShadow?: boolean;    // 连击时暗影残骰变持久型
+    comboGrantPlay?: boolean;        // 连击时+1出牌机会
+    poisonFromValue?: boolean;       // 施加毒=点数
+    poisonScaleDamage?: number;      // 额外伤害=目标毒层×N
+    comboDetonatePoison?: number;    // 连击时引爆N%毒层
+    comboScaleDamage?: number;       // 伤害+连击次数×N%
+    phantomFromShadowDice?: boolean; // 点数=手牌暗影残骰数×2
+    comboHeal?: number;              // 连击时回复N HP
+    grantPlayOnThird?: boolean;      // 第3次出牌时+1出牌机会
     // 通用
     purifyDebuff?: number | boolean; // 净化负面（遗物兼容）
   };
@@ -134,6 +178,11 @@ export interface Die {
   playing?: boolean;
   kept?: boolean;
   isTemp?: boolean;   // 盗贼临时补充的骰子（保留到下回合）
+  isShadowRemnant?: boolean;  // 暗影残骰标记
+  shadowRemnantPersistent?: boolean; // 持久暗影残骰（连击奖励，跨回合保留1次）
+  shadowRemnantSurvived?: boolean;   // 已存活1回合，下回合结束销毁
+  bounceGrowCount?: number;  // 飞刀骰子弹回次数（上限3）
+  boomerangUsed?: boolean;   // 回旋骰子本回合已弹回过
 }
 
 // ============================================================
@@ -473,7 +522,8 @@ export interface GameState {
   bloodRerollCount?: number;   // 本回合卖血重投次数（战士特权伤害加成）
   chargeStacks?: number;       // 法师蓄力层数（连续不出牌回合数）
   mageOverchargeMult?: number; // 法师囤满后继续蓄力的额外伤害倍率加成
-  comboCount?: number;         // 盗贼本回合已出牌次数（连击计数）
+  comboCount?: number;
+  lockedElement?: string;  // 棱镜聚焦锁定的元素         // 盗贼本回合已出牌次数（连击计数）
   lastPlayHandType?: string;   // 盗贼上一次出牌的牌型（连击终结判定）
 
   // 骰子库系统
@@ -524,6 +574,7 @@ export interface GameState {
   relicKeepHighest?: number;           // 血之契约遗物：保留N颗最高点骰子
   relicTempExtraPlay?: number;         // 磨砺石遗物：下回合临时+N出牌
   fortuneWheelUsed?: boolean;          // 命运之轮遗物：本场是否已用过
+  lifefurnaceCounter?: number;         // 生命熔炉：出牌计数器（每N次才触发）
   instakillChallenge?: InstakillChallenge | null; // 一击必杀挑战条件
   instakillCompleted?: boolean;        // 是否已达成一击必杀
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）

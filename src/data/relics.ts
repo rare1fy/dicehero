@@ -743,16 +743,16 @@ const adrenalineRushRelic: Relic = {
   },
 };
 
-/** 狂掷风暴 - 重投时30%概率不消耗免费次数（幸运保底） */
+/** 狂掷风暴 - 有免费重投时，15%概率不消耗免费次数 */
 const rerollFrenzyRelic: Relic = {
   id: 'reroll_frenzy_relic',
   name: '狂掷风暴',
-  description: '每次重投有30%概率不消耗免费次数（幸运保底）',
+  description: '使用免费重投时，10%概率不消耗本次免费次数（搏命重投不可触发）',
   icon: 'blade',
   rarity: 'uncommon',
   trigger: 'on_reroll',
   effect: () => ({
-    freeRerollChance: 0.3,
+    freeRerollChance: 0.10,
   }),
 };
 
@@ -924,11 +924,11 @@ const symmetrySeeker: Relic = {
 // 体系七：职业适配遗物
 // ============================================================
 
-/** 战士：血铸铠甲 - 每次卖血重投获得8护甲 */
+/** 战士：血铸铠甲 - 每次嗜血获得8护甲 */
 const bloodForgeArmor: Relic = {
   id: 'blood_forge_armor',
   name: '血铸铠甲',
-  description: '每次卖血重投获得8护甲',
+  description: '每次嗜血获得8护甲',
   icon: 'blade',
   rarity: 'uncommon',
   trigger: 'on_reroll',
@@ -1002,24 +1002,27 @@ const venomCrystal: Relic = {
   }),
 };
 
-/** 通用：魔法手套 - 打出对子以上牌型时，下回合临时+1手牌 */
+/** 通用：魔法手套 - 打出对子时，下回合临时+1手牌（需1回合CD，对子才触发） */
 const extraHandSlot: Relic = {
   id: 'extra_hand_slot',
   name: '魔法手套',
-  description: '打出对子以上牌型时，下回合临时+1手牌',
+  description: '打出对子时，下回合临时+1骰子（触发后需1次出牌冷却）',
   icon: 'hand',
   rarity: 'rare',
   trigger: 'on_play',
+  maxCounter: 2,
+  counterLabel: 'CD',
   effect: (ctx) => ({
-    tempDrawBonus: (ctx.handType && ctx.handType !== '普通攻击') ? 1 : 0,
+    // 每2次出牌触发1次，且只有对子才给tempDrawBonus
+    tempDrawBonus: (ctx.handType === '对子') ? 1 : 0,
   }),
 };
 
-/** 通用：嗜血骰袋 - 非战士职业也可以卖血重投（代价为战士的2倍） */
+/** 通用：嗜血骰袋 - 非战士职业也可以嗜血（代价为战士的2倍） */
 const extraFreeReroll: Relic = {
   id: 'extra_free_reroll',
   name: '嗜血骰袋',
-  description: '解锁卖血重投能力（非战士职业可用，HP代价为战士的2倍）',
+  description: '解锁嗜血能力（非战士职业可用，HP代价为战士的2倍）',
   icon: 'bag',
   rarity: 'legendary',
   trigger: 'passive',

@@ -163,7 +163,7 @@ export const getDiceElementClass = (element: DiceElement, selected: boolean, rol
   const base = 'pixel-dice ';
   const selection = selected ? 'pixel-dice-selected ' : '';
   const rollAnim = rolling ? 'animate-pulse opacity-70 ' : '';
-  const invalidStyle = invalid ? 'pixel-dice-invalid ' : '';
+  const invalidStyle = '';  // pressure blackout removed
 
   // Heavy dice (lead) - distinct gray metallic look
   if (diceDefId === 'heavy') {
