@@ -4,12 +4,10 @@ import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
 import { MiniDice } from './DiceBagPanel';
 import { getDiceDef } from '../data/dice';
-import { getAugmentIcon } from '../utils/uiHelpers';
-import { getConditionInfo } from './AugmentCard';
 import { formatDescription } from '../utils/richText';
 
 export const LootScreen: React.FC = () => {
-  const { game, collectLoot, finishLoot, pendingLootAugment, setPendingLootAugment, selectLootAugment } = useGameContext();
+  const { game, collectLoot, finishLoot } = useGameContext();
 
   return (
 <div className="flex flex-col h-full bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] p-5 overflow-y-auto">
@@ -31,13 +29,12 @@ export const LootScreen: React.FC = () => {
     {game.lootItems.map((item, i) => {
       const getLootInfo = (type: string) => {
         switch (type) {
-          case 'augment': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '遗物', borderColor: 'var(--pixel-purple)' };
+          case 'relic': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '✨ 遗物', borderColor: 'var(--pixel-purple)' };
           case 'gold': return { icon: <PixelCoin size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '金币', borderColor: 'var(--pixel-gold)' };
           case 'reroll': return { icon: <PixelRefresh size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '重掷强化', borderColor: 'var(--pixel-purple)' };
           case 'maxPlays': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-red-light)]', label: '出牌次数', borderColor: 'var(--pixel-red)' };
           case 'diceCount': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-orange-light)]', label: '骰子数量', borderColor: 'var(--pixel-orange)' };
           case 'specialDice': return { icon: null, color: 'text-[var(--pixel-green-light)]', label: '特殊骰子', borderColor: 'var(--pixel-green)' };
-          case 'relic': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '✨ 遗物', borderColor: 'var(--pixel-purple)' };
           case 'challengeChest': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '🎁 挑战宝箱', borderColor: 'var(--pixel-gold)' };
           default: return { icon: <PixelStar size={3} />, color: 'text-[var(--dungeon-text-dim)]', label: '物品', borderColor: 'var(--dungeon-panel-border)' };
         }
@@ -68,8 +65,7 @@ export const LootScreen: React.FC = () => {
           <div className="flex-1">
             <div className={`text-[8px] font-bold ${info.color} tracking-[0.1em] mb-0.5 opacity-70`}>{info.label}</div>
             <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none mb-0.5 pixel-text-shadow">
-              {item.type === 'augment' ? '技能模块包' : 
-               item.type === 'gold' ? `${item.value} 金币` : 
+              {item.type === 'gold' ? `${item.value} 金币` : 
                item.type === 'maxPlays' ? `+${item.value} 出牌次数` :
                item.type === 'specialDice' && item.diceDefId ? getDiceDef(item.diceDefId).name :
                item.type === 'diceCount' ? `+${item.value} 骰子` :
@@ -78,72 +74,13 @@ export const LootScreen: React.FC = () => {
                `+${item.value} 每回合重掷次数`}
             </div>
             <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
-              {item.type === 'relic' && item.relicData ? formatDescription(item.relicData.description) : item.type === 'augment' ? '点击从中选择一个模块' : (item.type as string) === 'challengeChest' ? '点击开启，随机获得金币/骰子/遗物' : `点击拾取该奖励`}
+              {item.type === 'relic' && item.relicData ? formatDescription(item.relicData.description) : (item.type as string) === 'challengeChest' ? '点击开启，随机获得金币/骰子/遗物' : `点击拾取该奖励`}
             </div>
           </div>
         </motion.button>
       );
     })}
 
-    {pendingLootAugment && (
-      <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-5">
-        <div className="max-w-md w-full">
-          <div className="text-center mb-6">
-            <h3 className="text-xl font-black text-[var(--dungeon-text-bright)] pixel-text-shadow tracking-wide">◆ 选择一个模块 ◆</h3>
-            <p className="text-[var(--dungeon-text-dim)] text-[8px] tracking-[0.15em] mt-2">点击以确认你的选择</p>
-          </div>
-          <div className="flex flex-col gap-3">
-            {pendingLootAugment.options.map((aug, idx) => {
-              const existing = game.augments.find(a => a?.id === aug.id);
-              return (
-                <motion.button
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  whileHover={{ scale: 1.02, x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => selectLootAugment(aug)}
-                  className="w-full pixel-panel p-4 text-left flex items-center gap-4 transition-all group"
-                  style={{ borderColor: existing ? 'var(--pixel-green)' : 'var(--pixel-blue)' }}
-                >
-                  <div className={`w-11 h-11 ${existing ? 'bg-[var(--pixel-green-dark)] text-[var(--pixel-green-light)]' : 'bg-[var(--pixel-blue-dark)] text-[var(--pixel-blue-light)]'} border-2 border-[var(--dungeon-panel-border)] flex items-center justify-center group-hover:scale-105 transition-transform`} style={{borderRadius:'2px'}}>
-                    {getAugmentIcon(aug.condition, 22)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <div className={`text-[9px] font-bold ${existing ? 'text-[var(--pixel-green)]' : 'text-[var(--pixel-blue)]'} tracking-[0.1em]`}>
-                        {existing ? `升级 (Lv.${existing.level} -> ${existing.level + 1})` : '新模块'}
-                      </div>
-                    </div>
-                    <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none pixel-text-shadow">{aug.name}</div>
-                    {/* 触发条件标签 */}
-                    {(() => {
-                      const cond = getConditionInfo(aug.condition);
-                      return (
-                        <div className="flex items-center gap-1.5 mt-1 mb-0.5">
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 border-l-2" style={{ borderLeftColor: cond.color, backgroundColor: cond.bgColor, borderRadius: '0 2px 2px 0' }}>
-                            <span style={{ color: cond.color }}>{getAugmentIcon(aug.condition, 10)}</span>
-                            <span className="text-[8px] font-black" style={{ color: cond.color }}>{cond.label}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    <div className="text-[9px] text-[var(--dungeon-text-dim)] mt-0.5 leading-tight">{formatDescription(aug.description)}</div>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-          <button 
-            onClick={() => setPendingLootAugment(null)}
-            className="mt-5 w-full py-2.5 pixel-btn pixel-btn-ghost text-[9px] font-bold tracking-[0.15em]"
-          >
-            取消
-          </button>
-        </div>
-      </div>
-    )}
 
     {game.lootItems.every(i => i.collected) && (
       <motion.button

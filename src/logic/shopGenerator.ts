@@ -26,7 +26,7 @@ export function generateShopItems(ownedRelicIds: string[]): ShopItem[] {
   // 构建候选商品池
   const candidateItems: ShopItem[] = [];
 
-  // 候选：遗物（type='augment'，历史命名，实指 relic 商品）
+  // 候选：遗物
   const shuffledRelics = pickRandomRelics(
     [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare],
     3,
@@ -34,9 +34,9 @@ export function generateShopItems(ownedRelicIds: string[]): ShopItem[] {
   );
   for (const shopRelic of shuffledRelics) {
     candidateItems.push({
-      id: 'aug_' + shopRelic.id,
-      type: 'augment' as const,
-      augment: { ...shopRelic, condition: 'passive' as any } as any,
+      id: 'relic_' + shopRelic.id,
+      type: 'relic' as const,
+      relicData: { ...shopRelic },
       label: shopRelic.name,
       desc: shopRelic.description,
       price: randPrice(),

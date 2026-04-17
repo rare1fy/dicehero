@@ -207,7 +207,7 @@ export interface StatusEffect {
 // 遗物
 // ============================================================
 
-// [ARCH-4] Augment/AugmentCategory/AugmentContext 已删除 — 增幅模块系统已统一到遗物
+// ============================================================
 
 // ============================================================
 // 地图
@@ -245,7 +245,7 @@ export interface Enemy {
   /** 敌人描述（用于弹窗） */
   description?: string;
   dropGold: number;
-  dropAugment: boolean;  // [ARCH-4] 保留字段但语义已变更：标记是否掉落遗物类奖励
+  dropRelic: boolean;
   dropMaxPlays?: number;
   dropDiceCount?: number;
   rerollReward?: number;
@@ -283,9 +283,8 @@ export interface ChestReward {
 
 export interface ShopItem {
   id: string;
-  type: 'relic' | 'augment' | 'reroll' | 'dice' | 'specialDice' | 'removeDice';
+  type: 'relic' | 'reroll' | 'dice' | 'specialDice' | 'removeDice';
   relicData?: Relic;
-  augment?: Relic;  // 遗物商品（历史命名 'augment' 实指 relic）
   diceDefId?: string;
   price: number;
   label: string;

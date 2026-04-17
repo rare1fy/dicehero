@@ -7,7 +7,8 @@
  * [RULES-A4] 所有遗物触发走 buildRelicContext，禁止手拼 ctx
  */
 
-import type { Die, StatusEffect, Augment, Enemy, GameState, Relic } from '../types/game';
+import React from 'react';
+import type { Die, StatusEffect, Enemy, GameState, Relic } from '../types/game';
 import { HAND_TYPES } from '../data/handTypes';
 import { STATUS_INFO } from '../data/statusInfo';
 import { getDiceDef, getUpgradedOnPlay, getElementLevelBonus } from '../data/dice';
@@ -54,7 +55,6 @@ export interface CalculateExpectedOutcomeParams {
   game: GameState;
   targetEnemy: Enemy | null;
   rerollCount: number;
-  activeAugments: Augment[];
   /** gameRef.current.furyBonusDamage */
   furyBonusDamage: number;
   /** gameRef.current.bloodRerollCount */
@@ -74,7 +74,7 @@ export interface CalculateExpectedOutcomeParams {
 export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams): ExpectedOutcomeResult | null {
   const {
     selected, dice, activeHands, bestHand, game,
-    targetEnemy, rerollCount, activeAugments,
+    targetEnemy, rerollCount,
     furyBonusDamage, bloodRerollCount, warriorRageMult, mageOverchargeMult,
   } = params;
 
@@ -133,34 +133,6 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   let goldBonus = 0;
   const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number, relicId?: string, icon?: string }[] = [];
 
-  // --- Augment effects ---
-  activeAugments.forEach(aug => {
-    const res = aug.effect(X, selected, aug.level || 1, { rerollsThisTurn: rerollCount, currentHp: game.hp, maxHp: game.maxHp, currentGold: game.souls });
-    const details: string[] = [];
-
-    if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
-    if (res.armor) { extraArmor += res.armor; details.push(`护甲+${res.armor}`); }
-    if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
-    if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率${Math.round(res.multiplier * 100)}%`); }
-    if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-    if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`金币+${res.goldBonus}`); }
-    if (res.statusEffects) {
-      res.statusEffects.forEach(s => {
-        const existing = statusEffects.find(es => es.type === s.type);
-        if (existing) {
-          existing.value += s.value;
-        } else {
-          statusEffects.push({ ...s });
-        }
-        const info = STATUS_INFO[s.type];
-        details.push(`${info.label}+${s.value}`);
-      });
-    }
-
-    if (details.length > 0) {
-      triggeredAugments.push({ name: aug.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
-    }
-  });
 
   // --- Relic on_play effects ---
   game.relics.filter(r => r.trigger === 'on_play').forEach(relic => {
@@ -233,7 +205,7 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
 
   const hasUnify = selected.some(d => getDiceDef(d.diceDefId).onPlay?.unifyElement);
   // 确定性选择：统一为第一个被选骰子的元素（预览需要确定性，避免 Math.random 导致 UI 闪烁）
-  const unifiedElement = hasUnify && !skipOnPlay ? (selected.find(d => d.element && d.element !== 'normal')?.element as ElementName || 'fire') : null;
+  const unifiedElement = hasUnify && !skipOnPlay ? (selected.find(d => d.element && d.element !== 'normal')?.element || 'fire') : null;
 
   selected.forEach(d => {
     if (skipOnPlay) return;
@@ -283,8 +255,10 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
     if (!def.onPlay) return;
     const upgradedOp = getUpgradedOnPlay(def, diceLevel);
     const op = upgradedOp || def.onPlay;
-    const depthDmgBonus = 1 + Math.floor((game.depth || 0) / 3) * 0.15;
-    const depthMultBonus = Math.floor((game.depth || 0) / 5) * 0.05;
+    // [ARCH] depth 字段已从 GameState 移除 — 使用地图节点深度近似
+    const currentDepth = game.map.find(n => n.id === game.currentNodeId)?.depth ?? 0;
+    const depthDmgBonus = 1 + Math.floor(currentDepth / 3) * 0.15;
+    const depthMultBonus = Math.floor(currentDepth / 5) * 0.05;
 
     // === 基础效果 ===
     if (op.bonusDamage && !op.firstPlayOnly && !op.requiresTriple) {

@@ -109,7 +109,6 @@ export interface BattleContextType {
   canAffordReroll: boolean;
   freeRerollsRemaining: number;
   currentRerollCost: number;
-  activeAugments: any[];
 
   // === 战斗动作 ===
   rollAllDice: (forceResetHand?: boolean) => Promise<void>;

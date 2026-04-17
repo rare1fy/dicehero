@@ -21,7 +21,7 @@ const UPGRADE_COSTS = [0, 120, 250];
 
 const REWARD_TABLE = {
   dice:      { weight: 55, label: '骰子' },
-  augment:   { weight: 35, label: '遗物' },
+  relic:      { weight: 35, label: '遗物' },
   reroll:    { weight: 8, label: '重投机会' },
   drawCount: { weight: 0.5, label: '抽骰+1' },
 };
@@ -30,7 +30,7 @@ function getAdjustedWeights(shopLevel: number) {
   const bonus = (shopLevel - 1) * 2;
   return {
     dice:      REWARD_TABLE.dice.weight - bonus * 0.5,
-    augment:   REWARD_TABLE.augment.weight + bonus,
+    relic:      REWARD_TABLE.relic.weight + bonus,
     reroll:    Math.max(0.3, REWARD_TABLE.reroll.weight - bonus * 0.05),
   };
 }
@@ -58,12 +58,12 @@ function generateReward(shopLevel: number): ChestReward {
       return { type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity };
     }
 
-    case 'augment': {
+    case 'relic': {
       const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
       if (relicPool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
       const pick = relicPool[Math.floor(Math.random() * relicPool.length)];
       const rarity = pick.rarity === 'rare' ? 'rare' as const : pick.rarity === 'uncommon' ? 'uncommon' as const : 'common' as const;
-      return { type: 'augment', augment: pick as any, label: pick.name, desc: pick.description, rarity };
+      return { type: 'relic', relicData: pick, label: pick.name, desc: pick.description, rarity };
     }
 
     case 'reroll':
@@ -162,8 +162,8 @@ const MerchantScreen: React.FC = () => {
       }
       return newState;
     });
-    if (item.type === 'augment' && item.augment) {
-      pickReward(item.augment);
+    if (item.type === 'relic' && item.relicData) {
+      pickReward(item.relicData);
     }
     addToast('\u2705 购买成功: ' + item.label, 'gold');
     addLog('购买商品: ' + item.label + ' (-' + item.price + 'g)');
@@ -293,7 +293,7 @@ const MerchantScreen: React.FC = () => {
         )}
         {shopItems.map((item, idx) => {
           const canBuy = game.souls >= item.price;
-          const typeColor = item.type === 'augment' ? '#34d399'
+          const typeColor = item.type === 'relic' ? '#34d399'
             : (item.type === 'dice' || item.type === 'specialDice') ? '#60a5fa'
             : item.type === 'reroll' ? '#a78bfa'
             : '#9ca3af';
@@ -309,7 +309,7 @@ const MerchantScreen: React.FC = () => {
               <div className="w-10 h-10 bg-[var(--dungeon-bg)] border-2 flex items-center justify-center flex-shrink-0"
                 style={{ borderColor: typeColor + '60', borderRadius: '2px' }}>
                 {(item.type === 'dice' || item.type === 'specialDice') && item.diceDefId ? <MiniDice defId={item.diceDefId} size={28} /> : (item.type === 'dice' || item.type === 'specialDice') && <PixelDice size={3} />}
-                {item.type === 'augment' && <PixelStar size={3} />}
+                {item.type === 'relic' && <PixelStar size={3} />}
                 {item.type === 'reroll' && <PixelDice size={3} />}
                 {item.type === 'removeDice' && <span className="text-[10px]">{'\u2702'}</span>}
               </div>
@@ -376,7 +376,7 @@ const TreasureScreen: React.FC = () => {
     const newReward = generateReward(shopLevel);
     setReward(newReward);
     setShowReward(true);
-    playSound(newReward.rarity === 'rare' ? 'augment_activate' : 'coin');
+    playSound(newReward.rarity === 'rare' ? 'relic_activate' : 'coin');
   }, [canAfford, cost, shopLevel, setGame, addToast]);
 
   const collectReward = useCallback(() => {
@@ -388,9 +388,9 @@ const TreasureScreen: React.FC = () => {
           addLog('开箱获得骰子: ' + reward.label);
         }
         break;
-      case 'augment':
-        if (reward.augment) {
-          setGame(prev => ({ ...prev, relics: [...prev.relics, reward.augment!] }));
+      case 'relic':
+        if (reward.relicData) {
+          pickReward(reward.relicData);
           addLog('开箱获得遗物: ' + reward.label);
         }
         break;
@@ -474,7 +474,7 @@ const TreasureScreen: React.FC = () => {
                 {Object.entries(weights).map(([key, w]) => {
                   const pct = ((w / totalW) * 100).toFixed(1);
                   const info = REWARD_TABLE[key as keyof typeof REWARD_TABLE];
-                  const barColor = key === 'augment' ? '#34d399' : key === 'reroll' ? '#a78bfa' : '#9ca3af';
+                  const barColor = key === 'relic' ? '#34d399' : key === 'reroll' ? '#a78bfa' : '#9ca3af';
                   return (
                     <div key={key} className="flex items-center gap-2 mb-1.5">
                       <span className="text-[8px] w-16 text-right font-bold" style={{ color: barColor }}>{info.label}</span>
@@ -520,9 +520,8 @@ const TreasureScreen: React.FC = () => {
                       <div className="text-[8px] font-bold tracking-widest" style={{ color: RARITY_COLORS[reward.rarity] }}>{RARITY_LABELS[reward.rarity]}</div>
                       <div className="w-12 h-12 flex items-center justify-center">
                         {reward.type === 'dice' && reward.diceDefId ? <MiniDice defId={reward.diceDefId} size={36} /> : reward.type === 'dice' && <PixelDice size={5} />}
-                        {reward.type === 'augment' && <PixelStar size={5} />}
+                        {reward.type === 'relic' && <PixelStar size={5} />}
                         {reward.type === 'reroll' && <PixelDice size={5} />}
-                        {reward.type === 'augment' && <PixelStar size={5} />}
                       </div>
                       <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{reward.label}</div>
                       <div className="text-[9px] text-[var(--dungeon-text-dim)]">{formatDescription(reward.desc)}</div>

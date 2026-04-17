@@ -42,7 +42,7 @@ const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Ene
     attackDmg: Math.floor(config.baseDmg * dmgScale),
     combatType: config.combatType || 'warrior',
     dropGold: config.drops.gold,
-    dropAugment: config.drops.augment,
+    dropRelic: config.drops.relic,
     rerollReward: config.drops.rerollReward,
     statuses: [],
     distance: (config.combatType === 'warrior' || config.combatType === 'guardian') ? 2 : 3,

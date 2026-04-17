@@ -50,7 +50,7 @@ export interface EnemyConfig {
   category: 'normal' | 'elite' | 'boss';
   combatType: 'warrior' | 'guardian' | 'ranger' | 'caster' | 'priest';
   chapter?: number; // 1-5, undefined = 通用
-  drops: { gold: number; augment: boolean; rerollReward?: number; };
+  drops: { gold: number; relic: boolean; rerollReward?: number; };
   quotes?: EnemyQuotes;
 }
 
@@ -61,7 +61,7 @@ const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_ghoul', name: '食尸鬼', emoji: '', chapter: 1,
     baseHp: 28, baseDmg: 7, category: 'normal', combatType: 'warrior',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 7 },
       { type: '攻击', baseValue: 9, description: '撕咬' },
@@ -78,7 +78,7 @@ const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_spider', name: '剧毒蛛母', emoji: '', chapter: 1,
     baseHp: 18, baseDmg: 3, category: 'normal', combatType: 'ranger',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
       { type: '攻击', baseValue: 4 },
@@ -95,7 +95,7 @@ const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_treant', name: '腐化树人', emoji: '', chapter: 1,
     baseHp: 42, baseDmg: 4, category: 'normal', combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 8 },
       { type: '攻击', baseValue: 5 },
@@ -113,7 +113,7 @@ const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_banshee', name: '哀嚎女妖', emoji: '', chapter: 1,
     baseHp: 16, baseDmg: 3, category: 'normal', combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
       { type: '攻击', baseValue: 5 },
@@ -130,7 +130,7 @@ const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_wolf_priest', name: '月光狼灵', emoji: '', chapter: 1,
     baseHp: 20, baseDmg: 2, category: 'normal', combatType: 'priest',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
@@ -153,7 +153,7 @@ const ch2_normals: EnemyConfig[] = [
   {
     id: 'ice_yeti', name: '雪原雪人', emoji: '', chapter: 2,
     baseHp: 36, baseDmg: 9, category: 'normal', combatType: 'warrior',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 9 },
       { type: '攻击', baseValue: 11, description: '冰拳' },
@@ -169,7 +169,7 @@ const ch2_normals: EnemyConfig[] = [
   {
     id: 'ice_mage', name: '霜寒女巫', emoji: '', chapter: 2,
     baseHp: 18, baseDmg: 4, category: 'normal', combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 1, description: '冻结', scalable: false },
       { type: '攻击', baseValue: 6 },
@@ -186,7 +186,7 @@ const ch2_normals: EnemyConfig[] = [
   {
     id: 'ice_wolf', name: '霜鬃狼', emoji: '', chapter: 2,
     baseHp: 22, baseDmg: 5, category: 'normal', combatType: 'ranger',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 5 },
       { type: '攻击', baseValue: 7, description: '冰霜撕咬' },
@@ -203,7 +203,7 @@ const ch2_normals: EnemyConfig[] = [
   {
     id: 'ice_golem', name: '寒冰石像', emoji: '', chapter: 2,
     baseHp: 44, baseDmg: 4, category: 'normal', combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 10 },
       { type: '攻击', baseValue: 5 },
@@ -226,7 +226,7 @@ const ch3_normals: EnemyConfig[] = [
   {
     id: 'lava_hound', name: '地狱火犬', emoji: '', chapter: 3,
     baseHp: 30, baseDmg: 8, category: 'normal', combatType: 'warrior',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 8 },
       { type: '攻击', baseValue: 10, description: '烈焰撕咬' },
@@ -243,7 +243,7 @@ const ch3_normals: EnemyConfig[] = [
   {
     id: 'lava_imp', name: '小恶魔', emoji: '', chapter: 3,
     baseHp: 16, baseDmg: 4, category: 'normal', combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '灼烧', scalable: false },
       { type: '攻击', baseValue: 5 },
@@ -261,7 +261,7 @@ const ch3_normals: EnemyConfig[] = [
   {
     id: 'lava_guardian', name: '黑铁卫士', emoji: '', chapter: 3,
     baseHp: 48, baseDmg: 5, category: 'normal', combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 12 },
       { type: '攻击', baseValue: 6 },
@@ -279,7 +279,7 @@ const ch3_normals: EnemyConfig[] = [
   {
     id: 'lava_shaman', name: '火焰萨满', emoji: '', chapter: 3,
     baseHp: 22, baseDmg: 3, category: 'normal', combatType: 'priest',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '灼烧', scalable: false },
       { type: '技能', baseValue: 1, description: '力量', scalable: false },
@@ -302,7 +302,7 @@ const ch4_normals: EnemyConfig[] = [
   {
     id: 'shadow_assassin', name: '暗影刺客', emoji: '', chapter: 4,
     baseHp: 24, baseDmg: 12, category: 'normal', combatType: 'ranger',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 12, description: '背刺' },
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
@@ -319,7 +319,7 @@ const ch4_normals: EnemyConfig[] = [
   {
     id: 'shadow_felguard', name: '邪能卫兵', emoji: '', chapter: 4,
     baseHp: 46, baseDmg: 6, category: 'normal', combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 7 },
       { type: '防御', baseValue: 14 },
@@ -336,7 +336,7 @@ const ch4_normals: EnemyConfig[] = [
   {
     id: 'shadow_warlock', name: '邪能术士', emoji: '', chapter: 4,
     baseHp: 20, baseDmg: 5, category: 'normal', combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
       { type: '攻击', baseValue: 6 },
@@ -354,7 +354,7 @@ const ch4_normals: EnemyConfig[] = [
   {
     id: 'shadow_knight', name: '堕落死亡骑士', emoji: '', chapter: 4,
     baseHp: 34, baseDmg: 10, category: 'normal', combatType: 'warrior',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
       { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
@@ -377,7 +377,7 @@ const ch5_normals: EnemyConfig[] = [
   {
     id: 'eternal_sentinel', name: '光铸哨兵', emoji: '', chapter: 5,
     baseHp: 40, baseDmg: 8, category: 'normal', combatType: 'guardian',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 14 },
       { type: '攻击', baseValue: 8 },
@@ -395,7 +395,7 @@ const ch5_normals: EnemyConfig[] = [
   {
     id: 'eternal_chrono', name: '时光龙人', emoji: '', chapter: 5,
     baseHp: 26, baseDmg: 7, category: 'normal', combatType: 'caster',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '虚弱', scalable: false },
       { type: '攻击', baseValue: 8, description: '时光冲击' },
@@ -412,7 +412,7 @@ const ch5_normals: EnemyConfig[] = [
   {
     id: 'eternal_archer', name: '星界游侠', emoji: '', chapter: 5,
     baseHp: 22, baseDmg: 10, category: 'normal', combatType: 'ranger',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
       { type: '攻击', baseValue: 12, description: '星辰之箭' },
@@ -429,7 +429,7 @@ const ch5_normals: EnemyConfig[] = [
   {
     id: 'eternal_priest', name: '泰坦祭司', emoji: '', chapter: 5,
     baseHp: 24, baseDmg: 3, category: 'normal', combatType: 'priest',
-    drops: { gold: 20, augment: false },
+    drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '力量', scalable: false },
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
@@ -460,7 +460,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_necromancer', name: '亡灵巫师', emoji: '', chapter: 1,
     baseHp: 85, baseDmg: 8, category: 'elite', combatType: 'caster',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 14, description: '亡灵大军' },
@@ -483,7 +483,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_alpha_wolf', name: '狼人首领', emoji: '', chapter: 1,
     baseHp: 100, baseDmg: 11, category: 'elite', combatType: 'warrior',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
       { type: '攻击', baseValue: 14, description: '狂暴撕咬' },
@@ -502,7 +502,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_frost_wyrm', name: '霜龙幼崽', emoji: '', chapter: 2,
     baseHp: 95, baseDmg: 10, category: 'elite', combatType: 'caster',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.3, actions: [
         { type: '攻击', baseValue: 18, description: '寒冰吐息' },
@@ -526,7 +526,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_ice_lord', name: '冰霜巨人王', emoji: '', chapter: 2,
     baseHp: 120, baseDmg: 7, category: 'elite', combatType: 'guardian',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '防御', baseValue: 20 },
       { type: '攻击', baseValue: 8 },
@@ -545,7 +545,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_infernal', name: '地狱火', emoji: '', chapter: 3,
     baseHp: 100, baseDmg: 12, category: 'elite', combatType: 'warrior',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 12 },
       { type: '攻击', baseValue: 16, description: '烈焰冲击' },
@@ -563,7 +563,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_dark_iron', name: '黑铁议员', emoji: '', chapter: 3,
     baseHp: 90, baseDmg: 9, category: 'elite', combatType: 'caster',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 16, description: '熔岩之怒' },
@@ -587,7 +587,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_doomguard', name: '末日守卫', emoji: '', chapter: 4,
     baseHp: 110, baseDmg: 11, category: 'elite', combatType: 'warrior',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
       { type: '攻击', baseValue: 16, description: '末日审判' },
@@ -606,7 +606,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_shadow_priest', name: '暗影大主教', emoji: '', chapter: 4,
     baseHp: 80, baseDmg: 8, category: 'elite', combatType: 'priest',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.3, actions: [
         { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
@@ -631,7 +631,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_titan_construct', name: '泰坦守护者', emoji: '', chapter: 5,
     baseHp: 130, baseDmg: 10, category: 'elite', combatType: 'guardian',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '防御', baseValue: 22 },
       { type: '攻击', baseValue: 10 },
@@ -649,7 +649,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   {
     id: 'elite_void_walker', name: '虚空行者', emoji: '', chapter: 5,
     baseHp: 90, baseDmg: 13, category: 'elite', combatType: 'caster',
-    drops: { gold: 50, augment: true, rerollReward: 2 },
+    drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.35, actions: [
         { type: '攻击', baseValue: 20, description: '虚空爆裂' },
@@ -680,7 +680,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_lich_forest', name: '枯骨巫妖', emoji: '', chapter: 1,
     baseHp: 150, baseDmg: 10, category: 'boss', combatType: 'caster',
-    drops: { gold: 60, augment: true },
+    drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 16, description: '亡灵风暴' },
@@ -709,7 +709,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_ancient_treant', name: '远古树王', emoji: '', chapter: 1,
     baseHp: 300, baseDmg: 15, category: 'boss', combatType: 'guardian',
-    drops: { gold: 0, augment: false },
+    drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 22, description: '大地之怒' },
@@ -736,7 +736,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_frost_queen', name: '霜寒女王', emoji: '', chapter: 2,
     baseHp: 160, baseDmg: 10, category: 'boss', combatType: 'caster',
-    drops: { gold: 60, augment: true },
+    drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 18, description: '暴风雪' },
@@ -765,7 +765,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_frost_lich', name: '霜之巫妖王', emoji: '', chapter: 2,
     baseHp: 320, baseDmg: 15, category: 'boss', combatType: 'warrior',
-    drops: { gold: 0, augment: false },
+    drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 28, description: '霜之哀伤' },
@@ -792,7 +792,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_ragnaros', name: '炎魔之王', emoji: '', chapter: 3,
     baseHp: 200, baseDmg: 12, category: 'boss', combatType: 'warrior',
-    drops: { gold: 60, augment: true },
+    drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 20, description: '岩浆之锤' },
@@ -819,7 +819,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_deathwing', name: '熔火死翼', emoji: '', chapter: 3,
     baseHp: 380, baseDmg: 16, category: 'boss', combatType: 'caster',
-    drops: { gold: 0, augment: false },
+    drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 30, description: '大灾变' },
@@ -846,7 +846,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_archimonde', name: '深渊领主', emoji: '', chapter: 4,
     baseHp: 200, baseDmg: 11, category: 'boss', combatType: 'caster',
-    drops: { gold: 60, augment: true },
+    drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 18, description: '暗影之手' },
@@ -875,7 +875,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_kiljaeden', name: '暗影之王', emoji: '', chapter: 4,
     baseHp: 380, baseDmg: 16, category: 'boss', combatType: 'caster',
-    drops: { gold: 0, augment: false },
+    drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 28, description: '黑暗终焉' },
@@ -902,7 +902,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_titan_watcher', name: '泰坦看守者', emoji: '', chapter: 5,
     baseHp: 200, baseDmg: 12, category: 'boss', combatType: 'guardian',
-    drops: { gold: 60, augment: true },
+    drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 18, description: '泰坦审判' },
@@ -929,7 +929,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   {
     id: 'boss_eternal_lord', name: '永恒主宰', emoji: '', chapter: 5,
     baseHp: 480, baseDmg: 18, category: 'boss', combatType: 'caster',
-    drops: { gold: 0, augment: false },
+    drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 28, description: '终极之光' },

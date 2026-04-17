@@ -1233,14 +1233,11 @@
 }
 
 /* === ������������ (���ػ�) === */
-@keyframes pixel-augment-flash {
   0% { background-color: rgba(60,200,100,0); }
   50% { background-color: rgba(60,200,100,0.3); }
   100% { background-color: rgba(60,200,100,0); }
 }
 
-.animate-augment-flash {
-  animation: pixel-augment-flash 0.5s steps(3);
 }
 
 /* === �����ǹ� === */

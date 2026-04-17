@@ -2,70 +2,65 @@
  * enemyAI.ts — 敌人回合AI逻辑
  * 
  * 从 DiceHeroGame.tsx endTurn 函数中提取的敌人AI决策模块。
- * 包含：灼烧/中毒结算、5种combatType决策、精英Boss特殊行为、回合结束处理。
+ * 包含：灼烧/中毒结算、5种combatType决策调度、回合结束处理。
  * 
- * [RULES-B4-EXEMPT] 大型switch/case + 回调接口：5种combatType决策是同一抽象层级的枚举
+ * 子模块：
+ * - enemySkills.ts: Priest/Caster 技能逻辑 + 状态递减
+ * - elites.ts: 精英/Boss 判定与增强逻辑
+ * - enemyDialogue.ts: 台词系统
+ * - attackCalc.ts: 攻击力计算纯函数
+ * - enemyWaveTransition.ts: 波次转换逻辑
+ *
+ * [ARCH-6 Round 3] 修复清单：
+ * - RED-1: 所有伤害计算/浮动文字移入 setGame 回调，使用 prev 而非 gameRef.current
+ * - RED-2: game 过期快照读取移入 setGame(prev => ...) 回调内
+ * - RED-3: Ranger 追击使用最新 attackCount
+ * - RED-5: battleTurn % 2 替换为 GUARDIAN_CONFIG.defenseCycle
+ * - Y1: addFloatingText icon 类型改为 string | undefined，消除 React 依赖
+ * - Y2: 高伤台词延迟由调用方执行（不再在逻辑层 setTimeout）
  */
 
-import type { Enemy, GameState, Die, StatusEffect, Relic } from '../types/game';
+import type { Enemy, GameState, Die, Relic } from '../types/game';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
-import { hasFatalProtection as HasFatalProtectionFn, triggerHourglass as TriggerHourglassFn } from '../engine/relicQueries';
-import { generateChallenge } from '../utils/instakillChallenge';
+import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
+import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
+import { getEffectiveAttackDmg, getRangerFollowUpDmg } from './attackCalc';
+import { executePriestSkill, executeCasterSkill, tickStatuses } from './enemySkills';
+import { processEliteDice, processEliteArmor } from './elites';
+import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
+import { tryWaveTransition } from './enemyWaveTransition';
+import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT } from '../config';
 
 // === EnemyAI 回调接口 ===
-// enemyAI 不直接依赖 React，通过回调与组件通信
 
 export interface EnemyAICallbacks {
-  // React 状态更新
   setGame: (update: GameState | ((prev: GameState) => GameState)) => void;
   setEnemies: (update: Enemy[] | ((prev: Enemy[]) => Enemy[])) => void;
   setEnemyEffects: (update: Record<string, string | null> | ((prev: Record<string, string | null>) => Record<string, string | null>)) => void;
   setDyingEnemies: (update: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  
-  // UI/演出回调
   setEnemyEffectForUid: (uid: string, effect: string | null) => void;
   enemyPreAction: (e: Enemy, quoteType: string) => Promise<boolean>;
   addLog: (msg: string) => void;
-  addFloatingText: (text: string, color: string, icon?: any, target?: string, large?: boolean) => void;
+  /** [Y1] icon 参数为 string 类型（非 React.ReactNode），逻辑层不依赖 React */
+  addFloatingText: (text: string, color: string, icon?: string, target?: 'player' | 'enemy', large?: boolean) => void;
   addToast: (msg: string, type: string) => void;
   playSound: (id: string) => void;
   setScreenShake: (v: boolean) => void;
   setPlayerEffect: (v: string | null) => void;
   showEnemyQuote: (uid: string, text: string, duration?: number) => void;
+  /** 延迟台词执行器：接收 DelayedQuoteAction 描述，在 UI 层调度定时器 */
+  scheduleDelayedQuote: (action: DelayedQuoteAction) => void;
   getEnemyQuotes: (enemyId: string) => { attack?: string[]; defend?: string[]; skill?: string[]; heal?: string[]; enter?: string[]; hurt?: string[] } | undefined;
   pickQuote: (arr?: string[]) => string | null;
   setRerollCount: (v: number | ((prev: number) => number)) => void;
   setWaveAnnouncement: (v: number | null) => void;
   setDice: (v: Die[]) => void;
   rollAllDice: (force?: boolean) => void;
-  
-  // 引擎函数
   buildRelicContext: typeof BuildRelicContextFn;
   hasFatalProtection: typeof HasFatalProtectionFn;
   triggerHourglass: typeof TriggerHourglassFn;
-  
-  // 胜利回调
   handleVictory: () => void;
-  
-  // 读取最新 game state 的 ref
   gameRef: { current: GameState };
-}
-
-// === 辅助函数 ===
-
-/** 状态持续期递减 */
-function tickStatuses(statuses: StatusEffect[]): StatusEffect[] {
-  return statuses
-    .map(s => {
-      if (s.type === 'poison' || s.type === 'burn') return s;
-      if (s.duration !== undefined) return { ...s, duration: s.duration - 1 };
-      return { ...s, value: s.value - 1 };
-    })
-    .filter(s => {
-      if (s.type === 'poison' || s.type === 'burn') return s.value > 0;
-      if (s.duration !== undefined) return s.duration > 0;
-      return s.value > 0;
-    });
 }
 
 // === 主函数 ===
@@ -82,8 +77,6 @@ function tickStatuses(statuses: StatusEffect[]): StatusEffect[] {
  * 6. 精英/Boss塞废骰子
  * 7. 精英/Boss叠护甲
  * 8. 敌人回合结束→玩家回合（灼烧结算+状态递减）
- * 
- * @returns currentPlayerHp 玩家当前HP（用于判断死亡）
  */
 export async function executeEnemyTurn(
   game: GameState,
@@ -93,10 +86,9 @@ export async function executeEnemyTurn(
   cb: EnemyAICallbacks
 ): Promise<number> {
   // 0. 标记进入敌人回合
-  cb.setGame((prev: GameState) => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, blackMarketUsedThisTurn: false }));
+  cb.setGame(prev => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, blackMarketUsedThisTurn: false }));
 
-  // 1. 玩家回合结束：中毒结算
-  let currentPlayerHp = game.hp;
+  // 1. 玩家中毒结算（E5: death check 在回调内部完成）
   cb.setGame((prev: GameState) => {
     let nextStatuses = [...prev.statuses];
     let poisonDamage = 0;
@@ -107,81 +99,91 @@ export async function executeEnemyTurn(
       cb.addFloatingText(`-${poisonDamage}`, 'text-purple-400', undefined, 'player');
       nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
     }
-    currentPlayerHp = Math.max(0, prev.hp - poisonDamage);
-    if (currentPlayerHp <= 0 && prev.hp > 0) {
+    let newHp = Math.max(0, prev.hp - poisonDamage);
+    if (newHp <= 0 && prev.hp > 0) {
       if (cb.hasFatalProtection(prev.relics)) {
-        currentPlayerHp = prev.hp;
-        return { ...prev, hp: currentPlayerHp, relics: cb.triggerHourglass(prev.relics) };
+        newHp = prev.hp;
+        return { ...prev, hp: newHp, relics: cb.triggerHourglass(prev.relics), statuses: nextStatuses };
       }
+      return { ...prev, hp: 0, phase: 'gameover' as const, statuses: nextStatuses };
     }
-    return { ...prev, hp: currentPlayerHp, statuses: nextStatuses };
+    return { ...prev, hp: newHp, statuses: nextStatuses };
   });
 
   await new Promise(r => setTimeout(r, 600));
-  if (currentPlayerHp <= 0) { cb.playSound('player_death'); cb.setGame((prev: GameState) => ({ ...prev, phase: 'gameover' })); return 0; }
+  if (cb.gameRef.current.hp <= 0) { cb.playSound('player_death'); return 0; }
 
-  // 2. 敌人灼烧结算
-  let enemyDeathsFromBurn: string[] = [];
-  cb.setEnemies((prev: Enemy[]) => prev.map(e => {
-    if (e.hp <= 0) return e;
-    const burn = e.statuses.find(s => s.type === 'burn');
-    if (burn && burn.value > 0) {
-      const dmg = burn.value;
-      cb.addLog(`${e.name} 因灼烧受到了 ${dmg} 点伤害。`);
-      cb.addFloatingText(`-${dmg}`, 'text-orange-500', undefined, 'enemy');
-      const nextStatuses = e.statuses.filter(s => s.type !== 'burn');
-      const newHp = Math.max(0, e.hp - dmg);
-      if (newHp <= 0) enemyDeathsFromBurn.push(e.uid);
-      return { ...e, hp: newHp, statuses: nextStatuses, armor: 0 };
-    }
-    return { ...e, armor: 0 };
-  }));
+  // 2. 敌人灼烧结算（E4: 全灭判定在 setEnemies 回调内用 prev 计算）
+  let allBurnedDead = false;
+  cb.setEnemies((prev: Enemy[]) => {
+    const deaths: string[] = [];
+    const result = prev.map(e => {
+      if (e.hp <= 0) return e;
+      const burn = e.statuses.find(s => s.type === 'burn');
+      if (burn && burn.value > 0) {
+        const dmg = burn.value;
+        cb.addLog(`${e.name} 因灼烧受到了 ${dmg} 点伤害。`);
+        cb.addFloatingText(`-${dmg}`, 'text-orange-500', undefined, 'enemy');
+        const nextStatuses = e.statuses.filter(s => s.type !== 'burn');
+        const newHp = Math.max(0, e.hp - dmg);
+        if (newHp <= 0) deaths.push(e.uid);
+        return { ...e, hp: newHp, statuses: nextStatuses, armor: 0 };
+      }
+      return { ...e, armor: 0 };
+    });
+    allBurnedDead = result.filter(e => e.hp > 0).length === 0 && deaths.length > 0;
+    return result;
+  });
 
   await new Promise(r => setTimeout(r, 600));
-
-  // 灼烧全灭→转波
-  const aliveAfterBurn = enemies.filter(e => e.hp > 0 && !enemyDeathsFromBurn.includes(e.uid));
-  if (aliveAfterBurn.length === 0 && enemyDeathsFromBurn.length > 0) {
-    const transitioned = tryWaveTransition(game, cb);
-    if (!transitioned) cb.handleVictory();
-    return currentPlayerHp;
+  if (allBurnedDead) {
+    // RED-2: tryWaveTransition 使用 gameRef.current 获取最新状态
+    const currentGame = cb.gameRef.current;
+    if (!tryWaveTransition(currentGame, cb)) cb.handleVictory();
+    return cb.gameRef.current.hp;
   }
 
-  // 3. 敌人中毒结算
-  const enemyDeathsFromPoison: string[] = [];
-  cb.setEnemies((prev: Enemy[]) => prev.map(e => {
-    if (e.hp <= 0) return e;
-    let nextStatuses = [...e.statuses];
-    const poison = nextStatuses.find(s => s.type === 'poison');
-    if (poison && poison.value > 0) {
-      cb.addLog(`${e.name} 因中毒受到了 ${poison.value} 点伤害。`);
-      cb.addFloatingText(`-${poison.value}`, 'text-purple-400', undefined, 'enemy');
-      nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
-      const newHp = Math.max(0, e.hp - poison.value);
-      if (newHp <= 0) enemyDeathsFromPoison.push(e.uid);
+  // 3. 敌人中毒结算（E4: 同上）
+  let allPoisonedDead = false;
+  cb.setEnemies((prev: Enemy[]) => {
+    const deaths: string[] = [];
+    const result = prev.map(e => {
+      if (e.hp <= 0) return e;
+      let nextStatuses = [...e.statuses];
+      const poison = nextStatuses.find(s => s.type === 'poison');
+      if (poison && poison.value > 0) {
+        cb.addLog(`${e.name} 因中毒受到了 ${poison.value} 点伤害。`);
+        cb.addFloatingText(`-${poison.value}`, 'text-purple-400', undefined, 'enemy');
+        nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
+        const newHp = Math.max(0, e.hp - poison.value);
+        if (newHp <= 0) deaths.push(e.uid);
+        nextStatuses = tickStatuses(nextStatuses);
+        return { ...e, hp: newHp, statuses: nextStatuses };
+      }
       nextStatuses = tickStatuses(nextStatuses);
-      return { ...e, hp: newHp, statuses: nextStatuses };
-    }
-    nextStatuses = tickStatuses(nextStatuses);
-    return { ...e, statuses: nextStatuses };
-  }));
+      return { ...e, statuses: nextStatuses };
+    });
+    allPoisonedDead = result.filter(e => e.hp > 0).length === 0 && deaths.length > 0;
+    return result;
+  });
 
   await new Promise(r => setTimeout(r, 600));
-
-  // 中毒全灭→转波
-  const aliveAfterPoison = enemies.filter(e => e.hp > 0 && !enemyDeathsFromPoison.includes(e.uid));
-  if (aliveAfterPoison.length === 0 && enemyDeathsFromPoison.length > 0) {
-    const transitioned = tryWaveTransition(game, cb);
-    if (!transitioned) cb.handleVictory();
-    return currentPlayerHp;
+  if (allPoisonedDead) {
+    // RED-2: tryWaveTransition 使用 gameRef.current 获取最新状态
+    const currentGame = cb.gameRef.current;
+    if (!tryWaveTransition(currentGame, cb)) cb.handleVictory();
+    return cb.gameRef.current.hp;
   }
 
   // 4. 每个存活敌人执行AI决策
+  // [RED-2] currentEnemies 仅用于循环迭代和只读字段（name, uid, combatType 等），
+  // 这些字段不会在 async 操作期间变化，快照安全。
+  // 但 battleTurn / statuses / armor 等会在 async 期间变化的值，
+  // 必须从 setGame(prev => ...) 的 prev 参数中读取。
   const currentEnemies = [...enemies];
   for (const e of currentEnemies.filter(en => en.hp > 0)) {
     await new Promise(r => setTimeout(r, 350));
 
-    // 冻结检查
     const isFrozen = e.statuses.some(s => s.type === 'freeze' && s.duration > 0);
     if (isFrozen) {
       cb.addLog(`${e.name} 被冻结，无法行动！`);
@@ -195,37 +197,40 @@ export async function executeEnemyTurn(
     const isSlowed = e.statuses.some(s => s.type === 'slow' && s.duration > 0);
     const isMelee = e.combatType === 'warrior' || e.combatType === 'guardian';
 
-    // 近战接近
     if (isMelee && e.distance > 0 && isSlowed) {
       cb.addLog(`${e.name} 被减速，无法移动！`);
       continue;
     }
     if (isMelee && e.distance > 0) {
-      cb.setEnemies((prev: Enemy[]) => prev.map(en =>
-        en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
-      ));
-      if (e.distance === 1) {
-        cb.addLog(`${e.name} 逼近到近身位置！`);
-      } else {
-        cb.addLog(`${e.name} 正在逼近...(距离 ${e.distance - 1})`);
-      }
+      cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en));
+      cb.addLog(e.distance === 1 ? `${e.name} 逼近到近身位置！` : `${e.name} 正在逼近...(距离 ${e.distance - 1})`);
       continue;
     }
 
     // Guardian: 攻防交替+嘲讽
-    if (e.combatType === 'guardian') {
-      if (game.battleTurn % 2 === 0) {
-        await cb.enemyPreAction(e, 'defend');
-        const shieldVal = Math.floor(e.attackDmg * 1.5);
+    // [RED-2] battleTurn 读取移入 setGame 回调，使用 prev.battleTurn
+    // [RED-5] 使用 GUARDIAN_CONFIG.defenseCycle 代替魔法数字 2
+    let guardianDefended = false;
+    cb.setGame((prev: GameState) => {
+      if (e.combatType === 'guardian' && prev.battleTurn % GUARDIAN_CONFIG.defenseCycle === 0) {
+        guardianDefended = true;
+      }
+      return prev; // 只读判断，不修改状态
+    });
+
+    if (guardianDefended) {
+      await cb.enemyPreAction(e, 'defend');
+      cb.setGame((prev: GameState) => {
+        const shieldVal = Math.floor(e.attackDmg * GUARDIAN_CONFIG.shieldMult);
         cb.setEnemyEffectForUid(e.uid, 'defend');
         cb.playSound('enemy_defend');
-        cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
-        cb.setGame((prev: GameState) => ({ ...prev, targetEnemyUid: e.uid }));
+        cb.setEnemies(prevE => prevE.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
         cb.addLog(`${e.name} 举盾防御（+${shieldVal}护甲），并嘲讽你！`);
-        await new Promise(r => setTimeout(r, 300));
-        cb.setEnemyEffectForUid(e.uid, null);
-        continue;
-      }
+        return { ...prev, targetEnemyUid: e.uid };
+      });
+      await new Promise(r => setTimeout(r, 300));
+      cb.setEnemyEffectForUid(e.uid, null);
+      continue;
     }
 
     // Priest: 治疗→自疗→增益→减益
@@ -233,78 +238,24 @@ export async function executeEnemyTurn(
       await cb.enemyPreAction(e, 'heal');
       cb.setEnemyEffectForUid(e.uid, 'skill');
       cb.playSound('enemy_skill');
+      // [RED-2] 传入 gameRef.current 而非快照 game，保证 battleTurn 等字段最新
       const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
-      const damagedAllies = allies.filter(en => en.hp < en.maxHp);
-      const selfDamaged = e.hp < e.maxHp;
-
-      if (damagedAllies.length > 0) {
-        const lowestAlly = damagedAllies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
-        const healVal = Math.floor(e.attackDmg * 4.0);
-        cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-        cb.addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
-        cb.addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
-        cb.playSound('enemy_heal');
-      } else if (selfDamaged) {
-        const healVal = Math.floor(e.attackDmg * 3.0);
-        cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-        cb.addLog(`${e.name} 治疗自己 ${healVal} HP。`);
-        cb.playSound('enemy_heal');
-      } else if (allies.length > 0) {
-        const target = allies[Math.floor(Math.random() * allies.length)];
-        if (game.battleTurn % 2 === 0) {
-          cb.setEnemies((prev: Enemy[]) => prev.map(en => {
-            if (en.uid !== target.uid) return en;
-            const existing = en.statuses.find(s => s.type === 'strength');
-            if (existing) {
-              return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 3 } : s) };
-            }
-            return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 3 }] };
-          }));
-          cb.addLog(`${e.name} 为 ${target.name} 施加了力量强化！`);
-          cb.addFloatingText('力量+3', 'text-red-400', undefined, 'enemy');
-        } else {
-          const armorVal = Math.floor(e.attackDmg * 3);
-          cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === target.uid ? { ...en, armor: en.armor + armorVal } : en));
-          cb.addLog(`${e.name} 为 ${target.name} 施加了护甲祝福（+${armorVal}护甲）！`);
-          cb.addFloatingText(`护甲+${armorVal}`, 'text-cyan-400', undefined, 'enemy');
-        }
-      } else {
-        // 无队友：减益玩家
-        const debuffRoll = Math.random();
-        if (debuffRoll < 0.35) {
-          cb.setGame((prev: GameState) => {
-            const weakStatus = prev.statuses.find(s => s.type === 'weak');
-            if (weakStatus) {
-              return { ...prev, statuses: prev.statuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 3 } : s) };
-            }
-            return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 3 }] };
-          });
-          cb.addLog(`${e.name} 对你施加了虚弱！`);
-          cb.addFloatingText('虚弱!', 'text-purple-400', undefined, 'player');
-        } else if (debuffRoll < 0.6) {
-          cb.setGame((prev: GameState) => {
-            const vulnStatus = prev.statuses.find(s => s.type === 'vulnerable');
-            if (vulnStatus) {
-              return { ...prev, statuses: prev.statuses.map(s => s.type === 'vulnerable' ? { ...s, value: s.value + 1, duration: 3 } : s) };
-            }
-            return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 3 }] };
-          });
-          cb.addLog(`${e.name} 对你施加了易伤！`);
-          cb.addFloatingText('易伤!', 'text-orange-400', undefined, 'player');
-        } else {
-          const curseDice = Math.random() < 0.5 ? 'cursed' : 'cracked';
-          const curseName = curseDice === 'cursed' ? '诅咒骰子' : '碎裂骰子';
-          cb.setGame((prev: GameState) => ({
-            ...prev,
-            ownedDice: [...prev.ownedDice, { defId: curseDice, level: 1 }],
-            diceBag: [...prev.diceBag, curseDice],
-          }));
-          cb.addLog(`${e.name} 向你的骰子库塞入了一颗${curseName}！`);
-          cb.addFloatingText(`+${curseName}`, 'text-red-400', undefined, 'player');
-          cb.playSound('enemy_skill');
-        }
+      const sr = executePriestSkill(e, allies, cb.gameRef.current);
+      for (const [uid, updates] of sr.enemyUpdates) {
+        cb.setEnemies(prev => prev.map(en => en.uid === uid ? { ...en, ...updates } : en));
       }
-
+      // [RED-4] statuses 始终为函数，直接调用；ownedDice/diceBag 为可选字段
+      cb.setGame(prev => ({ ...prev, statuses: sr.gameUpdates.statuses(prev.statuses) }));
+      if (sr.gameUpdates.ownedDice) {
+        cb.setGame(prev => ({
+          ...prev,
+          ownedDice: sr.gameUpdates.ownedDice!,
+          diceBag: sr.gameUpdates.diceBag!,
+        }));
+      }
+      for (const log of sr.logs) cb.addLog(log);
+      for (const ft of sr.floats) cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy');
+      if (sr.sound) cb.playSound(sr.sound);
       await new Promise(r => setTimeout(r, 300));
       cb.setEnemyEffectForUid(e.uid, null);
       continue;
@@ -315,53 +266,13 @@ export async function executeEnemyTurn(
       await cb.enemyPreAction(e, 'skill');
       cb.setEnemyEffectForUid(e.uid, 'skill');
       cb.playSound('enemy_skill');
-
-      const dotRoll = Math.random();
-      if (dotRoll < 0.4) {
-        const poisonVal = Math.max(2, Math.floor(e.attackDmg * 0.4));
-        cb.setGame((prev: GameState) => {
-          const existing = prev.statuses.find(s => s.type === 'poison');
-          if (existing) {
-            return { ...prev, statuses: prev.statuses.map(s => s.type === 'poison' ? { ...s, value: s.value + poisonVal } : s) };
-          }
-          return { ...prev, statuses: [...prev.statuses, { type: 'poison' as any, value: poisonVal }] };
-        });
-        cb.addLog(`${e.name} 释放毒雾，施加了 ${poisonVal} 层毒素！`);
-        cb.addFloatingText(`毒素+${poisonVal}`, 'text-emerald-400', undefined, 'player');
-      } else if (dotRoll < 0.7) {
-        const burnVal = Math.max(1, Math.floor(e.attackDmg * 0.3));
-        cb.setGame((prev: GameState) => {
-          const existing = prev.statuses.find(s => s.type === 'burn');
-          if (existing) {
-            return { ...prev, statuses: prev.statuses.map(s => s.type === 'burn' ? { ...s, value: s.value + burnVal, duration: 3 } : s) };
-          }
-          return { ...prev, statuses: [...prev.statuses, { type: 'burn' as any, value: burnVal, duration: 3 }] };
-        });
-        cb.addLog(`${e.name} 释放火球，施加了灼烧！`);
-        cb.addFloatingText(`灼烧+${burnVal}`, 'text-orange-400', undefined, 'player');
-      } else {
-        const poisonVal = Math.max(1, Math.floor(e.attackDmg * 0.25));
-        cb.setGame((prev: GameState) => {
-          let newStatuses = [...prev.statuses];
-          const existingPoison = newStatuses.find(s => s.type === 'poison');
-          if (existingPoison) {
-            newStatuses = newStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value + poisonVal } : s);
-          } else {
-            newStatuses.push({ type: 'poison' as any, value: poisonVal });
-          }
-          const existingWeak = newStatuses.find(s => s.type === 'weak');
-          if (existingWeak) {
-            newStatuses = newStatuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 2 } : s);
-          } else {
-            newStatuses.push({ type: 'weak' as any, value: 1, duration: 2 });
-          }
-          return { ...prev, statuses: newStatuses };
-        });
-        cb.addLog(`${e.name} 施放诅咒，施加了毒素和虚弱！`);
-        cb.addFloatingText(`毒素+${poisonVal}`, 'text-emerald-400', undefined, 'player');
-        setTimeout(() => cb.addFloatingText('虚弱', 'text-purple-400', undefined, 'player'), 200);
+      const sr = executeCasterSkill(e);
+      cb.setGame(prev => ({ ...prev, statuses: sr.updateStatuses(prev.statuses) }));
+      for (const log of sr.logs) cb.addLog(log);
+      for (const ft of sr.floats) {
+        if (ft.delay) setTimeout(() => cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy'), ft.delay);
+        else cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy');
       }
-
       await new Promise(r => setTimeout(r, 300));
       cb.setEnemyEffectForUid(e.uid, null);
       continue;
@@ -372,119 +283,104 @@ export async function executeEnemyTurn(
     cb.setEnemyEffectForUid(e.uid, 'attack');
     cb.setScreenShake(true);
 
-    let damage = e.attackDmg;
-    if (e.combatType === 'warrior') {
-      damage = Math.floor(damage * 1.3);
-    }
+    // [RED-3] Ranger: 更新 attackCount 并立即获取新值
+    let currentAttackCount: number | undefined;
     if (e.combatType === 'ranger') {
-      const hitCount = e.attackCount || 0;
-      damage = Math.max(1, Math.floor(damage * 0.40) + hitCount);
-      if (isSlowed) damage = Math.floor(damage * 0.5);
-      cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === e.uid ? { ...en, attackCount: hitCount + 2 } : en));
+      const oldCount = e.attackCount || 0;
+      const newCount = oldCount + ENEMY_ATTACK_MULT.rangerAttackCountStep;
+      cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, attackCount: newCount } : en));
+      currentAttackCount = newCount;
     }
-    const str = e.statuses.find(s => s.type === 'strength');
-    if (str) damage += str.value;
-    const weak = e.statuses.find(s => s.type === 'weak');
-    if (weak) damage = Math.max(1, Math.floor(damage * 0.75));
 
-    const preArmor = cb.gameRef.current.armor;
-    const preAbsorbed = Math.min(preArmor, damage);
-    const preHpDmg = damage - preAbsorbed;
-
+    // [RED-1] 所有伤害计算和浮动文字移入 setGame 回调，使用 prev
     cb.setGame((prev: GameState) => {
+      // 伤害计算使用 prev.statuses（而非 gameRef.current.statuses）
+      const damage = getEffectiveAttackDmg(e, prev.statuses, {
+        attackCount: currentAttackCount,
+        isSlowed,
+      });
+
       let newArmor = prev.armor;
       let newHp = prev.hp;
       let absorbed = 0;
-      if (newArmor > 0) {
-        absorbed = Math.min(newArmor, damage);
-        newArmor -= absorbed;
-      }
+      if (newArmor > 0) { absorbed = Math.min(newArmor, damage); newArmor -= absorbed; }
       const hpDmg = damage - absorbed;
       if (hpDmg > 0) newHp = Math.max(0, newHp - hpDmg);
-      if (newHp <= 0 && prev.hp > 0) {
-        if (cb.hasFatalProtection(prev.relics)) {
-          newHp = prev.hp;
-          newArmor = prev.armor;
-          return { ...prev, hp: newHp, armor: newArmor, relics: cb.triggerHourglass(prev.relics) };
-        }
+      const hpLost = prev.hp - newHp;
+
+      // 浮动文字与实际扣血一致（都在同一个 setGame 回调中计算）
+      if (absorbed > 0) cb.addFloatingText(`-${absorbed}`, 'text-blue-400', undefined, 'player');
+      if (hpDmg > 0) cb.addFloatingText(`-${hpDmg}`, 'text-red-500', undefined, 'player');
+      if (absorbed === 0 && hpDmg === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
+
+      cb.setPlayerEffect('flash');
+      cb.addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
+      cb.playSound('enemy');
+
+      // [Y2] 高伤台词延迟由调用方执行
+      const delayedQuotes = tryAttackTaunt(e, damage, cb);
+      for (const dq of delayedQuotes) {
+        cb.scheduleDelayedQuote(dq);
       }
-      return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + (prev.hp - newHp), hpLostThisBattle: (prev.hpLostThisBattle || 0) + (prev.hp - newHp) };
+
+      if (newHp <= 0 && prev.hp > 0 && cb.hasFatalProtection(prev.relics)) {
+        return { ...prev, hp: prev.hp, armor: prev.armor, relics: cb.triggerHourglass(prev.relics) };
+      }
+      return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
     });
 
-    // on_damage_taken 遗物
-    game.relics.filter((r: Relic) => r.trigger === 'on_damage_taken').forEach((relic: Relic) => {
-      const dmgTakenCtx = cb.buildRelicContext({ game, dice, targetEnemy: enemies.find((e: Enemy) => e.hp > 0) || null, rerollsThisTurn: rerollCount, hasPlayedThisTurn: game.playsLeft < game.maxPlays });
-      const res = relic.effect(dmgTakenCtx);
-      if (res.damage) {
-        cb.setGame((prev: GameState) => ({ ...prev, rageFireBonus: (prev.rageFireBonus || 0) + res.damage }));
-        cb.addToast(`${relic.name}: 下次出牌+${res.damage}伤害`, 'buff');
-      }
-      if (res.tempDrawBonus) {
-        cb.setGame((prev: GameState) => ({ ...prev, relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + res.tempDrawBonus }));
-        cb.addToast(`${relic.name}: 下回合+${res.tempDrawBonus}手牌`, 'buff');
-      }
-    });
+    // [RED-2] on_damage_taken 遗物：使用 gameRef.current 获取最新状态
+    const latestGame = cb.gameRef.current;
+    for (const relic of latestGame.relics.filter((r: Relic) => r.trigger === 'on_damage_taken')) {
+      const ctx = cb.buildRelicContext({
+        game: latestGame,
+        dice,
+        targetEnemy: cb.gameRef.current.battleWaves.length > 0
+          ? (enemies.find((en: Enemy) => en.hp > 0) || null)
+          : null,
+        rerollsThisTurn: rerollCount,
+        hasPlayedThisTurn: latestGame.playsLeft < latestGame.maxPlays,
+      });
+      const res = relic.effect(ctx);
+      if (res.damage) { cb.setGame(prev => ({ ...prev, rageFireBonus: (prev.rageFireBonus || 0) + res.damage! })); cb.addToast(`${relic.name}: 下次出牌+${res.damage}伤害`, 'buff'); }
+      if (res.tempDrawBonus) { cb.setGame(prev => ({ ...prev, relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + res.tempDrawBonus! })); cb.addToast(`${relic.name}: 下回合+${res.tempDrawBonus}手牌`, 'buff'); }
+    }
 
-    // 怒火骰子
-    const furyDice = game.ownedDice.find(od => od.defId === 'w_fury');
+    // [RED-2] 怒火骰子：使用 gameRef.current.ownedDice
+    const currentOwnedDice = cb.gameRef.current.ownedDice;
+    const furyDice = currentOwnedDice.find(od => od.defId === 'w_fury');
     if (furyDice) {
       const furyLevel = furyDice.level || 1;
-      cb.setGame((prev: GameState) => ({ ...prev, furyBonusDamage: (prev.furyBonusDamage || 0) + furyLevel }));
+      cb.setGame(prev => ({ ...prev, furyBonusDamage: (prev.furyBonusDamage || 0) + furyLevel }));
       cb.addFloatingText(`怒火+${furyLevel}`, 'text-orange-400', undefined, 'player');
     }
 
-    if (preAbsorbed > 0) {
-      cb.addFloatingText(`-${preAbsorbed}`, 'text-blue-400', undefined, 'player');
-    }
-    if (preHpDmg > 0) {
-      cb.addFloatingText(`-${preHpDmg}`, 'text-red-500', undefined, 'player');
-    }
-    if (preAbsorbed === 0 && preHpDmg === 0) {
-      cb.addFloatingText(`0`, 'text-gray-400', undefined, 'player');
-    }
-    cb.setPlayerEffect('flash');
-    cb.addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
-    cb.playSound('enemy');
-
-    // 攻击台词
-    if (Math.random() < 0.3) {
-      const aqc = cb.getEnemyQuotes(e.configId);
-      const al = cb.pickQuote(aqc?.attack);
-      if (al) cb.showEnemyQuote(e.uid, al, 1800);
-    }
-    if (damage >= 15) {
-      const hqc = cb.getEnemyQuotes(e.configId);
-      const hl = cb.pickQuote(hqc?.hurt);
-      if (hl) setTimeout(() => cb.showEnemyQuote(e.uid, hl, 2000), 600);
-    }
-
-    // Ranger 追击
+    // Ranger 追击（W2: 致命保护, W3: hpLost 统计）
     if (e.combatType === 'ranger') {
       await new Promise(r => setTimeout(r, 250));
-      const hitCount = (e.attackCount || 0);
-      const secondHit = Math.max(1, Math.floor(e.attackDmg * 0.40) + hitCount + 1);
-      const preArmor2 = cb.gameRef.current.armor;
-      const preAbsorbed2 = Math.min(preArmor2, secondHit);
-      const preHpDmg2 = secondHit - preAbsorbed2;
+      // [RED-3] 使用更新后的 currentAttackCount
+      const hitCount = currentAttackCount || 0;
+      const secondHit = getRangerFollowUpDmg(e, hitCount);
+
+      // [RED-1] 追击伤害计算和浮动文字也移入 setGame 回调
       cb.setGame((prev: GameState) => {
         let newArmor = prev.armor;
         let newHp = prev.hp;
-        if (newArmor > 0) {
-          const abs = Math.min(newArmor, secondHit);
-          newArmor -= abs;
-          const hpD = secondHit - abs;
-          if (hpD > 0) newHp = Math.max(0, newHp - hpD);
-        } else {
-          newHp = Math.max(0, newHp - secondHit);
+        let abs2 = 0;
+        if (newArmor > 0) { abs2 = Math.min(newArmor, secondHit); newArmor -= abs2; }
+        const hpD2 = secondHit - abs2;
+        if (hpD2 > 0) newHp = Math.max(0, newHp - hpD2);
+        const hpLost = prev.hp - newHp;
+
+        // 浮动文字与实际扣血一致
+        if (abs2 > 0) cb.addFloatingText(`-${abs2}`, 'text-blue-400', undefined, 'player');
+        if (hpD2 > 0) cb.addFloatingText(`-${hpD2}`, 'text-orange-400', undefined, 'player');
+
+        if (newHp <= 0 && prev.hp > 0 && cb.hasFatalProtection(prev.relics)) {
+          return { ...prev, hp: prev.hp, armor: prev.armor, relics: cb.triggerHourglass(prev.relics) };
         }
-        return { ...prev, hp: newHp, armor: newArmor };
+        return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
       });
-      if (preAbsorbed2 > 0) {
-        cb.addFloatingText(`-${preAbsorbed2}`, 'text-blue-400', undefined, 'player');
-      }
-      if (preHpDmg2 > 0) {
-        cb.addFloatingText(`-${preHpDmg2}`, 'text-orange-400', undefined, 'player');
-      }
       cb.addLog(`${e.name} 追击造成 ${secondHit} 伤害！`);
       cb.playSound('enemy');
     }
@@ -496,73 +392,35 @@ export async function executeEnemyTurn(
   }
 
   // 5. 精英/Boss：塞废骰子
+  // [RED-2] 使用 gameRef.current 获取最新状态
+  const gameForEliteDice = cb.gameRef.current;
   for (const e of currentEnemies.filter(en => en.hp > 0)) {
-    const isElite = e.maxHp > 80 && e.maxHp <= 200;
-    const isBoss = e.maxHp > 200;
-
-    if (isElite && game.battleTurn % 3 === 0) {
-      cb.setGame((prev: GameState) => ({
-        ...prev,
-        ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
-        diceBag: [...prev.diceBag, 'cracked'],
-      }));
-      cb.addLog(`${e.name} 向你的骰子库塞入了一颗碎裂骰子！`);
-      cb.addFloatingText('+碎裂骰子', 'text-red-400', undefined, 'player');
-      cb.playSound('enemy_skill');
+    const dr = processEliteDice(e, gameForEliteDice);
+    if (dr.triggered) {
+      cb.setGame(prev => ({ ...prev, ...(dr.gameUpdates.ownedDice ? { ownedDice: dr.gameUpdates.ownedDice!, diceBag: dr.gameUpdates.diceBag! } : {}) }));
+      for (const log of dr.logs) cb.addLog(log);
+      for (const ft of dr.floats) cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy');
+      if (dr.sound) cb.playSound(dr.sound);
       await new Promise(r => setTimeout(r, 400));
-    }
-
-    if (isBoss) {
-      const hpRatio = e.hp / e.maxHp;
-      if (hpRatio < 0.4 && game.battleTurn % 2 === 0) {
-        cb.setGame((prev: GameState) => ({
-          ...prev,
-          ownedDice: [...prev.ownedDice, { defId: 'cursed', level: 1 }],
-          diceBag: [...prev.diceBag, 'cursed'],
-        }));
-        cb.addLog(`${e.name} 施放诅咒，向你的骰子库塞入了一颗诅咒骰子！`);
-        cb.addFloatingText('+诅咒骰子', 'text-purple-400', undefined, 'player');
-        cb.playSound('enemy_skill');
-        await new Promise(r => setTimeout(r, 400));
-      } else if (game.battleTurn % 3 === 0) {
-        cb.setGame((prev: GameState) => ({
-          ...prev,
-          ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
-          diceBag: [...prev.diceBag, 'cracked'],
-        }));
-        cb.addLog(`${e.name} 向你的骰子库塞入了一颗碎裂骰子！`);
-        cb.addFloatingText('+碎裂骰子', 'text-red-400', undefined, 'player');
-        cb.playSound('enemy_skill');
-        await new Promise(r => setTimeout(r, 400));
-      }
     }
   }
 
   // 6. 精英/Boss：叠护甲
+  // [RED-2] 使用 gameRef.current 获取最新状态
+  const gameForEliteArmor = cb.gameRef.current;
   for (const e of currentEnemies.filter(en => en.hp > 0)) {
-    const isElite = e.maxHp > 80 && e.maxHp <= 200;
-    const isBoss = e.maxHp > 200;
-
-    if (isElite && game.battleTurn % 3 === 0 && game.battleTurn > 0) {
-      const armorVal = Math.floor(e.attackDmg * 1.5);
-      cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
-      cb.addLog(`${e.name} 凝聚了护甲（+${armorVal}）！`);
-      cb.addFloatingText(`护甲+${armorVal}`, 'text-cyan-400', undefined, 'enemy');
-      cb.playSound('enemy_defend');
-      await new Promise(r => setTimeout(r, 300));
-    }
-
-    if (isBoss && game.battleTurn % 2 === 0 && game.battleTurn > 0) {
-      const armorVal = Math.floor(e.attackDmg * 2.0);
-      cb.setEnemies((prev: Enemy[]) => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
-      cb.addLog(`${e.name} 释放了护盾（+${armorVal}护甲）！`);
-      cb.addFloatingText(`护盾+${armorVal}`, 'text-cyan-300', undefined, 'enemy');
-      cb.playSound('enemy_defend');
+    const ar = processEliteArmor(e, gameForEliteArmor);
+    if (ar.triggered) {
+      cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + ar.armorVal } : en));
+      cb.addLog(ar.log);
+      cb.addFloatingText(ar.float.text, ar.float.color, undefined, ar.float.target as 'player' | 'enemy');
+      cb.playSound(ar.sound);
       await new Promise(r => setTimeout(r, 300));
     }
   }
 
-  // 7. 敌人回合结束→玩家回合（灼烧结算+状态递减+battleTurn+1）
+  // 7. 敌人回合结束→玩家回合（E5: death check 在回调内部, W7: 删除死代码）
+  let returnHp = 0;
   cb.setGame((prev: GameState) => {
     const nextTurn = prev.battleTurn + 1;
     let nextStatuses = [...prev.statuses];
@@ -575,71 +433,17 @@ export async function executeEnemyTurn(
       nextStatuses = nextStatuses.filter(s => s.type !== 'burn');
     }
     nextStatuses = tickStatuses(nextStatuses);
-    currentPlayerHp = Math.max(0, prev.hp - burnDamage);
-    if (currentPlayerHp <= 0 && prev.hp > 0) {
+    let newHp = Math.max(0, prev.hp - burnDamage);
+    if (newHp <= 0 && prev.hp > 0) {
       if (cb.hasFatalProtection(prev.relics)) {
-        currentPlayerHp = prev.hp;
-        return { ...prev, hp: currentPlayerHp, relics: cb.triggerHourglass(prev.relics) };
+        newHp = prev.hp;
+        returnHp = newHp;
+        return { ...prev, battleTurn: nextTurn, hp: newHp, statuses: nextStatuses, isEnemyTurn: false, relics: cb.triggerHourglass(prev.relics) };
       }
     }
-
-    cb.setEnemies((prevEnemies: Enemy[]) => prevEnemies.map(e => {
-      if (e.hp <= 0 || !e.pattern) return e;
-      return e;
-    }));
-
-    return {
-      ...prev,
-      battleTurn: nextTurn,
-      hp: currentPlayerHp,
-      statuses: nextStatuses,
-      isEnemyTurn: false,
-    };
+    returnHp = newHp;
+    return { ...prev, battleTurn: nextTurn, hp: newHp, statuses: nextStatuses, isEnemyTurn: false };
   });
 
-  return currentPlayerHp;
-}
-
-// === 转波辅助函数 ===
-
-/**
- * 检查并执行波次转换
- * @returns true=成功转波, false=没有下一波（应调用handleVictory）
- */
-function tryWaveTransition(
-  game: GameState,
-  cb: EnemyAICallbacks
-): boolean {
-  const nextWaveIdx = game.currentWaveIndex + 1;
-  if (nextWaveIdx >= game.battleWaves.length) return false;
-
-  const nextWave = game.battleWaves[nextWaveIdx].enemies;
-  cb.setEnemies(nextWave);
-  cb.setEnemyEffects({});
-  cb.setDyingEnemies(new Set());
-  cb.setGame((prev: GameState) => ({
-    ...prev,
-    currentWaveIndex: nextWaveIdx,
-    targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
-    isEnemyTurn: false,
-    playsLeft: prev.maxPlays,
-    freeRerollsLeft: prev.freeRerollsPerTurn,
-    armor: 0,
-    chargeStacks: 0,
-    mageOverchargeMult: 0,
-    bloodRerollCount: 0,
-    comboCount: 0,
-    lastPlayHandType: undefined,
-    instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
-    instakillCompleted: false,
-    playsThisWave: 0,
-    rerollsThisWave: 0,
-    battleTurn: 1,
-  }));
-  cb.setRerollCount(0);
-  cb.setWaveAnnouncement(nextWaveIdx + 1);
-  cb.addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
-  cb.setDice([]);
-  cb.rollAllDice(true);
-  return true;
+  return returnHp;
 }

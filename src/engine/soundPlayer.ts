@@ -188,5 +188,4 @@ export const createMasterGain = (ctx: AudioContext): GainNode => {
   return master;
 };
 
-// === 导出类型 ===
-export type { AudioContext };
+// === AudioContext 类型导出已移除（TS2661: 不能 re-export 全局声明） ===

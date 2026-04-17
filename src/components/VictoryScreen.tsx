@@ -28,7 +28,7 @@ export const VictoryScreen: React.FC = () => {
   const totalDamage = stats.totalDamageDealt || 0;
   const highestSingleHit = stats.highestDamage || 0;
   const enemiesKilled = stats.enemiesKilled || 0;
-  const bossesKilled = stats.bossesKilled || 0;
+  const bossesWon = stats.bossesWon || 0;
   const totalGold = stats.goldEarned || 0;
   const goldSpent = stats.goldSpent || 0;
   const totalHealing = stats.totalHealing || 0;
@@ -113,7 +113,7 @@ export const VictoryScreen: React.FC = () => {
           <StatRow icon={<PixelSword size={2} />} label="总伤害" value={totalDamage.toLocaleString()} color="var(--pixel-red-light)" delay={0.5} />
           <StatRow icon={<PixelCrown size={2} />} label="最高单次伤害" value={highestSingleHit} color="var(--pixel-orange)" delay={0.6} />
           <StatRow icon={<PixelSkull size={2} />} label="击杀敌人" value={enemiesKilled} color="var(--pixel-red)" delay={0.7} />
-          <StatRow icon={<PixelSkull size={2} />} label="击杀Boss" value={bossesKilled} color="var(--pixel-purple)" delay={0.8} />
+          <StatRow icon={<PixelSkull size={2} />} label="击杀Boss" value={bossesWon} color="var(--pixel-purple)" delay={0.8} />
           <StatRow icon={<PixelShield size={2} />} label="总护甲获取" value={totalArmor} color="var(--pixel-blue-light)" delay={0.9} />
           <StatRow icon={<PixelHeart size={2} />} label="总治疗量" value={totalHealing} color="#6ae86a" delay={1.0} />
         </div>

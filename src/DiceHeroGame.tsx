@@ -18,7 +18,7 @@ import { RelicPixelIcon } from './components/PixelRelicIcons';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Modular Imports ---
-import type { Die, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState , Relic } from './types/game';
+import type { Die, StatusEffect, MapNode, Enemy, LootItem, ShopItem, GameState , Relic } from './types/game';
 import { INITIAL_STATS } from './types/game';
 import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, getUpgradedOnPlay, getElementLevelBonus } from './data/dice';
 import { drawFromBag, initDiceBag } from './data/diceBag';
@@ -31,7 +31,7 @@ import { hasRelic, hasLimitBreaker, hasBloodRerollRelic, getStraightUpgrade, has
 import { resetCompassCounter, incrementCompassCounter, triggerHourglass, tickHourglass, incrementFloorsCleared, updateRelicCounter } from './engine/relicUpdates';
 import { buildRelicContext } from './engine/buildRelicContext';
 import { FURY_CONFIG } from './config/gameBalance';
-// augments import removed - unified into relics
+
 import { getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
 import { STATUS_INFO } from './data/statusInfo';
@@ -43,9 +43,9 @@ import { executeEnemyTurn } from './logic/enemyAI';
 import type { EnemyAICallbacks } from './logic/enemyAI';
 import { buildLootItems, resolvePostVictoryPhase, openChallengeChest } from './logic/lootHandler';
 import type { PostVictoryPhase } from './logic/lootHandler';
-import { processCollectLoot, processSelectLootAugment, processReplaceAugment, processFinishLoot } from './logic/lootProcessor';
+import { processCollectLoot, processFinishLoot } from './logic/lootProcessor';
 import { StatusIcon } from './components/StatusIcon';
-import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES, ELEMENT_COLORS } from './utils/uiHelpers';
+import { getDiceElementClass, getHpBarClass, ELEMENT_NAMES, ELEMENT_COLORS } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
 import { CSSParticles } from './components/ParticleEffects';
 import { isTutorialCompleted } from './components/TutorialOverlay';
@@ -63,14 +63,14 @@ import { DiceRewardScreen } from './components/DiceRewardScreen';
 import { GameOverScreen } from './components/GameOverScreen';
 import { VictoryScreen } from './components/VictoryScreen';
 import { generateStartingRelicChoices } from './data/skillModules';
-import { getConditionInfo } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
 import { CHAPTER_CONFIG } from './config';
 import { applyDiceSpecialEffects } from './logic/diceEffects';
 import { createInitialGameState } from './logic/gameInit';
-import { COMBAT_TYPE_DESC, getEffectiveAttackDmg } from './logic/battleHelpers';
+import { COMBAT_TYPE_DESC } from './logic/battleHelpers';
+
 import { getRerollHpCost } from './logic/rerollCalc';
 import { generateShopItems } from './logic/shopGenerator';
 import { calculateSoulCrystalGain } from './logic/soulCrystalCalc';
@@ -114,7 +114,6 @@ export default function DiceHeroGame() {
   const [showClassInfo, setShowClassInfo] = useState(false);
   const [battleTransition, setBattleTransition] = useState<'none' | 'fadeIn' | 'hold' | 'fadeOut'>('none');
   const [bossEntrance, setBossEntrance] = useState<{ visible: boolean; name: string; chapter: number }>({ visible: false, name: '', chapter: 1 });
-  const [pendingLootAugment, setPendingLootAugment] = useState<{id: string, options: Augment[] } | null>(null);
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());
 
   // GM: 杀死当前波次敌人 — 触发死亡动画+波次切换
@@ -322,7 +321,6 @@ export default function DiceHeroGame() {
     }, 2500);
   };
   const [floatingTexts, setFloatingTexts] = useState<{ id: string; text: string; x: number; y: number; color: string; icon?: React.ReactNode; target: 'player' | 'enemy'; large?: boolean }[]>([]);
-  const [selectedAugment, setSelectedAugment] = useState<Augment | null>(null);
   const [_campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
   const [skillTriggerTexts, _setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
   const [handLeftThrow, setHandLeftThrow] = useState(false);
@@ -919,48 +917,6 @@ export default function DiceHeroGame() {
 
   // invalidDiceIds block removed - pressure blackout logic deleted
 
-  const activeAugments = useMemo(() => {
-    const selected = dice.filter(d => d.selected && !d.spent);
-    if (currentHands.allHands.length === 0) return [];
-
-    return game.augments.filter((aug): aug is Augment => {
-      if (!aug) return false;
-      
-      // Always-active augments trigger on every play
-      if (aug.condition === 'always') return true;
-      
-      // Passive augments are handled separately (shop discount, interest, etc)
-      if (aug.condition === 'passive') return false;
-      
-      // Element count condition
-      if (aug.condition === 'element_count') {
-        if (aug.conditionElement) {
-          return selected.filter(d => d.element === aug.conditionElement).length >= (aug.conditionValue || 1);
-        }
-        return false;
-      }
-      
-      const conditionMap: Record<string, string> = {
-        'high_card': '\u666E\u901A\u653B\u51FB',
-        'pair': '\u5BF9\u5B50',
-        'two_pair': '\u8FDE\u5BF9',
-        'n_of_a_kind': '\u4E09\u6761',
-        'full_house': '\u8461\u82A6',
-        'straight': '\u987A\u5B50',
-        'same_element': '\u540C\u5143\u7D20'
-      };
-      
-      const targetHand = conditionMap[aug.condition];
-      if (!targetHand) return false;
-      
-      if (aug.condition === 'n_of_a_kind') {
-        return ['\u4E09\u6761', '\u56DB\u6761', '\u4E94\u6761', '\u516D\u6761'].some(h => currentHands.allHands.includes(h as any));
-      }
-      
-      return currentHands.allHands.includes(targetHand as any);
-    });
-  }, [dice, game.augments, currentHands]);
-
   const expectedOutcome = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
     const { bestHand, allHands: _allHands, activeHands } = currentHands;
@@ -972,13 +928,12 @@ export default function DiceHeroGame() {
       game,
       targetEnemy,
       rerollCount,
-      activeAugments,
       furyBonusDamage: gameRef.current.furyBonusDamage || 0,
       bloodRerollCount: gameRef.current.bloodRerollCount || 0,
       warriorRageMult: gameRef.current.warriorRageMult || 0,
       mageOverchargeMult: gameRef.current.mageOverchargeMult || 0,
     });
-  }, [dice, activeAugments, currentHands]);
+  }, [dice, currentHands]);
 
   // 遗物副作用：从 useMemo 移到 useEffect，避免渲染阶段 setState
   useEffect(() => {
@@ -1054,7 +1009,7 @@ export default function DiceHeroGame() {
 
     const outcome = expectedOutcome;
     if (!outcome) return;
-    // --- Apply goldBonus from augments/relics (only on actual play, not preview) ---
+    // --- Apply goldBonus from relics (only on actual play, not preview) ---
     if (outcome.goldBonus && outcome.goldBonus > 0) {
       setGame(prev => ({ ...prev, souls: prev.souls + outcome.goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + outcome.goldBonus } }));
       addFloatingText(`+${outcome.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player');
@@ -1110,7 +1065,7 @@ export default function DiceHeroGame() {
       statusEffects: outcome.statusEffects,
       isSameElement: currentHands.activeHands.some(h => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h)),
     });
-    playSound('augment_activate');
+    playSound('relic_activate');
     await new Promise(r => setTimeout(r, 600));
 
     // ========================================
@@ -1143,7 +1098,7 @@ export default function DiceHeroGame() {
         // 插入到当前位置之后
         settleDice.splice(i + 1, 0, splitDie);
         splitOccurred = true;
-        playSound('augment_activate');
+        playSound('relic_activate');
         // 更新显示 — 新骰子弹出，同时把新骰子的值也加入计分并点亮
         runningBase += splitValue;
         const splitRunning = runningBase;
@@ -1171,7 +1126,7 @@ export default function DiceHeroGame() {
           target.value = magnetValue;
           magnetizedIds.add(target.id);
           magnetOccurred = true;
-          playSound('augment_activate');
+          playSound('relic_activate');
           setSettlementData(prev => prev ? { ...prev, selectedDice: [...settleDice] } : prev);
           await new Promise(r => setTimeout(r, 400));
           const targetDef = getDiceDef(target.diceDefId);
@@ -1188,7 +1143,7 @@ export default function DiceHeroGame() {
       if (newBestHand !== outcome.bestHand) {
         addLog(`磁吸改变了牌型！${outcome.bestHand} → ${newBestHand}`);
         addToast(` 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
-        playSound(newBestHand === '普通攻击' ? 'hit' : 'augment_activate');
+        playSound(newBestHand === '普通攻击' ? 'hit' : 'relic_activate');
       }
       const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
       let newHandMult = 1;
@@ -1225,7 +1180,7 @@ export default function DiceHeroGame() {
       if (newBestHand !== outcome.bestHand) {
         addLog(`分裂改变了牌型！${outcome.bestHand} → ${newBestHand}`);
         addToast(` 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
-        playSound(newBestHand === '普通攻击' ? 'hit' : 'augment_activate');
+        playSound(newBestHand === '普通攻击' ? 'hit' : 'relic_activate');
       }
       // 重新计算伤害（用新的骰子列表和牌型）
       const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
@@ -2450,6 +2405,9 @@ export default function DiceHeroGame() {
       setRerollCount, setWaveAnnouncement, setDice, rollAllDice,
       buildRelicContext, hasFatalProtection, triggerHourglass,
       handleVictory, gameRef,
+      scheduleDelayedQuote: (dq) => {
+        setTimeout(() => showEnemyQuote(dq.uid, dq.text, dq.duration), dq.delayMs);
+      },
     };
     const enemyTurnHp = await executeEnemyTurn(game, enemies, dice, rerollCount, enemyAICb);
     let currentPlayerHp = enemyTurnHp;
@@ -2795,9 +2753,9 @@ useEffect(() => {
       const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
       
       if (postVictory.phase === 'victory') {
-        return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: postVictory.bossesKilled } };
+        return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false, stats: { ...prev.stats, bossesWon: postVictory.bossesWon } };
       } else if (postVictory.phase === 'chapterTransition') {
-        return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: postVictory.bossesKilled } };
+        return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false, stats: { ...prev.stats, bossesWon: postVictory.bossesWon } };
       }
 
       return { 
@@ -2826,11 +2784,8 @@ useEffect(() => {
     
     if (!result.success) return;
 
-    // 增益类型需要弹出选择界面
-    if (result.needsAugmentSelection && result.augmentOptions) {
-      setPendingLootAugment({ id: result.pendingLootId || id, options: result.augmentOptions });
-      return;
-    }
+    // 遗物直接收集，无需选择界面
+
 
     // 应用新状态
     setGame(result.state);
@@ -2842,39 +2797,6 @@ useEffect(() => {
     result.toasts.forEach(toast => addToast(toast.message, toast.type));
   };
 
-  const selectLootAugment = (aug: Augment) => {
-    if (!pendingLootAugment) return;
-    playSound('select');
-    
-    // 使用纯函数处理增益选择
-    const result = processSelectLootAugment(game, pendingLootAugment.id, aug);
-    
-    // 应用新状态
-    setGame(result.state);
-    
-    // 输出日志
-    result.logs.forEach(log => addLog(log));
-    
-    // 如果需要替换，保持 pendingReplacementAugment 状态
-    if (result.needsReplacement && result.pendingReplacementAugment) {
-      // 状态已在 processSelectLootAugment 中设置
-    }
-    
-    // 清空待处理增益
-    setPendingLootAugment(null);
-  };
-
-  const replaceAugment = (newAug: Augment, replaceIdx: number) => {
-    playSound('select');
-    
-    // 使用纯函数处理增益替换
-    const result = processReplaceAugment(game, newAug, replaceIdx);
-    
-    // 应用新状态并输出日志
-    setGame(result.state);
-    result.logs.forEach(log => addLog(log));
-  };
-
   const finishLoot = () => {
     playSound('select');
     
@@ -2883,19 +2805,13 @@ useEffect(() => {
     setGame(newState);
   };
 
-  const pickReward = (aug: Augment) => {
-    setGame(prev => {
-      const newAugments = [...prev.augments];
-      const emptyIdx = newAugments.findIndex(a => a === null);
-      if (emptyIdx !== -1) {
-        newAugments[emptyIdx] = { ...aug, level: 1 };
-        addLog(`\u83B7\u5F97\u4E86\u65B0\u6A21\u5757: ${aug.name}`);
-        return { ...prev, augments: newAugments, phase: 'map' };
-      } else {
-        // All 5 slots full, need to replace
-        return { ...prev, pendingReplacementAugment: { ...aug, level: 1 } };
-      }
-    });
+  // [ARCH-4] pickReward 已简化 — 增益系统统一到遗物，此处仅处理遗物获取
+  const pickReward = (relic: Relic) => {
+    setGame(prev => ({
+      ...prev,
+      relics: [...prev.relics, { ...relic }],
+      phase: 'map',
+    }));
   };
 
   const nextNode = () => {
@@ -2916,7 +2832,7 @@ useEffect(() => {
   
   // COMBAT_TYPE_DESC 已提取到 logic/battleHelpers.ts
 
-  // getEffectiveAttackDmg 已提取到 logic/attackCalc.ts
+
 
   const resetGame = () => {
     setGame(createInitialGameState());
@@ -2933,12 +2849,10 @@ useEffect(() => {
     showHandGuide, setShowHandGuide,
     showDiceGuide, setShowDiceGuide,
     rerollFlash,
-    pendingLootAugment, setPendingLootAugment,
     startingRelicChoices,
     pendingBattleNode,
     startNode, startBattle,
     collectLoot, finishLoot,
-    selectLootAugment, replaceAugment,
     pickReward, nextNode,
     toasts, addToast,
     addLog,
@@ -3013,7 +2927,6 @@ useEffect(() => {
     canAffordReroll,
     freeRerollsRemaining,
     currentRerollCost,
-    activeAugments,
 
     // 战斗动作
     rollAllDice,
@@ -3855,10 +3768,8 @@ useEffect(() => {
                         const sceneTriggeredRelics = game.relics.filter(relic =>
                           flashingRelicIds.includes(relic.id) || outcomeTriggeredRelicIds.has(relic.id)
                         );
-                        const sceneTriggeredAugs = game.augments.filter(Boolean).filter(aug =>
-                          aug && activeAugments.some(a => a.id === aug!.id)
-                        );
-                        if (sceneTriggeredRelics.length === 0 && sceneTriggeredAugs.length === 0) return null;
+                        // [ARCH-4] 增强模块区已移除
+                        if (sceneTriggeredRelics.length === 0) return null;
                         return (
                           <>
                             <div className="w-full h-[1px] my-[3px]" style={{ background: 'linear-gradient(90deg, transparent, var(--pixel-gold), transparent)', opacity: 0.25 }} />
@@ -3875,23 +3786,7 @@ useEffect(() => {
                                   <RelicPixelIcon relicId={relic.id} size={1.5} />
                                 </motion.div>
                               ))}
-                              {sceneTriggeredAugs.map((aug, i) => {
-                                if (!aug) return null;
-                                return (
-                                  <motion.div
-                                    key={"saug-" + aug.id + "-" + i}
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="w-6 h-6 flex items-center justify-center cursor-pointer border border-[var(--pixel-gold)] shrink-0"
-                                    style={{ borderRadius: '2px', background: 'rgba(212,160,48,0.12)', boxShadow: '0 0 6px rgba(212,160,48,0.3)' }}
-                                    onClick={() => setSelectedAugment(aug)}
-                                  >
-                                    <div className="text-[var(--pixel-gold-light)]" style={{ filter: 'drop-shadow(0 0 2px rgba(212,160,48,0.5))' }}>
-                                      {getAugmentIcon(aug.condition, 10)}
-                                    </div>
-                                  </motion.div>
-                                );
-                              })}
+                              {/* [ARCH-4] sceneTriggeredAugs 已移除 */}
                             </div>
                           </>
                         );
@@ -4665,7 +4560,7 @@ useEffect(() => {
                 >
                   <span className="text-[11px] text-[var(--pixel-gold)] font-bold leading-none">▲</span>
                   <span className="text-[12px] text-[var(--pixel-gold)] hover:text-[var(--pixel-gold-light)] font-black tracking-[0.2em] leading-tight mt-0.5">遗物库</span>
-                  <span className="text-[9px] text-[var(--dungeon-text-dim)] font-mono leading-none mt-0.5">- {game.relics.length + game.augments.filter(Boolean).length}件 -</span>
+                  <span className="text-[9px] text-[var(--dungeon-text-dim)] font-mono leading-none mt-0.5">- {game.relics.length}件 -</span>
                 </button>
               </div>
 
@@ -4711,7 +4606,7 @@ useEffect(() => {
                       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--dungeon-panel-border)]">
                         <span className="text-[11px] font-black text-[var(--pixel-gold)] tracking-wider pixel-text-shadow"
                           style={{ textShadow: '0 0 6px rgba(212,160,48,0.4)' }}>
-                          遗物库 ({game.relics.length + game.augments.filter(Boolean).length})
+                          遗物库 ({game.relics.length})
                         </span>
                         <button
                           onClick={() => setShowRelicPanel(false)}
@@ -4722,7 +4617,7 @@ useEffect(() => {
                       </div>
                       {/* 遗物网格 */}
                       <div className="overflow-y-auto p-3" style={{ maxHeight: 'calc(55vh - 40px)' }}>
-                        {game.relics.length === 0 && game.augments.every(a => !a) && (
+                        {game.relics.length === 0 && (
                           <div className="flex items-center justify-center py-6 opacity-30">
                             <span className="text-[10px] text-[var(--dungeon-text-dim)]">暂无遗物</span>
                           </div>
@@ -4766,42 +4661,7 @@ useEffect(() => {
                             </div>
                           </>
                         )}
-                        {/* 增强模块区 */}
-                        {game.augments.filter(Boolean).length > 0 && (
-                          <>
-                            <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider mb-1.5">增强模块</div>
-                            <div className="grid grid-cols-6 gap-1.5">
-                              {game.augments.filter(Boolean).map((aug, i) => {
-                                if (!aug) return null;
-                                const isActive = activeAugments.some(a => a.id === aug.id);
-                                return (
-                                  <div
-                                    key={"augp-" + aug.id + "-" + i}
-                                    onClick={() => setSelectedAugment(aug)}
-                                    className={`flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
-                                      isActive
-                                        ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.2)] to-[rgba(180,120,30,0.08)]"
-                                        : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
-                                    }`}
-                                    style={{
-                                      borderRadius: '3px',
-                                      padding: '4px 2px 3px',
-                                      ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.3)' } : {}),
-                                    }}
-                                    title={`${aug.name}: ${aug.description}`}
-                                  >
-                                    <div className={`shrink-0 ${isActive ? "text-[var(--pixel-gold-light)]" : "text-[var(--dungeon-text-dim)]"}`} style={isActive ? { filter: 'drop-shadow(0 0 3px rgba(212,160,48,0.6))' } : {}}>
-                                      {getAugmentIcon(aug.condition, 14)}
-                                    </div>
-                                    <span className="text-[5px] font-bold leading-none px-0.5 py-px truncate max-w-full mt-0.5" style={{ color: getConditionInfo(aug.condition).color, backgroundColor: getConditionInfo(aug.condition).bgColor, border: `1px solid ${getConditionInfo(aug.condition).borderColor}`, borderRadius: '1px' }}>
-                                      {getConditionInfo(aug.condition).abbr}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
+                        {/* [ARCH-4] 增强模块区已移除 — 统一到遗物 */}
                       </div>
                     </motion.div>
                   </motion.div>
@@ -4859,14 +4719,14 @@ useEffect(() => {
         {/* Enemy info modal removed - no more intent system */}
       </AnimatePresence>
 
-      {/* Augment Detail Modal */}
+      {/* Relic Detail Modal */}
           <AnimatePresence>
-            {selectedAugment && (
+            {selectedRelic && (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setSelectedAugment(null)}
+                onClick={() => setSelectedRelic(null)}
                 className="absolute inset-0 bg-black/85 z-50 flex items-center justify-center p-6"
               >
                 <motion.div 
@@ -4875,41 +4735,16 @@ useEffect(() => {
                   className="pixel-panel p-5 w-full max-w-xs relative"
                   onClick={e => e.stopPropagation()}
                 >
-                  <div className="absolute top-5 right-5 text-[var(--pixel-green)] opacity-15">
-                    {getAugmentIcon(selectedAugment.condition, 40)}
+                  <div className="absolute top-5 right-5 text-[var(--pixel-gold)] opacity-15">
+                    <RelicPixelIcon relicId={selectedRelic.id} size={2.5} />
                   </div>
-                  <div className="text-[var(--pixel-green)] font-bold text-lg mb-2 relative z-10 pixel-text-shadow">{selectedAugment.name}</div>
-                  <div className="text-[var(--dungeon-text-dim)] text-[12px] tracking-[0.1em] mb-3 relative z-10 flex items-center gap-1">
-                    <span className="text-[var(--pixel-green)]">{getAugmentIcon(selectedAugment.condition, 12)}</span>
-                    触发条件: {
-                    selectedAugment.condition === 'high_card' ? '普通攻击' : 
-                    selectedAugment.condition === 'pair' ? '对子' :
-                    selectedAugment.condition === 'two_pair' ? '连对' :
-                    selectedAugment.condition === 'n_of_a_kind' ? 'N条' :
-                    selectedAugment.condition === 'full_house' ? '葫芦' :
-                    selectedAugment.condition === 'straight' ? '顺子' :
-                    selectedAugment.condition === 'same_element' ? '同元素' :
-                    selectedAugment.condition === 'element_count' ? '元素计数' : selectedAugment.condition
-                  }</div>
-                  <div className="text-[var(--dungeon-text)] text-[13px] mb-3 relative z-10">{formatDescription(selectedAugment.description)}</div>
-                  {/* 连招大师：显示当前数值加成 */}
-                  {selectedAugment.id === 'combo_master' && (
-                    <div className="text-[11px] mb-3 px-2 py-1.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] relative z-10" style={{borderRadius:'2px'}}>
-                      <div className="text-[var(--pixel-gold)] font-bold mb-1">当前连击加成</div>
-                      <div className="text-[var(--dungeon-text-dim)]">
-                        连续普攻次数: <span className="text-[var(--pixel-orange)] font-bold">{game.consecutiveNormalAttacks || 0}</span>
-                      </div>
-                      <div className="text-[var(--dungeon-text-dim)]">
-                        额外伤害: <span className="text-[var(--pixel-red)] font-bold">+{(game.consecutiveNormalAttacks || 0) * 4}</span>
-                      </div>
-                      <div className="text-[var(--dungeon-text-dim)]">
-                        倍率加成: <span className="text-[var(--pixel-cyan)] font-bold">+{Math.round((game.consecutiveNormalAttacks || 0) * 10)}%</span>
-                      </div>
-                      <div className="text-[8px] text-[var(--dungeon-text-dim)] mt-1 opacity-60">※ 每回合结束时重置</div>
-                    </div>
-                  )}
+                  <div className="text-[var(--pixel-gold)] font-bold text-lg mb-2 relative z-10 pixel-text-shadow">{selectedRelic.name}</div>
+                  <div className="text-[var(--dungeon-text-dim)] text-[12px] tracking-[0.1em] mb-3 relative z-10">
+                    {selectedRelic.rarity === 'legendary' ? '传说' : selectedRelic.rarity === 'rare' ? '稀有' : selectedRelic.rarity === 'uncommon' ? '精良' : '普通'}
+                  </div>
+                  <div className="text-[var(--dungeon-text)] text-[13px] mb-3 relative z-10">{formatDescription(selectedRelic.description)}</div>
                   <button 
-                    onClick={() => setSelectedAugment(null)}
+                    onClick={() => setSelectedRelic(null)}
                     className="w-full py-2.5 pixel-btn pixel-btn-ghost text-xs font-bold relative z-10"
                   >
                     关闭

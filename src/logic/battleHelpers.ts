@@ -4,7 +4,7 @@
  * 从 DiceHeroGame.tsx 提取的战斗辅助逻辑。
  */
 
-import type { StatusEffect, Enemy } from '../types/game';
+import type { StatusEffect } from '../types/game';
 
 /** 战斗类型描述（用于UI显示） */
 export const COMBAT_TYPE_DESC: Record<string, { name: string; icon: string; color: string; desc: string }> = {
@@ -30,21 +30,6 @@ export function tickStatuses(statuses: StatusEffect[]): StatusEffect[] {
       // 保留duration > 0 的
       return s.duration > 0;
     });
-}
-
-/** 计算敌人有效攻击力 */
-export function getEffectiveAttackDmg(
-  enemy: Enemy,
-  playerStatuses: StatusEffect[],
-): number {
-  let val = enemy.attackDmg;
-  const weak = enemy.statuses.find(s => s.type === 'weak');
-  if (weak) val = Math.floor(val * 0.75);
-  const playerVuln = playerStatuses.find(s => s.type === 'vulnerable');
-  if (playerVuln) val = Math.floor(val * 1.5);
-  const strength = enemy.statuses.find(s => s.type === 'strength');
-  if (strength) val += strength.value;
-  return val;
 }
 
 /** 判断是否为AOE牌型 */

@@ -24,13 +24,17 @@ export default defineConfig(({mode}) => {
     },
     build: {
       ...(isSingleFile ? {
-        // 单文件模式：内联所有资源
+        // 单文件模式：内联所有资源（排除字体，由 build-mobile.cjs 后处理）
         assetsInlineLimit: 100000000,
         cssCodeSplit: false,
         rollupOptions: {
           output: {
             inlineDynamicImports: true,
-          }
+          },
+          // 排除字体文件：vite-plugin-singlefile 内联 base64 字体时
+          // 文件名超过 Windows MAX_PATH(260) 导致 ENAMETOOLONG
+          // 字体由 build-mobile.cjs 统一内联
+          external: (id) => /\.(woff2|woff|ttf|otf|eot)$/i.test(id),
         }
       } : {})
     },

@@ -1,0 +1,35 @@
+﻿src/components/AugmentCard.tsx(3,15): error TS2305: Module '"../types/game"' has no exported member 'Augment'.
+src/components/MerchantScreen.tsx(11,15): error TS2305: Module '"../types/game"' has no exported member 'Augment'.
+src/components/ShopScreen.tsx(66,16): error TS2322: Type '"augment"' is not assignable to type '"gold" | "relic" | "reroll" | "maxPlays" | "heal" | "dice" | "maxHp" | "removeDice"'.
+src/contexts/GameContext.tsx(2,20): error TS2305: Module '"../types/game"' has no exported member 'Augment'.
+src/DiceHeroGame.tsx(21,34): error TS2305: Module '"./types/game"' has no exported member 'Augment'.
+src/DiceHeroGame.tsx(2846,60): error TS2345: Argument of type '"normal" | "gold" | "buff"' is not assignable to parameter of type '"gold" | "heal" | "damage" | "buff" | "info"'.
+  Type '"normal"' is not assignable to type '"gold" | "heal" | "damage" | "buff" | "info"'.
+src/engine/soundPlayer.ts(192,15): error TS2661: Cannot export 'AudioContext'. Only local declarations can be exported from a module.
+src/logic/expectedOutcomeCalc.ts(10,34): error TS2305: Module '"../types/game"' has no exported member 'Augment'.
+src/logic/expectedOutcomeCalc.ts(236,121): error TS2304: Cannot find name 'ElementName'.
+src/logic/expectedOutcomeCalc.ts(286,48): error TS2339: Property 'depth' does not exist on type 'GameState'.
+src/logic/expectedOutcomeCalc.ts(287,45): error TS2339: Property 'depth' does not exist on type 'GameState'.
+src/logic/expectedOutcomeCalc.ts(618,12): error TS2503: Cannot find namespace 'React'.
+src/logic/expectedOutcomeCalc.ts(618,27): error TS2503: Cannot find namespace 'React'.
+src/logic/expectedOutcomeCalc.ts(619,19): error TS2503: Cannot find namespace 'React'.
+src/logic/expectedOutcomeCalc.ts(619,34): error TS2503: Cannot find namespace 'React'.
+src/logic/gameInit.ts(46,5): error TS2353: Object literal may only specify known properties, and 'augments' does not exist in type 'GameState'.
+src/logic/lootHandler.ts(103,62): error TS2339: Property 'bossesKilled' does not exist on type 'RunStats'.
+src/logic/lootHandler.ts(105,72): error TS2339: Property 'bossesKilled' does not exist on type 'RunStats'.
+src/logic/lootProcessor.ts(12,36): error TS2305: Module '"../types/game"' has no exported member 'Augment'.
+src/logic/lootProcessor.ts(81,7): error TS2367: This comparison appears to be unintentional because the types '"gold" | "relic" | "reroll" | "maxPlays" | "diceCount" | "specialDice" | "diceChoice"' and '"augment"' have no overlap.
+src/logic/lootProcessor.ts(81,39): error TS2339: Property 'augmentOptions' does not exist on type 'LootItem'.
+src/logic/lootProcessor.ts(88,28): error TS2339: Property 'augmentOptions' does not exist on type 'LootItem'.
+src/logic/lootProcessor.ts(154,10): error TS2678: Type '"challengeChest"' is not comparable to type '"gold" | "relic" | "reroll" | "maxPlays" | "diceCount" | "specialDice" | "diceChoice"'.
+src/logic/lootProcessor.ts(205,29): error TS2339: Property 'augments' does not exist on type 'GameState'.
+src/logic/lootProcessor.ts(209,32): error TS2339: Property 'augments' does not exist on type 'GameState'.
+src/logic/lootProcessor.ts(221,26): error TS2353: Object literal may only specify known properties, and 'augments' does not exist in type 'GameState'.
+src/logic/lootProcessor.ts(227,26): error TS2339: Property 'augments' does not exist on type 'GameState'.
+src/logic/lootProcessor.ts(231,32): error TS2339: Property 'augments' does not exist on type 'GameState'.
+src/logic/lootProcessor.ts(241,26): error TS2353: Object literal may only specify known properties, and 'augments' does not exist in type 'GameState'.
+src/logic/lootProcessor.ts(248,24): error TS2353: Object literal may only specify known properties, and 'pendingReplacementAugment' does not exist in type 'GameState'.
+src/logic/lootProcessor.ts(272,24): error TS2339: Property 'augments' does not exist on type 'GameState'.
+src/logic/lootProcessor.ts(275,29): error TS2339: Property 'augments' does not exist on type 'GameState'.
+src/logic/lootProcessor.ts(280,5): error TS2367: This comparison appears to be unintentional because the types '"gold" | "relic" | "reroll" | "maxPlays" | "diceCount" | "specialDice" | "diceChoice"' and '"augment"' have no overlap.
+src/logic/lootProcessor.ts(290,7): error TS2353: Object literal may only specify known properties, and 'augments' does not exist in type 'GameState'.

@@ -8,13 +8,13 @@ import { PixelCoin, PixelDice } from './PixelIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
-import type { Augment } from '../types/game';
+import type { Relic } from '../types/game';
 
 interface MerchantItem {
   id: string;
-  type: 'dice' | 'augment' | 'heal' | 'reroll';
+  type: 'dice' | 'relic' | 'heal' | 'reroll';
   diceDefId?: string;
-  augment?: Augment;
+  relicData?: Relic;
   healAmount?: number;
   label: string;
   desc: string;
@@ -26,7 +26,7 @@ interface MerchantItem {
 
 function generateMerchantItems(chapter: number): MerchantItem[] {
   const items: MerchantItem[] = [];
-  const itemTypes = ['dice', 'augment', 'heal', 'reroll'];
+  const itemTypes = ['dice', 'relic', 'heal', 'reroll'];
   const shuffled = [...itemTypes].sort(() => Math.random() - 0.5);
   const picks = [shuffled[0], shuffled[1], shuffled[2 % shuffled.length]];
   
@@ -54,14 +54,14 @@ function generateMerchantItems(chapter: number): MerchantItem[] {
         });
         break;
       }
-      case 'augment': {
+      case 'relic': {
         const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
         const relicPicks = pickRandomRelics(relicPool, 1, []);
         if (relicPicks.length === 0) continue;
         const relicPick = relicPicks[0];
         const basePrice = relicPick.rarity === 'rare' ? 60 : relicPick.rarity === 'uncommon' ? 45 : 30;
         items.push({
-          id: `merchant-relic-${relicPick.id}`, type: 'augment' as any, augment: { ...relicPick, condition: () => true } as any,
+          id: `merchant-relic-${relicPick.id}`, type: 'relic', relicData: relicPick,
           label: relicPick.name, desc: relicPick.description,
           basePrice, finalPrice: Math.floor(basePrice * priceMult), priceTag, sold: false,
         });
@@ -119,18 +119,10 @@ export const MerchantScreen: React.FC = () => {
             addLog(`\u4ece\u5546\u4eba\u5904\u8d2d\u4e70\u4e86\u9ab0\u5b50: ${item.label}`);
           }
           break;
-        case 'augment':
-          if (item.augment) {
-            const emptySlot = prev.augments.findIndex(a => a === null);
-            if (emptySlot >= 0) {
-              const newAugs = [...prev.augments];
-              newAugs[emptySlot] = item.augment;
-              next.augments = newAugs;
-              addLog(`\u4ece\u5546\u4eba\u5904\u8d2d\u4e70\u4e86\u589e\u5e45: ${item.label}`);
-            } else {
-              next.pendingReplacementAugment = item.augment;
-              addToast('\u589e\u5e45\u69fd\u5df2\u6ee1\uff0c\u9009\u62e9\u4e00\u4e2a\u66ff\u6362');
-            }
+        case 'relic':
+          if (item.relicData) {
+            next.relics = [...prev.relics, { ...item.relicData }];
+            addLog(`\u4ece\u5546\u4eba\u5904\u8d2d\u4e70\u4e86\u9057\u7269: ${item.label}`);
           }
           break;
         case 'heal':
@@ -180,7 +172,7 @@ export const MerchantScreen: React.FC = () => {
               const canAfford = game.souls >= item.finalPrice && !item.sold;
               const elemColor = item.type === 'dice' && item.diceDefId 
                 ? ELEMENT_COLORS[getDiceDef(item.diceDefId).element] || '#888' 
-                : item.type === 'augment' ? '#a78bfa' 
+                : item.type === 'relic' ? '#a78bfa' 
                 : item.type === 'heal' ? '#34d399' : '#60a5fa';
               return (
                 <motion.button key={item.id}
@@ -197,7 +189,7 @@ export const MerchantScreen: React.FC = () => {
                   <div className="w-10 h-10 flex items-center justify-center shrink-0 border"
                     style={{ borderColor: elemColor + '44', backgroundColor: elemColor + '22', borderRadius: '2px' }}>
                     {item.type === 'dice' && item.diceDefId ? <MiniDice defId={item.diceDefId} size={16} /> : item.type === 'dice' && <PixelDice size={2} />}
-                    {item.type === 'augment' && <span className="text-lg">{'\u26A1'}</span>}
+                    {item.type === 'relic' && <span className="text-lg">{'✨'}</span>}
                     {item.type === 'heal' && <span className="text-lg">{'\u{1F48A}'}</span>}
                     {item.type === 'reroll' && <span className="text-lg">{'\u{1F504}'}</span>}
                   </div>

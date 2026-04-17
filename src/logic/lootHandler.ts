@@ -82,8 +82,8 @@ export function buildLootItems(params: {
 // === 纯函数：胜利后阶段转换判断 ===
 
 export type PostVictoryPhase = 
-  | { phase: 'victory'; bossesKilled: number }
-  | { phase: 'chapterTransition'; bossesKilled: number }
+  | { phase: 'victory'; bossesWon: number }
+  | { phase: 'chapterTransition'; bossesWon: number }
   | { phase: 'diceReward' };
 
 /**
@@ -100,9 +100,9 @@ export function resolvePostVictoryPhase(game: GameState): PostVictoryPhase {
     if (currentNode.depth >= mapMaxDepth) {
       // 判断是否为最终章
       if (game.chapter >= CHAPTER_CONFIG.totalChapters) {
-        return { phase: 'victory', bossesKilled: (game.stats.bossesKilled || 0) + 1 };
+        return { phase: 'victory', bossesWon: (game.stats.bossesWon || 0) + 1 } as any;
       } else {
-        return { phase: 'chapterTransition', bossesKilled: (game.stats.bossesKilled || 0) + 1 };
+        return { phase: 'chapterTransition', bossesWon: (game.stats.bossesWon || 0) + 1 } as any;
       }
     }
     // 中层Boss：继续走正常战利品流程

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import type { Die, Augment, MapNode, Enemy, GameState, Relic } from '../types/game';
+import type { Die, MapNode, Enemy, GameState, Relic } from '../types/game';
 
 interface Toast {
   id: number;
@@ -22,8 +22,6 @@ export interface GameContextType {
   showDiceGuide: boolean;
   setShowDiceGuide: React.Dispatch<React.SetStateAction<boolean>>;
   rerollFlash: boolean;
-  pendingLootAugment: { id: string; options: Augment[] } | null;
-  setPendingLootAugment: React.Dispatch<React.SetStateAction<{ id: string; options: Augment[] } | null>>;
   startingRelicChoices: Relic[];
   pendingBattleNode: MapNode | null;
   
@@ -32,9 +30,7 @@ export interface GameContextType {
   startBattle: (node: MapNode) => void;
   collectLoot: (id: string) => void;
   finishLoot: () => void;
-  selectLootAugment: (aug: Augment) => void;
-  replaceAugment: (newAug: Augment, replaceIdx: number) => void;
-  pickReward: (aug: Augment) => void;
+  pickReward: (relic: Relic) => void;
   nextNode: () => void;
   addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff') => void;
   addLog: (msg: string) => void;

@@ -8,7 +8,7 @@ export type SoundType =
   | 'victory' | 'defeat' | 'skill' | 'coin' | 'levelup' 
   | 'critical' | 'poison' | 'burn' | 'shield_break' | 'reroll'
   | 'map_move' | 'shop_buy' | 'campfire' | 'event' | 'boss_appear'
-  | 'dice_lock' | 'augment_activate' | 'turn_end'
+  | 'dice_lock' | 'relic_activate' | 'turn_end'
   | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe'
   | 'enemy_death' | 'player_death' | 'enemy_speak' | 'boss_laugh' | 'gate_close';
 
@@ -541,7 +541,7 @@ export const playSound = (type: SoundType) => {
         break;
       }
       
-      case 'augment_activate': {
+      case 'relic_activate': {
         // 遗物激活
         [659, 784, 988].forEach((f, i) => {
           const o = ctx.createOscillator();
