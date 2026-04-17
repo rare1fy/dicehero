@@ -1232,14 +1232,6 @@
   animation: pixel-boss-entrance 0.6s steps(6);
 }
 
-/* === ������������ (���ػ�) === */
-  0% { background-color: rgba(60,200,100,0); }
-  50% { background-color: rgba(60,200,100,0.3); }
-  100% { background-color: rgba(60,200,100,0); }
-}
-
-}
-
 /* === �����ǹ� === */
 @keyframes pixel-twinkle {
   0%, 100% { opacity: 0.2; }

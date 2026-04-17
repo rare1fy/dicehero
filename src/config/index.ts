@@ -41,4 +41,5 @@ export {
   type PatternAction,
   type PhaseConfig,
   type IntentType,
+  type EnemyQuotes,
 } from './enemies';
