@@ -285,7 +285,7 @@ export const CampfireScreen: React.FC = () => {
                   if (!currentOp || !nextOp) return null;
                   const changes = [];
                   if (currentOp.bonusDamage !== nextOp.bonusDamage) changes.push(`伤害: ${currentOp.bonusDamage} → ${nextOp.bonusDamage}`);
-                  if (currentOp.bonusMult !== nextOp.bonusMult) changes.push(`倍率: ${currentOp.bonusMult} → ${nextOp.bonusMult}`);
+                  if (currentOp.bonusMult !== nextOp.bonusMult) changes.push(`倍率: +${Math.round((currentOp.bonusMult - 1) * 100)}% → +${Math.round((nextOp.bonusMult - 1) * 100)}%`);
                   if (currentOp.selfDamage !== nextOp.selfDamage) changes.push(`副作用: ${currentOp.selfDamage} → ${nextOp.selfDamage}`);
                   if (changes.length === 0) return null;
                   return <div className="text-[9px] text-[var(--pixel-cyan)] mt-0.5">特效升级: {changes.join(", ")}</div>;
@@ -408,7 +408,7 @@ export const CampfireScreen: React.FC = () => {
                   soulCrystalMultiplier: 1.0, // 撤离后倍率重置为1
                   phase: 'map',
                 }));
-                addToast('+' + quota + ' 魂晶已安全撤离！倍率重置为1.0', 'gold');
+                addToast('+' + quota + ' 魂晶已安全撤离！倍率重置为+0%', 'gold');
                 addLog('营火撤离: ' + quota + ' 魂晶已转移至安全区，倍率重置');
               }}
               className={`w-full p-4 pixel-panel flex items-center justify-between transition-all group ${campfireUsed ? 'opacity-40 cursor-not-allowed' : ''}`}
@@ -420,7 +420,7 @@ export const CampfireScreen: React.FC = () => {
                   将 <span className="text-purple-300 font-bold">{game.blackMarketQuota || 0}</span> 魂晶转入安全区（死亡不丢失）
                 </div>
                 <div className="text-[8px] text-[var(--pixel-orange)] mt-0.5">
-                  ⚠ 撤离后<span className="font-bold">倍率重置为×1.0</span>，不撤离可继续贪倍率
+                  ⚠ 撤离后<span className="font-bold">倍率重置为+0%</span>，不撤离可继续贪倍率
                 </div>
               </div>
               <PixelSoulCrystal size={4} />

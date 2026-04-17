@@ -6,7 +6,7 @@
  * 2. 灌铅骰子：只能掷出 4/5/6，高下限
  * 3. 混沌骰子：只能掷出 1 和 6，极端分布
  * 4. 锋刃骰子：+20 基础伤害
- * 5. 倍增骰子：x1.5 倍率
+ * 5. 倍增骰子：+50% 倍率
  * 6. 小丑骰子：1-9 随机
  * 7. 分裂骰子：出牌时复制自身加入结算
  * 8. 诅咒骰子：0点，重Roll代价翻倍
@@ -162,7 +162,7 @@ const LEGACY_DICE: Record<string, DiceDef> = { heavy, elemental };
 
 // 盗贼临时骰子（连击/技能奖励，1回合后销毁）
 const temp_rogue: DiceDef = {
-  id: 'temp_rogue', name: '暗影残骰', element: 'normal', faces: [1, 1, 2, 2, 1, 2], rarity: 'common',
+  id: 'temp_rogue', name: '暗影残骰', element: 'normal', faces: [1, 1, 2, 2, 3, 3], rarity: 'common',
   description: '连击奖励的临时骰子，回合结束未使用则自动销毁',
 };
 

@@ -928,7 +928,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章5 终Boss
   {
     id: 'boss_eternal_lord', name: '永恒主宰', emoji: '', chapter: 5,
-    baseHp: 380, baseDmg: 16, category: 'boss', combatType: 'caster',
+    baseHp: 480, baseDmg: 18, category: 'boss', combatType: 'caster',
     drops: { gold: 0, augment: false },
     phases: [
       { hpThreshold: 0.5, actions: [

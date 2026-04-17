@@ -110,7 +110,7 @@ const crimsonGrail: Relic = {
 const arithmeticGauge: Relic = {
   id: 'arithmetic_gauge',
   name: '等差数列仪',
-  description: '打出顺子时，长度每+1，倍率翻倍(3顺=150%, 4顺=200%, 5顺=300%, 6顺=500%)',
+  description: '打出顺子时，长度每+1，倍率递增(3顺=+50%, 4顺=+100%, 5顺=+200%, 6顺=+400%)',
   icon: 'gauge',
   rarity: 'rare',
   trigger: 'on_play',
@@ -151,7 +151,7 @@ const elementalResonator: Relic = {
 const perfectionist: Relic = {
   id: 'perfectionist',
   name: '完美主义强迫症',
-  description: '打出葫芦/四条/五条且无特殊骰子(纯白杆)时，伤害x4',
+  description: '打出葫芦/四条/五条且无特殊骰子(纯白杆)时，伤害+300%',
   icon: 'diamond',
   rarity: 'legendary',
   trigger: 'on_play',
@@ -178,7 +178,7 @@ const twinStarsRelic: Relic = {
 const voidEchoRelic: Relic = {
   id: 'void_echo_relic',
   name: '虚空回响',
-  description: '打出连对时，最终伤害180%',
+  description: '打出连对时，最终伤害+80%',
   icon: 'diamond',
   rarity: 'uncommon',
   trigger: 'on_play',
@@ -237,7 +237,7 @@ const blackMarketContract: Relic = {
   rarity: 'uncommon',
   trigger: 'on_reroll',
   effect: (ctx) => ({
-    goldBonus: ctx.diceValue || 0,
+    goldBonus: ctx.isBloodReroll ? (ctx.diceValues?.[0] || 0) : 0,
     oncePerTurn: true,
   }),
 };
@@ -516,11 +516,11 @@ const treasureSenseRelic: Relic = {
   },
 };
 
-/** 点金之手 - 打出多条时额外获得点数和×2金币 */
+/** 点金之手 - 打出多条时额外获得点数和+100%金币 */
 const goldenTouchRelic: Relic = {
   id: 'golden_touch_relic',
   name: '点金之手',
-  description: '打出三条/四条/五条时额外获得点数和×2金币',
+  description: '打出三条/四条/五条时额外获得点数和+100%金币',
   icon: 'bag',
   rarity: 'uncommon',
   trigger: 'on_play',
@@ -544,7 +544,7 @@ const hagglerRelic: Relic = {
   effect: () => ({ shopDiscount: 0.2 }),
 };
 
-/** 元素过载 - 同元素出牌时伤害×2.2 */
+/** 元素过载 - 同元素出牌时伤害+120% */
 const elementOverloadRelic: Relic = {
   id: 'element_overload_relic',
   name: '元素过载',
@@ -704,7 +704,7 @@ const minimalistRelic: Relic = {
   }),
 };
 
-/** 血骰契约 - 每次重Roll伤害倍率+0.2（超模→rare） */
+/** 血骰契约 - 每次重Roll伤害倍率+20%（超模→rare） */
 const bloodDiceRelic: Relic = {
   id: 'blood_dice_relic',
   name: '血骰契约',
@@ -751,8 +751,8 @@ const rerollFrenzyRelic: Relic = {
   icon: 'blade',
   rarity: 'uncommon',
   trigger: 'on_reroll',
-  effect: () => ({
-    freeRerollChance: 0.10,
+  effect: (ctx) => ({
+    freeRerollChance: ctx.isBloodReroll ? 0 : 0.10,
   }),
 };
 
@@ -760,7 +760,7 @@ const rerollFrenzyRelic: Relic = {
 const diceMasterRelic: Relic = {
   id: 'dice_master_relic',
   name: '骰子大师',
-  description: '打出≥3颗骰子的牌型时，基础伤害+15，倍率130%',
+  description: '打出≥3颗骰子的牌型时，基础伤害+15，倍率+30%',
   icon: 'eye',
   rarity: 'legendary',
   trigger: 'on_play',
@@ -883,7 +883,7 @@ const fateCoin: Relic = {
   id: 'fate_coin',
   name: '命运硬币',
   icon: 'coin',
-  description: '本回合重投≥2次后出牌，倍率150%',
+  description: '本回合重投≥2次后出牌，倍率+50%',
   rarity: 'rare',
   trigger: 'on_play',
   effect: (ctx) => {
@@ -905,7 +905,7 @@ const elementAffinity: Relic = {
   effect: () => ({ normalElementChance: 0.3 }),
 };
 
-/** 完美主义者改 - 全部相同点数时额外x1.5 (规则改变型) */
+/** 完美主义者改 - 全部相同点数时额外+50% (规则改变型) */
 const symmetrySeeker: Relic = {
   id: 'symmetry_seeker',
   name: '对称追求者',
@@ -932,7 +932,7 @@ const bloodForgeArmor: Relic = {
   icon: 'blade',
   rarity: 'uncommon',
   trigger: 'on_reroll',
-  effect: () => ({ armor: 8 }),
+  effect: (ctx) => ({ armor: ctx.isBloodReroll ? 8 : 0 }),
 };
 
 /** 战士：不灭斗志 - HP≤50%时每次出牌+1免费重投 */
@@ -1014,7 +1014,7 @@ const extraHandSlot: Relic = {
   counterLabel: 'CD',
   effect: (ctx) => ({
     // 每2次出牌触发1次，且只有对子才给tempDrawBonus
-    tempDrawBonus: (ctx.handType === '对子') ? 1 : 0,
+    tempDrawBonus: ctx.handType === '对子' ? 1 : 0,
   }),
 };
 
@@ -1049,6 +1049,37 @@ const killReroll: Relic = {
   rarity: 'uncommon',
   trigger: 'on_kill',
   effect: () => ({ grantFreeReroll: 1 }),
+};
+
+/** 少即是多 - 低点数骰子倍率加成 */
+const lessIsMoreRelic: Relic = {
+  id: 'less_is_more_relic',
+  name: '少即是多',
+  description: '出牌时每有1颗3点及以下的骰子，倍率+20%',
+  icon: 'less_is_more',
+  rarity: 'uncommon',
+  trigger: 'on_play',
+  effect: (ctx) => {
+    const lowCount = (ctx.diceValues || []).filter(v => v <= 3).length;
+    if (lowCount === 0) return {};
+    return { multiplier: 1 + lowCount * 0.2 };
+  },
+};
+
+/** 血神之眼 - 击杀敌人时恢复HP */
+const bloodEyeRelic: Relic = {
+  id: 'blood_eye',
+  name: '血神之眼',
+  description: '击杀敌人时恢复3点HP，溢出伤害>5时额外回复2点',
+  icon: 'blood_eye',
+  rarity: 'rare',
+  trigger: 'on_kill',
+  effect: (ctx) => {
+    const overkill = ctx.overkillDamage || 0;
+    const baseHeal = 3;
+    const bonusHeal = overkill > 5 ? 2 : 0;
+    return { heal: baseHeal + bonusHeal };
+  },
 };
 
 export const ALL_RELICS: Record<string, Relic> = {
@@ -1136,27 +1167,15 @@ export const ALL_RELICS: Record<string, Relic> = {
   extra_free_reroll: extraFreeReroll,
   turn_armor: turnArmor,
   kill_reroll: killReroll,
-};
-
-/** 少即是多 - 低点数骰子倍率加成 */
-const lessIsMoreRelic: Relic = {
-  id: 'less_is_more_relic',
-  name: '少即是多',
-  description: '出牌时每有1颗3点及以下的骰子，倍率+20%',
-  icon: 'less_is_more',
-  rarity: 'uncommon',
-  trigger: 'on_play',
-  effect: (ctx) => {
-    const lowCount = (ctx.diceValues || []).filter(v => v <= 3).length;
-    if (lowCount === 0) return {};
-    return { multiplier: Math.pow(1.2, lowCount) };
-  },
+  // 遗漏遗物（之前定义在ALL_RELICS之后）
+  less_is_more_relic: lessIsMoreRelic,
+  blood_eye: bloodEyeRelic,
 };
 
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic, navigatorCompass, healingBreeze, sharpEdgeRelic, luckyCoinRelic, thickHideRelic, basicInstinctRelic, treasureMapRelic, turnArmor],
   uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator, warmEmberRelic, treasureSenseRelic, goldenTouchRelic, hagglerRelic, rapidStrikesRelic, bloodPactRelic, rerollFrenzyRelic, battleMedicRelic, rageFireRelic, lessIsMoreRelic, bloodForgeArmor, chargeCore, comboLeech, killReroll],
-  rare: [crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity, bloodDiceRelic, purifyWaterRelic, undyingSpirit, overflowMana, venomCrystal, extraHandSlot],
+  rare: [bloodEyeRelic, crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity, bloodDiceRelic, purifyWaterRelic, undyingSpirit, overflowMana, venomCrystal, extraHandSlot],
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush, universalPair, doubleStrike, extraFreeReroll],
 };
 

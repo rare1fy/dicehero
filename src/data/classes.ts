@@ -65,9 +65,9 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     hp: 120,
     maxHp: 120,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'w_bloodthirst', 'w_ironwall'],
-    passiveDesc: '【血怒战意】嗜血每次+15%最终伤害（叠加）；血量≤50%手牌+1；手牌溢出上限时按受伤百分比加伤害倍率；普攻可多选',
+    passiveDesc: '【血怒战意】嗜血每次+15%最终伤害（最多5层+75%）；叠满后卖血改为+5护甲；血量≤50%手牌+1；手牌溢出上限时按受伤百分比加伤害倍率；普攻可多选',
     skills: [
-      { name: '血怒战意', desc: '每次嗜血，最终伤害+15%（可叠加），以鲜血换取毁灭之力' },
+      { name: '血怒战意', desc: '每次嗜血，最终伤害+15%（最多叠加5层+75%），叠满后卖血获得5点护甲' },
       { name: '狂暴本能', desc: '血量≤50%时手牌上限+1颗；手牌达到6颗上限时，按受伤百分比获得等比例伤害倍率加成' },
       { name: '铁拳连打', desc: '普攻牌型可多选骰子，一次打出所有选中骰子的伤害' },
     ],
@@ -148,7 +148,7 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_lifefurnace', name: '生命熔炉', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '未满血时回复HP，数值等于本骰子的点数；满血时永久增加3点最大HP', onPlay: { healOrMaxHp: true } },
   { id: 'w_execute', name: '斩杀', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
-    description: '目标血量低于25%时伤害变为3倍；若成功击杀，回复15HP', onPlay: { executeThreshold: 0.25, executeMult: 3, executeHeal: 15 } },
+    description: '目标血量低于25%时伤害+100%；若成功击杀，回复15HP', onPlay: { executeThreshold: 0.25, executeMult: 2, executeHeal: 15 } },
   { id: 'w_leech', name: '吸血斩', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '回复HP，数值等于本骰子的点数，同时清除1层负面状态', onPlay: { healFromValue: true, purifyOne: true } },
 
@@ -209,7 +209,7 @@ const MAGE_DICE: DiceDef[] = [
   { id: 'mage_resonance', name: '共鸣', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '自动跟随本回合的元素坍缩结果，额外触发一次该元素效果', isElemental: true, onPlay: { copyMajorityElement: true } },
   { id: 'mage_devour', name: '超载', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
-    description: '出牌时如果处于蓄力状态，伤害额外提升当前蓄力层数×15%', onPlay: { bonusMultPerExtraCharge: 0.15 } },
+    description: '出牌时如果处于蓄力状态，伤害额外提升当前蓄力层数+15%', onPlay: { bonusMultPerExtraCharge: 0.15 } },
   { id: 'mage_purify', name: '净化之光', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '清除自身全部负面状态，每清除1层回复5HP', onPlay: { purifyAll: true, healPerCleanse: 5 } },
   { id: 'mage_surge', name: '法力涌动', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
@@ -253,21 +253,21 @@ const ROGUE_DICE: DiceDef[] = [
     description: '出牌后补1颗暗影残骰到手牌；作为连击出牌时，该残骰可保留到下回合', onPlay: { grantShadowDie: true, comboPersistShadow: true } },
 
   // === Uncommon (6) ===
-  { id: 'r_toxblade', name: '剧毒匕首', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'uncommon',
+  { id: 'r_toxblade', name: '剧毒匕首', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '对目标施加毒层：本骰子点数+3层；目标已中毒时再额外+2层', onPlay: { poisonBase: 3, poisonBonusIfPoisoned: 2 } },
   { id: 'r_shadow_clone', name: '影分身', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'uncommon',
     description: '出牌结算后，自动追加一次额外攻击，伤害为本次的50%', onPlay: { shadowClonePlay: true } },
   { id: 'r_boomerang', name: '回旋刃', element: 'normal', faces: [2,3,3,4,4,5], rarity: 'uncommon',
     description: '首次出牌后弹回手牌，下次使用不消耗出牌次数', onPlay: { boomerangPlay: true } },
-  { id: 'r_corrosion', name: '蚀骨毒液', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'uncommon',
+  { id: 'r_corrosion', name: '蚀骨毒液', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '对目标追加固定伤害，数值为目标身上毒层数的2倍；连击时引爆目标25%毒层为即时伤害', onPlay: { poisonScaleDamage: 2, comboDetonatePoison: 0.25 } },
   { id: 'r_chain_strike', name: '连锁打击', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'uncommon',
     description: '作为连击出牌时，对随机另一个敌人造成等于本骰子点数的独立伤害', onPlay: { comboSplashDamage: true } },
   { id: 'r_shadowstrike', name: '剔骨', element: 'normal', faces: [3,3,4,4,5,5], rarity: 'uncommon',
-    description: '连击次数越多伤害越高：每层连击使本次伤害翻2倍', onPlay: { comboScaleDamage: 2.0 } },
+    description: '连击次数越多伤害越高：每层连击使本次伤害+100%', onPlay: { comboScaleDamage: 2.0 } },
 
   // === Rare (6) ===
-  { id: 'r_venomfang', name: '毒王之牙', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'rare',
+  { id: 'r_venomfang', name: '毒王之牙', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '对目标施加毒层，层数为手牌中毒系骰子数量的3倍', onPlay: { poisonFromPoisonDice: 3 } },
   { id: 'r_tripleflash', name: '三连闪', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'rare',
     description: '作为第2次出牌时伤害提升60%；第3次及以上出牌时额外获得1次出牌机会', onPlay: { bonusMultOnSecondPlay: 1.6, grantPlayOnThird: true } },
@@ -283,7 +283,7 @@ const ROGUE_DICE: DiceDef[] = [
   // === Legendary (2) ===
   { id: 'r_deathtouch', name: '死神之触', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
     description: '作为本回合最后一次出牌时，引爆目标身上的全部负面状态为即时伤害', onPlay: { detonateAllOnLastPlay: true } },
-  { id: 'r_bladestorm', name: '影刃风暴', element: 'normal', faces: [1,1,2,2,3,3], rarity: 'legendary',
+  { id: 'r_bladestorm', name: '影刃风暴', element: 'normal', faces: [1,2,2,3,3,4], rarity: 'legendary',
     description: '本回合每出1次牌，后续伤害叠加提升40%，并补1颗暗影残骰到手牌', onPlay: { escalateDamage: 0.4, grantShadowDie: true } },
 ];
 

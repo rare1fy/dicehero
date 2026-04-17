@@ -207,30 +207,7 @@ export interface StatusEffect {
 // 遗物
 // ============================================================
 
-export type AugmentCategory = 'transition' | 'economy' | 'endgame' | 'normal_attack' | 'self_harm';
-
-export interface AugmentContext {
-  rerollsThisTurn?: number;
-  hpLostThisTurn?: number;
-  hpLostThisBattle?: number;
-  currentHp?: number;
-  maxHp?: number;
-  currentGold?: number;
-  enemiesKilledThisBattle?: number;
-  consecutiveNormalAttacks?: number;
-}
-
-export interface Augment {
-  id: string;
-  name: string;
-  level?: number;
-  category?: AugmentCategory;
-  condition: 'high_card' | 'pair' | 'two_pair' | 'n_of_a_kind' | 'full_house' | 'straight' | 'same_element' | 'element_count' | 'always' | 'passive';
-  conditionValue?: number;
-  conditionElement?: DiceElement;
-  effect: (x: number, dice: Die[], level: number, context?: AugmentContext) => { damage?: number; armor?: number; heal?: number; multiplier?: number; pierce?: number; goldBonus?: number; shopDiscount?: number; statusEffects?: StatusEffect[] };
-  description: string;
-}
+// [ARCH-4] Augment/AugmentCategory/AugmentContext 已删除 — 增幅模块系统已统一到遗物
 
 // ============================================================
 // 地图
@@ -268,7 +245,7 @@ export interface Enemy {
   /** 敌人描述（用于弹窗） */
   description?: string;
   dropGold: number;
-  dropAugment: boolean;
+  dropAugment: boolean;  // [ARCH-4] 保留字段但语义已变更：标记是否掉落遗物类奖励
   dropMaxPlays?: number;
   dropDiceCount?: number;
   rerollReward?: number;
@@ -285,10 +262,8 @@ export interface Enemy {
 
 export interface LootItem {
   id: string;
-  type: 'gold' | 'augment' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice' | 'diceChoice' | 'relic';
+  type: 'gold' | 'relic' | 'reroll' | 'maxPlays' | 'diceCount' | 'specialDice' | 'diceChoice';
   value?: number;
-  augment?: Augment;
-  augmentOptions?: Augment[];
   diceDefId?: string;
   collected: boolean;
   relicData?: Relic;
@@ -297,10 +272,10 @@ export interface LootItem {
 export type ChestTier = 'bronze' | 'silver' | 'gold';
 
 export interface ChestReward {
-  type: 'gold' | 'heal' | 'dice' | 'augment' | 'maxHp' | 'maxPlays' | 'removeDice' | 'reroll';
+  type: 'gold' | 'heal' | 'dice' | 'relic' | 'maxHp' | 'maxPlays' | 'removeDice' | 'reroll';
   value?: number;
   diceDefId?: string;
-  augment?: Augment;
+  relicData?: Relic;
   label: string;
   desc: string;
   rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
@@ -308,8 +283,9 @@ export interface ChestReward {
 
 export interface ShopItem {
   id: string;
-  type: 'augment' | 'reroll' | 'dice' | 'specialDice' | 'removeDice';
-  augment?: Augment;
+  type: 'relic' | 'augment' | 'reroll' | 'dice' | 'specialDice' | 'removeDice';
+  relicData?: Relic;
+  augment?: Relic;  // 遗物商品（历史命名 'augment' 实指 relic）
   diceDefId?: string;
   price: number;
   label: string;
@@ -386,13 +362,13 @@ export const INITIAL_STATS: RunStats = {
 // 游荡商人物品
 export interface MerchantItem {
   id: string;
-  type: 'dice' | 'augment' | 'heal' | 'reroll' | 'diceCount';
+  type: 'dice' | 'relic' | 'heal' | 'reroll' | 'diceCount';
   label: string;
   desc: string;
   price: number;
   bought: boolean;
   diceDefId?: string;
-  augment?: Augment;
+  relicData?: Relic;
   healAmount?: number;
   rerollAmount?: number;
 }
@@ -457,6 +433,7 @@ export interface RelicContext {
   isComboPlay?: boolean;           // 是否为连击出牌（暗影吸取用）
   targetPoisonStacks?: number;     // 目标毒层数（毒爆晶石用）
   playsThisTurn?: number;          // 本回合已出牌次数（连击本能用）
+  isBloodReroll?: boolean;         // 本次重投是否为卖血重投（黑市合同/血铸铠甲用）
 }
 
 export interface RelicEffect {
@@ -492,6 +469,30 @@ export interface RelicEffect {
   oncePerTurn?: boolean;         // 每回合只触发一次
   purifyDebuff?: number;         // 净化N个负面状态
 }
+
+// ============================================================
+// 被动遗物字段 Brand Type（ARCH-3 类型安全）
+// ============================================================
+
+/**
+ * 被动遗物特有的字段键名
+ *
+ * [RULES-A4] 这些字段只由 trigger: 'passive' 的遗物返回，
+ * 不依赖 RelicContext，可以在 sumPassiveRelicValue 中安全查询。
+ * 如果尝试用 sumPassiveRelicValue 查询不在此列表的字段，TypeScript 会报错。
+ */
+export type PassiveRelicKey =
+  | 'maxPointsUnlocked'      // limit_breaker: 骰子面值上限解除
+  | 'shopDiscount'           // merchant_compass: 商店折扣
+  | 'keepUnplayedOnce'       // fortune_wheel_relic: 保留未使用骰子
+  | 'straightUpgrade'        // dimension_crush: 顺子升级
+  | 'pairAsTriplet'          // unified_pair: 对子视为三条
+  | 'rerollPointBoost'       // chaos_face: 重投点数加成
+  | 'extraPlay'              // extra_play_relic: 额外出牌
+  | 'extraReroll'            // fate_coin: 额外重投
+  | 'normalElementChance'    // element_infuser: 普通骰子元素概率
+  | 'unlockBloodReroll';     // extra_free_reroll: 解锁卖血重投
+  // 注意：'extraDraw' 不是被动遗物字段，没有遗物返回此字段
 
 export interface Relic {
   id: string;
@@ -533,7 +534,6 @@ export interface GameState {
   drawCount: number;          // 每回合抽取数量
 
   handLevels: Record<string, number>;
-  augments: (Augment | null)[];
   relics: Relic[];                     // 遗物列表（无限制数量）
   elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
@@ -553,7 +553,6 @@ export interface GameState {
   enemyHpMultiplier: number;
   chapter: number;          // 当前大关 (1-5)
   stats: RunStats;
-  pendingReplacementAugment: Augment | null;
 
   // 黑市配额系统（塔科夫式溢出伤害提现）
   blackMarketQuota: number;           // 局内未撤离的黑市配额

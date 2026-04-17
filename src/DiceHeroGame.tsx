@@ -20,13 +20,17 @@ import { motion, AnimatePresence } from 'motion/react';
 // --- Modular Imports ---
 import type { Die, StatusEffect, Augment, MapNode, Enemy, LootItem, ShopItem, GameState , Relic } from './types/game';
 import { INITIAL_STATS } from './types/game';
-import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, DICE_BY_RARITY, getUpgradedOnPlay, getElementLevelBonus } from './data/dice';
+import { INITIAL_DICE_BAG, getDiceDef, rollDiceDef, getUpgradedOnPlay, getElementLevelBonus } from './data/dice';
 import { drawFromBag, initDiceBag } from './data/diceBag';
 import { DiceBagPanel, MiniDice } from './components/DiceBagPanel';
 import { ElementBadge, getOnPlayDescription } from './components/PixelDiceShapes';
 import { DiceFacePattern } from './components/DiceFacePattern';
 import { PixelDiceRenderer, hasPixelRenderer } from './components/PixelDiceRenderer';
-import { getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from './data/relics';
+import { ALL_RELICS } from './data/relics';
+import { hasRelic, hasLimitBreaker, hasBloodRerollRelic, getStraightUpgrade, hasOverflowConduit, hasSchrodingerBag, isHourglassReady, getHourglassCounter, getCompassCounter, getFloorsCleared, sumPassiveRelicValue, sumRelicValueByTrigger, hasFatalProtection } from './engine/relicQueries';
+import { resetCompassCounter, incrementCompassCounter, triggerHourglass, tickHourglass, incrementFloorsCleared, updateRelicCounter } from './engine/relicUpdates';
+import { buildRelicContext } from './engine/buildRelicContext';
+import { FURY_CONFIG } from './config/gameBalance';
 // augments import removed - unified into relics
 import { getEnemiesForNode } from './data/enemies';
 import { HAND_TYPES } from './data/handTypes';
@@ -35,12 +39,19 @@ import { playSound, playSettlementTick, playMultiplierTick, playHeavyImpact } fr
 import { checkHands, canFormValidHand, findHandCandidates } from './utils/handEvaluator';
 import { generateMap } from './utils/mapGenerator';
 import { generateChallenge, checkChallenge } from './utils/instakillChallenge';
+import { executeEnemyTurn } from './logic/enemyAI';
+import type { EnemyAICallbacks } from './logic/enemyAI';
+import { buildLootItems, resolvePostVictoryPhase, openChallengeChest } from './logic/lootHandler';
+import type { PostVictoryPhase } from './logic/lootHandler';
+import { processCollectLoot, processSelectLootAugment, processReplaceAugment, processFinishLoot } from './logic/lootProcessor';
 import { StatusIcon } from './components/StatusIcon';
 import { getAugmentIcon, getDiceElementClass, getHpBarClass, ELEMENT_NAMES, ELEMENT_COLORS } from './utils/uiHelpers';
 import { formatDescription } from './utils/richText';
 import { CSSParticles } from './components/ParticleEffects';
 import { isTutorialCompleted } from './components/TutorialOverlay';
 import { GameContext } from './contexts/GameContext';
+import { BattleContext } from './contexts/BattleContext';
+import type { BattleContextType } from './contexts/BattleContext';
 import { StartScreen } from './components/StartScreen';
 import { GlobalTopBar } from './components/GlobalTopBar';
 import { MapScreen } from './components/MapScreen';
@@ -56,16 +67,21 @@ import { getConditionInfo } from './components/AugmentCard';
 import { CollapsibleLog } from './components/CollapsibleLog';
 import { startBGM, stopBGM } from './utils/sound';
 import { PixelSprite, hasSpriteData } from './components/PixelSprite';
-import { PLAYER_INITIAL, SHOP_CONFIG, LOOT_CONFIG, CHAPTER_CONFIG } from './config';
+import { CHAPTER_CONFIG } from './config';
 import { applyDiceSpecialEffects } from './logic/diceEffects';
 import { createInitialGameState } from './logic/gameInit';
-import { COMBAT_TYPE_DESC } from './logic/battleHelpers';
+import { COMBAT_TYPE_DESC, getEffectiveAttackDmg } from './logic/battleHelpers';
+import { getRerollHpCost } from './logic/rerollCalc';
+import { generateShopItems } from './logic/shopGenerator';
+import { calculateSoulCrystalGain } from './logic/soulCrystalCalc';
+import type { KillData } from './logic/soulCrystalCalc';
+import { calculateExpectedOutcome, applyPendingSideEffects } from './logic/expectedOutcomeCalc';
 import { HandGuideModal } from './components/HandGuideModal';
+import CalcModal from './components/CalcModal';
 import { DiceGuideModal } from './components/DiceGuideModal';
 import { ChapterTransition } from './components/ChapterTransition';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ClassSelectScreen } from './components/ClassSelectScreen';
-import { ALL_RELICS } from './data/relics';
 
 const META_KEY = 'dicehero_meta';
 const loadMeta = () => {
@@ -86,75 +102,8 @@ import { ClassLeftHand, ClassRightHand } from './components/ClassHands';
 import { ClassInfoModal } from './components/ClassInfoModal';
 import { ClassIcon } from './components/ClassIcons';
 import { CLASS_DEFS, type ClassId } from './data/classes';
-
-
-
-// 遗物描述富文本高亮 — 只高亮触发条件关键词
-const RELIC_TRIGGER_PATTERN = /普通攻击|对子|连对|三条|四条|五条|六条|葫芦|顺子|同元素|元素顺|元素葫芦|皇家元素顺|击杀|重Roll|重投|致命伤害|受到伤害/g;
-
-function highlightRelicDesc(desc: string): React.ReactNode {
-  if (!desc) return desc;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  const regex = new RegExp(RELIC_TRIGGER_PATTERN.source, 'g');
-  while ((match = regex.exec(desc)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(desc.slice(lastIndex, match.index));
-    }
-    parts.push(
-      <span key={match.index} style={{ color: 'var(--pixel-gold)', fontWeight: 700 }}>
-        {match[0]}
-      </span>
-    );
-    lastIndex = regex.lastIndex;
-  }
-  if (lastIndex < desc.length) {
-    parts.push(desc.slice(lastIndex));
-  }
-  return parts.length > 1 ? <>{parts}</> : desc;
-}
-
-/** 自定义buff状态图标 — 支持点击显示tooltip说明（Portal渲染避免overflow裁切） */
-const BuffTooltip: React.FC<{
-  label: string; icon: React.ReactNode; color: string;
-  bgColor: string; borderColor: string; title: string; desc: string;
-}> = ({ label, icon, color, bgColor, borderColor, title, desc }) => {
-  const [show, setShow] = React.useState(false);
-  const triggerRef = React.useRef<HTMLDivElement>(null);
-  const [pos, setPos] = React.useState<{top: number; left: number} | null>(null);
-
-  React.useEffect(() => {
-    if (show && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.top - 4, left: rect.left });
-    }
-  }, [show]);
-
-  return (
-    <div className="relative" ref={triggerRef} onClick={() => setShow(!show)} onMouseLeave={() => setShow(false)}>
-      <div className="flex items-center gap-0.5 px-1 py-0.5 cursor-help" style={{ background: bgColor, border: `1px solid ${borderColor}`, borderRadius: '2px' }}>
-        {icon}
-        <span className="text-[9px] font-bold font-mono pixel-text-shadow" style={{ color }}>{label}</span>
-      </div>
-      {show && pos && ReactDOM.createPortal(
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-          className="fixed w-44 p-2 pixel-panel z-[9999]"
-          style={{ top: pos.top, left: Math.max(4, Math.min(pos.left, window.innerWidth - 180)), transform: 'translateY(-100%)' }}
-          onClick={() => setShow(false)}
-        >
-          <div className="text-[10px] font-bold mb-1 flex items-center gap-1 pixel-text-shadow" style={{ color }}>
-            {icon} {title}
-          </div>
-          <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-relaxed">{desc}</div>
-          <div className="absolute top-full left-4 border-[5px] border-transparent border-t-[var(--dungeon-panel-border)]" />
-        </motion.div>,
-        document.body
-      )}
-    </div>
-  );
-};
+import { highlightRelicDesc } from './utils/highlightRelic';
+import BuffTooltip from './components/BuffTooltip';
 
 export default function DiceHeroGame() {
   const [game, setGame] = useState<GameState>(createInitialGameState);
@@ -280,7 +229,7 @@ export default function DiceHeroGame() {
 
   const [enemyEffects, setEnemyEffects] = useState<Record<string, 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | null>>({});
   const [_dyingEnemies, setDyingEnemies] = useState<Set<string>>(new Set());
-  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
+  const setEnemyEffectForUid = (uid: string, effect: 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | 'hit' | 'debuff' | null) => setEnemyEffects(prev => ({ ...prev, [uid]: effect }));
 
   const [playerEffect, setPlayerEffect] = useState<'attack' | 'defend' | 'flash' | null>(null);
   const [enemyInfoTarget, setEnemyInfoTarget] = useState<string | null>(null);
@@ -507,8 +456,8 @@ export default function DiceHeroGame() {
       targetEnemyUid: (firstWave.find(e => e.combatType === 'guardian') || firstWave[0])?.uid || null,
       diceBag: initDiceBag(prev.ownedDice),
       discardPile: [], // 新战斗开始时清空所有状态效果
-      freeRerollsLeft: prev.freeRerollsPerTurn + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0),
-      playsLeft: prev.maxPlays + prev.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraPlay || 0), 0),
+      freeRerollsLeft: prev.freeRerollsPerTurn + sumPassiveRelicValue(prev.relics, 'extraReroll'),
+      playsLeft: prev.maxPlays + sumPassiveRelicValue(prev.relics, 'extraPlay'),
       isEnemyTurn: false,
       instakillChallenge: battleChallenge,
       instakillCompleted: false,
@@ -517,7 +466,8 @@ export default function DiceHeroGame() {
     }));
     // 直接用新bag抽取（避免闭包旧值问题）
     const freshBag = initDiceBag(game.ownedDice);
-    const drawCountBonus = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
+    // 被动遗物额外抽骰加成（目前没有遗物返回此字段，保留接口以备扩展）
+    const drawCountBonus = 0;
     // 战士：血量≤50%时手牌上限+1（进入战斗时也立即生效）
     const startWarriorBonus = (game.playerClass === 'warrior' && game.hp <= game.maxHp * 0.5) ? 1 : 0;
     if (startWarriorBonus > 0) {
@@ -536,14 +486,14 @@ export default function DiceHeroGame() {
         const def = getDiceDef(d.diceDefId);
         const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
         const randElem = def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : d.element;
-        return { ...d, value: rollDiceDef(def), element: randElem as any };
+        const boost = sumPassiveRelicValue(game.relics, 'rerollPointBoost'); return { ...d, value: Math.min(9, rollDiceDef(def) + boost), element: randElem as any };
       }));
       if (f === 3) playSound('reroll');
     setGame(prev => ({ ...prev, stats: { ...prev.stats, totalRerolls: prev.stats.totalRerolls + 1 } }));
     }
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     // 元素骰子坍缩 + 小丑骰子1-9随机
-    setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') , lockedElement: game.lockedElement }));
+    setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: hasLimitBreaker(game.relics) , lockedElement: game.lockedElement }));
     playSound('dice_lock');
     await new Promise(r => setTimeout(r, 200));
     setDice(prev => [...prev]);
@@ -572,17 +522,18 @@ export default function DiceHeroGame() {
           addToast(`导航罗盘: 3步已满，下次出牌+8伤害+5护甲！`, 'buff');
           setGame(prev => ({
             ...prev,
-            relics: prev.relics.map(r => r.id === 'navigator_compass' ? { ...r, counter: 0 } : r),
+            relics: resetCompassCounter(prev.relics),
           }));
         } else {
           setGame(prev => ({
             ...prev,
-            relics: prev.relics.map(r => r.id === 'navigator_compass' ? { ...r, counter: newCounter } : r),
+            relics: updateRelicCounter(prev.relics, 'navigator_compass', newCounter),
           }));
         }
         return;
       }
-      const res = relic.effect({});
+      const moveCtx = buildRelicContext({ game, dice, targetEnemy: null, rerollsThisTurn: 0, hasPlayedThisTurn: false });
+      const res = relic.effect(moveCtx);
       if (res.goldBonus) {
         moveGoldBonus += res.goldBonus;
       }
@@ -594,7 +545,7 @@ export default function DiceHeroGame() {
     // --- Relic counter: 急救沙漏 CD 减1 ---
     setGame(prev => ({
       ...prev,
-      relics: prev.relics.map(r => r.id === 'emergency_hourglass' && (r.counter || 0) > 0 ? { ...r, counter: (r.counter || 0) - 1 } : r),
+      relics: tickHourglass(prev.relics),
     }));
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
       if (node.depth === 0) {
@@ -611,43 +562,8 @@ export default function DiceHeroGame() {
       setCampfireView('main');
       setGame(prev => ({ ...prev, phase: 'campfire', currentNodeId: node.id }));
     } else if (node.type === 'merchant') {
-      // 游荡商人：随机3个商品，价格随机
-      const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
-      const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
-      // 构建候选商品池
-      const candidateItems: ShopItem[] = [];
-      // 候选：遗物
-      const shuffledRelics = pickRandomRelics([...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare], 3, game.relics.map(r => r.id));
-      for (const shopRelic of shuffledRelics) {
-        candidateItems.push({
-          id: 'relic_' + shopRelic.id, type: 'augment' as const, augment: { ...shopRelic, condition: 'passive' as any } as any,
-          label: shopRelic.name, desc: shopRelic.description, price: randPrice()
-        });
-      }
-      // 候选：骰子
-      const shuffledDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
-      for (const d of shuffledDice.slice(0, 2)) {
-        candidateItems.push({
-          id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id,
-          label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']',
-          price: d.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10
-        });
-      }
-      // 候选：重掷强化
-      candidateItems.push({
-        id: 'reroll_' + Math.random().toString(36).slice(2, 6), type: 'reroll' as const,
-        label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: randPrice()
-      });
-      // 从候选池随机抽3个
-      const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
-      // 始终添加删除骰子选项，价格随机
-      const [rmMin, rmMax] = SHOP_CONFIG.priceRange;
-      const removeDicePrice = Math.floor(Math.random() * (rmMax - rmMin + 1)) + rmMin;
-      shopItems.push({
-        id: 'removeDice_fixed', type: 'removeDice' as const,
-        label: '骰子净化', desc: '移除一颗骰子，瘦身构筑',
-        price: removeDicePrice
-      });
+      // 游荡商人：随机3个商品（使用 shopGenerator 纯函数）
+      const shopItems = generateShopItems(game.relics.map(r => r.id));
       setGame(prev => ({ ...prev, phase: 'merchant', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'treasure') {
       // Treasure: chest-only mode
@@ -682,7 +598,8 @@ export default function DiceHeroGame() {
     // 法师正常回合不丢弃未用骰子(保留在keptDice中); 但波次切换(forceResetHand)时必须丢回弃骰库
     const handDefIds = (g.playerClass === 'mage' && !forceResetHand ? [] : dice.filter(d => !d.spent && !d.isTemp && d.diceDefId !== 'temp_rogue')).map(d => d.diceDefId);
     const currentDiscard = [...g.discardPile, ...handDefIds];
-    const relicDrawBonus = g.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => { const eff = r.effect({}); return sum + (eff.drawCountBonus || 0) + (eff.extraDraw || 0); }, 0);
+    // 被动遗物额外抽骰加成（目前没有遗物返回此字段，保留接口以备扩展）
+    const relicDrawBonus = 0;
     
     // 法师：手牌上限 = drawCount + chargeStacks（硬顶6）；波次切换时 forceResetHand=true 强制chargeStacks=0
     const chargeStacks = forceResetHand ? 0 : (g.chargeStacks || 0);
@@ -746,29 +663,15 @@ export default function DiceHeroGame() {
     // 落定 — 使用预先抽取的结果
     setDice(prev => prev.map(d => ({ ...d, rolling: false })));
     // 元素骰子坍缩 + 小丑骰子1-9随机（每回合刷新）
-    setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') , lockedElement: game.lockedElement }));
+    setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: hasLimitBreaker(game.relics) , lockedElement: game.lockedElement }));
     playSound('dice_lock');
     addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
   };
 
-  // Calculate reroll HP cost: first N rerolls free, then 2, 4, 8, 16...
-  // 非战士职业：超过免费次数后不允许重投（不再嗜血）
-  const getRerollHpCost = (count: number): number => {
-    const extraFreeRerolls = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
-    const freeCount = (game.freeRerollsPerTurn || 1) + extraFreeRerolls;
-    if (count < freeCount) return 0;
-    // 嗜血骰袋遗物：非战士也能嗜血（代价2倍）
-    const hasBloodRerollRelic = game.relics.some(r => r.id === 'extra_free_reroll');
-    if (game.playerClass !== 'warrior' && !hasBloodRerollRelic) return -1;
-    const paidIndex = count - freeCount;
-    // 嗜血代价：当前最大HP × 2^n%（第1次2%, 2次4%, 3次8%...）
-    const baseCost = Math.ceil(game.maxHp * Math.pow(2, paidIndex + 1) / 100);
-    return game.playerClass !== 'warrior' ? baseCost * 2 : baseCost; // 非战士代价翻倍
-  };
-  const currentRerollCost = getRerollHpCost(rerollCount);
+  const currentRerollCost = getRerollHpCost(rerollCount, game.relics, game.freeRerollsPerTurn || 1, game.maxHp, game.playerClass || 'warrior');
   const canReroll = currentRerollCost !== -1; // 非战士免费次数用完后不可重投
   const canAffordReroll = canReroll && (currentRerollCost <= 0 || game.hp > currentRerollCost);
-  const extraFreeRerollsForDisplay = game.relics.filter(r => r.trigger === 'passive').reduce((sum, r) => sum + (r.effect({}).extraReroll || 0), 0);
+  const extraFreeRerollsForDisplay = sumPassiveRelicValue(game.relics, 'extraReroll');
   const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) + extraFreeRerollsForDisplay - rerollCount);
 
   const rerollSelected = async () => {
@@ -782,7 +685,7 @@ export default function DiceHeroGame() {
     }
 
     // Check HP cost
-    let hpCost = getRerollHpCost(rerollCount);
+    let hpCost = getRerollHpCost(rerollCount, game.relics, game.freeRerollsPerTurn || 1, game.maxHp, game.playerClass || 'warrior');
     if (hpCost === -1) {
       addToast('免费重投次数已用完', 'info');
       return;
@@ -797,36 +700,60 @@ export default function DiceHeroGame() {
       return;
     }
 
-    // Apply HP cost + 战士血怒叠加
-    if (hpCost > 0) {
-      const diceValueSum = toReroll.reduce((sum, d) => sum + d.value, 0);
+    // === on_reroll 遗物触发（统一走 buildRelicContext）===
+    const isBloodReroll = hpCost > 0; // 诅咒翻倍只放大非零代价，不会让免费变付费
+    const rerollCtx = buildRelicContext({
+      game, dice, targetEnemy: enemies.find(e => e.hp > 0) || null,
+      rerollsThisTurn: rerollCount, hasPlayedThisTurn: game.playsLeft < game.maxPlays,
+      isBloodReroll,
+    });
+    let onRerollGoldBonus = 0;
+    let onRerollArmor = 0;
+    game.relics.filter(r => r.trigger === 'on_reroll').forEach(r => {
+      const res = r.effect(rerollCtx);
+      // oncePerTurn 守卫：按遗物 ID 追踪，避免硬耦合 blackMarketUsedThisTurn
+      if (r.id === 'black_market_contract' && game.blackMarketUsedThisTurn) return;
+      if (res.goldBonus) onRerollGoldBonus += res.goldBonus;
+      if (res.armor) onRerollArmor += res.armor;
+    });
+
+    // Apply HP cost + 战士血怒叠加（5层封顶，叠满后+5护甲）
+    if (isBloodReroll) {
+      const currentFuryStacks = game.bloodRerollCount || 0;
+      const atCap = currentFuryStacks >= FURY_CONFIG.maxStack;
+      // 叠满后额外护甲
+      const capArmor = atCap ? FURY_CONFIG.armorAtCap : 0;
       setGame(prev => {
-        let goldBonus = 0;
-        prev.relics.filter(r => r.trigger === 'on_reroll').forEach(relic => {
-          const res = relic.effect({ hpLostThisTurn: hpCost, diceValue: diceValueSum });
-          // 每回合一次限制：检查 oncePerTurn 标记
-          if (res.oncePerTurn && (prev.blackMarketUsedThisTurn)) return;
-          if (res.goldBonus) goldBonus += res.goldBonus;
-        });
-        // 战士【血怒战意】：嗜血次数+1，用于伤害计算
-        const newBloodRerolls = (prev.bloodRerollCount || 0) + 1;
-        return { ...prev, hp: prev.hp - hpCost, bloodRerollCount: newBloodRerolls, souls: prev.souls + goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldBonus }, blackMarketUsedThisTurn: goldBonus > 0 ? true : prev.blackMarketUsedThisTurn };
+        const newBloodRerolls = Math.min((prev.bloodRerollCount || 0) + 1, FURY_CONFIG.maxStack);
+        return { ...prev, hp: prev.hp - hpCost, bloodRerollCount: newBloodRerolls, souls: prev.souls + onRerollGoldBonus, armor: prev.armor + onRerollArmor + capArmor, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + onRerollGoldBonus }, blackMarketUsedThisTurn: onRerollGoldBonus > 0 ? true : prev.blackMarketUsedThisTurn };
       });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
-      // 显示血怒当次加成
-      addFloatingText(`血怒+15%`, 'text-orange-400', undefined, 'player');
-      const rerollGoldBonus = (() => {
-        if (game.blackMarketUsedThisTurn) return 0; // 已触发过
-        return game.relics.filter(r => r.trigger === 'on_reroll').reduce((sum, relic) => {
-          const res = relic.effect({ hpLostThisTurn: hpCost, diceValue: diceValueSum });
-          if (res.oncePerTurn && game.blackMarketUsedThisTurn) return sum;
-          return sum + (res.goldBonus || 0);
-        }, 0);
-      })();
-      if (rerollGoldBonus > 0) {
-        setTimeout(() => addFloatingText(`+${rerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
+      if (atCap) {
+        addFloatingText(`血怒已满→+${FURY_CONFIG.armorAtCap}护甲`, 'text-blue-400', undefined, 'player');
+      } else {
+        addFloatingText(`血怒+${Math.round(FURY_CONFIG.damagePerStack * 100)}%`, 'text-orange-400', undefined, 'player');
       }
-      addLog(`嗜血消耗 ${hpCost} HP（血怒+${((game.bloodRerollCount || 0) + 1) * 15}%伤害）`);
+      if (onRerollGoldBonus > 0) {
+        setTimeout(() => addFloatingText(`+${onRerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
+      }
+      if (onRerollArmor > 0) {
+        addFloatingText(`+${onRerollArmor}护甲`, 'text-blue-400', undefined, 'player');
+      }
+      const displayStacks = Math.min(currentFuryStacks + 1, FURY_CONFIG.maxStack);
+      addLog(`嗜血消耗 ${hpCost} HP（血怒${displayStacks}/${FURY_CONFIG.maxStack}层，+${Math.round(displayStacks * FURY_CONFIG.damagePerStack * 100)}%伤害）`);
+    } else {
+      // 免费重投：应用遗物效果（卖血专属遗物已通过 isBloodReroll 在 effect 内过滤）
+      if (onRerollArmor > 0 || onRerollGoldBonus > 0) {
+        setGame(prev => ({
+          ...prev,
+          armor: prev.armor + onRerollArmor,
+          souls: prev.souls + onRerollGoldBonus,
+          stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + onRerollGoldBonus },
+          blackMarketUsedThisTurn: onRerollGoldBonus > 0 ? true : prev.blackMarketUsedThisTurn,
+        }));
+        if (onRerollArmor > 0) addFloatingText(`+${onRerollArmor}护甲`, 'text-blue-400', undefined, 'player');
+        if (onRerollGoldBonus > 0) addFloatingText(`+${onRerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player');
+      }
     }
     
     playSound('roll');
@@ -847,9 +774,10 @@ export default function DiceHeroGame() {
       }));
     }
 
-    // 落定：将选中骰子弃置，从骰子库抽新的替换（临时骰子只重投点数，不从库抽替换）
-    const tempRerollIds = new Set(toReroll.filter(d => d.isTemp).map(d => d.id));
-    const normalRerollDefIds = toReroll.filter(d => !d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.diceDefId);
+    // 落定：将选中骰子弃置，从骰子库抽新的替换
+    // 暗影残骰(temp_rogue)被重投时走正常骰子逻辑：进弃骰库 + 从骰子库抽替换
+    const tempRerollIds = new Set(toReroll.filter(d => d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.id));
+    const normalRerollDefIds = toReroll.filter(d => !d.isTemp || d.diceDefId === 'temp_rogue').map(d => d.diceDefId);
 
     setGame(prev => {
       const newDiscard = [...prev.discardPile, ...normalRerollDefIds];
@@ -869,7 +797,8 @@ export default function DiceHeroGame() {
             // 临时骰子：只重投点数，保持isTemp和diceDefId
             if (tempRerollIds.has(d.id)) {
               const def = getDiceDef(d.diceDefId);
-              return { ...d, value: rollDiceDef(def), rolling: false, selected: false };
+              const boost = sumPassiveRelicValue(game.relics, 'rerollPointBoost');
+              return { ...d, value: Math.min(9, rollDiceDef(def) + boost), rolling: false, selected: false };
             }
             // 普通骰子：从库抽新的替换
             if (drawIdx < drawn.length) {
@@ -879,7 +808,7 @@ export default function DiceHeroGame() {
             }
             return { ...d, rolling: false, selected: false };
           });
-          const result = applyDiceSpecialEffects(newDice, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') , lockedElement: game.lockedElement });
+          const result = applyDiceSpecialEffects(newDice, { hasLimitBreaker: hasLimitBreaker(game.relics) , lockedElement: game.lockedElement });
           addLog(`重掷结果: ${result.filter(nd => rerollIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
           return result;
         });
@@ -897,21 +826,14 @@ export default function DiceHeroGame() {
     // Safety: ensure no dice stuck in rolling state
     setDice(prev => prev.map(d => d.rolling ? { ...d, rolling: false } : d));
     // 狂掷风暴：10%概率不消耗免费重投次数（仅免费重投时可触发，嗜血不触发）
-    const freeChance = game.relics.filter(r => r.trigger === 'on_reroll').reduce((c, r) => c + (r.effect({}).freeRerollChance || 0), 0);
-    const isFreeReroll = (getRerollHpCost(rerollCount) <= 0);
+    // freeRerollChance 是 on_reroll 遗物的被动属性，通过 sumRelicValueByTrigger 查询
+    const freeChance = sumRelicValueByTrigger(game.relics, 'on_reroll', 'freeRerollChance');
+    const isFreeReroll = (getRerollHpCost(rerollCount, game.relics, game.freeRerollsPerTurn || 1, game.maxHp, game.playerClass || 'warrior') <= 0);
     if (freeChance > 0 && isFreeReroll && Math.random() < freeChance) {
       addFloatingText('幸运！免费次数保留', 'text-yellow-300', undefined, 'player');
     } else {
       setRerollCount(prev => prev + 1);
     }
-    // 血铸铠甲：on_reroll 给护甲
-    game.relics.filter(r => r.trigger === 'on_reroll').forEach(relic => {
-      const res = relic.effect({});
-      if (res.armor) {
-        setGame(prev => ({ ...prev, armor: prev.armor + res.armor }));
-        addFloatingText(`+${res.armor}护甲`, 'text-blue-400', undefined, 'player');
-      }
-    });
     // 追踪本波重投次数（洞察弱点用）
     setGame(prev => ({
       ...prev, rerollsThisWave: (prev.rerollsThisWave || 0) + 1
@@ -945,7 +867,7 @@ export default function DiceHeroGame() {
           return def.element !== 'normal' || !!def.onPlay;
         });
         if (hasSpecial) {
-          const handResult = checkHands(newSelected, { straightUpgrade: game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0 });
+          const handResult = checkHands(newSelected, { straightUpgrade: getStraightUpgrade(game.relics) });
           if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
             setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
           }
@@ -957,7 +879,7 @@ export default function DiceHeroGame() {
 
   // 降维打击遗物：顺子所需骰子数-1
   const straightUpgrade = useMemo(() => {
-    return game.relics.some(r => r.id === 'dimension_crush') ? 1 : 0;
+    return getStraightUpgrade(game.relics);
   }, [game.relics]);
 
   const currentHands = useMemo(() => {
@@ -1042,716 +964,28 @@ export default function DiceHeroGame() {
   const expectedOutcome = useMemo(() => {
     const selected = dice.filter(d => d.selected && !d.spent);
     const { bestHand, allHands: _allHands, activeHands } = currentHands;
-    if (selected.length === 0) return null;
-
-    const X = selected.reduce((sum, d) => sum + d.value, 0);
-    let baseDamage = 0;
-    let baseArmor = 0;
-    let handMultiplier = 1;
-    let baseHandValue = 0;
-    let statusEffects: StatusEffect[] = [];
-
-    activeHands.forEach(handName => {
-      const handDef = HAND_TYPES.find(h => h.name === handName);
-      if (handDef) {
-        const level = game.handLevels[handName] || 1;
-        const levelBonusMult = (level - 1) * 0.3;
-        // base已移除，纯倍率体系
-        handMultiplier += (((handDef as any).mult || 1) - 1) + levelBonusMult;
-      }
-
-      switch (handName) {
-        case '普通攻击': break;
-        case '对子': break;
-        case '顺子': break; // 3顺 AOE
-        case '连对': baseArmor += 5; break;
-        case '三连对': baseArmor += 8; break;
-        case '三条': statusEffects.push({ type: 'vulnerable', value: 1, duration: 2 }); break; // 1层易伤
-        case '4顺': statusEffects.push({ type: 'weak', value: 1, duration: 2 }); break; // AOE + 1层虚弱
-        case '同元素': break; // 骰子效果x2在后面处理
-        case '葫芦': baseArmor += 15; break; // 纯防御
-        case '5顺': statusEffects.push({ type: 'weak', value: 2, duration: 2 }); break; // AOE + 2层虚弱
-        case '四条': statusEffects.push({ type: 'vulnerable', value: 2, duration: 2 }); break; // 2层易伤
-        case '6顺': baseArmor += 10; statusEffects.push({ type: 'weak', value: 3, duration: 2 }); break; // AOE + 3层虚弱 + 10护甲
-        case '元素顺': break; // AOE + 骰子效果x2
-        case '元素葫芦': baseArmor += 25; break; // 骰子效果x2 + 25护甲
-        case '五条': statusEffects.push({ type: 'vulnerable', value: 3, duration: 2 }); break; // 3层易伤
-        case '六条': statusEffects.push({ type: 'vulnerable', value: 5, duration: 3 }); break; // 5层易伤
-        case '皇家元素顺': baseArmor += 50; break; // AOE + 骰子效果x3 + 50护甲
-      }
-    });
-
-    baseDamage = Math.floor(X * handMultiplier);
-
-    if (activeHands.some((h: string) => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h))) {
-      baseArmor += baseDamage;
-    }
-
-    let extraDamage = 0;
-    let extraArmor = 0;
-    let extraHeal = 0;
-    let holyPurify = 0; // 净化debuff数量（0=不净化）
-    let pierceDamage = 0;
-    let armorBreak = false;
-    let multiplier = 1;
-    let goldBonus = 0;
-    const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number, relicId?: string, icon?: string }[] = [];
-
-    activeAugments.forEach(aug => {
-      const res = aug.effect(X, selected, aug.level || 1, { rerollsThisTurn: rerollCount, currentHp: game.hp, maxHp: game.maxHp, currentGold: game.souls });
-      const details: string[] = [];
-
-      if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
-      if (res.armor) { extraArmor += res.armor; details.push(`护甲+${res.armor}`); }
-      if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
-      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率${Math.round(res.multiplier * 100)}%`); }
-      if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`\u91D1\u5E01+${res.goldBonus}`); }
-      if (res.statusEffects) {
-        res.statusEffects.forEach(s => {
-          const existing = statusEffects.find(es => es.type === s.type);
-          if (existing) {
-            existing.value += s.value;
-          } else {
-            statusEffects.push({ ...s });
-          }
-          const info = STATUS_INFO[s.type];
-          details.push(`${info.label}+${s.value}`);
-        });
-      }
-
-      if (details.length > 0) {
-        triggeredAugments.push({ name: aug.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined });
-      }
-    });
-
-    // --- Relic on_play effects ---
-    game.relics.filter(r => r.trigger === 'on_play').forEach(relic => {
-      // counter 机制（铁血战旗等计数型遗物）
-      if (relic.maxCounter !== undefined) {
-        const currentCounter = game.relics.find(r2 => r2.id === relic.id)?.counter || 0;
-        const newCounter = currentCounter + 1;
-        if (newCounter < relic.maxCounter) {
-          setGame(prev => ({ ...prev, relics: prev.relics.map(r => r.id === relic.id ? { ...r, counter: newCounter } : r) }));
-          return; // 未到触发条件，跳过
-        }
-        // 达到触发条件，重置counter
-        setGame(prev => ({ ...prev, relics: prev.relics.map(r => r.id === relic.id ? { ...r, counter: 0 } : r) }));
-      }
-      const relicCtx = {
-        handType: bestHand,
-        diceCount: selected.length,
-        diceValues: selected.map(d => d.value),
-        diceDefIds: selected.map(d => d.diceDefId),
-        pointSum: X,
-        loadedDiceCount: selected.filter(d => getDiceDef(d.diceDefId).id === 'heavy').length,
-        rerollsThisTurn: rerollCount,
-        currentHp: game.hp,
-        maxHp: game.maxHp,
-        hasSplitDice: selected.some(d => getDiceDef(d.diceDefId).id === 'split'),
-        splitDiceValue: selected.find(d => getDiceDef(d.diceDefId).id === 'split')?.value || 0,
-        elementsUsedThisBattle: new Set(game.elementsUsedThisBattle || []),
-        hasSpecialDice: selected.some(d => !['standard', 'heavy'].includes(getDiceDef(d.diceDefId).id)),
-        consecutiveNormalAttacks: game.consecutiveNormalAttacks || 0,
-        enemiesKilledThisBattle: game.enemiesKilledThisBattle || 0,
-        hpLostThisBattle: game.hpLostThisBattle || 0,
-        hpLostThisTurn: game.hpLostThisTurn || 0,
-        currentDepth: game.map.find(n => n.id === game.currentNodeId)?.depth || 0,
-        floorsCleared: game.relics.find(r => r.id === 'floor_conqueror')?.counter || 0,
-      };
-      const res = relic.effect(relicCtx);
-      const details = [];
-      if (res.damage) { extraDamage += res.damage; details.push(`伤害+${res.damage}`); }
-      if (res.armor) { extraArmor += res.armor; details.push(`护甲+${res.armor}`); }
-      if (res.heal) { extraHeal += res.heal; details.push(`回复+${res.heal}`); }
-      if (res.multiplier && res.multiplier !== 1) { multiplier *= res.multiplier; details.push(`倍率${Math.round(res.multiplier * 100)}%`); }
-      if (res.pierce) { pierceDamage += res.pierce; details.push(`穿透+${res.pierce}`); }
-      if (res.goldBonus) { goldBonus += res.goldBonus; details.push(`金币+${res.goldBonus}`); }
-      if (res.goldBonus) { /* toast will be shown in playHand */ }
-      // 净化效果：移除玩家负面状态
-      if (res.purifyDebuff) {
-        holyPurify += (typeof res.purifyDebuff === 'number' ? res.purifyDebuff : 1);
-        details.push('净化');
-      }
-      // 魔法手套：下回合临时+1手牌
-      if (res.tempDrawBonus) {
-        setGame(prev => ({ ...prev, relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + res.tempDrawBonus }));
-        details.push('下回合+1手牌');
-      }
-      // 铁血战旗/磨砺石：额外出牌机会
-      if (res.grantExtraPlay) {
-        setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + res.grantExtraPlay }));
-        details.push(`+${res.grantExtraPlay}出牌`);
-      }
-      // 稳健之心/连击本能：免费重投
-      if (res.grantFreeReroll) {
-        setRerollCount(prev => Math.max(0, prev - res.grantFreeReroll));
-        details.push(`+${res.grantFreeReroll}免费重投`);
-      }
-      // 血之契约：保留最高点骰子
-      if (res.keepHighestDie) {
-        setGame(prev => ({ ...prev, relicKeepHighest: (prev.relicKeepHighest || 0) + res.keepHighestDie }));
-        details.push('保留最高点骰子');
-      }
-      if (details.length > 0) {
-        triggeredAugments.push({ name: relic.name, details: details.join(', '), rawDamage: (res.damage || 0) + (res.pierce || 0), rawMult: res.multiplier && res.multiplier !== 1 ? res.multiplier : undefined, relicId: relic.id, icon: relic.icon });
-      }
-    });
-
-    // --- Relic rageFireBonus: 怒火燎原累积伤害消费 ---
-    if ((game.rageFireBonus || 0) > 0) {
-      extraDamage += game.rageFireBonus!;
-      triggeredAugments.push({ name: '怒火燎原', details: `伤害+${game.rageFireBonus}`, rawDamage: game.rageFireBonus!, relicId: 'rage_fire_relic', icon: 'blade' });
-      setGame(prev => ({ ...prev, rageFireBonus: 0 }));
-    }
-
-    // --- Dice onPlay effects ---
-    // 多选普通攻击时，特殊骰子当普通骰子，跳过所有onPlay效果
-    const skipOnPlay = selected.length > 1 && activeHands.includes('普通攻击') && activeHands.length === 1;
-    // 同元素牌型时，骰子效果翻倍（同元素大奖励核心机制）
-    const isSameElementHand = activeHands.some((h: string) => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h));
-    const isRoyalElement = activeHands.some((h) => h === '皇家元素顺');
-    const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0); // 同元素时效果×2
-    
-    // unifyElement (元素风暴): 出牌时将所有选中骰子强制变为同一随机元素
-    const hasUnify = selected.some(d => getDiceDef(d.diceDefId).onPlay?.unifyElement);
-    const unifiedElement = hasUnify && !skipOnPlay ? (['fire', 'ice', 'thunder', 'poison', 'holy'] as const)[Math.floor(Math.random() * 5)] : null;
-
-    selected.forEach(d => {
-      if (skipOnPlay) return;
-      const def = getDiceDef(d.diceDefId);
-      const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
-      const levelBonus = getElementLevelBonus(diceLevel);
-      const totalElementBonus = elementBonus * levelBonus;
-      
-      // 元素骰子：根据坍缩后的元素产生不同效果（元素风暴时使用统一元素）
-      const activeElement = unifiedElement || d.collapsedElement;
-      if (def.isElemental && activeElement) {
-        const diceValue = d.value;
-        switch (activeElement) {
-          case 'fire':
-            // 火：摧毁敌人所有护甲 + 基于点数的真实伤害 + 点数灼烧
-            pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
-            armorBreak = true;
-            statusEffects.push({ type: 'burn', value: diceValue });
-            break;
-          case 'ice':
-            // 冰：冻结1回合，点数结算减半
-            // 检查目标是否有冰冻免疫
-            if (!targetEnemy?.statuses?.some(s => (s.type as string) === 'freeze_immune')) {
-              statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
-            }
-            // 冰元素点数减半已在baseDamage计算前处理
-            break;
-          case 'thunder':
-            // 雷：对其他敌人造成等量穿透伤害（AOE标记）
-            pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
-            break;
-          case 'poison':
-            // 毒：叠加毒层，跨回合持续掉血
-            const poisonStacks = Math.floor((diceValue + 2) * totalElementBonus);
-            const existingPoison = statusEffects.find(es => es.type === 'poison');
-            if (existingPoison) existingPoison.value += poisonStacks;
-            else statusEffects.push({ type: 'poison', value: poisonStacks });
-            break;
-          case 'holy':
-            // 圣光：恢复等同点数的生命值
-            extraHeal += Math.floor(diceValue * elementBonus);
-            // 标记需要圣光净化（副作用延迟到 playHand 中执行）
-            holyPurify += 1;
-            break;
-        }
-        return; // 元素骰子不走普通onPlay
-      }
-      
-      // 碎裂骰子：反噬伤害（固定值）— 血量不足时跳过自伤
-      if (def.onPlay?.selfDamage) {
-        if (game.hp + extraHeal > def.onPlay.selfDamage) {
-          extraHeal -= def.onPlay.selfDamage;
-        }
-      }
-      
-      if (!def.onPlay) return;
-      const upgradedOp = getUpgradedOnPlay(def, diceLevel);
-      const op = upgradedOp || def.onPlay;
-      const depthDmgBonus = 1 + Math.floor((game.depth || 0) / 3) * 0.15;
-      const depthMultBonus = Math.floor((game.depth || 0) / 5) * 0.05;
-      
-      // === 基础效果（已有） ===
-      if (op.bonusDamage && !op.firstPlayOnly && !op.requiresTriple) {
-        extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
-      }
-      if (op.bonusMult && !op.requiresCharge) multiplier *= (1 + (op.bonusMult - 1 + depthMultBonus) * elementBonus);
-      if (op.heal) extraHeal += Math.floor(op.heal * elementBonus);
-      if (op.pierce) pierceDamage += Math.floor(op.pierce * elementBonus);
-      if (op.statusToEnemy) {
-        const boostedValue = Math.floor(op.statusToEnemy.value * elementBonus);
-        const existing = statusEffects.find(es => es.type === op.statusToEnemy!.type);
-        if (existing) { existing.value += boostedValue; }
-        else { statusEffects.push({ ...op.statusToEnemy, value: boostedValue }); }
-      }
-      
-      // === 战士效果 ===
-      // 自伤（百分比HP）— 血量不足时跳过自伤
-      if (op.selfDamagePercent) {
-        const selfDmg = Math.ceil(game.maxHp * op.selfDamagePercent);
-        if (game.hp + extraHeal > selfDmg) {
-          extraHeal -= selfDmg;
-        }
-      }
-      // 固定护甲
-      if (op.armor) {
-        extraArmor += op.armor;
-      }
-      // 护甲=骰子点数（荆棘骰子）
-      if (op.armorFromValue) {
-        extraArmor += d.value;
-      }
-      // 护甲=选中骰子总点数（巨人护盾）
-      if (op.armorFromTotalPoints) {
-        extraArmor += selected.reduce((sum, sd) => sum + sd.value, 0);
-      }
-      // 破甲（摧毁敌人全部护甲）
-      if (op.armorBreak) {
-        armorBreak = true;
-      }
-      // 反转骰子：敌人护甲转化为伤害
-      if (op.armorToDamage && targetEnemy) {
-        extraDamage += (targetEnemy.armor || 0);
-      }
-      // 受伤叠加伤害（怒火骰子）— 读取本局永久叠加值
-      if (op.scaleWithHits) {
-        const furyBonus = gameRef.current.furyBonusDamage || 0;
-        extraDamage += furyBonus;
-      }
-      // 首次出牌限定（冲锋骰子）
-      if (op.firstPlayOnly && op.bonusDamage) {
-        const isFirstPlay = (game.comboCount || 0) === 0 && game.battleTurn <= 1;
-        if (isFirstPlay) {
-          extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
-        }
-      }
-      // 已损失HP百分比加成（复仇骰子）
-      if (op.scaleWithLostHp) {
-        const lostHp = game.maxHp - game.hp;
-        extraDamage += Math.floor(lostHp * op.scaleWithLostHp);
-      }
-      // 斩杀（敌人HP低于阈值时伤害×N）
-      if (op.executeThreshold && op.executeMult && targetEnemy) {
-        if (targetEnemy.hp / targetEnemy.maxHp < op.executeThreshold) {
-          multiplier *= op.executeMult;
-          if (op.executeHeal) extraHeal += op.executeHeal;
-        }
-      }
-      // 独立AOE伤害（震地骰子/奥术飞弹）
-      if (op.aoeDamage) {
-        extraDamage += op.aoeDamage; // 在预览中显示为额外伤害
-      }
-      // 回血=骰子点数（吸血骰子）
-      if (op.healFromValue) {
-        extraHeal += d.value;
-      }
-      // 最大HP+N（兼容旧生命熔炉）
-      if (op.maxHpBonus) {
-        extraHeal += op.maxHpBonus;
-      }
-      // 生命熔炉v3：未满血回点数HP，满血+3最大HP（无上限）
-      if (op.healOrMaxHp) {
-        if (game.hp < game.maxHp) {
-          extraHeal += d.value;
-        }
-      }
-      // 低血时点数覆盖（不屈意志）— 已在骰子值层面处理，此处加成
-      if (op.lowHpOverrideValue && op.lowHpThreshold) {
-        if (game.hp / game.maxHp < op.lowHpThreshold && d.value < op.lowHpOverrideValue) {
-          // 差值作为额外伤害（因为点数已固定，需要补偿）
-          extraDamage += (op.lowHpOverrideValue - d.value);
-        }
-      }
-      // 三条以上牌型加成（战神之锤）
-      if (op.requiresTriple && op.bonusDamageFromPoints) {
-        const tripleHands = ['三条', '四条', '五条', '六条', '葫芦'];
-        if (activeHands.some((h: string) => tripleHands.includes(h))) {
-          const totalPoints = selected.reduce((sum, sd) => sum + sd.value, 0);
-          extraDamage += Math.floor(totalPoints * op.bonusDamageFromPoints);
-        }
-      }
-      // 嗜血叠加面值（浴血之刃）
-      if (op.scaleWithBloodRerolls && game.bloodRerollCount) {
-        const faceBonus = Math.min(game.bloodRerollCount, 3);
-        extraDamage += faceBonus; // 每次嗜血+1面值≈+1伤害
-      }
-      // 自施狂暴（狂暴之心）
-      if (op.selfBerserk) {
-        multiplier *= 1.3; // 伤害+30%
-        const berserkDmg = Math.ceil(game.maxHp * 0.05);
-        if (game.hp + extraHeal > berserkDmg) {
-          extraHeal -= berserkDmg; // 受伤+20%近似为自伤5%
-        }
-      }
-      // 自伤量转伤害（血神之眼）
-      if (op.scaleWithSelfDamage) {
-        // 本回合自伤量转化为伤害加成
-        const selfDmgThisTurn = (game.bloodRerollCount || 0) * 2; // 近似嗜血总消耗
-        multiplier *= (1 + selfDmgThisTurn * 0.02);
-      }
-      // 护甲转伤害（霸体铠甲）
-      if (op.damageFromArmor) {
-        extraDamage += Math.floor((game.armor + extraArmor) * op.damageFromArmor);
-      }
-      // 净化全部负面（咆哮/净化之光）
-      if (op.purifyAll) {
-        holyPurify += 99; // 大数=全部净化
-      }
-      // 嘲讽全体敌人（咆哮骰子）— 所有敌人距离归0（直接近战）
-      if (op.tauntAll) {
-        // tauntAll在出牌后实际应用时处理（设置所有敌人distance=0）
-      }
-      
-      // === 法师效果 ===
-      // 逆转点数（结算时点数=7-当前值）
-      if (op.reverseValue) {
-        const reversed = 7 - d.value;
-        if (reversed > d.value) {
-          extraDamage += (reversed - d.value); // 差值补偿
-        }
-      }
-      // 复制最高点数（镜像骰子）
-      if (op.copyHighestValue) {
-        const maxVal = Math.max(...selected.map(sd => sd.value));
-        if (maxVal > d.value) {
-          extraDamage += (maxVal - d.value);
-        }
-      }
-      // 固定点数覆盖（虚空之眼=7）
-      if (op.overrideValue) {
-        if (op.overrideValue > d.value) {
-          extraDamage += (op.overrideValue - d.value);
-        }
-      }
-      // 每颗元素骰子+N伤害（兼容旧奥术增幅）
-      if (op.bonusDamagePerElement) {
-        const elemCount = dice.filter(dd => !dd.spent && dd.element !== 'normal').length;
-        extraDamage += elemCount * op.bonusDamagePerElement;
-      }
-      // 奥术增幅v3：每颗元素骰子+N%最终伤害倍率
-      if (op.multPerElement) {
-        const elemCount = dice.filter(dd => !dd.spent && dd.element !== 'normal').length;
-        multiplier *= (1 + elemCount * op.multPerElement);
-      }
-      // 灼烧共鸣：目标有灼烧时+灼烧层×5伤害
-      if (op.burnEcho && targetEnemy) {
-        const burnStacks = targetEnemy.statuses.find(s => s.type === 'burn')?.value || 0;
-        if (burnStacks > 0) {
-          extraDamage += burnStacks * 5;
-          // 灼烧延长1回合的效果在playHand中处理
-        }
-      }
-      // 冰封余韵：目标上回合被冻结过时+N%伤害
-      if (op.frostEchoDamage && targetEnemy) {
-        const wasFrozen = targetEnemy.statuses.some(s => (s.type as string) === 'was_frozen');
-        if (wasFrozen) {
-          multiplier *= (1 + op.frostEchoDamage);
-        }
-      }
-      // 免伤护盾（魔力壁障）：点数×2的非护甲护盾
-      if (op.damageShield) {
-        extraArmor += d.value * 2; // 临时用armor代表，实际应是独立护盾
-      }
-      // 护甲=手牌数×N（法术护盾）
-      if (op.armorFromHandSize) {
-        const handSize = dice.filter(dd => !dd.spent).length;
-        extraArmor += handSize * op.armorFromHandSize;
-      }
-      // 蓄力加成（禁咒·陨星）
-      if (op.requiresCharge && op.bonusMult) {
-        if ((game.chargeStacks || 0) >= op.requiresCharge) {
-          // 基础倍率：吟唱满足要求时触发
-          const extraChargeLayers = Math.max(0, (game.chargeStacks || 0) - op.requiresCharge);
-          const extraMult = op.bonusMultPerExtraCharge ? extraChargeLayers * op.bonusMultPerExtraCharge : 0;
-          multiplier *= (op.bonusMult + extraMult);
-        }
-      }
-      // chainBolt: 奥术飞弹 — 结算后对每个存活敌人各造成等于自身点数的独立伤害（preview：显示单次参考）
-      if (op.chainBolt) {
-        extraDamage += Math.floor(d.value * elementBonus);
-      }
-      // 清除灼烧（魔力屏障）
-      if (op.removeBurn) {
-        holyPurify += 1; // 近似为净化1层
-      }
-      // 未出牌回复HP（冥想骰子）— 标记到heal中，在endTurn未出牌时触发
-      // healOnSkip在endTurn中处理，此处不做预览
-      // splashToRandom: 暗影溅射 — 对场上随机另一敌人造成等于本骰子点数的独立伤害（在结算时实际处理）
-      // 随机目标（奥术飞弹）— aoeDamage已处理，randomTarget标记让AOE只打随机1个而非全体
-      // randomTarget不影响预览伤害，在实际应用伤害时处理
-      // 保留到下回合时+N点（水晶骰子）— 在回合开始时处理kept骰子
-      // bonusOnKeep 在新回合开始抽牌后处理
-      // 保留时自动重投（时光骰子）— 在回合开始时处理
-      // rerollOnKeep 在新回合开始抽牌后处理
-      // 保留时+N倍率（法力涌动）— 在回合开始时处理kept骰子
-      // bonusMultOnKeep 在新回合开始时积累到临时倍率中
-      // 每保留1回合+N点/上限（星辰骰子）— 在回合开始时处理
-      // bonusPerTurnKept 在回合开始时给kept骰子加点
-      // devourDie removed — 吞噬改为超载(bonusMultPerExtraCharge)
-      // 每净化1种回复N HP（净化之光增强）
-      if (op.healPerCleanse) {
-        const negCount = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type)).length;
-        extraHeal += negCount * op.healPerCleanse;
-      }
-      // 双元素（棱镜骰子）— 触发第二元素效果
-      if (def.isElemental && d.secondElement && d.secondElement !== d.collapsedElement) {
-        const diceValue = d.value;
-        switch (d.secondElement) {
-          case 'fire':
-            pierceDamage += Math.floor(diceValue * totalElementBonus);
-            statusEffects.push({ type: 'burn', value: Math.max(1, Math.floor(diceValue / 2)) });
-            break;
-          case 'ice':
-            if (!targetEnemy?.statuses?.some(s => (s.type as string) === 'freeze_immune')) {
-              statusEffects.push({ type: 'freeze', value: 1, duration: 1 });
-            }
-            break;
-          case 'thunder':
-            pierceDamage += Math.floor(diceValue * totalElementBonus);
-            break;
-          case 'poison': {
-            const pStacks = Math.floor((diceValue + 1) * totalElementBonus);
-            const ep = statusEffects.find(es => es.type === 'poison');
-            if (ep) ep.value += pStacks; else statusEffects.push({ type: 'poison', value: pStacks });
-            break;
-          }
-          case 'holy':
-            extraHeal += Math.floor(diceValue * 0.5 * elementBonus);
-            break;
-        }
-      }
-      // 复制多数元素（共鸣骰子）— 已在坍缩时处理，此处不需额外逻辑
-      // 统一元素（元素风暴）— 出牌时将所有选中骰子变为同一元素
-      // unifyElement 在出牌结算前处理元素
-      // 与未选中骰子交换点数（命运编织）— 自动找最高点数的未选中骰子交换
-      if (op.swapWithUnselected) {
-        const unselected = dice.filter(dd => !dd.spent && !dd.selected);
-        if (unselected.length > 0) {
-          const best = unselected.reduce((a, b) => a.value > b.value ? a : b);
-          if (best.value > d.value) {
-            extraDamage += (best.value - d.value);
-          }
-        }
-      }
-      // 冻结+N回合（永冻核心）
-      if (op.freezeBonus) {
-        const existingFreeze = statusEffects.find(es => es.type === 'freeze');
-        if (existingFreeze) { existingFreeze.value += op.freezeBonus; }
-        else { statusEffects.push({ type: 'freeze', value: 1 + op.freezeBonus }); }
-      }
-      // 触发全部元素（元素之心）— 触发手牌中所有不同元素效果
-      if (op.triggerAllElements) {
-        const elementsInHand = new Set(dice.filter(dd => !dd.spent && dd.element !== 'normal').map(dd => dd.element));
-        // 每种额外元素+5伤害（近似各元素效果的平均值）
-        extraDamage += elementsInHand.size * 5;
-      }
-      // multiElementBlast: 元素风暴 — 每颗选中骰子各触发1种随机元素效果
-      if (op.multiElementBlast) {
-        const elements = ['fire', 'ice', 'thunder', 'poison', 'holy'];
-        selected.forEach(sd => {
-          const randElem = elements[Math.floor(Math.random() * elements.length)];
-          const dv = sd.value;
-          switch (randElem) {
-            case 'fire': pierceDamage += Math.floor(dv * totalElementBonus); statusEffects.push({ type: 'burn', value: Math.max(1, Math.floor(dv / 2)) }); break;
-            case 'ice': statusEffects.push({ type: 'freeze', value: 1, duration: 1 }); break;
-            case 'thunder': pierceDamage += Math.floor(dv * totalElementBonus); break;
-            case 'poison': { const ps = Math.floor((dv + 1) * totalElementBonus); const ep = statusEffects.find(es => es.type === 'poison'); if (ep) ep.value += ps; else statusEffects.push({ type: 'poison', value: ps }); break; }
-            case 'holy': extraHeal += Math.floor(dv * 0.5); break;
-          }
-        });
-      }
-
-      
-      // === 盗贼效果 ===
-      // 连击倍率加成（匕首骰子）
-      if (op.comboBonus) {
-        multiplier *= (1 + op.comboBonus);
-      }
-      // 施加毒=点数（淬毒）
-      if (op.poisonFromValue) {
-        const poisonVal = d.value;
-        const existing = statusEffects.find(es => es.type === 'poison');
-        if (existing) { existing.value += poisonVal; }
-        else { statusEffects.push({ type: 'poison', value: poisonVal }); }
-      }
-      // 兼容旧poisonInverse
-      if (op.poisonInverse) {
-        const poisonVal = Math.max(1, 7 - d.value);
-        const existing = statusEffects.find(es => es.type === 'poison');
-        if (existing) { existing.value += poisonVal; }
-        else { statusEffects.push({ type: 'poison', value: poisonVal }); }
-      }
-      // 基础毒层+已有毒加成（剧毒匕首）
-      if (op.poisonBase) {
-        let poisonVal = d.value + op.poisonBase;
-        if (op.poisonBonusIfPoisoned && targetEnemy?.statuses.some(s => s.type === 'poison')) {
-          poisonVal += op.poisonBonusIfPoisoned;
-        }
-        const existing = statusEffects.find(es => es.type === 'poison');
-        if (existing) { existing.value += poisonVal; }
-        else { statusEffects.push({ type: 'poison', value: poisonVal }); }
-      }
-      // 第2次出牌暴击（兼容旧致命骰子）
-      if (op.critOnSecondPlay && (game.comboCount || 0) >= 1) {
-        multiplier *= op.critOnSecondPlay;
-      }
-      // 剔骨：伤害+连击次数×N%
-      if (op.comboScaleDamage) {
-        multiplier *= (1 + (game.comboCount || 0) * op.comboScaleDamage);
-      }
-      // 蚀骨毒液：额外伤害=目标毒层×N
-      if (op.poisonScaleDamage && targetEnemy) {
-        const targetPoison = targetEnemy.statuses.find(s => s.type === 'poison')?.value || 0;
-        extraDamage += targetPoison * op.poisonScaleDamage;
-      }
-      // 蚀骨毒液连击：引爆N%毒层
-      if (op.comboDetonatePoison && (game.comboCount || 0) >= 1 && targetEnemy) {
-        const targetPoison = targetEnemy.statuses.find(s => s.type === 'poison')?.value || 0;
-        extraDamage += Math.floor(targetPoison * op.comboDetonatePoison);
-      }
-      // multOnThirdPlay: 追击骰子 — 第3次及以上出牌伤害×N
-      if (op.multOnThirdPlay && (game.comboCount || 0) >= 2) {
-        multiplier *= op.multOnThirdPlay;
-      }
-      // 第2次出牌额外伤害（暗影骰子）
-      if (op.bonusDamageOnSecondPlay && (game.comboCount || 0) >= 1) {
-        extraDamage += op.bonusDamageOnSecondPlay;
-      }
-      // 第2次出牌倍率加成（三连闪）
-      if (op.bonusMultOnSecondPlay && (game.comboCount || 0) >= 1) {
-        multiplier *= op.bonusMultOnSecondPlay;
-      }
-      // 偷取护甲（偷窃骰子）
-      if (op.stealArmor && targetEnemy) {
-        const stolen = Math.min(targetEnemy.armor, op.stealArmor);
-        extraArmor += stolen;
-      }
-      // 毒层=毒系骰子数×N（毒王之牙）
-      if (op.poisonFromPoisonDice) {
-        const poisonDiceCount = selected.filter(sd => {
-          const dd = getDiceDef(sd.diceDefId);
-          return dd.onPlay?.poisonInverse || dd.onPlay?.poisonBase || dd.onPlay?.statusToEnemy?.type === 'poison';
-        }).length;
-        const poisonVal = poisonDiceCount * op.poisonFromPoisonDice;
-        if (poisonVal > 0) {
-          const existing = statusEffects.find(es => es.type === 'poison');
-          if (existing) { existing.value += poisonVal; }
-          else { statusEffects.push({ type: 'poison', value: poisonVal }); }
-        }
-      }
-      // 引爆毒层百分比（瘟疫引爆）—— 基础50% + 每额外出牌+10%（上限100%）
-      if (op.detonatePoisonPercent && targetEnemy) {
-        const currentPoison = targetEnemy.statuses.find(s => s.type === 'poison')?.value || 0;
-        const extraPlays = Math.max(0, (game.comboCount || 0) - 1);
-        const detonateRate = Math.min(1, op.detonatePoisonPercent + (op.detonateExtraPerPlay || 0) * extraPlays);
-        extraDamage += Math.floor(currentPoison * detonateRate);
-      }
-      // 递增伤害叠加（影刃风暴）
-      if (op.escalateDamage) {
-        multiplier *= (1 + (game.comboCount || 0) * op.escalateDamage);
-      }
-      // 幻影骰子：点数=暗影残骰数×2（至少2）
-      if (op.phantomFromShadowDice) {
-        const shadowCount = dice.filter(dd => !dd.spent && dd.diceDefId === 'temp_rogue').length;
-        const phantomVal = Math.max(2, shadowCount * 2);
-        if (phantomVal > d.value) {
-          extraDamage += (phantomVal - d.value);
-        }
-      }
-      // 兼容旧wildcard
-      if (op.wildcard) {
-        if (d.value < 6) {
-          extraDamage += (6 - d.value);
-        }
-      }
-      // 净化1层负面（吸血斩/净化之刃）
-      if (op.purifyOne) {
-        holyPurify += 1;
-      }
-      // 连击时回复HP（净化之刃）
-      if (op.comboHeal && (game.comboCount || 0) >= 1) {
-        extraHeal += op.comboHeal;
-      }
-      // 兼容旧transferDebuff
-      if (op.transferDebuff) {
-        const negativeStatuses = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
-        if (negativeStatuses.length > 0) {
-          holyPurify += 1;
-          const transferred = negativeStatuses[0];
-          statusEffects.push({ type: transferred.type, value: transferred.value });
-        }
-      }
-      // 最后一次出牌引爆全部负面（死神之触）
-      if (op.detonateAllOnLastPlay && game.playerClass === 'rogue') {
-        // 盗贼出2次牌，第2次 = comboCount >= 1
-        if ((game.comboCount || 0) >= 1 && targetEnemy) {
-          const totalDebuffs = targetEnemy.statuses.reduce((sum, s) => {
-            if (['poison', 'burn', 'vulnerable', 'weak'].includes(s.type)) return sum + s.value;
-            return sum;
-          }, 0);
-          extraDamage += totalDebuffs * 2; // 每层负面引爆为2点伤害
-        }
-      }
-    });
-
-    // 法师过充倍率加成（手牌满6后继续蓄力积累的额外倍率）
-    if (game.playerClass === 'mage' && (game.mageOverchargeMult || 0) > 0) {
-      multiplier *= (1 + (game.mageOverchargeMult || 0));
-      triggeredAugments.push({ name: '过充吟唱', details: `伤害×${Math.round((1 + (game.mageOverchargeMult || 0)) * 100)}%`, rawMult: 1 + (game.mageOverchargeMult || 0) });
-    }
-
-    const totalDamage = Math.floor(baseDamage * multiplier) + extraDamage + pierceDamage;
-
-    // Apply status modifiers
-    let modifiedDamage = totalDamage;
-    const playerWeak = game.statuses.find(s => s.type === 'weak');
-    if (playerWeak) modifiedDamage = Math.floor(modifiedDamage * 0.75);
-    
-    const enemyVulnerable = targetEnemy?.statuses.find(s => s.type === 'vulnerable');
-    if (enemyVulnerable) modifiedDamage = Math.floor(modifiedDamage * 1.5);
-
-    // === 职业伤害加成 ===
-    // 战士【血怒战意】：每次嗜血+15%伤害（从ref读最新值防止stale closure）
-    const latestBloodRerolls = gameRef.current.bloodRerollCount || 0;
-    if (game.playerClass === 'warrior' && latestBloodRerolls > 0) {
-      modifiedDamage = Math.floor(modifiedDamage * (1 + latestBloodRerolls * 0.15));
-    }
-    // 战士【狂暴本能】：受伤百分比对应的伤害倍率加成（手牌溢出6上限时触发）
-    const latestRageMult = gameRef.current.warriorRageMult || 0;
-    if (game.playerClass === 'warrior' && latestRageMult > 0) {
-      modifiedDamage = Math.floor(modifiedDamage * (1 + latestRageMult));
-    }
-    // 盗贼【连击加成】：第2次出牌+20%伤害（普通攻击不触发）
-    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && bestHand !== '普通攻击') {
-      modifiedDamage = Math.floor(modifiedDamage * 1.2);
-    }
-
-    return {
-      damage: modifiedDamage,
-      armor: Math.floor(baseArmor + extraArmor),
-      heal: extraHeal,
-      baseDamage,
-      baseHandValue,
-      handMultiplier,
-      extraDamage: modifiedDamage - baseDamage - pierceDamage,
-      pierceDamage,
-      armorBreak,
-      multiplier,
-      triggeredAugments,
+    return calculateExpectedOutcome({
+      selected,
+      dice,
+      activeHands,
       bestHand,
-      statusEffects,
-      X,
-      selectedValues: selected.map(d => d.value),
-      goldBonus,
-      holyPurify,
-    };
+      game,
+      targetEnemy,
+      rerollCount,
+      activeAugments,
+      furyBonusDamage: gameRef.current.furyBonusDamage || 0,
+      bloodRerollCount: gameRef.current.bloodRerollCount || 0,
+      warriorRageMult: gameRef.current.warriorRageMult || 0,
+      mageOverchargeMult: gameRef.current.mageOverchargeMult || 0,
+    });
   }, [dice, activeAugments, currentHands]);
+
+  // 遗物副作用：从 useMemo 移到 useEffect，避免渲染阶段 setState
+  useEffect(() => {
+    if (expectedOutcome && expectedOutcome.pendingSideEffects.length > 0) {
+      applyPendingSideEffects(expectedOutcome.pendingSideEffects, setGame, setRerollCount);
+    }
+  }, [expectedOutcome]);
 
   // AOE state for enemy highlighting
   const isAoeActive = useMemo(() => {
@@ -2100,8 +1334,8 @@ export default function DiceHeroGame() {
       if (op.drawFromBag) allEffects.push({ name: def.name, detail: `补抽${op.drawFromBag}颗骰子`, type: 'status' });
       if (op.grantExtraPlay) allEffects.push({ name: def.name, detail: '+1出牌机会', type: 'status' });
       if (op.grantTempDieFixed) allEffects.push({ name: def.name, detail: '+1临时骰(2-5)', type: 'status' });
-      if (op.multOnThirdPlay && (game.comboCount || 0) >= 2) allEffects.push({ name: def.name, detail: `追击×${op.multOnThirdPlay}`, type: 'damage' });
-      if (op.shadowClonePlay) allEffects.push({ name: def.name, detail: `影分身×50%`, type: 'damage' });
+      if (op.multOnThirdPlay && (game.comboCount || 0) >= 2) allEffects.push({ name: def.name, detail: `追击+${Math.round((op.multOnThirdPlay - 1) * 100)}%`, type: 'mult' });
+      if (op.shadowClonePlay) allEffects.push({ name: def.name, detail: `影分身+50%`, type: 'damage' });
       if (op.unifyElement) allEffects.push({ name: def.name, detail: '统一元素', type: 'status' });
       if (def.isElemental && d.secondElement) allEffects.push({ name: def.name, detail: `双元素: ${d.secondElement}`, type: 'status' });
       if (op.critOnSecondPlay && (game.comboCount || 0) >= 1) allEffects.push({ name: def.name, detail: `暴击+${Math.round((op.critOnSecondPlay - 1) * 100)}%`, type: 'mult', rawMult: op.critOnSecondPlay });
@@ -2138,19 +1372,21 @@ export default function DiceHeroGame() {
       allEffects.push({ name: aug.name, detail: aug.details, type: aug.rawMult ? 'mult' : 'damage', rawValue: aug.rawDamage || undefined, rawMult: aug.rawMult || undefined, relicId: aug.relicId, icon: aug.icon });
     });
 
-    // 战士血怒加成
+    // 战士血怒加成（5层封顶）
     const latestBloodRerolls = gameRef.current.bloodRerollCount || 0;
     if (game.playerClass === 'warrior' && latestBloodRerolls > 0) {
-      allEffects.push({ name: '血怒', detail: `${latestBloodRerolls}层 ×${Math.round((1 + latestBloodRerolls * 0.15) * 100)}%`, type: 'mult', rawMult: 1 + latestBloodRerolls * 0.15, icon: 'blooddrop' });
+      const atCap = latestBloodRerolls >= FURY_CONFIG.maxStack;
+      const effectiveStacks = Math.min(latestBloodRerolls, FURY_CONFIG.maxStack);
+      allEffects.push({ name: '血怒', detail: `${effectiveStacks}/${FURY_CONFIG.maxStack}层 +${Math.round(effectiveStacks * FURY_CONFIG.damagePerStack * 100)}%${atCap ? ' [已满]' : ''}`, type: 'mult', rawMult: 1 + effectiveStacks * FURY_CONFIG.damagePerStack, icon: 'blooddrop' });
     }
     // 战士狂暴本能（受伤百分比倍率）
     const settlementRageMult = gameRef.current.warriorRageMult || 0;
     if (game.playerClass === 'warrior' && settlementRageMult > 0) {
-      allEffects.push({ name: '狂暴', detail: `×${Math.round((1 + settlementRageMult) * 100)}%`, type: 'mult', rawMult: 1 + settlementRageMult, icon: 'flame' });
+      allEffects.push({ name: '狂暴', detail: `+${Math.round(settlementRageMult * 100)}%`, type: 'mult', rawMult: 1 + settlementRageMult, icon: 'flame' });
     }
     // 盗贼连击加成
     if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
-      allEffects.push({ name: '连击', detail: '×120%', type: 'mult', rawMult: 1.2, icon: 'zap' });
+      allEffects.push({ name: '连击', detail: '+20%', type: 'mult', rawMult: 1.2, icon: 'zap' });
     }
     
     // 逐个展示效果
@@ -2515,7 +1751,7 @@ export default function DiceHeroGame() {
           pointSum: outcome.X,
           rerollsUsedSinceLastPlay: prev.rerollsThisWave || 0,
           totalDiceInHand: totalDiceInHand,
-          ownedDiceTypes: [...new Set(prev.ownedDice.map(d => d.defId))],
+          ownedDiceTypes: [...new Set<string>(prev.ownedDice.map(d => d.defId))],
           killedThisPlay: killedEnemiesData.length,
         });
       }
@@ -2632,7 +1868,7 @@ export default function DiceHeroGame() {
                 id: Date.now() + 9000,
                 selected: false, spent: false, rolling: false, justAdded: true, isBonusDraw: true,
               };
-              const processed = applyDiceSpecialEffects([newDie], { hasLimitBreaker: g.relics.some(r => r.id === 'limit_breaker') , lockedElement: g.lockedElement });
+              const processed = applyDiceSpecialEffects([newDie], { hasLimitBreaker: hasLimitBreaker(g.relics) , lockedElement: g.lockedElement });
               setDice(prev => [...prev, ...processed.map(d => ({ ...d, justAdded: true }))]);
               setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
               addFloatingText(`+1骰子`, 'text-yellow-300', undefined, 'player');
@@ -2670,7 +1906,8 @@ export default function DiceHeroGame() {
         game.relics.filter(r => r.trigger === 'on_kill').forEach(relic => {
           killedEnemiesData.forEach(killedData => {
             const overkill = killedData.overkill;
-            const res = relic.effect({ overkillDamage: overkill });
+            const killCtx = buildRelicContext({ game, dice, targetEnemy: enemies.find(e => e.hp > 0) || null, rerollsThisTurn: rerollCount, hasPlayedThisTurn: true, overkillDamage: overkill });
+            const res = relic.effect(killCtx);
             if (res.heal && res.heal > 0) {
               setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + res.heal) }));
               addToast(` ${relic.name}: +${res.heal}HP`, 'heal');
@@ -2687,8 +1924,7 @@ export default function DiceHeroGame() {
         });
 
           // 溢出导管: 溢出伤害转移给随机敌人
-          const overflowRelic = game.relics.find(r => r.id === 'overflow_conduit');
-          if (overflowRelic) {
+          if (hasOverflowConduit(game.relics)) {
             killedEnemiesData.forEach(killedData => {
               const overkill = killedData.overkill;
               if (overkill > 0) {
@@ -2788,7 +2024,7 @@ export default function DiceHeroGame() {
           id: Date.now() + Math.floor(Math.random() * 10000),
           rolling: false, selected: false, spent: false, justAdded: true, isBonusDraw: true,
         }));
-        const processed = applyDiceSpecialEffects(newDice, { hasLimitBreaker: g.relics.some(r => r.id === 'limit_breaker'), lockedElement: g.lockedElement });
+        const processed = applyDiceSpecialEffects(newDice, { hasLimitBreaker: hasLimitBreaker(g.relics), lockedElement: g.lockedElement });
         setDice(pd => [...pd, ...processed.map(d => ({ ...d, justAdded: true }))]);
         setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
         addFloatingText(`接应: +${bagDrawCount}骰子`, 'text-cyan-300', undefined, 'player');
@@ -2850,7 +2086,7 @@ export default function DiceHeroGame() {
     }
 
     // boomerangPlay: 回旋骰子已弹回，给下次出牌免费（playsLeft不减）
-    const hasBoomerangBounced = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.boomerangPlay);
+    const hasBoomerangBounced = selectedDiceForSpent.some(d => d.boomerangUsed);
     if (hasBoomerangBounced) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
       addFloatingText('回旋: 下次出牌免费!', 'text-cyan-300', undefined, 'player');
@@ -2865,7 +2101,7 @@ export default function DiceHeroGame() {
           const poison = e.statuses.find(s => s.type === 'poison');
           if (!poison || poison.value <= 0) return e;
           const doubled = poison.value * 2;
-          addFloatingText(`蚀骨连击: 毒层×2(${doubled})`, 'text-green-500', undefined, 'enemy');
+          addFloatingText(`蚀骨连击: 毒层翻倍(${doubled})`, 'text-green-500', undefined, 'enemy');
           return { ...e, statuses: e.statuses.map(s => s.type === 'poison' ? { ...s, value: doubled, duration: Math.max(s.duration || 2, 1) } : s) };
         }));
       }
@@ -3065,7 +2301,11 @@ export default function DiceHeroGame() {
               }
             });
           }, 300);
-          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, chargeStacks: 0, mageOverchargeMult: 0, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1 }));
+          // 垮波次：保留当前回合玩家出牌状态（playsLeft/comboCount/lastPlayHandType）
+          // battleTurn重置为1：新波次敌人是全新实体，AI周期应从头开始
+          // playsThisWave=0从新波次起算，与保留的playsLeft无依赖（仅instakill challenge内部使用）
+          // 法师吟唱/过充/元素锁定重置（rollAllDice(true)已按chargeStacks=0抽牌，保留state会不一致）
+          setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, chargeStacks: 0, mageOverchargeMult: 0, bloodRerollCount: 0, lockedElement: undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1 }));
           setRerollCount(0);
           setWaveAnnouncement(nextWaveIdx + 1);
           addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
@@ -3142,6 +2382,31 @@ export default function DiceHeroGame() {
       });
     }
 
+    // === on_turn_end 遗物触发 ===
+    const turnEndCtx = buildRelicContext({ game, dice, targetEnemy: enemies.find(e => e.hp > 0) || null, rerollsThisTurn: rerollCount, hasPlayedThisTurn: playedThisTurn });
+    const turnEndEffects = game.relics.filter(r => r.trigger === 'on_turn_end').map(r => ({ relic: r, effect: r.effect(turnEndCtx) }));
+    let turnEndDrawBonus = 0;
+    turnEndEffects.forEach(({ relic, effect }) => {
+      // 蓄力晶核：未出牌时加护甲+回血
+      if (effect.armor && effect.armor > 0) {
+        setGame(prev => ({ ...prev, armor: prev.armor + effect.armor! }));
+        addFloatingText(`+${effect.armor}护甲`, 'text-blue-400', undefined, 'player');
+      }
+      if (effect.heal && effect.heal > 0) {
+        setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + effect.heal!) }));
+        addFloatingText(`+${effect.heal}HP`, 'text-green-400', undefined, 'player');
+      }
+      // 薛定谔的袋子：drawCountBonus
+      if (effect.drawCountBonus && effect.drawCountBonus > 0) {
+        turnEndDrawBonus += effect.drawCountBonus;
+        addLog(`${relic.name}：下回合额外抽${effect.drawCountBonus}颗骰子！`);
+      }
+    });
+    // 存入 game state，供抽牌阶段读取
+    if (turnEndDrawBonus > 0) {
+      setGame(prev => ({ ...prev, tempDrawCountBonus: (prev.tempDrawCountBonus || 0) + turnEndDrawBonus }));
+    }
+
     // tauntAll: 咆哮骰子 — 嘲讽全体敌人：无视距离立即攻击玩家一次，算作敌人回合
     if (playedThisTurn) {
       const hasTaunt = dice.filter(d => d.spent).some(d => getDiceDef(d.diceDefId).onPlay?.tauntAll);
@@ -3167,8 +2432,8 @@ export default function DiceHeroGame() {
               };
             });
             addFloatingText(`-${totalTauntDmg}`, 'text-red-500', undefined, 'player');
-            addToast(`嘲讽反噬：全体敌人攻击造成${totalTauntDmg}伤害`, 'debuff');
-            playSound('enemy_attack');
+            addToast(`嘲讽反噬：全体敌人攻击造成${totalTauntDmg}伤害`, 'damage');
+            playSound('enemy_skill');
           }, 400);
         }
         // 嘲讽攻击算作敌人的回合行动，距离归0
@@ -3177,624 +2442,17 @@ export default function DiceHeroGame() {
     }
 
     // 重置战士血怒/盗贼连击计数
-    setGame(prev => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, blackMarketUsedThisTurn: false }));
-
-    // --- Helper: tick status durations ---
-    const tickStatuses = (statuses: StatusEffect[]): StatusEffect[] => {
-      return statuses
-        .map(s => {
-          if (s.type === 'poison' || s.type === 'burn') return s;
-          if (s.duration !== undefined) return { ...s, duration: s.duration - 1 };
-          return { ...s, value: s.value - 1 };
-        })
-        .filter(s => {
-          if (s.type === 'poison' || s.type === 'burn') return s.value > 0;
-          if (s.duration !== undefined) return s.duration > 0;
-          return s.value > 0;
-        });
+    // === 敌人回合：调用 enemyAI 模块 ===
+    const enemyAICb: EnemyAICallbacks = {
+      setGame, setEnemies, setEnemyEffects, setDyingEnemies,
+      setEnemyEffectForUid, enemyPreAction, addLog, addFloatingText, addToast, playSound,
+      setScreenShake, setPlayerEffect, showEnemyQuote, getEnemyQuotes, pickQuote,
+      setRerollCount, setWaveAnnouncement, setDice, rollAllDice,
+      buildRelicContext, hasFatalProtection, triggerHourglass,
+      handleVictory, gameRef,
     };
-
-    // --- 1. Player Turn End: process player poison ---
-    let currentPlayerHp = game.hp;
-    setGame(prev => {
-      let nextStatuses = [...prev.statuses];
-      let poisonDamage = 0;
-      const poison = prev.statuses.find(s => s.type === 'poison');
-      if (poison && poison.value > 0) {
-        poisonDamage = poison.value;
-        addLog(`\u4f60\u56e0\u4e2d\u6bd2\u53d7\u5230\u4e86 ${poisonDamage} \u70b9\u4f24\u5bb3\u3002`);
-        addFloatingText(`-${poisonDamage}`, 'text-purple-400', <PixelPoison size={2} />, 'player');
-        nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
-      }
-      currentPlayerHp = Math.max(0, prev.hp - poisonDamage);
-      // 急救沙漏: 毒伤致命保护
-      if (currentPlayerHp <= 0 && prev.hp > 0) {
-        const hgR = prev.relics.find(r => r.id === 'emergency_hourglass');
-        if (hgR && (hgR.counter || 0) === 0) {
-          currentPlayerHp = prev.hp;
-          return { ...prev, hp: currentPlayerHp,
-            relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
-          };
-        }
-      }
-      return { ...prev, hp: currentPlayerHp, statuses: nextStatuses };
-    });
-
-    await new Promise(r => setTimeout(r, 600));
-    if (currentPlayerHp <= 0) { playSound('player_death'); setGame(prev => ({ ...prev, phase: 'gameover' })); return; }
-
-    // --- 2. Process each enemy's burn damage ---
-    let enemyDeathsFromBurn: string[] = [];
-    setEnemies(prev => prev.map(e => {
-      if (e.hp <= 0) return e;
-      const burn = e.statuses.find(s => s.type === 'burn');
-      if (burn && burn.value > 0) {
-        const dmg = burn.value;
-        addLog(`${e.name} \u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${dmg} \u70b9\u4f24\u5bb3\u3002`);
-        addFloatingText(`-${dmg}`, 'text-orange-500', <PixelFlame size={2} />, 'enemy');
-        // 灼烧只存在一回合，造成伤害后直接移除
-        const nextStatuses = e.statuses.filter(s => s.type !== 'burn');
-        const newHp = Math.max(0, e.hp - dmg);
-        if (newHp <= 0) enemyDeathsFromBurn.push(e.uid);
-        return { ...e, hp: newHp, statuses: nextStatuses, armor: 0 };
-      }
-      return { ...e, armor: 0 };
-    }));
-
-    await new Promise(r => setTimeout(r, 600));
-
-    // Check if all enemies died from burn
-    const aliveAfterBurn = enemies.filter(e => e.hp > 0 && !enemyDeathsFromBurn.includes(e.uid));
-    if (aliveAfterBurn.length === 0 && enemyDeathsFromBurn.length > 0) {
-      // Check next wave
-      const nextWaveIdx = game.currentWaveIndex + 1;
-      if (nextWaveIdx < game.battleWaves.length) {
-        const nextWave = game.battleWaves[nextWaveIdx].enemies;
-        setEnemies(nextWave);
-        setEnemyEffects({}); setDyingEnemies(new Set());
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, chargeStacks: 0, mageOverchargeMult: 0, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1 }));
-        setRerollCount(0);
-          setWaveAnnouncement(nextWaveIdx + 1);
-        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
-        setDice([]);
-        rollAllDice(true);
-        return;
-      }
-      handleVictory();
-      return;
-    }
-
-    // --- 2.5. Pre-Action: process each enemy's poison ---
-    const enemyDeathsFromPoison: string[] = [];
-// --- 4. Enemy Turn End: process each enemy's poison ---
-    setEnemies(prev => prev.map(e => {
-      if (e.hp <= 0) return e;
-      let nextStatuses = [...e.statuses];
-      const poison = nextStatuses.find(s => s.type === 'poison');
-      if (poison && poison.value > 0) {
-        addLog(`${e.name} \u56e0\u4e2d\u6bd2\u53d7\u5230\u4e86 ${poison.value} \u70b9\u4f24\u5bb3\u3002`);
-        addFloatingText(`-${poison.value}`, 'text-purple-400', <PixelPoison size={2} />, 'enemy');
-        nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
-        const newHp = Math.max(0, e.hp - poison.value);
-        if (newHp <= 0) enemyDeathsFromPoison.push(e.uid);
-        nextStatuses = tickStatuses(nextStatuses);
-        return { ...e, hp: newHp, statuses: nextStatuses };
-      }
-      nextStatuses = tickStatuses(nextStatuses);
-      return { ...e, statuses: nextStatuses };
-    }));
-
-    await new Promise(r => setTimeout(r, 600));
-
-    // Check if all enemies died from poison
-    // Note: we need to re-read enemies after the state update, but since this is async
-    // we'll check based on the computed values
-    const aliveAfterPoison = enemies.filter(e => e.hp > 0 && !enemyDeathsFromPoison.includes(e.uid));
-    if (aliveAfterPoison.length === 0 && enemyDeathsFromPoison.length > 0) {
-      const nextWaveIdx = game.currentWaveIndex + 1;
-      if (nextWaveIdx < game.battleWaves.length) {
-        const nextWave = game.battleWaves[nextWaveIdx].enemies;
-        setEnemies(nextWave);
-        setEnemyEffects({}); setDyingEnemies(new Set());
-        setGame(prev => ({ ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: prev.maxPlays, freeRerollsLeft: prev.freeRerollsPerTurn, armor: 0, chargeStacks: 0, mageOverchargeMult: 0, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1 }));
-        setRerollCount(0);
-          setWaveAnnouncement(nextWaveIdx + 1);
-        addLog(`\u7b2c ${nextWaveIdx + 1} \u6ce2\u654c\u4eba\u6765\u88ad\uff01`);
-        setDice([]);
-        rollAllDice(true);
-        return;
-      }
-      handleVictory();
-      return;
-    }
-
-
-        // --- 3. Each alive enemy takes action ---
-        // Rules:
-        // - warrior (melee): approach first, attack when distance=0, high damage
-        // - guardian (melee tank): approach first, taunt (force player to target), alternate attack/defend
-        // - ranger (ranged): attack from any distance, lower damage
-        // - caster (ranged): attack from any distance, may apply debuffs
-        // - priest (ranged support): never attacks, heals allies + buffs allies + debuffs player
-        const currentEnemies = [...enemies];
-        for (const e of currentEnemies.filter(en => en.hp > 0)) {
-          await new Promise(r => setTimeout(r, 350));
-          
-          // Freeze check: completely skip action
-          const isFrozen = e.statuses.some(s => s.type === 'freeze' && s.duration > 0);
-          if (isFrozen) {
-            addLog(`${e.name} \u88AB\u51BB\u7ED3\uFF0C\u65E0\u6CD5\u884C\u52A8\uFF01`);
-            addFloatingText('\u51BB\u7ED3', 'text-cyan-400', undefined, 'enemy');
-            setEnemyEffectForUid(e.uid, 'shake');
-            await new Promise(r => setTimeout(r, 400));
-            setEnemyEffectForUid(e.uid, null);
-            continue;
-          }
-          
-          // Slow check: affects movement and ranged damage
-          const isSlowed = e.statuses.some(s => s.type === 'slow' && s.duration > 0);
-                    const isMelee = e.combatType === 'warrior' || e.combatType === 'guardian';
-          
-          // Melee: must approach first
-          // Slowed melee enemies cannot move
-          if (isMelee && e.distance > 0 && isSlowed) {
-            addLog(`${e.name} \u88AB\u51CF\u901F\uFF0C\u65E0\u6CD5\u79FB\u52A8\uFF01`);
-            continue;
-          }
-                    if (isMelee && e.distance > 0) {
-            setEnemies(prev => prev.map(en =>
-              en.uid === e.uid ? { ...en, distance: Math.max(0, en.distance - 1) } : en
-            ));
-            if (e.distance === 1) {
-              addLog(`${e.name} 逼近到近身位置！`);
-            } else {
-              addLog(`${e.name} 正在逼近...(距离 ${e.distance - 1})`);
-            }
-            continue;
-          }
-          
-          // Guardian (tank): alternate attack/defend, taunt effect
-          if (e.combatType === 'guardian') {
-            if (game.battleTurn % 2 === 0) {
-              // Defend turn + taunt
-              await enemyPreAction(e, 'defend');
-              const shieldVal = Math.floor(e.attackDmg * 1.5);
-              setEnemyEffectForUid(e.uid, 'defend');
-              playSound('enemy_defend');
-              setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
-              // Force player to target this guardian
-              setGame(prev => ({ ...prev, targetEnemyUid: e.uid }));
-              addLog(`${e.name} 举盾防御（+${shieldVal}护甲），并嘲讽你！`);
-              await new Promise(r => setTimeout(r, 300));
-              setEnemyEffectForUid(e.uid, null);
-              continue;
-            }
-            // Attack turn: fall through to normal attack below
-          }
-          
-          // Priest (support): smart AI - prioritize healing damaged allies
-          if (e.combatType === 'priest') {
-            await enemyPreAction(e, 'heal');
-            setEnemyEffectForUid(e.uid, 'skill');
-            playSound('enemy_skill');
-            const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
-            const damagedAllies = allies.filter(en => en.hp < en.maxHp);
-            const selfDamaged = e.hp < e.maxHp;
-            
-            if (damagedAllies.length > 0) {
-              // Priority 1: Heal the most damaged ally
-              const lowestAlly = damagedAllies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
-              const healVal = Math.floor(e.attackDmg * 4.0);
-              setEnemies(prev => prev.map(en => en.uid === lowestAlly.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-              addLog(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
-              addFloatingText(`+${healVal}`, 'text-emerald-500', undefined, 'enemy');
-              playSound('enemy_heal');
-            } else if (selfDamaged) {
-              // Priority 2: Heal self if damaged
-              const healVal = Math.floor(e.attackDmg * 3.0);
-              setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, hp: Math.min(en.maxHp, en.hp + healVal) } : en));
-              addLog(`${e.name} 治疗自己 ${healVal} HP。`);
-              playSound('enemy_heal');
-            } else if (allies.length > 0) {
-              // Priority 3: Buff ally - alternate between strength and armor
-              const target = allies[Math.floor(Math.random() * allies.length)];
-              if (game.battleTurn % 2 === 0) {
-                // Even turns: give strength
-                setEnemies(prev => prev.map(en => {
-                  if (en.uid !== target.uid) return en;
-                  const existing = en.statuses.find(s => s.type === 'strength');
-                  if (existing) {
-                    return { ...en, statuses: en.statuses.map(s => s.type === 'strength' ? { ...s, value: s.value + 3 } : s) };
-                  }
-                  return { ...en, statuses: [...en.statuses, { type: 'strength' as any, value: 3 }] };
-                }));
-                addLog(`${e.name} 为 ${target.name} 施加了力量强化！`);
-                addFloatingText('力量+3', 'text-red-400', undefined, 'enemy');
-              } else {
-                // Odd turns: give armor
-                const armorVal = Math.floor(e.attackDmg * 3);
-                setEnemies(prev => prev.map(en => en.uid === target.uid ? { ...en, armor: en.armor + armorVal } : en));
-                addLog(`${e.name} 为 ${target.name} 施加了护甲祝福（+${armorVal}护甲）！`);
-                addFloatingText(
-`护甲+${armorVal}`
-, 'text-cyan-400', undefined, 'enemy');
-              }
-            } else {
-              // Priority 4: No allies - debuff player with various effects
-              const debuffRoll = Math.random();
-              if (debuffRoll < 0.35) {
-                // Weak
-                setGame(prev => {
-                  const weakStatus = prev.statuses.find(s => s.type === 'weak');
-                  if (weakStatus) {
-                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 3 } : s) };
-                  }
-                  return { ...prev, statuses: [...prev.statuses, { type: 'weak' as any, value: 1, duration: 3 }] };
-                });
-                addLog(`${e.name} 对你施加了虚弱！`);
-                addFloatingText('虚弱!', 'text-purple-400', undefined, 'player');
-              } else if (debuffRoll < 0.6) {
-                // Vulnerable
-                setGame(prev => {
-                  const vulnStatus = prev.statuses.find(s => s.type === 'vulnerable');
-                  if (vulnStatus) {
-                    return { ...prev, statuses: prev.statuses.map(s => s.type === 'vulnerable' ? { ...s, value: s.value + 1, duration: 3 } : s) };
-                  }
-                  return { ...prev, statuses: [...prev.statuses, { type: 'vulnerable' as any, value: 1, duration: 3 }] };
-                });
-                addLog(`${e.name} 对你施加了易伤！`);
-                addFloatingText('易伤!', 'text-orange-400', undefined, 'player');
-              } else {
-                // Insert curse dice
-                const curseDice = Math.random() < 0.5 ? 'cursed' : 'cracked';
-                const curseName = curseDice === 'cursed' ? '诅咒骰子' : '碎裂骰子';
-                setGame(prev => ({
-                  ...prev,
-                  ownedDice: [...prev.ownedDice, { defId: curseDice, level: 1 }],
-                  diceBag: [...prev.diceBag, curseDice],
-                }));
-                addLog(`${e.name} 向你的骰子库塞入了一颗${curseName}！`);
-                addFloatingText(
-`+${curseName}`
-, 'text-red-400', undefined, 'player');
-                playSound('enemy_skill');
-              }
-            }
-            
-            await new Promise(r => setTimeout(r, 300));
-            setEnemyEffectForUid(e.uid, null);
-            continue;
-          }
-          
-          // Caster (ranged mage): never attacks directly, only applies DoT effects
-          if (e.combatType === 'caster') {
-            await enemyPreAction(e, 'skill');
-            setEnemyEffectForUid(e.uid, 'skill');
-            playSound('enemy_skill');
-            
-            // Randomly choose a DoT: poison, burn, or both
-            const dotRoll = Math.random();
-            if (dotRoll < 0.4) {
-              // Apply poison
-              const poisonVal = Math.max(2, Math.floor(e.attackDmg * 0.4));
-              setGame(prev => {
-                const existing = prev.statuses.find(s => s.type === 'poison');
-                if (existing) {
-                  return { ...prev, statuses: prev.statuses.map(s => s.type === 'poison' ? { ...s, value: s.value + poisonVal } : s) };
-                }
-                return { ...prev, statuses: [...prev.statuses, { type: 'poison' as any, value: poisonVal }] };
-              });
-              addLog(`${e.name} 释放毒雾，施加了 ${poisonVal} 层毒素！`);
-              addFloatingText(`毒素+${poisonVal}`, 'text-emerald-400', undefined, 'player');
-            } else if (dotRoll < 0.7) {
-              // Apply burn
-              const burnVal = Math.max(1, Math.floor(e.attackDmg * 0.3));
-              setGame(prev => {
-                const existing = prev.statuses.find(s => s.type === 'burn');
-                if (existing) {
-                  return { ...prev, statuses: prev.statuses.map(s => s.type === 'burn' ? { ...s, value: s.value + burnVal, duration: 3 } : s) };
-                }
-                return { ...prev, statuses: [...prev.statuses, { type: 'burn' as any, value: burnVal, duration: 3 }] };
-              });
-              addLog(`${e.name} 释放火球，施加了灼烧！`);
-              addFloatingText(`灼烧+${burnVal}`, 'text-orange-400', undefined, 'player');
-            } else {
-              // Apply both poison + weak
-              const poisonVal = Math.max(1, Math.floor(e.attackDmg * 0.25));
-              setGame(prev => {
-                let newStatuses = [...prev.statuses];
-                const existingPoison = newStatuses.find(s => s.type === 'poison');
-                if (existingPoison) {
-                  newStatuses = newStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value + poisonVal } : s);
-                } else {
-                  newStatuses.push({ type: 'poison' as any, value: poisonVal });
-                }
-                const existingWeak = newStatuses.find(s => s.type === 'weak');
-                if (existingWeak) {
-                  newStatuses = newStatuses.map(s => s.type === 'weak' ? { ...s, value: s.value + 1, duration: 2 } : s);
-                } else {
-                  newStatuses.push({ type: 'weak' as any, value: 1, duration: 2 });
-                }
-                return { ...prev, statuses: newStatuses };
-              });
-              addLog(`${e.name} 施放诅咒，施加了毒素和虚弱！`);
-              addFloatingText(`毒素+${poisonVal}`, 'text-emerald-400', undefined, 'player');
-              setTimeout(() => addFloatingText('虚弱', 'text-purple-400', undefined, 'player'), 200);
-            }
-            
-            await new Promise(r => setTimeout(r, 300));
-            setEnemyEffectForUid(e.uid, null);
-            continue;
-          }
-          
-          // Combat type differentiation:
-          // - warrior: high melee damage, 20% bonus at close range
-          // - ranger: multi-hit (2 weaker hits), chance to apply burn
-          // - caster: single hit + guaranteed debuff
-          // - others: normal attack
-          await enemyPreAction(e, 'attack');
-          setEnemyEffectForUid(e.uid, 'attack');
-          setScreenShake(true);
-          
-          let damage = e.attackDmg;
-          // Warrior: melee powerhouse - 30% bonus at close range (the real threat)
-          if (e.combatType === 'warrior') {
-            damage = Math.floor(damage * 1.3);
-          }
-          // Ranger: attacks twice, damage escalates each attack (+1 per hit)
-          if (e.combatType === 'ranger') {
-            const hitCount = e.attackCount || 0;
-            damage = Math.max(1, Math.floor(damage * 0.40) + hitCount);
-            if (isSlowed) damage = Math.floor(damage * 0.5);
-            // 递增攻击计数
-            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, attackCount: hitCount + 2 } : en));
-          }
-          // Caster: handled above (dot-only, no direct attack)
-          const str = e.statuses.find(s => s.type === 'strength');
-          if (str) damage += str.value;
-          const weak = e.statuses.find(s => s.type === 'weak');
-          if (weak) damage = Math.max(1, Math.floor(damage * 0.75));
-          
-          
-                    // Pre-calculate armor absorption for floating text
-          const preArmor = gameRef.current.armor;
-          const preAbsorbed = Math.min(preArmor, damage);
-          const preHpDmg = damage - preAbsorbed;
-
-setGame(prev => {
-            let newArmor = prev.armor;
-            let newHp = prev.hp;
-            let absorbed = 0;
-            if (newArmor > 0) {
-              absorbed = Math.min(newArmor, damage);
-              newArmor -= absorbed;
-            }
-            const hpDmg = damage - absorbed;
-            if (hpDmg > 0) newHp = Math.max(0, newHp - hpDmg);
-            // 急救沙漏: 免疫致命伤害
-            if (newHp <= 0 && prev.hp > 0) {
-              const hgRelic = prev.relics.find(r => r.id === 'emergency_hourglass');
-              if (hgRelic && (hgRelic.counter || 0) === 0) {
-                newHp = prev.hp; // 完全无视这次伤害
-                newArmor = prev.armor;
-                return { ...prev, hp: newHp, armor: newArmor,
-                  relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
-                };
-              }
-            }
-            return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + (prev.hp - newHp), hpLostThisBattle: (prev.hpLostThisBattle || 0) + (prev.hp - newHp) };
-          });
-          
-          // --- Relic on_damage_taken effects ---
-          game.relics.filter(r => r.trigger === 'on_damage_taken').forEach(relic => {
-            const res = relic.effect({});
-            if (res.damage) {
-              setGame(prev => ({ ...prev, rageFireBonus: (prev.rageFireBonus || 0) + res.damage }));
-              addToast(`${relic.name}: 下次出牌+${res.damage}伤害`, 'buff');
-            }
-            if (res.tempDrawBonus) {
-              setGame(prev => ({ ...prev, relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + res.tempDrawBonus }));
-              addToast(`${relic.name}: 下回合+${res.tempDrawBonus}手牌`, 'buff');
-            }
-          });
-          // --- 怒火骰子：受到敌人攻击时永久叠加额外伤害 ---
-          const furyDice = game.ownedDice.find(od => od.defId === 'w_fury');
-          if (furyDice) {
-            const furyLevel = furyDice.level || 1;
-            const furyInc = furyLevel; // 1级+1, 2级+2, 3级+3
-            setGame(prev => ({ ...prev, furyBonusDamage: (prev.furyBonusDamage || 0) + furyInc }));
-            addFloatingText(`怒火+${furyInc}`, 'text-orange-400', undefined, 'player');
-          }
-          // Armor absorbed: blue text with shield icon; HP damage: red text
-          if (preAbsorbed > 0) {
-            addFloatingText(`-${preAbsorbed}`, 'text-blue-400', <PixelShield size={2} />, 'player');
-          }
-          if (preHpDmg > 0) {
-            addFloatingText(`-${preHpDmg}`, 'text-red-500', undefined, 'player');
-          }
-          if (preAbsorbed === 0 && preHpDmg === 0) {
-            addFloatingText(`0`, 'text-gray-400', undefined, 'player');
-          }
-          setPlayerEffect('flash');
-          addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
-          playSound('enemy');
-          // 30% 概率触发攻击台词
-          if (Math.random() < 0.3) {
-            const aqc = getEnemyQuotes(e.configId);
-            const al = pickQuote(aqc?.attack);
-            if (al) showEnemyQuote(e.uid, al, 1800);
-          }
-          // 受重击台词（单次伤害超过 15）
-          if (damage >= 15) {
-            const hqc = getEnemyQuotes(e.configId);
-            const hl = pickQuote(hqc?.hurt);
-            if (hl) setTimeout(() => showEnemyQuote(e.uid, hl, 2000), 600);
-          }
-          
-          // Ranger: second hit after short delay (also escalated)
-          if (e.combatType === 'ranger') {
-            await new Promise(r => setTimeout(r, 250));
-            const hitCount = (e.attackCount || 0);
-            const secondHit = Math.max(1, Math.floor(e.attackDmg * 0.40) + hitCount + 1);
-                        const preArmor2 = gameRef.current.armor;
-            const preAbsorbed2 = Math.min(preArmor2, secondHit);
-            const preHpDmg2 = secondHit - preAbsorbed2;
-setGame(prev => {
-              let newArmor = prev.armor;
-              let newHp = prev.hp;
-              if (newArmor > 0) {
-                const abs = Math.min(newArmor, secondHit);
-                newArmor -= abs;
-                const hpD = secondHit - abs;
-                if (hpD > 0) newHp = Math.max(0, newHp - hpD);
-              } else {
-                newHp = Math.max(0, newHp - secondHit);
-              }
-              return { ...prev, hp: newHp, armor: newArmor };
-            });
-            if (preAbsorbed2 > 0) {
-              addFloatingText(`-${preAbsorbed2}`, 'text-blue-400', <PixelShield size={2} />, 'player');
-            }
-            if (preHpDmg2 > 0) {
-              addFloatingText(`-${preHpDmg2}`, 'text-orange-400', undefined, 'player');
-            }
-            addLog(`${e.name} 追击造成 ${secondHit} 伤害！`);
-            playSound('enemy');
-          }
-          
-          await new Promise(r => setTimeout(r, 300));
-          setScreenShake(false);
-          setEnemyEffectForUid(e.uid, null);
-          setPlayerEffect(null);
-        }
-
-
-        
-        // --- 3.5. Elite/Boss: 塞废骰子 ---
-        // 精英怪每2回合塞一颗碎裂骰子，Boss每回合塞一颗（低血量时塞诅咒骰子）
-        for (const e of currentEnemies.filter(en => en.hp > 0)) {
-          const isElite = e.maxHp > 80 && e.maxHp <= 200; // 精英怪HP范围
-          const isBoss = e.maxHp > 200; // Boss HP范围
-          
-          if (isElite && game.battleTurn % 3 === 0) {
-            // 精英每2回合塞一颗碎裂骰子
-            setGame(prev => ({
-              ...prev,
-              ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
-              diceBag: [...prev.diceBag, 'cracked'],
-            }));
-            addLog(`${e.name} 向你的骰子库塞入了一颗碎裂骰子！`);
-            addFloatingText('+碎裂骰子', 'text-red-400', undefined, 'player');
-            playSound('enemy_skill');
-            await new Promise(r => setTimeout(r, 400));
-          }
-          
-          if (isBoss) {
-            const hpRatio = e.hp / e.maxHp;
-            if (hpRatio < 0.4 && game.battleTurn % 2 === 0) {
-              // Boss低血量：塞诅咒骰子
-              setGame(prev => ({
-                ...prev,
-                ownedDice: [...prev.ownedDice, { defId: 'cursed', level: 1 }],
-                diceBag: [...prev.diceBag, 'cursed'],
-              }));
-              addLog(`${e.name} 施放诅咒，向你的骰子库塞入了一颗诅咒骰子！`);
-              addFloatingText('+诅咒骰子', 'text-purple-400', undefined, 'player');
-              playSound('enemy_skill');
-              await new Promise(r => setTimeout(r, 400));
-            } else if (game.battleTurn % 3 === 0) {
-              // Boss正常：每2回合塞碎裂骰子
-              setGame(prev => ({
-                ...prev,
-                ownedDice: [...prev.ownedDice, { defId: 'cracked', level: 1 }],
-                diceBag: [...prev.diceBag, 'cracked'],
-              }));
-              addLog(`${e.name} 向你的骰子库塞入了一颗碎裂骰子！`);
-              addFloatingText('+碎裂骰子', 'text-red-400', undefined, 'player');
-              playSound('enemy_skill');
-              await new Promise(r => setTimeout(r, 400));
-            }
-          }
-        }
-
-
-        // --- 3.6. Elite/Boss: 叠护甲 ---
-        // 部分精英每3回合叠一次护甲，Boss每2回合叠一次护甲
-        for (const e of currentEnemies.filter(en => en.hp > 0)) {
-          const isElite = e.maxHp > 80 && e.maxHp <= 200;
-          const isBoss = e.maxHp > 200;
-          
-          if (isElite && game.battleTurn % 3 === 0 && game.battleTurn > 0) {
-            const armorVal = Math.floor(e.attackDmg * 1.5);
-            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
-            addLog(`${e.name} 凝聚了护甲（+${armorVal}）！`);
-            addFloatingText(
-`护甲+${armorVal}`
-, 'text-cyan-400', undefined, 'enemy');
-            playSound('enemy_defend');
-            await new Promise(r => setTimeout(r, 300));
-          }
-          
-          if (isBoss && game.battleTurn % 2 === 0 && game.battleTurn > 0) {
-            const armorVal = Math.floor(e.attackDmg * 2.0);
-            setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + armorVal } : en));
-            addLog(`${e.name} 释放了护盾（+${armorVal}护甲）！`);
-            addFloatingText(
-`护盾+${armorVal}`
-, 'text-cyan-300', undefined, 'enemy');
-            playSound('enemy_defend');
-            await new Promise(r => setTimeout(r, 300));
-          }
-        }
-
-
-    // --- 5. Player Turn Start ---
-    
-      // 薛定谔的袋子：若上回合未使用重Roll，本回合额外抽1颗
-      let _schrodingerBonus = 0;
-      if (game.relics.some(r => r.id === 'schrodinger_bag') && rerollCount === 0) {
-        _schrodingerBonus = 1;
-        addLog('薛定谔的袋子：未重Roll，下回合额外抽1颗骰子！');
-      }
-setGame(prev => {
-      const nextTurn = prev.battleTurn + 1;
-      let nextStatuses = [...prev.statuses];
-      let burnDamage = 0;
-      const burn = prev.statuses.find(s => s.type === 'burn');
-      if (burn && burn.value > 0) {
-        burnDamage = burn.value;
-        addLog(`\u4f60\u56e0\u707c\u70e7\u53d7\u5230\u4e86 ${burnDamage} \u70b9\u4f24\u5bb3\u3002`);
-        addFloatingText(`-${burnDamage}`, 'text-orange-500', <PixelFlame size={2} />, 'player');
-        // 灼烧只存在一回合，造成伤害后直接移除
-        nextStatuses = nextStatuses.filter(s => s.type !== 'burn');
-      }
-      nextStatuses = tickStatuses(nextStatuses);
-      currentPlayerHp = Math.max(0, prev.hp - burnDamage);
-      // 急救沙漏: 火伤致命保护
-      if (currentPlayerHp <= 0 && prev.hp > 0) {
-        const hgR = prev.relics.find(r => r.id === 'emergency_hourglass');
-        if (hgR && (hgR.counter || 0) === 0) {
-          currentPlayerHp = prev.hp;
-          return { ...prev, hp: currentPlayerHp,
-            relics: prev.relics.map(r => r.id === 'emergency_hourglass' ? { ...r, counter: 15 } : r)
-          };
-        }
-      }
-
-      // Update all alive enemies' intents for next turn
-      setEnemies(prevEnemies => prevEnemies.map(e => {
-        if (e.hp <= 0 || !e.pattern) return e;
-        return e; // pattern no longer sets intent
-      }));
-
-      return { 
-        ...prev, 
-        battleTurn: nextTurn, 
-        hp: currentPlayerHp,
-        statuses: nextStatuses,
-        isEnemyTurn: false
-      };
-    });
+    const enemyTurnHp = await executeEnemyTurn(game, enemies, dice, rerollCount, enemyAICb);
+    let currentPlayerHp = enemyTurnHp;
 
     await new Promise(r => setTimeout(r, 100));
 
@@ -3847,7 +2505,7 @@ setGame(prev => {
     } else {
       // 战士/其他：默认全部弃掉
       // 命运之轮：首次出牌后保留手牌1次
-      const hasKeepOnce = g2.relics.some(r => r.id === 'fortune_wheel_relic') && !(g2.fortuneWheelUsed);
+      const hasKeepOnce = hasRelic(g2.relics, 'fortune_wheel_relic') && !(g2.fortuneWheelUsed);
       if (hasKeepOnce && g2.playsLeft < g2.maxPlays) {
         remainingDice = dice.filter(d => !d.spent);
         discardFromHand = [];
@@ -3882,8 +2540,10 @@ setGame(prev => {
     
     const remainingCount = remainingDice.length;
     
-    // Capture schrodinger bonus before entering setTimeout (closure captures value)
-    const schrodingerBonus = _schrodingerBonus;
+    // Capture draw bonus from on_turn_end effects before entering setTimeout (closure captures value)
+    const schrodingerBonus = game.tempDrawCountBonus || 0;
+    // Reset tempDrawCountBonus for next turn
+    setGame(prev => ({ ...prev, tempDrawCountBonus: 0 }));
     // Use setTimeout to ensure previous state updates are flushed
     setTimeout(() => {
       // Read latest game state from ref (setTimeout ensures prior setGame calls are flushed)
@@ -4025,7 +2685,7 @@ setGame(prev => {
         }
         setDice(pd => pd.map(d => ({ ...d, rolling: false, kept: false })));
         // 元素骰子坍缩 + 小丑骰子1-9随机
-        setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: game.relics.some(r => r.id === 'limit_breaker') , lockedElement: game.lockedElement }));
+        setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: hasLimitBreaker(game.relics) , lockedElement: game.lockedElement }));
         playSound('dice_lock');
         await new Promise(r => setTimeout(r, 200));
         setDice(prev => [...prev]);
@@ -4103,99 +2763,41 @@ useEffect(() => {
     // --- 层厅征服者: counter 递增 ---
     setGame(prev => ({
       ...prev,
-      relics: prev.relics.map(r => r.id === 'floor_conqueror' ? { ...r, counter: (r.counter || 0) + 1 } : r),
+      relics: incrementFloorsCleared(prev.relics),
     }));
     if (enemies.length === 0) return;
     const allWaveEnemies = game.battleWaves.flatMap(w => w.enemies);
     playSound('victory');
     addLog(`击败了 ${enemies[0]?.name || ""}！`);
     
-    let baseGold = enemies.reduce((s,e) => s + e.dropGold, 0);
+    let bonusGold = 0;
     // on_battle_end 遗物触发（如废品回收站）
     game.relics.filter(r => r.trigger === 'on_battle_end').forEach(relic => {
-      const res = relic.effect({
-        cursedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCursed).length,
-        crackedDiceInHand: dice.filter(d => getDiceDef(d.diceDefId).isCracked).length,
-        currentGold: game.souls,
-      });
+      const res = relic.effect(buildRelicContext({
+        game,
+        dice,
+        targetEnemy: null,
+        rerollsThisTurn: 0,
+        hasPlayedThisTurn: true,
+      }));
       if (res.goldBonus && res.goldBonus > 0) {
-        baseGold += res.goldBonus;
+        bonusGold += res.goldBonus;
         addToast(` ${relic.name}: +${res.goldBonus}金币`, 'gold');
       }
     });
-    const loot: LootItem[] = [
-      { id: 'gold', type: 'gold', value: baseGold, collected: false }
-    ];
 
-    // Boss rewards: +1 draw count (手牌上限+1)
-    const victoryNode = game.map.find(n => n.id === game.currentNodeId);
-    if (victoryNode?.type === 'boss') {
-      loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
-    }
+    // === 战利品列表构建（纯函数提取到 logic/lootHandler.ts） ===
+    const loot = buildLootItems({ game, enemies, allWaveEnemies, bonusGold });
 
-    // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
-    // 中Boss(非终Boss)也走骰子奖励，不随机给重roll
-    const mapMaxDepth = Math.max(...game.map.map(n => n.depth));
-    const isMidBoss = victoryNode?.type === 'boss' && victoryNode.depth < mapMaxDepth;
-    if (isMidBoss) {
-      // 中Boss必给+1骰子（额外的，在diceReward阶段选新骰子之外再加一颗手牌）
-      // 不走随机elite奖励
-    } else if (enemies.find(e => e.rerollReward)?.rerollReward) {
-      const eliteRewards = LOOT_CONFIG.eliteRewards;
-      const selectedReward = eliteRewards[Math.floor(Math.random() * eliteRewards.length)];
-      
-      if (selectedReward.type === 'freeRerollPerTurn') {
-        loot.push({ id: 'freeReroll', type: 'reroll', value: selectedReward.value, collected: false });
-      } else {
-        loot.push({ id: selectedReward.type, type: selectedReward.type as any, value: selectedReward.value, collected: false });
-      }
-    }
-
-    // (augment loot removed - unified into relic drops)
-
-    // 一击必杀挑战奖励：额外宝箱（点击后随机开启）
-    if (game.instakillCompleted || gameRef.current.instakillCompleted) {
-      loot.push({ id: 'challenge_chest', type: 'challengeChest' as any, value: 0, collected: false });
-    }
-
-
-
-
-
-
-
-
-    // 遗物掉落：精英战/Boss战必掉，普通战30%概率
-    const battleType = allWaveEnemies.some(e => e.name.includes('Boss')) ? 'boss' : 
-                       allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
-    const relicDropChance = battleType === 'enemy' ? 0 : 1.0;
-    if (Math.random() < relicDropChance) {
-      const relicPool = getRelicRewardPool(battleType as 'elite' | 'boss');
-      const ownedRelicIds = game.relics.map(r => r.id);
-      const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
-      if (newRelics.length > 0) {
-        const newRelic = newRelics[0];
-        loot.push({ id: 'relic-' + newRelic.id, type: 'relic' as any, value: 0, collected: false, relicData: newRelic });
-        
-      }
-    }
+    // === 胜利后阶段转换（纯函数提取到 logic/lootHandler.ts） ===
+    const postVictory = resolvePostVictoryPhase(game);
     setGame(prev => {
       const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
       
-      if (prev.currentNodeId && prev.map.find(n => n.id === prev.currentNodeId)?.type === 'boss') {
-        const bossNode = prev.map.find(n => n.id === prev.currentNodeId);
-        const mapMaxDepth = Math.max(...prev.map.map(n => n.depth));
-        // 最终Boss = 当前地图最大深度的Boss节点
-        if (bossNode && bossNode.depth >= mapMaxDepth) {
-          // 判断是否为最终章
-          if (prev.chapter >= CHAPTER_CONFIG.totalChapters) {
-            return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: (prev.stats.bossesKilled || 0) + 1 } };
-          } else {
-            // 进入大关过渡
-            return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: (prev.stats.bossesKilled || 0) + 1 } };
-          }
-        }
-        // 中层Boss：继续走正常战利品流程
+      if (postVictory.phase === 'victory') {
+        return { ...prev, map: newMap, phase: 'victory', isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: postVictory.bossesKilled } };
+      } else if (postVictory.phase === 'chapterTransition') {
+        return { ...prev, map: newMap, phase: 'chapterTransition' as any, isEnemyTurn: false, stats: { ...prev.stats, bossesKilled: postVictory.bossesKilled } };
       }
 
       return { 
@@ -4204,42 +2806,9 @@ useEffect(() => {
         phase: 'diceReward',
         lootItems: loot,
         isEnemyTurn: false,
-        relics: prev.relics.map(r => r.id === 'emergency_hourglass' && (r.counter || 0) > 0 ? { ...r, counter: (r.counter || 0) - 1 } : r)
+        relics: tickHourglass(prev.relics)
       };
     });
-  };
-
-  // === 大关过渡：进入下一章 ===
-  const _handleNextChapter = () => {
-    setGame(prev => {
-      const nextChapter = prev.chapter + 1;
-      const healAmount = Math.floor(prev.maxHp * CHAPTER_CONFIG.chapterHealPercent);
-      const newHp = Math.min(prev.maxHp, prev.hp + healAmount);
-      const bonusGold = CHAPTER_CONFIG.chapterBonusGold;
-      const newMap = generateMap();
-      const diceIds = prev.ownedDice.map(d => d.defId);
-      const newBag = initDiceBag(diceIds);
-      return {
-        ...prev,
-        chapter: nextChapter,
-        map: newMap,
-        currentNodeId: null,
-        phase: 'map' as const,
-        hp: newHp,
-        armor: 0,
-        souls: prev.souls + bonusGold,
-        diceBag: newBag,
-        discardPile: [],
-        statuses: [],
-        battleTurn: 0,
-        isEnemyTurn: false,
-        battleWaves: [],
-        currentWaveIndex: 0,
-        logs: [...prev.logs, `\n=== 第${nextChapter}章: ${CHAPTER_CONFIG.chapterNames[nextChapter - 1]} ===\n回复了 ${healAmount} HP，获得 ${bonusGold} 金币`],
-      };
-    });
-    setEnemies([]);
-    playSound('victory');
   };
 
   const collectLoot = (id: string) => {
@@ -4247,164 +2816,71 @@ useEffect(() => {
     const item = game.lootItems.find(i => i.id === id);
     if (!item || item.collected) return;
 
-    if (item.type === 'augment' && item.augmentOptions) {
-      setPendingLootAugment({ id: item.id, options: item.augmentOptions });
+    // 挑战宝箱播放特殊音效
+    if ((item.type as string) === 'challengeChest') {
+      playSound('shop_buy');
+    }
+
+    // 使用纯函数处理状态更新
+    const result = processCollectLoot(game, id);
+    
+    if (!result.success) return;
+
+    // 增益类型需要弹出选择界面
+    if (result.needsAugmentSelection && result.augmentOptions) {
+      setPendingLootAugment({ id: result.pendingLootId || id, options: result.augmentOptions });
       return;
     }
 
-    setGame(prev => {
-      const nextLoot = prev.lootItems.map(i => i.id === id ? { ...i, collected: true } : i);
-      let nextState = { ...prev, lootItems: nextLoot };
+    // 应用新状态
+    setGame(result.state);
 
-      if (item.type === 'gold') {
-        nextState.souls += item.value || 0;
-        addLog(`获得了 ${item.value} 金币。`);
-      } else if (item.type === 'reroll') {
-        if (item.id === 'freeReroll') {
-          nextState.freeRerollsPerTurn += item.value || 0;
-          addLog(`获得了每回合 +${item.value} 免费重骰。`);
-        } else {
-          nextState.freeRerollsPerTurn += item.value || 0;
-          addLog(`获得了 ${item.value} 次全局重骰机会。`);
-        }
-      } else if (item.type === 'maxPlays') {
-        nextState.maxPlays += item.value || 0;
-        addLog(`获得了 ${item.value} 次出牌机会。`);
-      } else if (item.type === 'specialDice' && item.diceDefId) {
-        nextState.ownedDice = [...nextState.ownedDice, { defId: item.diceDefId!, level: 1 }];
-        const ddef = getDiceDef(item.diceDefId);
-        addLog(`获得了特殊骰子: ${ddef.name}。`);
-      } else if (item.type === 'diceCount') {
-        const oldDice = nextState.drawCount;
-        nextState.drawCount = Math.min(6, nextState.drawCount + (item.value || 0));
-        if (nextState.drawCount > oldDice) {
-          nextState.enemyHpMultiplier += 0.25;
-        }
-        addLog(`获得了 ${item.value} 颗骰子。`);
-      } else if ((item.type as string) === 'challengeChest') {
-        // 挑战宝箱：随机开出奖励
-        playSound('shop_buy');
-        const roll = Math.random();
-        if (roll < 0.4) {
-          const gold = 30 + Math.floor(Math.random() * 40);
-          nextState.souls += gold;
-          addLog(`开启挑战宝箱：获得 ${gold} 金币`);
-          addToast(`🎁 挑战宝箱：+${gold}金币`, 'gold');
-        } else if (roll < 0.75) {
-          const pool = [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || [])];
-          const pick = pool[Math.floor(Math.random() * pool.length)];
-          if (pick) {
-            nextState.ownedDice = [...nextState.ownedDice, { defId: pick.id, level: 1 }];
-            addLog(`开启挑战宝箱：获得 ${pick.name}`);
-            addToast(`🎁 挑战宝箱：${pick.name}`, 'buff');
-          } else {
-            nextState.souls += 50;
-            addToast(`🎁 挑战宝箱：+50金币`, 'gold');
-          }
-        } else {
-          const relicPool = [...(RELICS_BY_RARITY.common || []), ...(RELICS_BY_RARITY.uncommon || [])];
-          const ownedIds = nextState.relics.map((r: any) => r.id);
-          const available = relicPool.filter(r => !ownedIds.includes(r.id));
-          if (available.length > 0) {
-            const pick = available[Math.floor(Math.random() * available.length)];
-            nextState.relics = [...nextState.relics, { ...pick }];
-            addLog(`开启挑战宝箱：获得遗物 ${pick.name}`);
-            addToast(`🎁 挑战宝箱：${pick.name}`, 'buff');
-          } else {
-            nextState.souls += 60;
-            addToast(`🎁 挑战宝箱：+60金币`, 'gold');
-          }
-        }
-      }
+    // 输出日志
+    result.logs.forEach(log => addLog(log));
 
-      // 遗物拾取
-      if (item.type === 'relic' && item.relicData) {
-        nextState.relics = [...nextState.relics, { ...item.relicData }];
-        addLog(`获得遗物: ${item.relicData.name}`);
-      }
-
-      return nextState;
-    });
-
-    // 閬楃墿 toast
-    if (item.type === 'relic' && item.relicData) {
-      addToast(' 获得遗物: ' + item.relicData.name + '!', 'buff');
-    }
-    
-    // Dice gained toast — outside setGame to avoid StrictMode double-fire
-    if (item.type === 'specialDice' && item.diceDefId) {
-      const ddef = getDiceDef(item.diceDefId);
-      addToast(`获得了特殊骰子: ${ddef.name}`);
-    } else if (item.type === 'diceCount' && game.drawCount < 6) {
-      addToast("获得诅咒之力，敌人也都变强了");
-      addLog("获得诅咒之力，敌人血量提升 25%。");
-    }
+    // 显示 toast
+    result.toasts.forEach(toast => addToast(toast.message, toast.type));
   };
 
   const selectLootAugment = (aug: Augment) => {
     if (!pendingLootAugment) return;
     playSound('select');
     
-    // Augment module: find empty slot or replace
-    const existingIdx = game.augments.findIndex(a => a?.id === aug.id);
-    if (existingIdx !== -1) {
-      // Upgrade existing
-      setGame(prev => {
-        const nextAugs = [...prev.augments];
-        const existing = nextAugs[existingIdx]!;
-        nextAugs[existingIdx] = { ...existing, level: (existing.level || 1) + 1 };
-        const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
-        addLog(`\u6A21\u5757\u5347\u7EA7: ${aug.name} Lv.${(existing.level || 1) + 1}`);
-        return { ...prev, augments: nextAugs, lootItems: nextLoot };
-      });
-      setPendingLootAugment(null);
-    } else {
-      const emptyIdx = game.augments.findIndex(a => a === null);
-      if (emptyIdx !== -1) {
-        setGame(prev => {
-          const nextAugs = [...prev.augments];
-          nextAugs[emptyIdx] = { ...aug, level: 1 };
-          const nextLoot = prev.lootItems.map(i => i.id === pendingLootAugment.id ? { ...i, collected: true } : i);
-          addLog(`\u83B7\u5F97\u65B0\u6A21\u5757: ${aug.name}`);
-          return { ...prev, augments: nextAugs, lootItems: nextLoot };
-        });
-        setPendingLootAugment(null);
-      } else {
-        // All slots full, need replacement UI
-        setGame(prev => ({ ...prev, pendingReplacementAugment: { ...aug, level: 1 } }));
-        setPendingLootAugment(null);
-      }
+    // 使用纯函数处理增益选择
+    const result = processSelectLootAugment(game, pendingLootAugment.id, aug);
+    
+    // 应用新状态
+    setGame(result.state);
+    
+    // 输出日志
+    result.logs.forEach(log => addLog(log));
+    
+    // 如果需要替换，保持 pendingReplacementAugment 状态
+    if (result.needsReplacement && result.pendingReplacementAugment) {
+      // 状态已在 processSelectLootAugment 中设置
     }
+    
+    // 清空待处理增益
+    setPendingLootAugment(null);
   };
 
   const replaceAugment = (newAug: Augment, replaceIdx: number) => {
     playSound('select');
-    setGame(prev => {
-      const oldAug = prev.augments[replaceIdx];
-      const refund = oldAug ? (oldAug.level || 1) * 50 : 0;
-      const newAugs = [...prev.augments];
-      newAugs[replaceIdx] = { ...newAug, level: 1 };
-      
-      // Find the loot item that triggered this and mark it collected
-      const nextLoot = prev.lootItems.map(i => i.type === 'augment' && !i.collected ? { ...i, collected: true } : i);
-      
-      addLog(`替换了遗物: ${oldAug?.name} -> ${newAug.name}，返还了 ${refund} 金币。`);
-      return { 
-        ...prev, 
-        augments: newAugs, 
-        souls: prev.souls + refund,
-        lootItems: nextLoot,
-        pendingReplacementAugment: null 
-      };
-    });
+    
+    // 使用纯函数处理增益替换
+    const result = processReplaceAugment(game, newAug, replaceIdx);
+    
+    // 应用新状态并输出日志
+    setGame(result.state);
+    result.logs.forEach(log => addLog(log));
   };
 
   const finishLoot = () => {
     playSound('select');
-    setGame(prev => ({
-      ...prev,
-      phase: 'map'
-    }));
+    
+    // 使用纯函数处理完成战利品收集
+    const newState = processFinishLoot(game);
+    setGame(newState);
   };
 
   const pickReward = (aug: Augment) => {
@@ -4427,26 +2903,8 @@ useEffect(() => {
     if (next === 4 || next === 9) {
       setGame(prev => ({ ...prev, phase: 'campfire', currentNode: next }));
     } else if (next === 5) {
-      // 游荡商人：随机3个商品
-      const [minP, maxP] = SHOP_CONFIG.priceRange;
-      const rp = () => Math.floor(Math.random() * (maxP - minP + 1)) + minP;
-      const candidates: ShopItem[] = [];
-      const sRelics = pickRandomRelics([...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare], 3, game.relics.map(r => r.id));
-      for (const aug of sRelics) {
-        candidates.push({ id: 'aug_' + aug.id, type: 'augment' as const, augment: { ...aug, condition: 'passive' as any } as any, label: aug.name, desc: aug.description, price: rp() });
-      }
-      const sDice = [...DICE_BY_RARITY.uncommon, ...DICE_BY_RARITY.rare].sort(() => Math.random() - 0.5);
-      for (const d of sDice.slice(0, 2)) {
-        candidates.push({ id: 'dice_' + d.id, type: 'specialDice' as const, diceDefId: d.id, label: d.name, desc: d.description + ' [' + d.faces.join(',') + ']', price: d.rarity === 'rare' ? rp() + 30 : rp() + 10 });
-      }
-      candidates.push({ id: 'reroll_legacy', type: 'reroll' as const, label: '重掷强化', desc: '永久增加每回合 +1 次免费重掷', price: rp() });
-      const shopItems: ShopItem[] = candidates.sort(() => Math.random() - 0.5).slice(0, 3);
-      // 始终添加删除骰子选项
-      shopItems.push({
-        id: 'removeDice_fixed', type: 'removeDice' as const,
-        label: '骰子净化', desc: '移除一颗骰子，瘦身构筑',
-        price: Math.floor(Math.random() * 61) + 20 // 20-80随机
-      });
+      // 游荡商人：随机3个商品（使用 shopGenerator 纯函数）
+      const shopItems = generateShopItems(game.relics.map(r => r.id));
       setGame(prev => ({ ...prev, phase: 'merchant', currentNode: next, shopItems }));
     } else if (next === 7) {
       setGame(prev => ({ ...prev, phase: 'event', currentNode: next }));
@@ -4458,16 +2916,7 @@ useEffect(() => {
   
   // COMBAT_TYPE_DESC 已提取到 logic/battleHelpers.ts
 
-  const _getEffectiveAttackDmg = (e: Enemy) => {
-    let val = e.attackDmg;
-    const weak = e.statuses.find(s => s.type === 'weak');
-    if (weak) val = Math.floor(val * 0.75);
-    const playerVuln = game.statuses.find(s => s.type === 'vulnerable');
-    if (playerVuln) val = Math.floor(val * 1.5);
-    const strength = e.statuses.find(s => s.type === 'strength');
-    if (strength) val += strength.value;
-    return val;
-  };
+  // getEffectiveAttackDmg 已提取到 logic/attackCalc.ts
 
   const resetGame = () => {
     setGame(createInitialGameState());
@@ -4495,6 +2944,86 @@ useEffect(() => {
     addLog,
     handleSelectStartingRelic, handleSkipStartingRelic,
     resetGame,
+  };
+
+  // --- BattleContext Provider Value (战斗UI状态+动作) ---
+  const battleContextValue: BattleContextType = {
+    // 核心战斗状态
+    game, setGame,
+    enemies, targetEnemy,
+    dice,
+    rerollCount,
+
+    // 战斗UI状态
+    enemyEffects,
+    playerEffect,
+    screenShake,
+    hpGained,
+    rerollFlash,
+    floatingTexts,
+    enemyQuotes,
+    enemyInfoTarget,
+    setEnemyInfoTarget,
+    selectedHandTypeInfo,
+    setSelectedHandTypeInfo,
+
+    // 结算演出状态
+    settlementPhase,
+    settlementData,
+    showDamageOverlay,
+    showRelicPanel,
+    setShowRelicPanel,
+    flashingRelicIds,
+    selectedRelic,
+    setSelectedRelic,
+
+    // 模态框开关
+    showCalcModal,
+    setShowCalcModal,
+    showHandGuide,
+    setShowHandGuide,
+    showDiceGuide,
+    setShowDiceGuide,
+    showClassInfo,
+    setShowClassInfo,
+
+    // 转场/波次状态
+    battleTransition,
+    bossEntrance,
+    waveAnnouncement,
+    showWaveDetail,
+    setShowWaveDetail,
+    showChallengeDetail,
+    setShowChallengeDetail,
+
+    // 骰子动画状态
+    handLeftThrow,
+    shuffleAnimating,
+    diceDiscardAnim,
+    lastTappedDieId,
+    setLastTappedDieId,
+
+    // 计算属性
+    currentHands,
+    isNormalAttackMulti,
+    handHintIds,
+    expectedOutcome,
+    isAoeActive,
+    canReroll,
+    canAffordReroll,
+    freeRerollsRemaining,
+    currentRerollCost,
+    activeAugments,
+
+    // 战斗动作
+    rollAllDice,
+    rerollSelected,
+    toggleSelect,
+    playHand,
+    endTurn,
+    addToast,
+    addFloatingText,
+    addLog,
   };
 
 
@@ -4541,6 +3070,7 @@ useEffect(() => {
 
   return (
     <GameContext.Provider value={contextValue}>
+    <BattleContext.Provider value={battleContextValue}>
     <div className="relative h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] overflow-hidden select-none sm:border-x-3 border-[var(--dungeon-panel-border)] flex flex-col scanlines">
       {/* 像素网格背景 */}
       <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
@@ -5170,7 +3700,7 @@ useEffect(() => {
                           {settlementData.isSameElement && (
                             <div className="text-[10px] font-bold text-[var(--pixel-cyan)] mt-1 animate-pulse tracking-widest"
                               style={{textShadow: '0 0 10px rgba(48,216,208,0.8)'}}>
-                              ★ 元素共鸣 ×2 ★
+                              ★ 元素共鸣 +100% ★
                             </div>
                           )}
                         </div>
@@ -5538,18 +4068,22 @@ useEffect(() => {
                   <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
                     {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
                     {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
-                    {/* 战士血怒加成显示（支持点击tips） */}
-                    {game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0 && (
+                    {/* 战士血怒加成显示（5层封顶） */}
+                    {game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0 && (() => {
+                      const fs = Math.min(game.bloodRerollCount || 0, FURY_CONFIG.maxStack);
+                      const atCap = (game.bloodRerollCount || 0) >= FURY_CONFIG.maxStack;
+                      return (
                       <BuffTooltip
-                        label={`×${Math.round((1 + (game.bloodRerollCount || 0) * 0.15) * 100)}%`}
+                        label={`+${Math.round(fs * FURY_CONFIG.damagePerStack * 100)}%`}
                         icon={<PixelBloodDrop size={1.5} />}
                         color="rgb(220,60,60)"
                         bgColor="rgba(200,40,40,0.15)"
                         borderColor="rgba(200,40,40,0.4)"
-                        title={`血怒 ×${game.bloodRerollCount}层`}
-                        desc={`每次嗜血+15%最终伤害，当前${game.bloodRerollCount}层=+${game.bloodRerollCount * 15}%。出牌后重置。`}
+                        title={`血怒 ${fs}/${FURY_CONFIG.maxStack}层${atCap ? ' [已满]' : ''}`}
+                        desc={`每次嗜血+${Math.round(FURY_CONFIG.damagePerStack * 100)}%最终伤害（最多${FURY_CONFIG.maxStack}层+${Math.round(FURY_CONFIG.maxStack * FURY_CONFIG.damagePerStack * 100)}%）。${atCap ? '叠满后卖血改为+' + FURY_CONFIG.armorAtCap + '护甲。' : ''}出牌后重置。`}
                       />
-                    )}
+                      );
+                    })()}
                     {/* 战士狂暴本能（受伤百分比倍率） */}
                     {game.playerClass === 'warrior' && (game.warriorRageMult || 0) > 0 && (
                       <BuffTooltip
@@ -5558,14 +4092,14 @@ useEffect(() => {
                         color="rgb(255,80,40)"
                         bgColor="rgba(255,60,20,0.15)"
                         borderColor="rgba(255,60,20,0.4)"
-                        title={`狂暴本能 ×${Math.round((1 + (game.warriorRageMult || 0)) * 100)}%`}
+                        title={`狂暴本能 +${Math.round((game.warriorRageMult || 0) * 100)}%`}
                         desc={`手牌达到6颗上限时，按受伤百分比(${Math.round((1 - game.hp / game.maxHp) * 100)}%)获得等比例伤害加成。`}
                       />
                     )}
                     {/* 法师过充加成显示（支持点击tips） */}
                     {game.playerClass === 'mage' && (game.mageOverchargeMult || 0) > 0 && (
                       <BuffTooltip
-                        label={`×${Math.round((1 + (game.mageOverchargeMult || 0)) * 100)}%`}
+                        label={`+${Math.round((game.mageOverchargeMult || 0) * 100)}%`}
                         icon={<PixelMagic size={1.5} />}
                         color="rgb(192,132,252)"
                         bgColor="rgba(160,80,255,0.15)"
@@ -5583,7 +4117,7 @@ useEffect(() => {
                         bgColor="rgba(120,80,200,0.15)"
                         borderColor="rgba(120,80,200,0.4)"
                         title={`星界吟唱 Lv.${game.chargeStacks}`}
-                        desc={`手牌上限${Math.min(6, game.drawCount + (game.chargeStacks || 0))}/6，吟唱回合+6护甲。出牌后重置所有吟唱。`}
+                        desc={`手牌上限${Math.min(6, game.drawCount + (game.chargeStacks || 0))}/6，吟唱回合+${6 + (game.chargeStacks || 0) * 2}护甲。出牌后重置所有吟唱。`}
                       />
                     )}
                     {/* 盗贼连击计数显示 */}
@@ -5595,7 +4129,7 @@ useEffect(() => {
                         bgColor="rgba(48,160,80,0.15)"
                         borderColor="rgba(48,160,80,0.4)"
                         title={`连击 ×${game.comboCount}`}
-                        desc={`第2次出牌伤害×120%。两次相同牌型（非普攻）额外+25%。回合结束重置。`}
+                        desc={`第2次出牌伤害+20%。两次相同牌型（非普攻）额外+25%。回合结束重置。`}
                       />
                     )}
                   </div>
@@ -6282,169 +4816,15 @@ useEffect(() => {
 
             
 
-            {/* Calculation Modal */}
-            <AnimatePresence>
-              {showCalcModal && expectedOutcome && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85"
-                  onClick={() => setShowCalcModal(false)}
-                >
-                  <motion.div 
-                    initial={{ scale: 0.9, y: 20 }}
-                    animate={{ scale: 1, y: 0 }}
-                    className="w-full max-w-sm pixel-panel overflow-hidden"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className="p-3 border-b-3 border-[var(--dungeon-panel-border)] flex justify-between items-center bg-[var(--dungeon-bg-light)]">
-                      <h3 className="text-[12px] font-bold text-[var(--dungeon-text-bright)] tracking-[0.1em] pixel-text-shadow">◆ 结果计算详情 ◆</h3>
-                      <button onClick={() => setShowCalcModal(false)} className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text-bright)]">
-                        <PixelClose size={2} />
-                      </button>
-                    </div>
-                    <div className="p-4 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">激活牌型</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[12px] font-bold text-[var(--pixel-green)]">{expectedOutcome.bestHand}</span>
-                          {game.handLevels[expectedOutcome.bestHand] > 1 && (
-                            <span className="text-[10px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
-                          )}
-                          <span className="text-[10px] text-[var(--dungeon-text-dim)] font-mono">(基础 {expectedOutcome.baseHandValue} / 倍率 {Math.round(expectedOutcome.handMultiplier * 100)}%)</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">选中骰子</span>
-                        <div className="flex gap-1">
-                          {dice.filter(d => d.selected && !d.spent).map((d, i) => (
-                            <PixelDiceRenderer key={i} diceDefId={d.diceDefId} value={d.value} size={22} element={d.collapsedElement || (d.element !== 'normal' ? d.element : undefined)} />
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[12px] text-[var(--dungeon-text-dim)]">基础点数 (X)</span>
-                        <span className="text-[12px] font-bold text-[var(--dungeon-text-bright)]">{expectedOutcome.X}</span>
-                      </div>
-                      <div className="h-[2px] bg-[var(--dungeon-panel-border)]" />
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[12px]">
-                          <span className="text-[var(--dungeon-text-dim)]">牌型基础伤害 <span className="text-[10px] opacity-50">({expectedOutcome.baseHandValue} + {expectedOutcome.X}) × {Math.round(expectedOutcome.handMultiplier * 100)}%</span></span>
-                          <span className="text-[var(--dungeon-text)]">{expectedOutcome.baseDamage}</span>
-                        </div>
-                        {expectedOutcome.extraDamage !== 0 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">加成伤害 <span className="text-[10px] opacity-50">× {Math.round(expectedOutcome.multiplier * 100)}%</span></span>
-                            <span className="text-[var(--pixel-gold)]">+{expectedOutcome.extraDamage}</span>
-                          </div>
-                        )}
-                        {expectedOutcome.pierceDamage > 0 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">穿透伤害</span>
-                            <span className="text-[var(--pixel-purple)]">+{expectedOutcome.pierceDamage}</span>
-                          </div>
-                        )}
-                        {expectedOutcome.armorBreak && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">?? 破甲</span>
-                            <span className="text-orange-400">摧毁护甲</span>
-                          </div>
-                        )}
-                        {expectedOutcome.statusEffects?.filter(s => s.type === 'burn').length > 0 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)]">?? 灼烧</span>
-                            <span className="text-orange-400">+{expectedOutcome.statusEffects.filter(s => s.type === 'burn').reduce((sum, s) => sum + s.value, 0)}</span>
-                          </div>
-                        )}
-                        
-                        {/* Status Modifiers */}
-                        {game.statuses.find(s => s.type === 'weak') && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
-                              <PixelArrowDown size={1} /> 虚弱修正
-                            </span>
-                            <span className="text-[var(--dungeon-text-dim)]">×75%</span>
-                          </div>
-                        )}
-                        {targetEnemy?.statuses.find(s => s.type === 'vulnerable') && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
-                              <PixelArrowUp size={1} /> 易伤修正
-                            </span>
-                            <span className="text-[var(--pixel-red)]">×150%</span>
-                          </div>
-                        )}
-                        {/* 战士血怒加成 */}
-                        {game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-red-400 flex items-center gap-1">
-                              <PixelBloodDrop size={1} /> 血怒({game.bloodRerollCount}层)
-                            </span>
-                            <span className="text-red-400">×{Math.round((1 + (game.bloodRerollCount || 0) * 0.15) * 100)}%</span>
-                          </div>
-                        )}
-                        {/* 战士狂暴本能 */}
-                        {game.playerClass === 'warrior' && (game.warriorRageMult || 0) > 0 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-red-400 flex items-center gap-1">
-                              <PixelFlame size={1} /> 狂暴(受伤{Math.round((1 - game.hp / game.maxHp) * 100)}%)
-                            </span>
-                            <span className="text-red-400">×{Math.round((1 + (game.warriorRageMult || 0)) * 100)}%</span>
-                          </div>
-                        )}
-                        {/* 盗贼连击加成 */}
-                        {game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-green-400 flex items-center gap-1">
-                              <PixelZap size={1} /> 连击加成
-                            </span>
-                            <span className="text-green-400">×120%</span>
-                          </div>
-                        )}
-                        {/* 法师过充加成 */}
-                        {game.playerClass === 'mage' && (game.mageOverchargeMult || 0) > 0 && (
-                          <div className="flex justify-between items-center text-[12px]">
-                            <span className="text-purple-400 flex items-center gap-1">
-                              <PixelMagic size={1} /> 过充吟唱
-                            </span>
-                            <span className="text-purple-400">×{Math.round((1 + (game.mageOverchargeMult || 0)) * 100)}%</span>
-                          </div>
-                        )}
-
-                        <div className="flex justify-between items-center text-xs font-bold border-t-2 border-[var(--dungeon-panel-border)] pt-2">
-                          <span className="text-[var(--dungeon-text-bright)]">最终总伤害</span>
-                          <span className="text-[var(--pixel-red)] pixel-text-shadow">{expectedOutcome.damage}</span>
-                        </div>
-                        {expectedOutcome.armor > 0 && (
-                          <div className="flex justify-between items-center text-xs font-bold pt-1">
-                            <span className="text-[var(--dungeon-text-bright)]">获得护甲</span>
-                            <span className="text-[var(--pixel-blue)] pixel-text-shadow">+{expectedOutcome.armor}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {expectedOutcome.statusEffects.length > 0 && (
-                        <div className="pt-3 space-y-2">
-                          <div className="text-[11px] font-bold text-[var(--dungeon-text-dim)] tracking-[0.1em]">附加效果</div>
-                          <div className="flex flex-wrap gap-2">
-                            {expectedOutcome.statusEffects.map((s, i) => {
-                              const info = STATUS_INFO[s.type];
-                              return (
-                                <div key={i} className={`flex items-center gap-1 px-2 py-1 bg-[var(--dungeon-bg)] border border-[var(--dungeon-panel-border)] ${info.color}`} style={{borderRadius:'2px'}}>
-                                  {info.icon}
-                                  <span className="text-[11px] font-bold">{info.label} +{s.value}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Calculation Modal — extracted to CalcModal component */}
+            <CalcModal
+              visible={showCalcModal}
+              onClose={() => setShowCalcModal(false)}
+              expectedOutcome={expectedOutcome}
+              selectedDice={dice.filter(d => d.selected && !d.spent)}
+              game={game}
+              targetEnemy={targetEnemy}
+            />
 
       {/* Hand Type Info Modal */}
       <AnimatePresence>
@@ -6556,6 +4936,7 @@ useEffect(() => {
       <DiceGuideModal />
       {/* Global Hand Guide Modal */}
       <HandGuideModal />
+</BattleContext.Provider>
 </GameContext.Provider>
   );
 }

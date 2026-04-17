@@ -92,7 +92,7 @@ export const MapScreen: React.FC = () => {
   const nodePositions = useMemo(() => {
     const positions: Record<string, { x: number; y: number }> = {};
     // 按层处理
-    const depths = [...new Set(game.map.map(n => n.depth))].sort((a, b) => a - b);
+    const depths = [...new Set<number>(game.map.map(n => n.depth))].sort((a, b) => a - b);
     
     for (const depth of depths) {
       const layerNodes = game.map.filter(n => n.depth === depth);
