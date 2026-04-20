@@ -70,11 +70,11 @@ export const LootScreen: React.FC = () => {
                item.type === 'specialDice' && item.diceDefId ? getDiceDef(item.diceDefId).name :
                item.type === 'diceCount' ? `+${item.value} 骰子` :
                item.type === 'relic' && item.relicData ? `✨ ${item.relicData.name}` :
-               (item.type as string) === 'challengeChest' ? '🎁 洞察弱点宝箱' :
+               item.type === 'challengeChest' ? '🎁 洞察弱点宝箱' :
                `+${item.value} 每回合重掷次数`}
             </div>
             <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">
-              {item.type === 'relic' && item.relicData ? formatDescription(item.relicData.description) : (item.type as string) === 'challengeChest' ? '点击开启，随机获得金币/骰子/遗物' : `点击拾取该奖励`}
+              {item.type === 'relic' && item.relicData ? formatDescription(item.relicData.description) : item.type === 'challengeChest' ? '点击开启，随机获得金币/骰子/遗物' : `点击拾取该奖励`}
             </div>
           </div>
         </motion.button>

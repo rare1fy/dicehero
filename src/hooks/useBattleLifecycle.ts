@@ -379,7 +379,7 @@ export function useBattleLifecycle(state: BattleState) {
 
   // ==================== BGM 管理 ====================
   useEffect(() => {
-    const bgmMap: Record<string, 'battle' | 'explore' | 'start' | 'stop'> = {
+    const bgmMap: Partial<Record<GameState['phase'], 'battle' | 'explore' | 'start' | 'stop'>> = {
       battle: 'battle',
       map: 'explore', merchant: 'explore', campfire: 'explore',
       event: 'explore', diceReward: 'explore', loot: 'explore',
@@ -387,7 +387,7 @@ export function useBattleLifecycle(state: BattleState) {
       start: 'start',
       chapterTransition: 'stop', gameover: 'stop', victory: 'stop',
     };
-    const action = bgmMap[game.phase as string];
+    const action = bgmMap[game.phase];
     if (action === 'stop') stopBGM();
     else if (action) startBGM(action);
   }, [game.phase]);
@@ -398,7 +398,7 @@ export function useBattleLifecycle(state: BattleState) {
       // Bug-3: 检查是否有敌人正在播放死亡动画（effect === 'death'），如果有则延迟清空
       const hasDyingEnemy = enemies.some(e => {
         const effect = state.enemyEffects[e.uid];
-        return e.hp <= 0 && (effect as string | null) === 'death';
+        return e.hp <= 0 && effect === 'death';
       });
       if (hasDyingEnemy) {
         const timer = setTimeout(() => {

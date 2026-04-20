@@ -82,7 +82,7 @@ export default function DiceHeroGame() {
     return <GameContext.Provider value={contextValue}><StartScreen /></GameContext.Provider>;
   }
 
-  if ((game.phase as string) === 'classSelect') {
+  if (game.phase === 'classSelect') {
     return (
       <GameContext.Provider value={contextValue}>
         <ClassSelectScreen onSelect={(classId) => {
@@ -102,7 +102,6 @@ export default function DiceHeroGame() {
   }
 
   if (game.phase === 'gameover') {
-    console.log('[RENDER_GAMEOVER] phase=', game.phase, 'hp=', game.hp, 'callstack=', new Error('render gameover').stack?.substring(0,500));
     return <GameContext.Provider value={contextValue}><GameOverScreen /></GameContext.Provider>;
   }
 

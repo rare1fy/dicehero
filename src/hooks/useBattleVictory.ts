@@ -49,26 +49,58 @@ export function useBattleVictory(
     // 核心状态转换（phase/统计/遗物更新）放入低优先级更新
     startTransition(() => {
       setGame(prev => {
-      // 销毁敌人塞的废骰子
-      const cleanedOwnedDice = prev.ownedDice.filter(d => d.defId !== 'cursed' && d.defId !== 'cracked');
-      const cleanedDiceBag = prev.diceBag.filter(id => id !== 'cursed' && id !== 'cracked');
-      const cleanedDiscardPile = prev.discardPile.filter(id => id !== 'cursed' && id !== 'cracked');
-      const cleanedDrawCount = prev.drawCount - (prev.tempDrawCountBonus || 0);
+        // 销毁敌人塞的废骰子
+        const cleanedOwnedDice = prev.ownedDice.filter(d => d.defId !== 'cursed' && d.defId !== 'cracked');
+        const cleanedDiceBag = prev.diceBag.filter(id => id !== 'cursed' && id !== 'cracked');
+        const cleanedDiscardPile = prev.discardPile.filter(id => id !== 'cursed' && id !== 'cracked');
+        const cleanedDrawCount = prev.drawCount - (prev.tempDrawCountBonus || 0);
 
-      // 统计更新
-      const s = { ...prev.stats };
-      s.battlesWon += 1;
-      s.enemiesKilled += killedCount;
-      if (nodeType === 'elite') s.elitesWon += 1;
-      if (nodeType === 'boss') s.bossesWon += 1;
+        // 统计更新
+        const s = { ...prev.stats };
+        s.battlesWon += 1;
+        s.enemiesKilled += killedCount;
+        if (nodeType === 'elite') s.elitesWon += 1;
+        if (nodeType === 'boss') s.bossesWon += 1;
 
-      // 层厅征服者 + 沙漏
-      const updatedRelics = tickHourglass(incrementFloorsCleared(prev.relics));
+        // 层厅征服者 + 沙漏
+        const updatedRelics = tickHourglass(incrementFloorsCleared(prev.relics));
 
-      // 地图标记
-      const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
+        // 地图标记
+        const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
 
-      if (postVictory.phase === 'victory') {
+        if (postVictory.phase === 'victory') {
+          return {
+            ...prev,
+            ownedDice: cleanedOwnedDice,
+            diceBag: cleanedDiceBag,
+            discardPile: cleanedDiscardPile,
+            drawCount: cleanedDrawCount,
+            tempDrawCountBonus: 0,
+            stats: { ...s, bossesWon: postVictory.bossesWon },
+            relics: updatedRelics,
+            map: newMap,
+            phase: 'victory',
+            isEnemyTurn: false,
+          };
+        }
+
+        if (postVictory.phase === 'chapterTransition') {
+          return {
+            ...prev,
+            ownedDice: cleanedOwnedDice,
+            diceBag: cleanedDiceBag,
+            discardPile: cleanedDiscardPile,
+            drawCount: cleanedDrawCount,
+            tempDrawCountBonus: 0,
+            stats: { ...s, bossesWon: postVictory.bossesWon },
+            relics: updatedRelics,
+            map: newMap,
+            phase: 'chapterTransition',
+            isEnemyTurn: false,
+          };
+        }
+
+        // diceReward 阶段：先切换 phase，lootItems 在下一步异步补充
         return {
           ...prev,
           ownedDice: cleanedOwnedDice,
@@ -76,44 +108,13 @@ export function useBattleVictory(
           discardPile: cleanedDiscardPile,
           drawCount: cleanedDrawCount,
           tempDrawCountBonus: 0,
-          stats: { ...s, bossesWon: postVictory.bossesWon },
+          stats: s,
           relics: updatedRelics,
           map: newMap,
-          phase: 'victory',
+          phase: 'diceReward',
           isEnemyTurn: false,
         };
-      }
-
-      if (postVictory.phase === 'chapterTransition') {
-        return {
-          ...prev,
-          ownedDice: cleanedOwnedDice,
-          diceBag: cleanedDiceBag,
-          discardPile: cleanedDiscardPile,
-          drawCount: cleanedDrawCount,
-          tempDrawCountBonus: 0,
-          stats: { ...s, bossesWon: postVictory.bossesWon },
-          relics: updatedRelics,
-          map: newMap,
-          phase: 'chapterTransition',
-          isEnemyTurn: false,
-        };
-      }
-
-      // diceReward 阶段：先切换 phase，lootItems 在下一步异步补充
-      return {
-        ...prev,
-        ownedDice: cleanedOwnedDice,
-        diceBag: cleanedDiceBag,
-        discardPile: cleanedDiscardPile,
-        drawCount: cleanedDrawCount,
-        tempDrawCountBonus: 0,
-        stats: s,
-        relics: updatedRelics,
-        map: newMap,
-        phase: 'diceReward',
-        isEnemyTurn: false,
-      };
+      }); // end setGame
     }); // end startTransition
 
     // ---- 第二步：异步处理遗物 on_battle_end + 战利品构建 ----
@@ -148,7 +149,7 @@ export function useBattleVictory(
     const item = game.lootItems.find(i => i.id === id);
     if (!item || item.collected) return;
 
-    if ((item.type as string) === 'challengeChest') {
+    if (item.type === 'challengeChest') {
       playSound('shop_buy');
     }
 

@@ -233,18 +233,14 @@ export function useBattleCombat(
   // ==================== endTurn ====================
   const endTurn = async () => {
     // [DIAG] endTurn 入口
-    console.log('[END_TURN_ENTRY] phase=', game.phase, 'hp=', game.hp, 'isEnemyTurn=', game.isEnemyTurn, 'ref.phase=', gameRef.current.phase, 'ref.hp=', gameRef.current.hp);
     // [BUG-FIX-v2] 防重入：如果敌人回合正在进行中，禁止再次进入
     if (gameRef.current.isEnemyTurn) {
-      console.log('[END_TURN_BLOCKED] enemy turn already in progress');
       return;
     }
     // [BUG-FIX-v2] 防重入：如果已经 gameover，禁止进入
     if (gameRef.current.phase === 'gameover') {
-      console.log('[END_TURN_BLOCKED] already gameover');
       return;
     }
-    console.log('[END_TURN_GUARD_PASSED] ref.phase=', gameRef.current.phase, 'ref.hp=', gameRef.current.hp, 'ref.isEnemyTurn=', gameRef.current.isEnemyTurn);
 
     await processTurnEnd({
       game, enemies, dice, rerollCount,
@@ -252,7 +248,6 @@ export function useBattleCombat(
       addFloatingText, addToast, addLog, playSound, setScreenShake,
       buildRelicContext,
     });
-    console.log('[AFTER_PROCESS_TURN_END] ref.hp=', gameRef.current.hp, 'ref.phase=', gameRef.current.phase);
 
     const enemyAICb = buildEnemyAICallbacks({
       setGame, setEnemies, setEnemyEffects, setDyingEnemies,
@@ -263,33 +258,24 @@ export function useBattleCombat(
       buildRelicContext, hasFatalProtection, triggerHourglass,
       handleVictory: victory.handleVictory, gameRef,
     });
-    console.log('[BEFORE_ENEMY_TURN] calling executeEnemyTurn... ref.hp=', gameRef.current.hp, 'ref.phase=', gameRef.current.phase);
     const enemyTurnHp = await executeEnemyTurn(game, enemies, dice, rerollCount, enemyAICb);
     let currentPlayerHp = enemyTurnHp;
 
     await new Promise(r => setTimeout(r, 100));
 
     // [DIAG] 敌人回合结束后的状态
-    console.log('[END_TURN] enemyTurnHp=', enemyTurnHp, 'gameRef.hp=', gameRef.current.hp, 'gameRef.phase=', gameRef.current.phase, 'gameRef.isEnemyTurn=', gameRef.current.isEnemyTurn);
     // [BUG-FIX-v2] 检查是否已在 enemyAI 内部设置了 gameover（避免重复设置）
     if (gameRef.current.phase === 'gameover') {
-      console.log('[END_TURN] gameover detected from enemyAI, returning early');
-      console.trace('[END_TURN_TRACE] gameover_from_enemyAI');
       return;
     }
-    console.log('[END_TURN_CHECK_DEATH] enemyTurnHp=', enemyTurnHp, 'ref.hp=', gameRef.current.hp, 'ref.phase=', gameRef.current.phase);
     if (currentPlayerHp <= 0) {
-      console.log('[END_TURN] currentPlayerHp <= 0, setting gameover. enemyTurnHp=', enemyTurnHp, 'ref.hp=', gameRef.current.hp);
-      console.trace('[END_TURN_TRACE] death_by_currentPlayerHp_le_zero');
       playSound('player_death'); setGame(prev => ({ ...prev, phase: 'gameover' })); return;
     }
 
     // [BUG-FIX-v2] 在回调内检查 gameover 状态，防止覆盖 enemyAI 设置的 gameover
     // 此回调可能在 await 之后执行，此时 gameRef.current 已更新
-    console.log('[END_TURN_NORMAL] entering setGame callback, ref.phase=', gameRef.current.phase, 'ref.hp=', gameRef.current.hp);
     setGame(prev => {
       if (prev.phase === 'gameover') {
-        console.log('[END_TURN_NORMAL] prev.phase is gameover in setGame callback, preserving');
         return prev;
       }
       return {
@@ -326,10 +312,7 @@ export function useBattleCombat(
     // [BUG-FIX-v2] 只在玩家回合才检查 hp<=0 → gameover
     // 敌人回合期间 hp 可能暂时 <=0（在 setGame 调度中），
     // 但 enemyAI 内部已经设置了 phase:'gameover'，这里不需要重复处理
-    console.log('[USEEFFECT_HP_CHECK] phase=', game.phase, 'isEnemyTurn=', game.isEnemyTurn, 'hp=', game.hp);
     if (game.phase === 'battle' && !game.isEnemyTurn && game.hp <= 0) {
-      console.log('[USEEFFECT_TRIGGERING_GAMEOVER] !!! 这是useEffect触发的gameover !!! hp=', game.hp);
-      console.trace('[USEEFFECT_GAMEOVER_TRACE] hp_check_useEffect');
       playSound('player_death');
       setGame(prev => ({ ...prev, hp: 0, phase: 'gameover' }));
     }
@@ -337,7 +320,6 @@ export function useBattleCombat(
 
   useEffect(() => {
     const unspentDice = dice.filter(d => !d.spent);
-    console.log('[AUTO_ENDTURN_CHECK] phase=', game.phase, 'isEnemyTurn=', game.isEnemyTurn, 'hp=', game.hp, 'playsLeft=', game.playsLeft, 'diceLen=', dice.length, 'unspent=', unspentDice.length);
     if (
       game.phase === 'battle' &&
       !game.isEnemyTurn &&
@@ -349,7 +331,6 @@ export function useBattleCombat(
       !dice.some(d => d.playing) &&
       (game.playsLeft <= 0 || unspentDice.length === 0)
     ) {
-      console.log('[AUTO_ENDTURN_TRIGGER] scheduling endTurn in 1000ms');
       const timer = setTimeout(() => {
         // [BUG-FIX-v2] 再次确认状态未变（闭包中的 game 可能已过期）
         const g = gameRef.current;
