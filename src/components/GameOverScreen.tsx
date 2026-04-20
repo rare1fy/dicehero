@@ -12,7 +12,7 @@ const loadMeta = () => {
   } catch { /* ignore */ }
   return { permanentQuota: 0, unlockedStartRelics: [], highestOverkill: 0, totalRuns: 0, totalWins: 0 };
 };
-const saveMeta = (meta: any) => {
+const saveMeta = (meta: { permanentQuota: number; unlockedStartRelics: string[]; highestOverkill: number; totalRuns: number; totalWins: number }) => {
   try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch { /* ignore */ }
 };
 

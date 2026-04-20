@@ -24,8 +24,8 @@ export default defineConfig(({mode}) => {
     },
     build: {
       ...(isSingleFile ? {
-        // 单文件模式：内联所有资源（排除字体，由 build-mobile.cjs 后处理）
-        assetsInlineLimit: 100000000,
+        // 单文件模式：小资源内联（阈值 400KB，排除 600KB+ 字体文件由 build-mobile.cjs 后处理）
+        assetsInlineLimit: 409600,
         cssCodeSplit: false,
         rollupOptions: {
           output: {

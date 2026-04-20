@@ -19,7 +19,7 @@ const Stars: React.FC = React.memo(() => {
     }));
   }, []);
   return (
-    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' as any }}>
+    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' }}>
       {stars.map((s, i) => (
         <rect key={i} x={`${s.x}%`} y={`${s.y}%`} width={s.size} height={s.size}
           fill={`rgba(220,230,255,${s.brightness})`} className="animate-star-twinkle"
@@ -81,7 +81,7 @@ const IceBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
     </>)}
     {/* 银白冰山远景 */}
     <svg className="absolute w-full pointer-events-none"
-      style={{ bottom: '50%', height: '30%', imageRendering: 'pixelated' as any }}
+      style={{ bottom: '50%', height: '30%', imageRendering: 'pixelated' }}
       viewBox="0 0 320 100" preserveAspectRatio="none">
       {/* 远山 — 银白 */}
       <polygon points="0,100 0,55 20,40 40,50 60,25 80,38 100,15 120,30 140,20 160,35 180,10 200,28 220,40 240,22 260,35 280,45 300,28 320,40 320,100" fill={isBoss ? '#2a3448' : '#485870'} />
@@ -97,7 +97,7 @@ const IceBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
     </svg>
     {/* 雪松树线 */}
     <svg className="absolute w-full pointer-events-none"
-      style={{ bottom: '50%', height: '12%', zIndex: 2, imageRendering: 'pixelated' as any }}
+      style={{ bottom: '50%', height: '12%', zIndex: 2, imageRendering: 'pixelated' }}
       viewBox="0 0 320 40" preserveAspectRatio="none">
       <polygon
         points="0,40 0,22 4,18 8,10 12,16 16,6 20,14 24,18 28,8 32,14 36,20 40,10 44,16 48,6 52,14 56,18 60,8 64,14 68,20 72,10 76,16 80,6 84,14 88,18 92,8 96,14 100,20 104,10 108,16 112,6 116,14 120,18 124,8 128,14 132,20 136,10 140,16 144,6 148,14 152,18 156,8 160,14 164,20 168,10 172,16 176,6 180,14 184,18 188,8 192,14 196,20 200,10 204,16 208,6 212,14 216,18 220,8 224,14 228,20 232,10 236,16 240,6 244,14 248,18 252,8 256,14 260,20 264,10 268,16 272,6 276,14 280,18 284,8 288,14 292,20 296,10 300,16 304,6 308,14 312,18 316,14 320,10 320,40"
@@ -105,7 +105,7 @@ const IceBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
     </svg>
     {/* 雪松 左 */}
     <div className="absolute pointer-events-none" style={{ left: '3%', bottom: '48%', zIndex: 2 }}>
-      <svg width="36" height="80" viewBox="0 0 18 40" style={{ imageRendering: 'pixelated' as any }}>
+      <svg width="36" height="80" viewBox="0 0 18 40" style={{ imageRendering: 'pixelated' }}>
         <rect x="8" y="24" width="2" height="16" fill="#3a3028" />
         <rect x="6" y="18" width="6" height="8" fill={isBoss ? '#1e2c38' : '#2a3c48'} />
         <rect x="4" y="12" width="10" height="8" fill={isBoss ? '#1a2834' : '#243844'} />
@@ -120,7 +120,7 @@ const IceBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
     </div>
     {/* 雪松 右 */}
     <div className="absolute pointer-events-none" style={{ right: '5%', bottom: '48%', zIndex: 2, transform: 'scaleX(-1)' }}>
-      <svg width="30" height="65" viewBox="0 0 18 40" style={{ imageRendering: 'pixelated' as any }}>
+      <svg width="30" height="65" viewBox="0 0 18 40" style={{ imageRendering: 'pixelated' }}>
         <rect x="8" y="24" width="2" height="16" fill="#3a3028" />
         <rect x="5" y="16" width="8" height="10" fill={isBoss ? '#1e2c38' : '#2a3c48'} />
         <rect x="3" y="8" width="12" height="10" fill={isBoss ? '#1a2834' : '#243844'} />
@@ -133,7 +133,7 @@ const IceBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
     <div className="absolute left-0 right-0 pointer-events-none" style={{ top: '48%', bottom: 0, zIndex: 1 }}>
       <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
         <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
-          <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' as any }}>
+          <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }}>
             {/* 基底 — 雪白色 */}
             <rect x="0" y="0" width="320" height="200" fill={isBoss ? '#28354a' : '#4a5c70'} />
             {/* 雪地条纹 */}

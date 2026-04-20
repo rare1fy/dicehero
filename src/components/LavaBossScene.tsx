@@ -19,7 +19,7 @@ const Stars: React.FC = React.memo(() => {
     }));
   }, []);
   return (
-    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' as any }}>
+    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' }}>
       {stars.map((s, i) => (
         <rect key={i} x={`${s.x}%`} y={`${s.y}%`} width={s.size} height={s.size}
           fill={`rgba(255,180,140,${s.brightness})`} className="animate-star-twinkle"
@@ -68,7 +68,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
       }} />
       {/* 爆发的火山 — 更大+喷射光 */}
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '48%', height: '40%', imageRendering: 'pixelated' as any }}
+        style={{ bottom: '48%', height: '40%', imageRendering: 'pixelated' }}
         viewBox="0 0 320 140" preserveAspectRatio="none">
         {/* 主火山 — 更大 */}
         <polygon points="80,140 120,25 160,5 200,25 240,140" fill="#321c10" />
@@ -88,7 +88,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
       </svg>
       {/* 岩石柱 — 更大 */}
       <div className="absolute pointer-events-none" style={{ left: '3%', bottom: '44%', zIndex: 2 }}>
-        <svg width="36" height="100" viewBox="0 0 14 40" style={{ imageRendering: 'pixelated' as any }}>
+        <svg width="36" height="100" viewBox="0 0 14 40" style={{ imageRendering: 'pixelated' }}>
           <rect x="2" y="0" width="10" height="40" fill="#2e1c12" />
           <rect x="0" y="4" width="14" height="4" fill="#261410" />
           <rect x="1" y="16" width="12" height="3" fill="#261410" />
@@ -96,7 +96,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
         </svg>
       </div>
       <div className="absolute pointer-events-none" style={{ right: '6%', bottom: '44%', zIndex: 2 }}>
-        <svg width="30" height="80" viewBox="0 0 12 32" style={{ imageRendering: 'pixelated' as any }}>
+        <svg width="30" height="80" viewBox="0 0 12 32" style={{ imageRendering: 'pixelated' }}>
           <rect x="2" y="0" width="8" height="32" fill="#2a1a12" />
           <rect x="0" y="6" width="12" height="3" fill="#221210" />
           <rect x="4" y="0" width="2" height="32" fill="#342018" />
@@ -106,7 +106,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
       <div className="absolute left-0 right-0 pointer-events-none" style={{ top: '48%', bottom: 0, zIndex: 1 }}>
         <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
           <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
-            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' as any }}>
+            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }}>
               <rect x="0" y="0" width="320" height="200" fill="#1e0c06" />
               <rect x="0" y="0" width="320" height="8" fill="#241008" />
               <rect x="0" y="14" width="320" height="10" fill="#1a0c06" />
@@ -154,7 +154,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
       }} />
       <Stars />
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '48%', height: '35%', imageRendering: 'pixelated' as any }}
+        style={{ bottom: '48%', height: '35%', imageRendering: 'pixelated' }}
         viewBox="0 0 320 120" preserveAspectRatio="none">
         <polygon points="100,120 130,30 160,10 190,30 220,120" fill="#2a1810" />
         <polygon points="135,30 160,14 185,30 160,26" fill="#3a2018" />
@@ -166,14 +166,14 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
         <polygon points="0,120 0,90 40,80 80,85 120,75 160,90 200,80 240,85 280,78 320,88 320,120" fill="#140a06" />
       </svg>
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '48%', height: '10%', zIndex: 2, imageRendering: 'pixelated' as any }}
+        style={{ bottom: '48%', height: '10%', zIndex: 2, imageRendering: 'pixelated' }}
         viewBox="0 0 320 30" preserveAspectRatio="none">
         <polygon
           points="0,30 0,18 5,14 10,8 15,12 20,6 25,14 30,10 35,4 40,12 50,8 60,14 70,6 80,12 90,16 100,8 110,12 120,6 130,14 140,10 150,4 160,12 170,8 180,14 190,6 200,12 210,16 220,8 230,12 240,6 250,14 260,10 270,4 280,12 290,8 300,14 310,10 320,6 320,30"
           fill="#100804" />
       </svg>
       <div className="absolute pointer-events-none" style={{ left: '5%', bottom: '46%', zIndex: 2 }}>
-        <svg width="30" height="80" viewBox="0 0 12 32" style={{ imageRendering: 'pixelated' as any }}>
+        <svg width="30" height="80" viewBox="0 0 12 32" style={{ imageRendering: 'pixelated' }}>
           <rect x="2" y="0" width="8" height="32" fill="#2a1c14" />
           <rect x="0" y="4" width="12" height="4" fill="#221410" />
           <rect x="1" y="14" width="10" height="3" fill="#221410" />
@@ -181,7 +181,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
         </svg>
       </div>
       <div className="absolute pointer-events-none" style={{ right: '8%', bottom: '46%', zIndex: 2 }}>
-        <svg width="24" height="60" viewBox="0 0 10 24" style={{ imageRendering: 'pixelated' as any }}>
+        <svg width="24" height="60" viewBox="0 0 10 24" style={{ imageRendering: 'pixelated' }}>
           <rect x="2" y="0" width="6" height="24" fill="#281a12" />
           <rect x="0" y="6" width="10" height="3" fill="#201210" />
           <rect x="3" y="0" width="2" height="24" fill="#322018" />
@@ -190,7 +190,7 @@ const LavaBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) => (
       <div className="absolute left-0 right-0 pointer-events-none" style={{ top: '48%', bottom: 0, zIndex: 1 }}>
         <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
           <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
-            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' as any }}>
+            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }}>
               <rect x="0" y="0" width="320" height="200" fill="#1a0c06" />
               <rect x="0" y="0" width="320" height="8" fill="#201008" />
               <rect x="0" y="14" width="320" height="10" fill="#180c06" />

@@ -84,7 +84,7 @@ export const EnemyBestiary: React.FC<Props> = ({ visible, onClose }) => {
             </div>
 
             {/* Chapter tabs */}
-            <div className="flex gap-0.5 p-2 bg-[var(--dungeon-bg)] border-b border-[var(--dungeon-panel-border)]" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
+            <div className="flex gap-0.5 p-2 bg-[var(--dungeon-bg)] border-b border-[var(--dungeon-panel-border)]" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               {CHAPTER_CONFIG.chapterNames.map((name, i) => (
                 <button
                   key={i}
@@ -102,7 +102,7 @@ export const EnemyBestiary: React.FC<Props> = ({ visible, onClose }) => {
             </div>
 
             {/* Enemy list */}
-            <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-1.5" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' } as any}>
+            <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-1.5" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
               {/* Normal */}
               {chapterEnemies.filter(e => e.category === 'normal').length > 0 && (
                 <>

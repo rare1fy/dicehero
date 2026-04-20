@@ -44,7 +44,7 @@ export const StartScreen: React.FC = () => {
 
   const startGame = () => {
     // 进入职业选择界面
-    setGame(prev => ({ ...prev, phase: 'classSelect' as any }));
+    setGame(prev => ({ ...prev, phase: 'classSelect' }));
   };
 
   const handleStart = () => {

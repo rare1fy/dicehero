@@ -19,7 +19,7 @@ const Stars: React.FC = React.memo(() => {
     }));
   }, []);
   return (
-    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' as any }}>
+    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' }}>
       {stars.map((s, i) => (
         <rect key={i} x={`${s.x}%`} y={`${s.y}%`} width={s.size} height={s.size}
           fill={`rgba(180,160,220,${s.brightness})`} className="animate-star-twinkle"
@@ -82,7 +82,7 @@ const ShadowBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
       }} />
       {/* 哥特要塞剪影（更大更暗） */}
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '50%', height: '35%', imageRendering: 'pixelated' as any }}
+        style={{ bottom: '50%', height: '35%', imageRendering: 'pixelated' }}
         viewBox="0 0 320 120" preserveAspectRatio="none">
         <rect x="0" y="80" width="320" height="40" fill="#0a0616" />
         <rect x="0" y="78" width="320" height="4" fill="#120a1e" />
@@ -115,7 +115,7 @@ const ShadowBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
       <div className="absolute left-0 right-0 pointer-events-none" style={{ top: '48%', bottom: 0, zIndex: 1 }}>
         <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
           <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
-            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' as any }}>
+            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }}>
               <rect x="0" y="0" width="320" height="200" fill="#0e0818" />
               <rect x="0" y="0" width="320" height="6" fill="#120c20" />
               <rect x="0" y="12" width="320" height="8" fill="#0a0614" />
@@ -165,7 +165,7 @@ const ShadowBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
         zIndex: 1,
       }} />
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '50%', height: '32%', imageRendering: 'pixelated' as any }}
+        style={{ bottom: '50%', height: '32%', imageRendering: 'pixelated' }}
         viewBox="0 0 320 110" preserveAspectRatio="none">
         <rect x="0" y="70" width="320" height="40" fill="#0e0814" />
         <rect x="0" y="68" width="320" height="4" fill="#140c1c" />
@@ -195,7 +195,7 @@ const ShadowBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
         <polygon points="0,110 0,90 30,80 60,88 90,75 120,85 140,78 160,72 180,78 200,85 220,75 250,82 280,78 310,85 320,80 320,110" fill="#080410" />
       </svg>
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '50%', height: '10%', zIndex: 2, imageRendering: 'pixelated' as any }}
+        style={{ bottom: '50%', height: '10%', zIndex: 2, imageRendering: 'pixelated' }}
         viewBox="0 0 320 30" preserveAspectRatio="none">
         <polygon
           points="0,30 0,20 5,16 10,8 15,14 20,6 25,12 30,18 40,10 50,6 60,14 70,18 80,8 90,14 100,6 110,12 120,18 130,8 140,14 150,6 160,12 170,18 180,8 190,14 200,6 210,12 220,18 230,8 240,14 250,6 260,12 270,18 280,8 290,14 300,6 310,12 320,8 320,30"
@@ -204,7 +204,7 @@ const ShadowBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
       <div className="absolute left-0 right-0 pointer-events-none" style={{ top: '48%', bottom: 0, zIndex: 1 }}>
         <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
           <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
-            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' as any }}>
+            <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }}>
               <rect x="0" y="0" width="320" height="200" fill="#0c0814" />
               <rect x="0" y="0" width="320" height="6" fill="#100c1a" />
               <rect x="0" y="12" width="320" height="8" fill="#080612" />

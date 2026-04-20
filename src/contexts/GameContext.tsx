@@ -11,8 +11,9 @@ export interface GameContextType {
   // State
   game: GameState;
   setGame: React.Dispatch<React.SetStateAction<GameState>>;
-  enemy: Enemy | null;
-  setEnemy: React.Dispatch<React.SetStateAction<Enemy | null>>;
+  enemies: Enemy[];
+  setEnemies: React.Dispatch<React.SetStateAction<Enemy[]>>;
+  targetEnemy: Enemy | null;
   dice: Die[];
   setDice: React.Dispatch<React.SetStateAction<Die[]>>;
   showTutorial: boolean;
@@ -27,11 +28,12 @@ export interface GameContextType {
   
   // Actions
   startNode: (node: MapNode) => void;
-  startBattle: (node: MapNode) => void;
+  startBattle: (node: MapNode | number) => void;
   collectLoot: (id: string) => void;
   finishLoot: () => void;
   pickReward: (relic: Relic) => void;
   nextNode: () => void;
+  toasts: Toast[];
   addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff') => void;
   addLog: (msg: string) => void;
   handleSelectStartingRelic: (relic: Relic) => void;

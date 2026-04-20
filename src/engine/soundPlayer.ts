@@ -31,7 +31,7 @@ const FADE_DURATION = 800;
 
 export const getCtx = (): AudioContext => {
   if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    audioCtx = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext || AudioContext)();
   }
   return audioCtx;
 };

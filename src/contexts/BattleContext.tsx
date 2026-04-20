@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Die, Enemy, GameState, Relic } from '../types/game';
+import type { Die, Enemy, GameState, Relic, StatusEffect, ExpectedOutcomeResult } from '../types/game';
 
 // === 结算演出状态 ===
 export interface SettlementData {
@@ -22,7 +22,7 @@ export interface SettlementData {
   finalDamage: number;
   finalArmor: number;
   finalHeal: number;
-  statusEffects: any[];
+  statusEffects: StatusEffect[];
   isSameElement?: boolean;
 }
 
@@ -92,18 +92,20 @@ export interface BattleContextType {
   showChallengeDetail: boolean;
   setShowChallengeDetail: React.Dispatch<React.SetStateAction<boolean>>;
 
-  // === 骰子动画状态 ===
+  // === 战斗动画状态 ===
   handLeftThrow: boolean;
   shuffleAnimating: boolean;
   diceDiscardAnim: boolean;
   lastTappedDieId: number | null;
   setLastTappedDieId: React.Dispatch<React.SetStateAction<number | null>>;
+  skillTriggerTexts: { id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[];
+  targetEnemyUid: string | null;
 
   // === 计算属性 ===
   currentHands: { bestHand: string; allHands: string[]; activeHands: string[] };
   isNormalAttackMulti: boolean;
   handHintIds: Set<number>;
-  expectedOutcome: any; // ExpectedOutcome 类型从 expectedOutcomeCalc 导入
+  expectedOutcome: ExpectedOutcomeResult | null; // 从 expectedOutcomeCalc 导入
   isAoeActive: boolean;
   canReroll: boolean;
   canAffordReroll: boolean;

@@ -148,12 +148,12 @@ const MerchantScreen: React.FC = () => {
     }
     playSound('shop_buy');
     setGame(prev => {
-      const newState: any = {
+      const newState = {
         ...prev,
         souls: prev.souls - item.price,
         stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + item.price },
         shopItems: prev.shopItems.filter(si => si.id !== item.id),
-      };
+      } as Partial<GameState>;
       if (item.type === 'reroll') {
         newState.freeRerollsPerTurn = prev.freeRerollsPerTurn + 1;
       }
@@ -250,7 +250,7 @@ const MerchantScreen: React.FC = () => {
                 playSound('enemy_skill');
                 setGame(prev => ({
                   ...prev,
-                  ownedDice: prev.ownedDice.filter((_: any, i: number) => i !== removeDiceIdx),
+                  ownedDice: prev.ownedDice.filter((_, i) => i !== removeDiceIdx),
                 }));
                 addToast(`${def.name} 已移除`, 'damage');
                 addLog(`商人净化: ${def.name} 已被移除`);

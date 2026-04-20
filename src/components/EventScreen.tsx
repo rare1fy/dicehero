@@ -183,7 +183,7 @@ export const EventScreen: React.FC = () => {
   // --- Remove Dice Selection Overlay (for event removeDice action) ---
   if (removeDiceMode) {
     const removableDice = game.ownedDice
-      .map((d: any, i: number) => ({ ...d, index: i }));
+      .map((d, i) => ({ ...d, index: i }));
     const canRemove = game.ownedDice.length > 6;
     
     return (
@@ -197,7 +197,7 @@ export const EventScreen: React.FC = () => {
           点击选择一颗骰子永久移除，最少保留6颗
         </p>
         <div className="flex justify-center gap-2.5 flex-wrap max-w-sm relative z-10">
-          {removableDice.map((d: any) => {
+          {removableDice.map((d) => {
             const def = getDiceDef(d.defId);
             const faces = getUpgradedFaces(def, d.level);
             const isSelected = removeDiceIdx === d.index;
@@ -238,7 +238,7 @@ export const EventScreen: React.FC = () => {
                 playSound('enemy_skill');
                 setGame(prev => ({
                   ...prev,
-                  ownedDice: prev.ownedDice.filter((_: any, i: number) => i !== removeDiceIdx),
+                  ownedDice: prev.ownedDice.filter((_, i) => i !== removeDiceIdx),
                 }));
                 addToast(`✖ ${def.name} 已被熔炼`, 'damage');
                 addLog(`${def.name} 已被投入熔炉移除。`);

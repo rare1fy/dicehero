@@ -20,7 +20,7 @@ const HolyStars: React.FC = React.memo(() => {
     }));
   }, []);
   return (
-    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' as any }}>
+    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' }}>
       {stars.map((s, i) => (
         <rect key={i} x={`${s.x}%`} y={`${s.y}%`} width={s.size} height={s.size}
           fill={`rgba(255,248,220,${s.brightness})`} className="animate-star-twinkle"
@@ -80,7 +80,7 @@ const EternalBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =>
 
     {/* 远景浮空神殿 — 金白建筑 */}
     <svg className="absolute w-full pointer-events-none"
-      style={{ bottom: '50%', height: '28%', imageRendering: 'pixelated' as any }}
+      style={{ bottom: '50%', height: '28%', imageRendering: 'pixelated' }}
       viewBox="0 0 320 90" preserveAspectRatio="none">
       {/* 浮空石柱 — 左 (白金) */}
       <rect x="35" y="28" width="14" height="62" fill={isBoss ? '#2a2440' : '#585080'} />
@@ -144,7 +144,7 @@ const EternalBossScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =>
     <div className="absolute left-0 right-0 pointer-events-none" style={{ top: '48%', bottom: 0, zIndex: 1 }}>
       <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
         <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
-          <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' as any }}>
+          <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }}>
             {/* 基底 — 暖灰白大理石 */}
             <rect x="0" y="0" width="320" height="200" fill={isBoss ? '#201c30' : '#484070'} />
             <rect x="0" y="0" width="320" height="6" fill={isBoss ? '#242038' : '#504878'} />

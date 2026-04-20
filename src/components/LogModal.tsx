@@ -35,7 +35,7 @@ export const LogModal: React.FC<Props> = ({ visible, onClose }) => {
               <button onClick={onClose} className="p-1 hover:opacity-70"><PixelClose size={2} /></button>
             </div>
             <div ref={logRef} className="flex-1 overflow-y-auto min-h-0 p-3 space-y-0.5"
-              style={{ WebkitOverflowScrolling: 'touch' } as any}>
+              style={{ WebkitOverflowScrolling: 'touch' }}>
               {game.logs.length === 0 ? (
                 <div className="text-center text-[var(--dungeon-text-dim)] text-[10px] py-8">暂无日志</div>
               ) : game.logs.map((log, i) => (

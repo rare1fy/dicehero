@@ -38,7 +38,7 @@ export const BossEntrance: React.FC<BossEntranceProps> = ({ visible, bossName, s
         <motion.div
           key="boss-entrance"
           className="absolute inset-0 flex flex-col items-center justify-center"
-          style={{ zIndex: 998, background: colors.bg, overflow: 'hidden', imageRendering: 'pixelated' as any }}
+          style={{ zIndex: 998, background: colors.bg, overflow: 'hidden', imageRendering: 'pixelated' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

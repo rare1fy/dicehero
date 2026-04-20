@@ -1,5 +1,14 @@
 import { MapNode, NodeType } from '../types/game';
 import { MAP_CONFIG } from '../config';
+import {
+  MapNodeExt,
+  SPECIAL_TYPES,
+  NON_COMBAT_TYPES,
+  ECONOMIC_TYPES,
+  shuffle,
+  ensureCampfiresBeforeBoss,
+  validateCombatDensity,
+} from './mapConstraints';
 
 /**
  * 杀戮尖塔风格地图生成器 v4
@@ -12,33 +21,9 @@ import { MAP_CONFIG } from '../config';
  * 5. 路径战斗密度兜底
  */
 
-export interface MapNodeExt extends MapNode {
-  x: number;
-}
-
-// ============================================================
-// 工具函数
-// ============================================================
-
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function isCombatType(type: NodeType): boolean {
-  return type === 'enemy' || type === 'elite' || type === 'boss';
-}
-
-/** 特殊节点 — 不能与同类或彼此连续 */
-const SPECIAL_TYPES: NodeType[] = ['elite', 'campfire', 'merchant'];
+// MapNodeExt 现在从 mapConstraints 模块导出，此处保持 re-export 以兼容消费方
+export type { MapNodeExt } from './mapConstraints';
+export { shuffle } from './mapConstraints';
 
 // ============================================================
 // 概率权重配置 — 参照杀戮尖塔
@@ -291,7 +276,6 @@ export const generateMap = (): MapNode[] => {
   // ================================================================
   // 第四步：约束修正 — 逐节点检查路径连续性
   // ================================================================
-  const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure'];
 
   for (let l = 1; l < layers; l++) {
     if (trulyFixedLayers.has(l)) continue;
@@ -309,11 +293,11 @@ export const generateMap = (): MapNode[] => {
       }
 
       // 修正2：连续2层非战斗 → 强制战斗
-      if (nonCombatTypes.includes(node.type) && l >= 2) {
+      if (NON_COMBAT_TYPES.includes(node.type) && l >= 2) {
         const hasNonCombatChain = parents.some(parent => {
-          if (!nonCombatTypes.includes(parent.type)) return false;
+          if (!NON_COMBAT_TYPES.includes(parent.type)) return false;
           const grandparents = nodes.filter(n => n.depth === l - 2 && n.connectedTo.includes(parent.id));
-          return grandparents.some(gp => nonCombatTypes.includes(gp.type));
+          return grandparents.some(gp => NON_COMBAT_TYPES.includes(gp.type));
         });
         if (hasNonCombatChain) {
           node.type = 'enemy';
@@ -325,7 +309,6 @@ export const generateMap = (): MapNode[] => {
   // ================================================================
   // 第五步：经济节点管控
   // ================================================================
-  const economicTypes: NodeType[] = ['merchant', 'treasure'];
   for (let l = 0; l < layers; l++) {
     if (trulyFixedLayers.has(l)) continue;
     const layerNodes = nodes.filter(n => n.depth === l);
@@ -333,7 +316,7 @@ export const generateMap = (): MapNode[] => {
     // 前2层无经济节点
     if (l <= 1) {
       layerNodes.forEach(n => {
-        if (economicTypes.includes(n.type)) {
+        if (ECONOMIC_TYPES.includes(n.type)) {
           n.type = Math.random() < 0.6 ? 'enemy' : 'event';
         }
       });
@@ -343,7 +326,7 @@ export const generateMap = (): MapNode[] => {
     // 每层最多1个经济节点
     let econCount = 0;
     layerNodes.forEach(n => {
-      if (economicTypes.includes(n.type)) {
+      if (ECONOMIC_TYPES.includes(n.type)) {
         econCount++;
         if (econCount > 1) {
           n.type = Math.random() < 0.6 ? 'enemy' : 'event';
@@ -369,181 +352,6 @@ export const generateMap = (): MapNode[] => {
 
   return nodes;
 };
-
-// ============================================================
-// Boss前营火保障
-// ============================================================
-
-/**
- * 确保Boss前的节点中至少有 minCount 个 campfire，
- * 且尽量分布在不同的路径上（不相邻位置）。
- *
- * 搜索范围：Boss前2层（preBoss层和preBoss-1层）
- */
-function ensureCampfiresBeforeBoss(
-  nodes: MapNodeExt[],
-  bossDepth: number,
-  minCount: number
-): void {
-  const preBossDepth = bossDepth - 1;
-  const preBoss2Depth = bossDepth - 2;
-
-  // 收集Boss前2层所有节点
-  const candidates = nodes.filter(n =>
-    n.depth === preBossDepth || n.depth === preBoss2Depth
-  );
-
-  // 已有的营火
-  const existingCampfires = candidates.filter(n => n.type === 'campfire');
-
-  let needed = minCount - existingCampfires.length;
-  if (needed <= 0) return;
-
-  // 找Boss前一层（preBossDepth）的可替换节点
-  const preBossNodes = nodes.filter(n => n.depth === preBossDepth);
-  // 找Boss前两层（preBoss2Depth）的可替换节点
-  const preBoss2Nodes = nodes.filter(n => n.depth === preBoss2Depth);
-
-  // 已有营火的x坐标集合（用于保证分散）
-  const campfireXPositions = existingCampfires.map(n => n.x);
-
-  // 优先在preBossDepth层放置，其次preBoss2Depth层
-  const allCandidates = [
-    ...shuffle(preBossNodes.filter(n => n.type !== 'campfire' && n.type !== 'boss')),
-    ...shuffle(preBoss2Nodes.filter(n => n.type !== 'campfire' && n.type !== 'boss')),
-  ];
-
-  // 按距离已有营火的最远优先排序（确保分散）
-  allCandidates.sort((a, b) => {
-    const aMinDist = campfireXPositions.length > 0
-      ? Math.min(...campfireXPositions.map(cx => Math.abs(a.x - cx)))
-      : Infinity;
-    const bMinDist = campfireXPositions.length > 0
-      ? Math.min(...campfireXPositions.map(cx => Math.abs(b.x - cx)))
-      : Infinity;
-    return bMinDist - aMinDist; // 距离远的优先
-  });
-
-  for (const candidate of allCandidates) {
-    if (needed <= 0) break;
-
-    // 检查是否与已有营火在不同路径上（x距离>15表示不同路径区域）
-    const tooClose = campfireXPositions.some(cx => Math.abs(candidate.x - cx) < 15);
-    if (tooClose && allCandidates.length > needed) continue; // 有更好选择时跳过
-
-    candidate.type = 'campfire';
-    campfireXPositions.push(candidate.x);
-    needed--;
-  }
-
-  // 如果分散放置后仍不够，强制放置
-  if (needed > 0) {
-    for (const candidate of allCandidates) {
-      if (needed <= 0) break;
-      if (candidate.type === 'campfire') continue;
-      candidate.type = 'campfire';
-      needed--;
-    }
-  }
-}
-
-// ============================================================
-// 路径战斗密度验证
-// ============================================================
-
-function validateCombatDensity(
-  nodes: MapNodeExt[],
-  startDepth: number,
-  endDepth: number,
-  minCombat: number,
-  fixedLayerIds: Set<number>
-): void {
-  const nonCombatTypes: NodeType[] = ['campfire', 'merchant', 'event', 'treasure'];
-  const startNodes = nodes.filter(n => n.depth === startDepth);
-
-  function findMinCombatOnPaths(nodeId: string, targetDepth: number): number {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return 0;
-    const combatVal = isCombatType(node.type) ? 1 : 0;
-    if (node.depth === targetDepth) return combatVal;
-
-    const children = node.connectedTo
-      .map(cid => nodes.find(n => n.id === cid))
-      .filter((n): n is MapNodeExt => n !== undefined && n.depth <= targetDepth);
-
-    if (children.length === 0) return combatVal;
-
-    let minChildCombat = Infinity;
-    for (const child of children) {
-      const childMin = findMinCombatOnPaths(child.id, targetDepth);
-      if (childMin < minChildCombat) minChildCombat = childMin;
-    }
-    return combatVal + (minChildCombat === Infinity ? 0 : minChildCombat);
-  }
-
-  for (const startNode of startNodes) {
-    const minOnPath = findMinCombatOnPaths(startNode.id, endDepth);
-    if (minOnPath < minCombat) {
-      forceMoreCombat(nodes, startNode.id, endDepth, minCombat, fixedLayerIds, nonCombatTypes);
-    }
-  }
-}
-
-function forceMoreCombat(
-  nodes: MapNodeExt[],
-  startId: string,
-  targetDepth: number,
-  minCombat: number,
-  fixedLayerIds: Set<number>,
-  nonCombatTypes: NodeType[]
-): void {
-  const path = findWeakestPath(nodes, startId, targetDepth);
-  if (!path) return;
-
-  let combatCount = path.filter(n => isCombatType(n.type)).length;
-  for (const node of path) {
-    if (combatCount >= minCombat) break;
-    if (fixedLayerIds.has(node.depth)) continue;
-    // 不把营火改掉（保护Boss前的营火）
-    if (node.type === 'campfire') continue;
-    if (nonCombatTypes.includes(node.type)) {
-      node.type = 'enemy';
-      combatCount++;
-    }
-  }
-}
-
-function findWeakestPath(
-  nodes: MapNodeExt[],
-  startId: string,
-  targetDepth: number
-): MapNodeExt[] | null {
-  const node = nodes.find(n => n.id === startId) as MapNodeExt | undefined;
-  if (!node) return null;
-  if (node.depth === targetDepth) return [node];
-
-  const children = node.connectedTo
-    .map(cid => nodes.find(n => n.id === cid))
-    .filter((n): n is MapNodeExt => n !== undefined && n.depth <= targetDepth);
-
-  if (children.length === 0) return [node];
-
-  let weakestSubPath: MapNodeExt[] | null = null;
-  let weakestCombat = Infinity;
-
-  for (const child of children) {
-    const subPath = findWeakestPath(nodes, child.id, targetDepth);
-    if (subPath) {
-      const combat = subPath.filter(n => isCombatType(n.type)).length;
-      if (combat < weakestCombat) {
-        weakestCombat = combat;
-        weakestSubPath = subPath;
-      }
-    }
-  }
-
-  return weakestSubPath ? [node, ...weakestSubPath] : [node];
-}
 
 // ============================================================
 // 导出辅助

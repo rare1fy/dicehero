@@ -20,7 +20,7 @@ const Stars: React.FC = React.memo(() => {
     }));
   }, []);
   return (
-    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' as any }}>
+    <svg className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' }}>
       {stars.map((s, i) => (
         <rect key={i} x={`${s.x}%`} y={`${s.y}%`} width={s.size} height={s.size}
           fill={`rgba(200,205,230,${s.brightness})`} className="animate-star-twinkle"
@@ -38,7 +38,7 @@ const Moon: React.FC = React.memo(() => (
       background: 'radial-gradient(circle, rgba(180,190,220,0.07) 0%, rgba(160,170,200,0.03) 45%, transparent 70%)',
       borderRadius: '50%',
     }} />
-    <svg width="80" height="80" viewBox="0 0 20 20" style={{ imageRendering: 'pixelated' as any }}>
+    <svg width="80" height="80" viewBox="0 0 20 20" style={{ imageRendering: 'pixelated' }}>
       <rect x="6" y="2" width="8" height="2" fill="#ddd8c0" />
       <rect x="4" y="4" width="12" height="2" fill="#e8e0c8" />
       <rect x="3" y="6" width="14" height="2" fill="#ede6d0" />
@@ -62,7 +62,7 @@ const Moon: React.FC = React.memo(() => (
 /* ── 山脉 — 比天空亮很多，蓝紫灰调 ── */
 const Mountains: React.FC = React.memo(() => (
   <svg className="absolute w-full pointer-events-none"
-    style={{ bottom: '50%', height: '28%', imageRendering: 'pixelated' as any }}
+    style={{ bottom: '50%', height: '28%', imageRendering: 'pixelated' }}
     viewBox="0 0 320 100" preserveAspectRatio="none">
     {/* 远山 — 蓝灰色，明显比天空亮 */}
     <polygon
@@ -91,7 +91,7 @@ const DeadTree: React.FC<TreeProps> = React.memo(({ x, bottom, scale = 1, flip =
     transform: `scale(${flip ? -scale : scale}, ${scale})`,
     transformOrigin: 'bottom center', imageRendering: 'pixelated',
   }}>
-    <svg width="48" height="100" viewBox="0 0 48 100" style={{ imageRendering: 'pixelated' as any }}>
+    <svg width="48" height="100" viewBox="0 0 48 100" style={{ imageRendering: 'pixelated' }}>
       {variant === 'dead1' && (<>
         <rect x="21" y="30" width="6" height="70" fill="#3e3024" />
         <rect x="19" y="60" width="3" height="36" fill="#34281c" />
@@ -152,7 +152,7 @@ const DeadTree: React.FC<TreeProps> = React.memo(({ x, bottom, scale = 1, flip =
 const Puddle: React.FC<{ x: string; bottom: string; size?: 'sm' | 'md' }> = React.memo(
   ({ x, bottom, size = 'sm' }) => (
     <svg className="absolute pointer-events-none"
-      style={{ left: x, bottom, zIndex: 1, imageRendering: 'pixelated' as any }}
+      style={{ left: x, bottom, zIndex: 1, imageRendering: 'pixelated' }}
       width={size === 'sm' ? 18 : 28} height={size === 'sm' ? 6 : 8}
       viewBox={size === 'sm' ? '0 0 18 6' : '0 0 28 8'}>
       {size === 'sm' ? (<>
@@ -174,7 +174,7 @@ const Puddle: React.FC<{ x: string; bottom: string; size?: 'sm' | 'md' }> = Reac
 const Rock: React.FC<{ x: string; bottom: string; size?: 'sm' | 'md' }> = React.memo(
   ({ x, bottom, size = 'sm' }) => (
     <svg className="absolute pointer-events-none"
-      style={{ left: x, bottom, zIndex: 2, imageRendering: 'pixelated' as any }}
+      style={{ left: x, bottom, zIndex: 2, imageRendering: 'pixelated' }}
       width={size === 'sm' ? 12 : 20} height={size === 'sm' ? 8 : 12}
       viewBox={size === 'sm' ? '0 0 12 8' : '0 0 20 12'}>
       {size === 'sm' ? (<>
@@ -219,7 +219,7 @@ const PerspectiveGround: React.FC = React.memo(() => (
     <div style={{ width: '100%', height: '100%', perspective: '400px', perspectiveOrigin: '50% 0%', overflow: 'hidden' }}>
       <div style={{ width: '100%', height: '100%', transform: 'rotateX(35deg)', transformOrigin: 'top center' }}>
         <svg className="w-full h-full" viewBox="0 0 320 200" preserveAspectRatio="none"
-          style={{ imageRendering: 'pixelated' as any }}>
+          style={{ imageRendering: 'pixelated' }}>
           {/* 基底 — 暗褐泥土 */}
           <rect x="0" y="0" width="320" height="200" fill="#1c160c" />
           {/* 枯黄草地（两侧）*/}
@@ -304,7 +304,7 @@ const PerspectiveGround: React.FC = React.memo(() => (
     </div>
     {/* 弧形地平线 — 用 SVG path 画弧度 */}
     <svg className="absolute w-full pointer-events-none"
-      style={{ top: -10, left: 0, height: 20, imageRendering: 'pixelated' as any }}
+      style={{ top: -10, left: 0, height: 20, imageRendering: 'pixelated' }}
       viewBox="0 0 320 20" preserveAspectRatio="none">
       {/* 左侧弧形草皮 */}
       <path d="M0,20 L0,14 C40,8 80,4 120,6 L120,20 Z" fill="#1e1a08" />
@@ -337,7 +337,7 @@ const ForestBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
       <Mountains />
       {/* 燃烧枯树线 — 红色树冠轮廓 */}
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '50%', height: '14%', zIndex: 2, imageRendering: 'pixelated' as any }}
+        style={{ bottom: '50%', height: '14%', zIndex: 2, imageRendering: 'pixelated' }}
         viewBox="0 0 320 50" preserveAspectRatio="none">
         <polygon
           points="0,50 0,30 3,28 6,18 10,24 14,12 18,20 22,8 26,16 30,22 34,10 38,18 42,24 46,12 50,20 54,14 58,22 62,8 66,18 70,24 74,14 78,20 82,10 86,18 90,26 94,14 98,20 102,8 106,18 110,24 114,12 118,20 122,14 126,22 130,10 134,18 138,24 142,12 146,20 150,8 154,16 158,22 162,14 166,20 170,10 174,18 178,24 182,12 186,20 190,8 194,16 198,22 202,14 206,18 210,10 214,20 218,24 222,12 226,18 230,8 234,16 238,22 242,14 246,20 250,10 254,18 258,24 262,12 266,18 270,22 274,14 278,20 282,10 286,18 290,24 294,14 298,18 302,10 306,18 310,24 314,16 318,20 320,14 320,50"
@@ -385,7 +385,7 @@ const ForestBattleScene: React.FC<{ isBoss?: boolean }> = ({ isBoss = false }) =
       }} />
       <Mountains />
       <svg className="absolute w-full pointer-events-none"
-        style={{ bottom: '50%', height: '14%', zIndex: 2, imageRendering: 'pixelated' as any }}
+        style={{ bottom: '50%', height: '14%', zIndex: 2, imageRendering: 'pixelated' }}
         viewBox="0 0 320 50" preserveAspectRatio="none">
         <polygon
           points="0,50 0,30 3,28 6,18 10,24 14,12 18,20 22,8 26,16 30,22 34,10 38,18 42,24 46,12 50,20 54,14 58,22 62,8 66,18 70,24 74,14 78,20 82,10 86,18 90,26 94,14 98,20 102,8 106,18 110,24 114,12 118,20 122,14 126,22 130,10 134,18 138,24 142,12 146,20 150,8 154,16 158,22 162,14 166,20 170,10 174,18 178,24 182,12 186,20 190,8 194,16 198,22 202,14 206,18 210,10 214,20 218,24 222,12 226,18 230,8 234,16 238,22 242,14 246,20 250,10 254,18 258,24 262,12 266,18 270,22 274,14 278,20 282,10 286,18 290,24 294,14 298,18 302,10 306,18 310,24 314,16 318,20 320,14 320,50"

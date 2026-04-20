@@ -260,7 +260,7 @@ export const CSSParticles: React.FC<{
           animationDelay: `${delay}s`,
           animationDuration: `${duration}s`,
           opacity: 0.5 + Math.random() * 0.3,
-          imageRendering: 'pixelated' as any,
+          imageRendering: 'pixelated',
         }}
       />
     );

@@ -53,13 +53,13 @@ export function buildLootItems(params: {
     if (selectedReward.type === 'freeRerollPerTurn') {
       loot.push({ id: 'freeReroll', type: 'reroll', value: selectedReward.value, collected: false });
     } else {
-      loot.push({ id: selectedReward.type, type: selectedReward.type as any, value: selectedReward.value, collected: false });
+      loot.push({ id: selectedReward.type, type: selectedReward.type as LootItem['type'], value: selectedReward.value, collected: false });
     }
   }
 
   // 一击必杀挑战奖励：额外宝箱（点击后随机开启）
   if (game.instakillCompleted) {
-    loot.push({ id: 'challenge_chest', type: 'challengeChest' as any, value: 0, collected: false });
+    loot.push({ id: 'challenge_chest', type: 'challengeChest', value: 0, collected: false });
   }
 
   // 遗物掉落：精英战/Boss战必掉，普通战0%概率
@@ -72,7 +72,7 @@ export function buildLootItems(params: {
     const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
     if (newRelics.length > 0) {
       const newRelic = newRelics[0];
-      loot.push({ id: 'relic-' + newRelic.id, type: 'relic' as any, value: 0, collected: false, relicData: newRelic });
+      loot.push({ id: 'relic-' + newRelic.id, type: 'relic', value: 0, collected: false, relicData: newRelic });
     }
   }
 
@@ -100,9 +100,9 @@ export function resolvePostVictoryPhase(game: GameState): PostVictoryPhase {
     if (currentNode.depth >= mapMaxDepth) {
       // 判断是否为最终章
       if (game.chapter >= CHAPTER_CONFIG.totalChapters) {
-        return { phase: 'victory', bossesWon: (game.stats.bossesWon || 0) + 1 } as any;
+        return { phase: 'victory', bossesWon: (game.stats.bossesWon || 0) + 1 };
       } else {
-        return { phase: 'chapterTransition', bossesWon: (game.stats.bossesWon || 0) + 1 } as any;
+        return { phase: 'chapterTransition', bossesWon: (game.stats.bossesWon || 0) + 1 };
       }
     }
     // 中层Boss：继续走正常战利品流程

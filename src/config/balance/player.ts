@@ -119,3 +119,23 @@ export const STATUS_EFFECT_MULT = {
   /** 易伤(vulnerable)：受到攻击 ×1.5 */
   vulnerable: 1.5,
 } as const;
+
+// ============================================================
+// 动画时长配置（ms）
+// ============================================================
+export const ANIMATION_TIMING = {
+  /** 敌人死亡动画持续时间 */
+  enemyDeathDuration: 1800,
+  /** 敌人死亡后等待清理的缓冲时间（死亡动画 + 缓冲） */
+  enemyDeathCleanupDelay: 2200,
+  /** 波次转换时，等待死亡动画 + 额外缓冲后再替换敌人 */
+  waveTransitionDeathBuffer: 400,
+  /** 敌人入场动画（boss_entrance）持续时间 */
+  bossEntranceDuration: 1200,
+  /** 攻击特效持续时间 */
+  attackEffectDuration: 400,
+  /** 说话特效持续时间 */
+  speakingEffectDuration: 400,
+  /** 战斗胜利后延迟清理敌人（确保死亡动画播完，≥ enemyDeathDuration） */
+  victoryEnemyCleanupDelay: 2200,
+} as const;

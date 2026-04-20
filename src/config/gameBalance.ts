@@ -21,6 +21,7 @@ export {
   SOUL_CRYSTAL_CONFIG,
   getSoulCrystalMult,
   STATUS_EFFECT_MULT,
+  ANIMATION_TIMING,
 } from './balance/player';
 
 export {

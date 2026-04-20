@@ -36,29 +36,42 @@ export function tryWaveTransition(
   cb.setEnemies(nextWave);
   cb.setEnemyEffects({});
   cb.setDyingEnemies(new Set());
-  cb.setGame((prev: GameState) => ({
-    ...prev,
-    currentWaveIndex: nextWaveIdx,
-    targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
-    isEnemyTurn: false,
-    playsLeft: prev.maxPlays,
-    freeRerollsLeft: prev.freeRerollsPerTurn,
-    armor: 0,
-    chargeStacks: 0,
-    mageOverchargeMult: 0,
-    bloodRerollCount: 0,
-    comboCount: 0,
-    lastPlayHandType: undefined,
-    instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
-    instakillCompleted: false,
-    playsThisWave: 0,
-    rerollsThisWave: 0,
-    battleTurn: 1,
-  }));
+  // 垮波次：保留玩家剩余出牌/重投/连击状态（Bug-21：垮波次≠回合结束）
+  // Bug-4：法师吟唱（不出牌）时 DOT 击杀全敌，应保留 chargeStacks 和屯牌；
+  //         出了牌时则重置吟唱状态，与正常回合结束一致。
+  // 闭包变量：将 setGame 回调内的 isMageChanting 传出，避免使用过期快照
+  let outerIsMageChanting = false;
+  cb.setGame((prev: GameState) => {
+    const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
+    outerIsMageChanting = isMageChanting;
+    return {
+      ...prev,
+      currentWaveIndex: nextWaveIdx,
+      targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
+      isEnemyTurn: false,
+      playsLeft: Math.max(prev.playsLeft, 1),
+      freeRerollsLeft: Math.max(prev.freeRerollsLeft, 1),
+      armor: 0,
+      chargeStacks: isMageChanting ? prev.chargeStacks : 0,
+      mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
+      bloodRerollCount: 0,
+      comboCount: prev.comboCount,
+      lastPlayHandType: prev.lastPlayHandType,
+      lockedElement: isMageChanting ? prev.lockedElement : undefined,
+      instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
+      instakillCompleted: false,
+      playsThisWave: 0,
+      rerollsThisWave: 0,
+      battleTurn: 1,
+    };
+  });
   cb.setRerollCount(0);
   cb.setWaveAnnouncement(nextWaveIdx + 1);
   cb.addLog(`第 ${nextWaveIdx + 1} 波敌人来袭！`);
-  cb.setDice([]);
-  cb.rollAllDice(true);
+  // Bug-4：法师吟唱时保留屯牌，不清空骰子、不强制重置手牌
+  if (!outerIsMageChanting) {
+    cb.setDice([]);
+  }
+  cb.rollAllDice(!outerIsMageChanting);
   return true;
 }
