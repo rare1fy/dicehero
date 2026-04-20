@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
-import { MiniDice } from './DiceBagPanel';
+import { MiniDice } from './MiniDice';
 import { getDiceDef } from '../data/dice';
 import { formatDescription } from '../utils/richText';
 

@@ -5,7 +5,7 @@ import { getDiceDef, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { formatDescription } from '../utils/richText';
 
-import { MiniDice } from './DiceBagPanel';
+import { MiniDice } from './MiniDice';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { playSound } from '../utils/sound';

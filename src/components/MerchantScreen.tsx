@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { formatDescription } from '../utils/richText';
-import { MiniDice } from './DiceBagPanel';
+import { MiniDice } from './MiniDice';
 import { PixelCoin, PixelDice } from './PixelIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';

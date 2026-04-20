@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { MiniDice } from './DiceBagPanel';
+import { MiniDice } from './MiniDice';
 import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef, DICE_MAX_LEVEL } from '../data/dice';
 import { playSound } from '../utils/sound';

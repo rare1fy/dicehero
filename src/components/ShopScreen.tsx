@@ -6,7 +6,7 @@ import { PixelCoin, PixelStar, PixelDice, PixelFlame, PixelClose } from './Pixel
 import { DICE_BY_RARITY, getDiceDef, getUpgradedFaces } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward, ShopItem } from '../types/game';
-import { MiniDice } from './DiceBagPanel';
+import { MiniDice } from './MiniDice';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { formatDescription } from '../utils/richText';
