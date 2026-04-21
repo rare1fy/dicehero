@@ -9,14 +9,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  PixelHeart, PixelShield, PixelRefresh, PixelPlay, PixelZap,
-  PixelSkull, PixelFlame, PixelSword,
+  PixelHeart,
+  PixelShield,
+  PixelSkull,
+  PixelSword,
   PixelAttackIntent,
-  PixelArrowRight,
-  PixelMagic, PixelPoison, PixelCoin, PixelDice, PixelSoulCrystal,
-  PixelBloodDrop,
+  PixelMagic,
 } from './PixelIcons';
-import { RelicPixelIcon } from './PixelRelicIcons';
 import ForestBattleScene from './ForestBattleScene';
 import IceBattleScene from './IceBattleScene';
 import LavaBossScene from './LavaBossScene';
@@ -26,20 +25,16 @@ import { ClassLeftHand, ClassRightHand } from './ClassHands';
 import { StatusIcon } from './StatusIcon';
 import { EnemyQuoteBubble } from './EnemyQuoteBubble';
 import { PixelSprite, hasSpriteData } from './PixelSprite';
-import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
-import { DiceFacePattern } from './DiceFacePattern';
-import { ElementBadge } from './PixelDiceShapes';
+import { SettlementOverlay } from './SettlementOverlay';
+import { DamagePreviewCard } from './DamagePreviewCard';
 import { useBattleContext } from '../contexts/BattleContext';
 import { formatDescription } from '../utils/richText';
-import { getDiceElementClass } from '../utils/uiHelpers';
-import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
-import ReactDOM from 'react-dom';
-import { getDiceDef } from '../data/dice';
 
 export function EnemyStageView() {
   const {
-    game, setGame,
+    game,
+    setGame,
     enemies,
     dice,
     enemyEffects,
@@ -47,22 +42,20 @@ export function EnemyStageView() {
     floatingTexts,
     enemyQuotes,
     setEnemyInfoTarget,
-    showChallengeDetail, setShowChallengeDetail,
-    showWaveDetail, setShowWaveDetail,
-    waveAnnouncement, setWaveAnnouncement: _setWaveAnnouncement,
+    showChallengeDetail,
+    setShowChallengeDetail,
+    showWaveDetail,
+    setShowWaveDetail,
+    waveAnnouncement,
+    setWaveAnnouncement: _setWaveAnnouncement,
     isAoeActive,
     isNormalAttackMulti,
     handHintIds,
-    expectedOutcome,
-    settlementPhase,
-    settlementData,
-    flashingRelicIds,
-    selectedRelic, setSelectedRelic,
-    showRelicPanel, setShowRelicPanel,
     handLeftThrow,
     shuffleAnimating,
     diceDiscardAnim,
-    lastTappedDieId, setLastTappedDieId,
+    lastTappedDieId,
+    setLastTappedDieId,
     skillTriggerTexts,
     targetEnemyUid,
     addToast,
@@ -443,6 +436,10 @@ export function EnemyStageView() {
           </motion.div>
         ))}
       </AnimatePresence>
+
+      {/* 结算演出覆盖层 + 出牌预期结算卡片（2026-04-21 铁律 B.1 拆分） */}
+      <SettlementOverlay />
+      <DamagePreviewCard />
     </div>
   );
 }
