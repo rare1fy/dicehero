@@ -400,7 +400,8 @@ export async function executeEnemyTurn(
   }
 
   // 7. 敌人回合结束→玩家回合
-  let returnHp = 0;
+  // [BUG-FIX] Use gameRef real HP as default. React 18 batches setGame updaters asynchronously; if we init returnHp=0, the synchronous return fires before updater runs -> upper layer sees 0 -> false gameover trigger.
+  let returnHp = cb.gameRef.current.hp;
   cb.setGame((prev: GameState) => {
     if (prev.phase === 'gameover') {
       returnHp = prev.hp;
