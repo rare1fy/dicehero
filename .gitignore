@@ -1,8 +1,22 @@
-node_modules/
+﻿node_modules/
 build/
 dist/
 coverage/
 .DS_Store
 *.log
+
+# 环境变量
 .env*
 !.env.example
+
+# 构建产物（Pages 入口 index.html 不忽略，由 deploy.cjs 管理）
+dicehero-mobile.html
+*.zip
+
+# 临时调试产物
+tsc-*.txt
+tsc_*.txt
+tmp-*.md
+report-temp.md
+*.backup
+*.old
