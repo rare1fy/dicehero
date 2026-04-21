@@ -40,7 +40,7 @@ export interface EnemyAICallbacks {
   addToast: (msg: string, type: string) => void;
   playSound: (id: string) => void;
   setScreenShake: (v: boolean) => void;
-  setPlayerEffect: (v: string | null) => void;
+  setPlayerEffect: React.Dispatch<React.SetStateAction<string | null>>;
   showEnemyQuote: (uid: string, text: string, duration?: number) => void;
   /** 延迟台词执行器：接收 DelayedQuoteAction 描述，在 UI 层调度定时器 */
   scheduleDelayedQuote: (action: DelayedQuoteAction) => void;

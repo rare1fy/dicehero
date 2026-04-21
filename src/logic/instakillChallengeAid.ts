@@ -108,11 +108,11 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         if (e.hp <= 0) return e;
         const newStatuses = [...(e.statuses || [])];
         const burnIdx = newStatuses.findIndex(s => s.type === 'burn');
-        if (burnIdx >= 0) newStatuses[burnIdx] = { ...newStatuses[burnIdx], stacks: newStatuses[burnIdx].stacks + stacks };
-        else newStatuses.push({ type: 'burn', stacks, duration: 99 });
+        if (burnIdx >= 0) newStatuses[burnIdx] = { ...newStatuses[burnIdx], value: newStatuses[burnIdx].value + stacks };
+        else newStatuses.push({ type: 'burn', value: stacks, duration: 99 });
         const poisonIdx = newStatuses.findIndex(s => s.type === 'poison');
-        if (poisonIdx >= 0) newStatuses[poisonIdx] = { ...newStatuses[poisonIdx], stacks: newStatuses[poisonIdx].stacks + stacks };
-        else newStatuses.push({ type: 'poison', stacks, duration: 99 });
+        if (poisonIdx >= 0) newStatuses[poisonIdx] = { ...newStatuses[poisonIdx], value: newStatuses[poisonIdx].value + stacks };
+        else newStatuses.push({ type: 'poison', value: stacks, duration: 99 });
         return { ...e, statuses: newStatuses };
       }));
       enemies.filter(e => e.hp > 0).forEach(e => {

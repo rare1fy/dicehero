@@ -58,7 +58,7 @@ export function useBattleLifecycle(state: BattleState) {
   const startBattle = async (nodeOrIndex: MapNode | number) => {
     // nextNode() 可能传入数字索引，需从 map 中查找
     const node: MapNode = typeof nodeOrIndex === 'number'
-      ? game.map.find(n => n.id === nodeOrIndex) || game.map.find(n => n.depth === nodeOrIndex)!
+      ? game.map.find(n => n.depth === nodeOrIndex)!
       : nodeOrIndex;
     setBattleTransition('fadeIn');
     await new Promise(r => setTimeout(r, 200));
@@ -394,7 +394,7 @@ export function useBattleLifecycle(state: BattleState) {
 
   // ==================== phase清空enemies ====================
   useEffect(() => {
-    if (game.phase === 'reward' || game.phase === 'map') {
+    if (game.phase === 'diceReward' || game.phase === 'map') {
       // Bug-3: 检查是否有敌人正在播放死亡动画（effect === 'death'），如果有则延迟清空
       const hasDyingEnemy = enemies.some(e => {
         const effect = state.enemyEffects[e.uid];

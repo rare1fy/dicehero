@@ -92,16 +92,9 @@ export interface BattleWave {
  * 权威定义在 utils/instakillChallenge.ts（含 ChallengeType 枚举 + trackSet 字段）。
  * 拆分时保留此处是为了避免循环依赖（Enemy→GameState→...），
  * 如需扩展字段应以 instakillChallenge.ts 为准并同步更新此处。 */
-export interface InstakillChallenge {
-  type: string;       // 对应 ChallengeType 枚举值（如 'descending_chain'）
-  label: string;
-  description: string;
-  value?: number;
-  handType?: string;
-  progress?: number;
-  completed: boolean;
-  trackSet?: string[]; // 追踪集合（utils/instakillChallenge.ts 权威定义）
-}
+// InstakillChallenge 权威定义位于 utils/instakillChallenge.ts（含 ChallengeType union + trackSet 等完整字段）。
+// 此处 re-export 确保 types 模块的统一入口，后续扩展须改动 utils/instakillChallenge.ts 源头。
+export type { InstakillChallenge } from '../utils/instakillChallenge';
 
 // 游荡商人物品
 export interface MerchantItem {

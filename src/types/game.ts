@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // types/game.ts — 统一重导出入口 + 本地类型
 // ============================================================
 
@@ -9,6 +9,7 @@ import type { Relic } from './relics';
 
 // 重导出 — 统一入口
 export type { DiceElement, DiceRarity, DiceDef, OwnedDie, Die, HandType, StatusType, StatusEffect } from './dice';
+export type { ClassId } from '../data/classes';
 export type { NodeType, MapNode, EnemyCombatType, Enemy, LootItem, ChestTier, ChestReward, ShopItem, BattleWave, InstakillChallenge, MerchantItem } from './entities';
 export type { RelicTrigger, RelicRarity, RelicContext, RelicEffect, PassiveRelicKey, Relic } from './relics';
 
@@ -87,6 +88,8 @@ export interface GameState {
   relics: Relic[];                     // 遗物列表（无限制数量）
   elementsUsedThisBattle: string[];    // 本场战斗已使用的元素
   currentNodeId: string | null;
+  /** 当前节点的 depth 索引（number 版，用于 nextNode 递增逻辑） */
+  currentNode?: number;
   map: MapNode[];
   phase: 'start' | 'classSelect' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure';
   battleTurn: number;
@@ -129,7 +132,7 @@ export interface GameState {
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）
   rerollsThisWave?: number;            // 本波重投次数（挑战追踪用）
   tempDrawCountBonus?: number;         // 洞察弱点临时骰子上限加成（战斗结束清除）
-  gmKillWave?: boolean;                // GM 调试：杀死当前波次敌人
+  gmKillWave?: number;                 // GM 调试：杀死当前波次敌人（timestamp，让 useEffect 通过值变化触发）
 }
 
 // ============================================================

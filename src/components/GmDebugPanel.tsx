@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { ALL_RELICS } from '../data/relics';
+import type { GameState } from '../types/game';
 import { ALL_DICE } from '../data/dice';
 
 const RARITY_COLORS: Record<string, string> = {
@@ -153,7 +154,7 @@ const GmBattleActions: React.FC<{
       <GmBtn
         onClick={() => {
           if (game.phase === 'battle') {
-            setGame(p => ({ ...p, gmKillWave: Date.now() }));
+            setGame((p): GameState => ({ ...p, gmKillWave: Date.now() }));
             addToast('GM: 杀死当前波次敌人');
           } else {
             addToast('GM: 当前不在战斗中');

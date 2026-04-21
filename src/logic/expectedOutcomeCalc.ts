@@ -17,7 +17,7 @@ import { HAND_TYPES } from '../data/handTypes';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
 import { FURY_CONFIG } from '../config/gameBalance';
-import { processDiceOnPlayEffects } from './diceOnPlayCalc';
+import { processDiceOnPlayEffects } from './diceOnPlay';
 
 // 重新导出类型和副作用执行，保持消费方 import 路径不变
 export type { PendingSideEffect, ExpectedOutcomeResult, CalculateExpectedOutcomeParams } from './expectedOutcomeTypes';

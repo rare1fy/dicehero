@@ -4,7 +4,7 @@ import type { Die, MapNode, Enemy, GameState, Relic } from '../types/game';
 interface Toast {
   id: number;
   message: string;
-  type: 'info' | 'damage' | 'heal' | 'gold' | 'buff';
+  type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff' | string;
 }
 
 export interface GameContextType {

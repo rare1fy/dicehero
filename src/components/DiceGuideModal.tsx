@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GameContext } from '../contexts/GameContext';
 import { PixelClose } from './PixelIcons';
 import { ALL_DICE } from '../data/dice';
+import type { DiceDef } from '../types/game';
 import { CLASS_DICE } from '../data/classes';
 import {
   CATEGORIES,

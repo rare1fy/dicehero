@@ -28,7 +28,7 @@ export const RARITY_LABELS: Record<string, string> = {
 
 export const RARITY_ORDER = ['common', 'uncommon', 'rare', 'legendary', 'curse'] as const;
 
-type CategoryId = 'all' | 'universal' | 'warrior' | 'mage' | 'rogue';
+export type CategoryId = 'all' | 'universal' | 'warrior' | 'mage' | 'rogue';
 
 export interface GuideSection {
   category: CategoryId;

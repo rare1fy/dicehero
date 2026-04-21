@@ -115,7 +115,7 @@ export const MerchantScreen: React.FC = () => {
       switch (item.type) {
         case 'dice':
           if (item.diceDefId) {
-            next.ownedDice = [...prev.ownedDice, { defId: item.diceDefId, upgradeLevel: 0 }];
+            next.ownedDice = [...prev.ownedDice, { defId: item.diceDefId, level: 1 }];
             addLog(`\u4ece\u5546\u4eba\u5904\u8d2d\u4e70\u4e86\u9ab0\u5b50: ${item.label}`);
           }
           break;

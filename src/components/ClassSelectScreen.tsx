@@ -146,7 +146,6 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
                 style={{
                   borderColor: isSelected ? cls.color : 'var(--dungeon-panel-border)',
                   boxShadow: isSelected ? `0 0 12px ${cls.color}40, inset 0 0 8px ${cls.color}15` : undefined,
-                  ringColor: cls.color,
                 }}
               >
                 <div className="shrink-0" style={{ filter: isSelected ? `drop-shadow(0 0 6px ${cls.color}80)` : undefined }}>

@@ -1,3 +1,4 @@
+// [RULES-B2-EXEMPT] 纯 SVG 像素资产 — 8 个职业双手的 rect/path 数据堆叠 + 3 个声明式条件图层叠加(attacking/glowing)，拆分无收益反增 6 个文件维护成本
 ﻿/**
  * ClassHands.tsx — 职业专属第一人称双手像素SVG
  * 战士：铁甲手套+骨骷髅骰子+战斧

@@ -6,6 +6,13 @@ import { PixelDice, PixelClose } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
 import { MiniDice, DiceQueueThumbnail } from './MiniDice';
 
+interface DiceBagPanelProps {
+  ownedDice: string[];
+  diceBag: string[];
+  discardPile: string[];
+  position?: 'left' | 'right';
+}
+
 /**
  * DiceBagPanel - 骰子库/弃骰库面板
  * position='left': 骰子库 (蓝色)

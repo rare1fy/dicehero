@@ -17,7 +17,7 @@ import { computeHandHintIds } from '../logic/handHintCalc';
 import { checkHands } from '../utils/handEvaluator';
 import { playSound } from '../utils/sound';
 import { calculateExpectedOutcome, applyPendingSideEffects } from '../logic/expectedOutcomeCalc';
-import { runSettlementAnimation } from '../logic/settlementAnimation';
+import { runSettlementAnimation } from '../logic/settlement';
 import { applyDamageToEnemies } from '../logic/damageApplication';
 import { executePostPlayEffects, createCheckEnemyDeaths } from '../logic/postPlayEffects';
 import { computePlayStatsUpdate, calcComboFinisherBonus } from '../logic/playHandStats';
@@ -253,7 +253,7 @@ export function useBattleCombat(
       setGame, setEnemies, setEnemyEffects, setDyingEnemies,
       setEnemyEffectForUid, enemyPreAction: state.enemyPreAction,
       addLog, addFloatingText, addToast, playSound,
-      setScreenShake, setPlayerEffect, showEnemyQuote, getEnemyQuotes, pickQuote,
+      setScreenShake, setPlayerEffect: setPlayerEffect as React.Dispatch<React.SetStateAction<string | null>>, showEnemyQuote, getEnemyQuotes, pickQuote,
       setRerollCount, setWaveAnnouncement, setDice, rollAllDice,
       buildRelicContext, hasFatalProtection, triggerHourglass,
       handleVictory: victory.handleVictory, gameRef,
@@ -265,7 +265,8 @@ export function useBattleCombat(
 
     // [DIAG] 敌人回合结束后的状态
     // [BUG-FIX-v2] 检查是否已在 enemyAI 内部设置了 gameover（避免重复设置）
-    if (gameRef.current.phase === 'gameover') {
+    // TS narrowing 破除：await 后 gameRef.current 可能已被异步修改为 gameover
+    if ((gameRef.current.phase as string) === 'gameover') {
       return;
     }
     if (currentPlayerHp <= 0) {

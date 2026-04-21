@@ -26,16 +26,16 @@ export const VictoryScreen: React.FC = () => {
 
   // 计算高光数据
   const totalDamage = stats.totalDamageDealt || 0;
-  const highestSingleHit = stats.highestDamage || 0;
+  const highestSingleHit = stats.maxSingleHit || 0;
   const enemiesKilled = stats.enemiesKilled || 0;
   const bossesWon = stats.bossesWon || 0;
   const totalGold = stats.goldEarned || 0;
   const goldSpent = stats.goldSpent || 0;
   const totalHealing = stats.totalHealing || 0;
   const totalArmor = stats.totalArmorGained || 0;
-  const turnsPlayed = stats.turnsPlayed || 0;
-  const diceRolled = stats.diceRolled || 0;
-  const rerolls = stats.rerollCount || 0;
+  const turnsPlayed = stats.totalPlays || 0;
+  const diceRolled = stats.totalPlays || 0;
+  const rerolls = stats.totalRerolls || 0;
   const relicCount = game.relics.length;
   const diceCount = game.ownedDice.length;
   const chapter = game.chapter || 5;

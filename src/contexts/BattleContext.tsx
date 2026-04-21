@@ -1,5 +1,6 @@
 import React from 'react';
-import type { Die, Enemy, GameState, Relic, StatusEffect, ExpectedOutcomeResult } from '../types/game';
+import type { Die, Enemy, GameState, Relic, StatusEffect } from '../types/game';
+import type { ExpectedOutcomeResult } from '../logic/expectedOutcomeTypes';
 
 // === 结算演出状态 ===
 export interface SettlementData {
@@ -17,6 +18,7 @@ export interface SettlementData {
     type: 'damage' | 'mult' | 'status' | 'heal' | 'armor';
     rawValue?: number;
     rawMult?: number;
+    relicId?: string;
   }[];
   currentEffectIdx: number;
   finalDamage: number;
@@ -28,7 +30,7 @@ export interface SettlementData {
 
 export type SettlementPhase = null | 'hand' | 'dice' | 'mult' | 'effects' | 'bounce' | 'damage';
 
-export type EnemyEffectType = 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | null;
+export type EnemyEffectType = 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | 'hit' | 'debuff' | null;
 
 export type PlayerEffectType = 'attack' | 'defend' | 'flash' | null;
 
@@ -87,6 +89,7 @@ export interface BattleContextType {
   battleTransition: 'none' | 'fadeIn' | 'hold' | 'fadeOut';
   bossEntrance: { visible: boolean; name: string; chapter: number };
   waveAnnouncement: number | null;
+  setWaveAnnouncement: (n: number | null) => void;
   showWaveDetail: boolean;
   setShowWaveDetail: React.Dispatch<React.SetStateAction<boolean>>;
   showChallengeDetail: boolean;

@@ -2,7 +2,7 @@
 // 骰子元素与稀有度
 // ============================================================
 
-export type DiceElement = 'normal' | 'fire' | 'ice' | 'thunder' | 'poison' | 'holy';
+export type DiceElement = 'normal' | 'fire' | 'ice' | 'thunder' | 'poison' | 'holy' | 'shadow';
 export type DiceRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'curse';
 
 // ============================================================

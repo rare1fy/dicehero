@@ -24,6 +24,16 @@ import EternalBossScene from './EternalBossScene';
 import { ClassLeftHand, ClassRightHand } from './ClassHands';
 import { StatusIcon } from './StatusIcon';
 import { EnemyQuoteBubble } from './EnemyQuoteBubble';
+import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from '../config/enemies';
+
+// 通过 configId 反查敌人所属 category（Enemy 运行时实例不含 category 字段，权威来源在 EnemyConfig）
+const ENEMY_CATEGORY_MAP: Record<string, 'normal' | 'elite' | 'boss'> = (() => {
+  const m: Record<string, 'normal' | 'elite' | 'boss'> = {};
+  NORMAL_ENEMIES.forEach(e => { m[e.id] = 'normal'; });
+  ELITE_ENEMIES.forEach(e => { m[e.id] = 'elite'; });
+  BOSS_ENEMIES.forEach(e => { m[e.id] = 'boss'; });
+  return m;
+})();
 import { PixelSprite, hasSpriteData } from './PixelSprite';
 import { SettlementOverlay } from './SettlementOverlay';
 import { DamagePreviewCard } from './DamagePreviewCard';
@@ -340,7 +350,7 @@ export function EnemyStageView() {
               {enemy.armor > 0 && <StatusIcon status={{ type: 'armor', value: enemy.armor }} align="center" />}
               {enemy.statuses.map((s, i) => <StatusIcon key={i} status={s} align="center" />)}
             </div>
-            <EnemyQuoteBubble text={enemyQuotes[enemy.uid] || null} category={enemy.category} />
+            <EnemyQuoteBubble text={enemyQuotes[enemy.uid] || null} category={ENEMY_CATEGORY_MAP[enemy.configId] ?? 'normal'} />
             <div className={`relative ${
               enemy.combatType === 'warrior' ? 'animate-enemy-breathe-warrior' :
               enemy.combatType === 'caster' ? 'animate-enemy-breathe-caster' :
