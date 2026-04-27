@@ -42,17 +42,24 @@
 
 ### 1.1 全局游戏阶段（`GameState.phase`）
 
+**自然语言流程**：玩家打开游戏后先看到主菜单（menu），点开始进入职业选择（classSelect），选完职业即进入正式跑图流程：地图（map）→ 踩节点触发对应阶段（战斗 / 战利品 / 商店 / 篝火 / 事件 / 宝箱）→ 阶段结束回到地图。击败章节 Boss 且还有后续章节时会走一段章节切换动画（chapterTransition）再进入新章节的地图；击败最终章节 Boss 走通关（victory）；任何时候 HP 清零走失败（gameover）。
+
 ```
-menu → classSelect → (map ↔ battle ↔ diceReward/loot/shop/campfire/event/treasure/skillSelect)
+menu → classSelect → (map ↔ battle ↔ diceReward / loot / shop / campfire / event / treasure)
                          ↓ (Boss + chapter<5)
-                    chapterTransition → map (新章节)
+                    chapterTransition → map（新章节）
                          ↓ (Boss + chapter=5)
                     victory
                          ↓ (hp<=0)
                     gameover
 ```
 
+> 说明：Coder 考古曾发现源码里残留一个 `skillSelect` / 增幅模块阶段，**现版本设计上已废弃**，不进入 Godot 版移植范围。
+
 ### 1.2 完整阶段列表
+
+下表列出所有实际运行时会走到的阶段。每个阶段对应一个独立 UI 场景或弹窗，切换阶段时会同步清理/重置相关战斗态（见第 4 章）。
+
 
 | phase | 触发 | 职责 |
 |---|---|---|
@@ -66,7 +73,6 @@ menu → classSelect → (map ↔ battle ↔ diceReward/loot/shop/campfire/event
 | `campfire` | 踩到 campfire 节点 | 休息 +40HP / 强化遗物 |
 | `event` | 踩到 event 节点 | 10 种随机事件之一 |
 | `treasure` | 踩到 treasure 节点 | 免费遗物 3 选 1 |
-| `skillSelect` | 特定事件 | 增幅模块选择（以 HP/maxHp 换强化） |
 | `chapterTransition` | 章节 Boss 被击败且 chapter<5 | 章节切换动画（回血 60% + 75 金） |
 | `gameover` | HP≤0 且无沙漏 | 失败结算 |
 | `victory` | 第 5 章最终 Boss 击败 | 通关结算 |
@@ -168,7 +174,12 @@ enemy.dmg = floor(baseDmg × depthDmgMult × chapterDmgMult × nodeMultiplier)
 
 ## 3. 三职业完整规格
 
+三位英雄定位差异极大——战士靠卖血换强度、近身硬拼；法师靠吟唱蓄力、一发致命；盗贼靠多段连击、节奏压制。三者在初始属性、出牌次数、重投代价、手牌保留规则上都不同，以下表格先汇总核心数据，再分节展开每位英雄的专属机制。
+
 ### 3.1 初始属性表（`data/classes.ts`）
+
+**说明**：下表所有骰子 id 以源码 `data/classes.ts initialDice` 为准。盗贼初始普通骰已按本版本设计修正为 4 颗（与战士、法师对齐）；源码中历史上为 3 颗，需要 Godot 版在实现时按 4 颗写入。
+
 
 | 字段 | 战士 warrior | 法师 mage | 盗贼 rogue |
 |---|---|---|---|
@@ -177,10 +188,12 @@ enemy.dmg = floor(baseDmg × depthDmgMult × chapterDmgMult × nodeMultiplier)
 | maxPlays（出牌/回合）| 1 | 1 | **2** |
 | freeRerolls（免费重投/回合）| 1 | 1 | 1 |
 | canBloodReroll | **true** | false | false |
-| 初始骰子 | std×4 + w_bloodthirst + w_ironwall | std×4 + mage_elemental + mage_reverse | std×3 + r_quickdraw + r_combomastery |
+| 初始骰子 | std×4 + w_bloodthirst + w_ironwall | std×4 + mage_elemental + mage_reverse | **std×4** + r_quickdraw + r_combomastery |
 | 通用上限 | maxDrawCount=6, 初始遗物槽=5, souls=0 | 同左 | 同左 |
 
 ### 3.2 战士专属机制
+
+**体验定位**：战士的核心体验是"越打越猛、血越少越凶"。进入半血状态自动多抽一张、卖血重投叠嗜血层、受伤越重狂暴倍率越高。独有的特权是**普攻可多选**——不凑牌型也能把手里全部骰子一口气丢出去，但代价是所有骰子的特殊效果本次失效（换来纯数值的最大化输出）。
 
 1. **血怒补牌**（被动 passive）：HP ≤ 50%×maxHp 时，每回合抽牌数 +1
    - 触发点：`drawPhase.ts` + `useBattleLifecycle.rollAllDice`
@@ -208,6 +221,8 @@ enemy.dmg = floor(baseDmg × depthDmgMult × chapterDmgMult × nodeMultiplier)
 
 ### 3.3 法师专属机制
 
+**体验定位**：法师是三位英雄里唯一"可以选择不出牌"的职业。按住手牌憋一回合 = 吟唱，下回合开局手牌不会被洗掉、反而会再抽 1 颗叠加到上限。憋满 6 颗后继续吟唱进入"过充"，每过充一次伤害加 10%、护甲也叠加。吟唱的风险就是敌人会照常打你，所以法师的核心博弈是"蓄多少回合一把秒掉 vs 中途硬拼保命"。
+
 1. **吟唱保留**（被动）：本回合未出牌 → 保留所有未消耗手牌至下回合
    - 判定点：`drawPhase.ts`，`playsLeft < maxPlays`（出过牌）→ 全弃；`playsLeft === maxPlays`（未出牌）→ 保留
 
@@ -232,6 +247,8 @@ enemy.dmg = floor(baseDmg × depthDmgMult × chapterDmgMult × nodeMultiplier)
 9. **棱镜锁元素**（`mage_prism`）：出牌后 `lockElement=true`，下回合所有元素骰沿用当前元素（直到回合结束清空）
 
 ### 3.4 盗贼专属机制
+
+**体验定位**：盗贼是三位英雄里唯一能在一回合内出牌两次的职业。第一次出牌不求高伤，作为"连击预备"换免费重投和补刀机会；第二次出牌才是主攻，带连击加成、同牌型二连还能再叠一层。整套体系鼓励玩家构筑"先低价铺垫、再高价收割"的节奏，暗影残骰更是连击的润滑剂——能跨回合积攒小骰子当第二次出牌的添头。
 
 1. **每回合 2 次出牌**（`maxPlays=2`）
 
