@@ -101,3 +101,22 @@
 新增待办：
 - `DESIGN-TREASURE-MINIGAME`（P1）宝箱节点小玩法设计
 - `FEATURE-DICE-UPGRADE`（搁置）骰子升级体系评估
+
+
+---
+
+## v3.0 · 爽点专题补全（2026-04-27）
+
+新增 08 号专题文档，专门描述被漏掉的两大战斗爽点 UI：
+
+- **[08-damage-settlement-relic-drawer.md](./08-damage-settlement-relic-drawer.md)** · 伤害演出 4 Phase 编排 + 遗物半弹窗自动展开/刷光
+  - §1 整体时序总览（Phase 1 → 2 → 2.5 → 3 → bounce → 4 → cleanup）
+  - §2 遗物半弹窗（折叠态 / 展开态 / 三态视觉 / 详情弹窗）
+  - §3 伤害演出（牌型卡 / 骰子序列 / 计分条 / 触发效果列表 / DamageOverlay 三档卡肉震屏）
+  - §4 出牌预期卡（DamagePreviewCard）
+  - §5 Godot 移植实现建议（节点结构 / 状态机 / 信号协议）
+  - §6 完整实现 Checklist（9 大块）
+  - §7 自然语言完整还原（读一遍就能脑补画面）
+  - §8 源码证据校验
+
+**核心结论**：伤害演出 Phase 1 自动 `setShowRelicPanel(true)`，Phase 3 触发遗物时 `setFlashingRelicIds` 刷光 800ms，Phase 4 结束自动 `setShowRelicPanel(false)` 收起。整条视觉反馈链是战斗构筑感的基石，Godot 版必须 1:1 复刻。
