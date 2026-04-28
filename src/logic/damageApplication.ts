@@ -48,6 +48,7 @@ export interface DamageAppContext {
   showEnemyQuote: (uid: string, text: string, duration: number) => void;
   getEnemyQuotes: (configId: string) => EnemyQuotes | undefined;
   pickQuote: (quotes?: string[]) => string | undefined;
+  setScreenShake: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // ============================================================
@@ -66,6 +67,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
     setEnemies, setGame, setArmorGained, setHpGained, setPlayerEffect,
     setEnemyEffectForUid, enemyQuotedLowHp, setEnemyQuotedLowHp,
     addFloatingText, playSound, showEnemyQuote, getEnemyQuotes, pickQuote,
+    setScreenShake,
   } = ctx;
 
   // --- Apply damage to enemy (with AOE support) ---
@@ -156,6 +158,9 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       }
       if (newHp <= 0) {
         setEnemyEffectForUid(e.uid, 'death'); playSound('enemy_death');
+      } else {
+        setEnemyEffectForUid(e.uid, 'hit');
+        setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
         const dq2 = getEnemyQuotes(e.configId);
         const dl2 = pickQuote(dq2?.death);
         if (dl2) showEnemyQuote(e.uid, dl2, ANIMATION_TIMING.enemyDeathDuration + 200);
@@ -176,6 +181,9 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       remainingDamage -= absorbed;
     }
     finalEnemyHp = targetEnemy.hp - remainingDamage; // 保留负值用于overkill计算
+    // Player attack hit feedback
+    setScreenShake(true);
+    setTimeout(() => setScreenShake(false), 200);
     if (finalEnemyHp <= 0) {
       setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death');
       const dq = getEnemyQuotes(targetEnemy.configId);
@@ -191,6 +199,11 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         setTimeout(() => setEnemyEffectForUid(targetUid, null), ANIMATION_TIMING.speakingEffectDuration);
         setEnemyQuotedLowHp(prev => new Set([...prev, targetUid]));
       }
+    }
+    // Enemy survived: hit flash effect
+    if (finalEnemyHp > 0) {
+      setEnemyEffectForUid(targetUid, 'hit');
+      setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
     }
     
     setEnemies(prev => prev.map(e => {

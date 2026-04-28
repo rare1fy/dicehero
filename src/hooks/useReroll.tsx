@@ -40,7 +40,7 @@ export function useReroll(state: BattleState) {
 
   // ==================== rerollSelected ====================
   const rerollSelected = async () => {
-    if (game.isEnemyTurn || game.playsLeft <= 0) return;
+    if (game.isEnemyTurn) return;
 
     const toReroll = dice.filter(d => d.selected && !d.spent);
     if (toReroll.length === 0) {

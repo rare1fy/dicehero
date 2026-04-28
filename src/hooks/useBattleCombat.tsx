@@ -70,7 +70,6 @@ export function useBattleCombat(
     if (!die) return;
     if (die.spent) { addToast('该骰子已使用'); return; }
     if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
-    if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
 
     const isCurrentlySelected = die.selected;
     state.setLastTappedDieId(isCurrentlySelected ? null : id);
@@ -154,7 +153,6 @@ export function useBattleCombat(
     if (enemies.length === 0 || !targetEnemy) return;
     if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
     if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
-    if (game.playsLeft <= 0) { addToast('出牌次数已耗尽'); return; }
 
     const targetUidForTracking = targetEnemy.uid;
     const playsBefore = playsPerEnemyRef.current[targetUidForTracking] || 0;
@@ -212,6 +210,7 @@ export function useBattleCombat(
       setEnemies, setGame, setArmorGained, setHpGained, setPlayerEffect,
       setEnemyEffectForUid, enemyQuotedLowHp, setEnemyQuotedLowHp,
       addFloatingText, playSound, showEnemyQuote, getEnemyQuotes, pickQuote,
+      setScreenShake,
     });
 
     // 出牌后效处理
@@ -270,7 +269,14 @@ export function useBattleCombat(
       return;
     }
     if (currentPlayerHp <= 0) {
-      playSound('player_death'); setGame(prev => ({ ...prev, phase: 'gameover' })); return;
+      playSound('player_death');
+      setScreenShake(true);
+      setPlayerEffect('death');
+      await new Promise(r => setTimeout(r, 800));
+      setScreenShake(false);
+      setPlayerEffect(null);
+      setGame(prev => ({ ...prev, phase: 'gameover' }));
+      return;
     }
 
     // [BUG-FIX-v2] 在回调内检查 gameover 状态，防止覆盖 enemyAI 设置的 gameover
@@ -315,6 +321,9 @@ export function useBattleCombat(
     // 但 enemyAI 内部已经设置了 phase:'gameover'，这里不需要重复处理
     if (game.phase === 'battle' && !game.isEnemyTurn && game.hp <= 0) {
       playSound('player_death');
+      setScreenShake(true);
+      setPlayerEffect('death');
+      setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 800);
       setGame(prev => ({ ...prev, hp: 0, phase: 'gameover' }));
     }
   }, [game.phase, game.hp, game.isEnemyTurn]);
@@ -330,7 +339,7 @@ export function useBattleCombat(
       dice.length > 0 &&
       !dice.some(d => d.rolling) &&
       !dice.some(d => d.playing) &&
-      (game.playsLeft <= 0 || unspentDice.length === 0)
+      unspentDice.length === 0
     ) {
       const timer = setTimeout(() => {
         // [BUG-FIX-v2] 再次确认状态未变（闭包中的 game 可能已过期）

@@ -278,6 +278,8 @@ export function EnemyStageView() {
               ? { scale: [1, 1.08, 1] }
               : effect === 'skill'
               ? { scale: [1, 1.2, 1], rotate: [0, 8, -8, 0] }
+              : effect === 'hit'
+              ? { x: [0, -10, 12, -6, 3, 0], scale: [1, 0.9, 1.1, 0.95, 1.02, 1], filter: ['brightness(1)', 'brightness(3)', 'brightness(0.5)', 'brightness(2)', 'brightness(1)'] }
               : playerEffect === 'attack' && isTarget
               ? { x: [0, -4, 6, -3, 0], scale: [1, 0.97, 1.01, 0.99, 1] }
               : { scale: depthScale, y: depthY, opacity: depthOpacity }
@@ -378,6 +380,7 @@ export function EnemyStageView() {
             )}
             <AnimatePresence>
               {effect === 'attack' && (<motion.div initial={{ opacity: 0, scale: 0.5, y: 0 }} animate={{ opacity: 1, scale: 2, y: 80 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"><PixelSword size={5} /></motion.div>)}
+            {effect === 'hit' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0] }} transition={{ duration: 0.4 }} className="absolute inset-0 pointer-events-none z-20 rounded-lg" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,100,50,0.3) 50%, transparent 80%)' }} />)}
               {playerEffect === 'attack' && isTarget && (<motion.div initial={{ opacity: 1, scaleX: 0 }} animate={{ opacity: [1, 1, 0], scaleX: [0, 1.2, 1.5], rotate: -15 }} transition={{ duration: 0.35 }} className="absolute inset-[-10px] pointer-events-none z-30 slash-effect" />)}
             </AnimatePresence>
           </motion.div>

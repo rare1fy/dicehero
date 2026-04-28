@@ -32,7 +32,7 @@ export type SettlementPhase = null | 'hand' | 'dice' | 'mult' | 'effects' | 'bou
 
 export type EnemyEffectType = 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | 'hit' | 'debuff' | null;
 
-export type PlayerEffectType = 'attack' | 'defend' | 'flash' | null;
+export type PlayerEffectType = 'attack' | 'defend' | 'flash' | 'death' | null;
 
 export interface BattleContextType {
   // === 核心战斗状态 ===
