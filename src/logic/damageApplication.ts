@@ -189,21 +189,30 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       const dq = getEnemyQuotes(targetEnemy.configId);
       const dl = pickQuote(dq?.death);
       if (dl) showEnemyQuote(targetUid, dl, ANIMATION_TIMING.enemyDeathDuration + 200);
-    } else if (finalEnemyHp / targetEnemy.maxHp < 0.3 && !enemyQuotedLowHp.has(targetUid)) {
-      const lqc = getEnemyQuotes(targetEnemy.configId);
-      const ll = pickQuote(lqc?.lowHp);
-      if (ll) {
-        showEnemyQuote(targetUid, ll, 3000);
-        playSound('enemy_speak');
-        setEnemyEffectForUid(targetUid, 'speaking');
-        setTimeout(() => setEnemyEffectForUid(targetUid, null), ANIMATION_TIMING.speakingEffectDuration);
-        setEnemyQuotedLowHp(prev => new Set([...prev, targetUid]));
-      }
     }
-    // Enemy survived: hit flash effect
+    // Enemy survived: hit flash effect first, then speaking if low HP
     if (finalEnemyHp > 0) {
       setEnemyEffectForUid(targetUid, 'hit');
-      setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
+      // Check if will trigger low HP speaking
+      const willSpeakLowHp = finalEnemyHp / targetEnemy.maxHp < 0.3 && !enemyQuotedLowHp.has(targetUid);
+      if (willSpeakLowHp) {
+        const lqc = getEnemyQuotes(targetEnemy.configId);
+        const ll = pickQuote(lqc?.lowHp);
+        if (ll) {
+          // Play hit for 400ms, then transition to speaking
+          setTimeout(() => {
+            showEnemyQuote(targetUid, ll, 3000);
+            playSound('enemy_speak');
+            setEnemyEffectForUid(targetUid, 'speaking');
+            setTimeout(() => setEnemyEffectForUid(targetUid, null), ANIMATION_TIMING.speakingEffectDuration);
+          }, 400);
+          setEnemyQuotedLowHp(prev => new Set([...prev, targetUid]));
+        } else {
+          setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
+        }
+      } else {
+        setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
+      }
     }
     
     setEnemies(prev => prev.map(e => {

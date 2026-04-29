@@ -323,8 +323,9 @@ export function useBattleCombat(
       playSound('player_death');
       setScreenShake(true);
       setPlayerEffect('death');
-      setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 800);
+      const timerId = setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 800);
       setGame(prev => ({ ...prev, hp: 0, phase: 'gameover' }));
+      return () => clearTimeout(timerId);
     }
   }, [game.phase, game.hp, game.isEnemyTurn]);
 
