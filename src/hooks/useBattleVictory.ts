@@ -86,19 +86,14 @@ export function useBattleVictory(
         }
 
         if (postVictory.phase === 'chapterTransition') {
-          // Bug-10: 终层Boss(非最终章)奖励 drawCount+1 + 诅咒(敌人HP+25%)
-          const newDrawCount = Math.min(6, prev.drawCount + 1);
-          const newEnemyHpMultiplier = newDrawCount > prev.drawCount
-            ? prev.enemyHpMultiplier + 0.25
-            : prev.enemyHpMultiplier;
+          // [2026-05-07] 章节中层Boss不再产出 drawCount+1 奖励，固定加手牌上限的设定只有关底Boss才给
           return {
             ...prev,
             ownedDice: cleanedOwnedDice,
             diceBag: cleanedDiceBag,
             discardPile: cleanedDiscardPile,
-            drawCount: newDrawCount,
+            drawCount: cleanedDrawCount,
             tempDrawCountBonus: 0,
-            enemyHpMultiplier: newEnemyHpMultiplier,
             stats: { ...s, bossesWon: postVictory.bossesWon },
             relics: updatedRelics,
             map: newMap,

@@ -36,9 +36,8 @@ export const LOOT_CONFIG = {
   /** 增幅选择数量 */
   relicChoiceCount: 3,
   /** 精英额外奖励 */
-  /** 精英额外奖励：40%概率获得+1每回合重投，60%获得金币 */
+  /** 精英额外奖励：100% 给金币（历史上的 freeRerollPerTurn 奖励已移除，免费重投相关能力改由遗物承载） */
   eliteRewards: [
-    { type: 'freeRerollPerTurn' as const, value: 1, label: '+1 每回合重投' },
     { type: 'gold' as const, value: 40, label: '+40 金币' },
     { type: 'gold' as const, value: 40, label: '+40 金币' },
     { type: 'gold' as const, value: 50, label: '+50 金币' },

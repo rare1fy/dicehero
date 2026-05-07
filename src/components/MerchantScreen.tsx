@@ -12,7 +12,7 @@ import type { Relic } from '../types/game';
 
 interface MerchantItem {
   id: string;
-  type: 'dice' | 'relic' | 'heal' | 'reroll';
+  type: 'dice' | 'relic' | 'heal';
   diceDefId?: string;
   relicData?: Relic;
   healAmount?: number;
@@ -26,7 +26,8 @@ interface MerchantItem {
 
 function generateMerchantItems(chapter: number, ownedRelicIds: string[] = []): MerchantItem[] {
   const items: MerchantItem[] = [];
-  const itemTypes = ['dice', 'relic', 'heal', 'reroll'];
+  // [2026-05-07] 移除 reroll（+1免费重投）商品，该类能力改由遗物承载
+  const itemTypes = ['dice', 'relic', 'heal'];
   const shuffled = [...itemTypes].sort(() => Math.random() - 0.5);
   const picks = [shuffled[0], shuffled[1], shuffled[2 % shuffled.length]];
   
@@ -77,15 +78,6 @@ function generateMerchantItems(chapter: number, ownedRelicIds: string[] = []): M
         });
         break;
       }
-      case 'reroll': {
-        const basePrice = 30;
-        items.push({
-          id: `merchant-reroll-${i}`, type: 'reroll',
-          label: '\u91cd\u6295\u7b26\u6587 +1', desc: '\u6c38\u4e45\u589e\u52a0\u6bcf\u56de\u5408\u514d\u8d39\u91cd\u6295\u6b21\u6570',
-          basePrice, finalPrice: Math.floor(basePrice * priceMult), priceTag, sold: false,
-        });
-        break;
-      }
     }
   }
   return items;
@@ -132,11 +124,6 @@ export const MerchantScreen: React.FC = () => {
             addToast(`+${item.healAmount} HP`, 'heal');
           }
           break;
-        case 'reroll':
-          next.freeRerollsPerTurn = (prev.freeRerollsPerTurn || 1) + 1;
-          addLog('\u83b7\u5f97\u91cd\u6295\u7b26\u6587\uff0c\u6bcf\u56de\u5408\u514d\u8d39\u91cd\u6295+1');
-          addToast('+1 \u514d\u8d39\u91cd\u6295', 'buff');
-          break;
       }
       return next;
     });
@@ -173,7 +160,7 @@ export const MerchantScreen: React.FC = () => {
               const elemColor = item.type === 'dice' && item.diceDefId 
                 ? ELEMENT_COLORS[getDiceDef(item.diceDefId).element] || '#888' 
                 : item.type === 'relic' ? '#a78bfa' 
-                : item.type === 'heal' ? '#34d399' : '#60a5fa';
+                : '#34d399';
               return (
                 <motion.button key={item.id}
                   initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: item.sold ? 0.4 : 1 }}
@@ -191,7 +178,6 @@ export const MerchantScreen: React.FC = () => {
                     {item.type === 'dice' && item.diceDefId ? <MiniDice defId={item.diceDefId} size={16} /> : item.type === 'dice' && <PixelDice size={2} />}
                     {item.type === 'relic' && <span className="text-lg">{'✨'}</span>}
                     {item.type === 'heal' && <span className="text-lg">{'\u{1F48A}'}</span>}
-                    {item.type === 'reroll' && <span className="text-lg">{'\u{1F504}'}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold truncate" style={{ color: elemColor }}>{item.label}</div>

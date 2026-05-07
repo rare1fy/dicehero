@@ -69,9 +69,6 @@ const MerchantScreen: React.FC = () => {
         stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + item.price },
         shopItems: prev.shopItems.filter(si => si.id !== item.id),
       };
-      if (item.type === 'reroll') {
-        newState.freeRerollsPerTurn = prev.freeRerollsPerTurn + 1;
-      }
       if (item.type === 'dice' || item.type === 'specialDice') {
         newState.ownedDice = [...prev.ownedDice, { defId: item.diceDefId!, level: 1 }];
       }
@@ -209,7 +206,6 @@ const MerchantScreen: React.FC = () => {
           const canBuy = game.souls >= item.price;
           const typeColor = item.type === 'relic' ? '#34d399'
             : (item.type === 'dice' || item.type === 'specialDice') ? '#60a5fa'
-            : item.type === 'reroll' ? '#a78bfa'
             : '#9ca3af';
           return (
             <motion.div
@@ -224,7 +220,6 @@ const MerchantScreen: React.FC = () => {
                 style={{ borderColor: typeColor + '60', borderRadius: '2px' }}>
                 {(item.type === 'dice' || item.type === 'specialDice') && item.diceDefId ? <MiniDice defId={item.diceDefId} size={28} /> : (item.type === 'dice' || item.type === 'specialDice') && <PixelDice size={3} />}
                 {item.type === 'relic' && <PixelStar size={3} />}
-                {item.type === 'reroll' && <PixelDice size={3} />}
                 {item.type === 'removeDice' && <span className="text-[10px]">{'\u2702'}</span>}
               </div>
               <div className="flex-1 min-w-0">

@@ -15,20 +15,39 @@ import { formatDescription } from '../utils/richText';
 const CHEST_COST = 60;
 const UPGRADE_COSTS = [0, 120, 250];
 
+// [2026-05-07] 移除固定+1重投/抽骰+1/maxPlays 产出，宝箱只产骰子和遗物。
 const REWARD_TABLE = {
-  dice:      { weight: 55, label: '骰子' },
-  relic:      { weight: 35, label: '遗物' },
-  reroll:    { weight: 8, label: '重投机会' },
-  drawCount: { weight: 0.5, label: '抽骰+1' },
+  dice:  { weight: 55, label: '骰子' },
+  relic: { weight: 45, label: '遗物' },
 };
 
 function getAdjustedWeights(shopLevel: number) {
   const bonus = (shopLevel - 1) * 2;
   return {
-    dice:      REWARD_TABLE.dice.weight - bonus * 0.5,
-    relic:      REWARD_TABLE.relic.weight + bonus,
-    reroll:    Math.max(0.3, REWARD_TABLE.reroll.weight - bonus * 0.05),
+    dice:  Math.max(10, REWARD_TABLE.dice.weight - bonus),
+    relic: REWARD_TABLE.relic.weight + bonus,
   };
+}
+
+function pickDiceReward(shopLevel: number): ChestReward | null {
+  const pools = shopLevel >= 3
+    ? [...(DICE_BY_RARITY.rare || []), ...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.common || [])]
+    : shopLevel >= 2
+      ? [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || []).slice(0, 2)]
+      : [...(DICE_BY_RARITY.uncommon || [])];
+  if (pools.length === 0) return null;
+  const pick = pools[Math.floor(Math.random() * pools.length)];
+  const rarity = (DICE_BY_RARITY.rare || []).includes(pick) ? 'rare' as const
+    : (DICE_BY_RARITY.uncommon || []).includes(pick) ? 'uncommon' as const : 'common' as const;
+  return { type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity };
+}
+
+function pickRelicReward(): ChestReward | null {
+  const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+  if (relicPool.length === 0) return null;
+  const pick = relicPool[Math.floor(Math.random() * relicPool.length)];
+  const rarity = pick.rarity === 'rare' ? 'rare' as const : pick.rarity === 'uncommon' ? 'uncommon' as const : 'common' as const;
+  return { type: 'relic', relicData: pick, label: pick.name, desc: pick.description, rarity };
 }
 
 function generateReward(shopLevel: number): ChestReward {
@@ -40,33 +59,14 @@ function generateReward(shopLevel: number): ChestReward {
     roll -= w;
     if (roll <= 0) { rewardType = key as keyof typeof REWARD_TABLE; break; }
   }
-  switch (rewardType) {
-    case 'dice': {
-      const pools = shopLevel >= 3
-        ? [...(DICE_BY_RARITY.rare || []), ...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.common || [])]
-        : shopLevel >= 2
-          ? [...(DICE_BY_RARITY.uncommon || []), ...(DICE_BY_RARITY.rare || []).slice(0, 2)]
-          : [...(DICE_BY_RARITY.uncommon || [])];
-      if (pools.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
-      const pick = pools[Math.floor(Math.random() * pools.length)];
-      const rarity = (DICE_BY_RARITY.rare || []).includes(pick) ? 'rare' as const
-        : (DICE_BY_RARITY.uncommon || []).includes(pick) ? 'uncommon' as const : 'common' as const;
-      return { type: 'dice', diceDefId: pick.id, label: pick.name, desc: pick.description, rarity };
-    }
-
-    case 'relic': {
-      const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
-      if (relicPool.length === 0) return { type: 'reroll', value: 1, label: '+1 重投', desc: '每回合重投次数+1', rarity: 'uncommon' };
-      const pick = relicPool[Math.floor(Math.random() * relicPool.length)];
-      const rarity = pick.rarity === 'rare' ? 'rare' as const : pick.rarity === 'uncommon' ? 'uncommon' as const : 'common' as const;
-      return { type: 'relic', relicData: pick, label: pick.name, desc: pick.description, rarity };
-    }
-
-    case 'reroll':
-      return { type: 'reroll', value: 1, label: '+1 重投', desc: '永久增加每回合免费重投次数', rarity: 'uncommon' };
-
-
+  if (rewardType === 'dice') {
+    return pickDiceReward(shopLevel) ?? pickRelicReward() ?? {
+      type: 'dice', diceDefId: 'standard', label: '标准骰', desc: '[1,2,3,4,5,6]', rarity: 'common',
+    };
   }
+  return pickRelicReward() ?? pickDiceReward(shopLevel) ?? {
+    type: 'dice', diceDefId: 'standard', label: '标准骰', desc: '[1,2,3,4,5,6]', rarity: 'common',
+  };
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -141,10 +141,6 @@ export const TreasureScreen: React.FC = () => {
           pickReward(reward.relicData);
           addLog('开箱获得遗物: ' + reward.label);
         }
-        break;
-      case 'reroll':
-        setGame(prev => ({ ...prev, freeRerollsPerTurn: prev.freeRerollsPerTurn + 1 }));
-        addLog('开箱获得 +1 重投');
         break;
     }
     playSound('coin');
@@ -222,7 +218,7 @@ export const TreasureScreen: React.FC = () => {
                 {Object.entries(weights).map(([key, w]) => {
                   const pct = ((w / totalW) * 100).toFixed(1);
                   const info = REWARD_TABLE[key as keyof typeof REWARD_TABLE];
-                  const barColor = key === 'relic' ? '#34d399' : key === 'reroll' ? '#a78bfa' : '#9ca3af';
+                  const barColor = key === 'relic' ? '#34d399' : '#9ca3af';
                   return (
                     <div key={key} className="flex items-center gap-2 mb-1.5">
                       <span className="text-[8px] w-16 text-right font-bold" style={{ color: barColor }}>{info.label}</span>
@@ -269,7 +265,6 @@ export const TreasureScreen: React.FC = () => {
                       <div className="w-12 h-12 flex items-center justify-center">
                         {reward.type === 'dice' && reward.diceDefId ? <MiniDice defId={reward.diceDefId} size={36} /> : reward.type === 'dice' && <PixelDice size={5} />}
                         {reward.type === 'relic' && <PixelStar size={5} />}
-                        {reward.type === 'reroll' && <PixelDice size={5} />}
                       </div>
                       <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{reward.label}</div>
                       <div className="text-[9px] text-[var(--dungeon-text-dim)]">{formatDescription(reward.desc)}</div>

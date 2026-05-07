@@ -42,21 +42,21 @@ export function buildLootItems(params: {
     loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
   }
 
-  // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
-  // 中Boss(非终Boss)也走骰子奖励，不随机给重roll
+  // Elite rewards: 中Boss必给+1骰子（在diceReward阶段选新骰子之外再加一颗手牌）
+  // 普通精英战走 LOOT_CONFIG.eliteRewards（仅金币奖励）
+  // [2026-05-07] 固定加免费重投/单回合出牌/手牌上限的奖励已全部移除，改由遗物承载
   const isMidBoss = victoryNode?.type === 'boss' && victoryNode.depth < mapMaxDepth;
   if (isMidBoss) {
-    // 中Boss必给+1骰子（额外的，在diceReward阶段选新骰子之外再加一颗手牌）
-    // 不走随机elite奖励
+    // 中Boss走骰子奖励，不走随机elite奖励
   } else if (enemies.find(e => e.rerollReward)?.rerollReward) {
     const eliteRewards = LOOT_CONFIG.eliteRewards;
     const selectedReward = eliteRewards[Math.floor(Math.random() * eliteRewards.length)];
-    
-    if (selectedReward.type === 'freeRerollPerTurn') {
-      loot.push({ id: 'freeReroll', type: 'reroll', value: selectedReward.value, collected: false });
-    } else {
-      loot.push({ id: selectedReward.type, type: selectedReward.type as LootItem['type'], value: selectedReward.value, collected: false });
-    }
+    loot.push({
+      id: selectedReward.type,
+      type: selectedReward.type as LootItem['type'],
+      value: selectedReward.value,
+      collected: false,
+    });
   }
 
   // 一击必杀挑战奖励：额外宝箱（点击后随机开启）

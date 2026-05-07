@@ -13,9 +13,11 @@ import { SHOP_CONFIG } from '../config/gameBalance';
 
 /**
  * 生成商店商品列表
- * - 从遗物池随机3个 + 骰子池随机2个 + 1个重掷强化 → 候选池
+ * - 从遗物池随机3个 + 骰子池随机2个 → 候选池
  * - 从候选池随机抽3个
  * - 始终添加"骰子净化"选项
+ *
+ * [2026-05-07] 固定加免费重投/单回合出牌次数的奖励已移除，此类能力改由遗物承载。
  *
  * @param ownedRelicIds 已拥有的遗物ID列表（用于排除）
  * @param playerClass 当前职业（用于遗物职业筛选：通用遗物+匹配职业遗物）
@@ -61,15 +63,6 @@ export function generateShopItems(ownedRelicIds: string[], playerClass?: ClassId
       price: d.rarity === 'rare' ? randPrice() + 30 : randPrice() + 10,
     });
   }
-
-  // 候选：重掷强化
-  candidateItems.push({
-    id: 'reroll_legacy',
-    type: 'reroll' as const,
-    label: '重掷强化',
-    desc: '永久增加每回合 +1 次免费重掷',
-    price: randPrice(),
-  });
 
   // 从候选池随机抽3个
   const shopItems: ShopItem[] = candidateItems.sort(() => Math.random() - 0.5).slice(0, 3);
