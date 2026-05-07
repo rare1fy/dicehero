@@ -424,11 +424,33 @@ export function useBattleLifecycle(state: BattleState) {
         }
         setEnemyQuotes({});
         setEnemyQuotedLowHp(new Set());
-        // 垮波次：保留玩家剩余出牌/重投/连击状态（Bug-21：垮波次≠回合结束）
-        // Bug-4：法师吟唱（不出牌）时保留 chargeStacks 和屯牌；出了牌时重置吟唱状态
+        // [2026-05-07] GM 切波次 = 回合自然结束（与 checkEnemyDeathsModule/enemyWaveTransition 一致）
         setGame(prev => {
           const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
-          return { ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: Math.max(prev.playsLeft, 1), freeRerollsLeft: prev.freeRerollsLeft, armor: 0, chargeStacks: isMageChanting ? prev.chargeStacks : 0, mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0, bloodRerollCount: 0, comboCount: prev.comboCount, lockedElement: isMageChanting ? prev.lockedElement : undefined, lastPlayHandType: prev.lastPlayHandType, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1, boomerangFreeReroll: 0, comboFreeReroll: 0 };
+          return {
+            ...prev,
+            currentWaveIndex: nextWaveIdx,
+            targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
+            isEnemyTurn: false,
+            playsLeft: prev.maxPlays,
+            freeRerollsLeft: prev.freeRerollsPerTurn,
+            armor: 0,
+            chargeStacks: isMageChanting ? prev.chargeStacks : 0,
+            mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
+            bloodRerollCount: 0,
+            comboCount: 0,
+            lockedElement: isMageChanting ? prev.lockedElement : undefined,
+            lastPlayHandType: undefined,
+            instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
+            instakillCompleted: false,
+            playsThisWave: 0,
+            rerollsThisWave: 0,
+            battleTurn: 1,
+            boomerangFreeReroll: 0,
+            comboFreeReroll: 0,
+            hpLostThisTurn: 0,
+            consecutiveNormalAttacks: 0,
+          };
         });
         setRerollCount(0);
         setWaveAnnouncement(nextWaveIdx + 1);

@@ -36,10 +36,10 @@ export function tryWaveTransition(
   cb.setEnemies(nextWave);
   cb.setEnemyEffects({});
   cb.setDyingEnemies(new Set());
-  // 垮波次：保留玩家剩余出牌/重投/连击状态（Bug-21：垮波次≠回合结束）
-  // Bug-4：法师吟唱（不出牌）时 DOT 击杀全敌，应保留 chargeStacks 和屯牌；
-  //         出了牌时则重置吟唱状态，与正常回合结束一致。
-  // 闭包变量：将 setGame 回调内的 isMageChanting 传出，避免使用过期快照
+  // [2026-05-07] 波次切换 = 回合自然结束：统一重置 per-turn 状态（与 checkEnemyDeathsModule 一致）
+  // 适用场景：敌人回合的 DOT 结算把所有敌人打死，触发此路径切波次。
+  //   同样重置 playsLeft / 重投 / 连击 / 临时奖励，玩家直接进新回合先手。
+  //   法师吟唱保留原有"本回合未出牌则保留吟唱"语义。
   let outerIsMageChanting = false;
   cb.setGame((prev: GameState) => {
     const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
@@ -49,14 +49,14 @@ export function tryWaveTransition(
       currentWaveIndex: nextWaveIdx,
       targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
       isEnemyTurn: false,
-      playsLeft: Math.max(prev.playsLeft, 1),
-      freeRerollsLeft: prev.freeRerollsLeft,
+      playsLeft: prev.maxPlays,
+      freeRerollsLeft: prev.freeRerollsPerTurn,
       armor: 0,
       chargeStacks: isMageChanting ? prev.chargeStacks : 0,
       mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
       bloodRerollCount: 0,
-      comboCount: prev.comboCount,
-      lastPlayHandType: prev.lastPlayHandType,
+      comboCount: 0,
+      lastPlayHandType: undefined,
       lockedElement: isMageChanting ? prev.lockedElement : undefined,
       instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
       instakillCompleted: false,
@@ -65,6 +65,8 @@ export function tryWaveTransition(
       battleTurn: 1,
       boomerangFreeReroll: 0,
       comboFreeReroll: 0,
+      hpLostThisTurn: 0,
+      consecutiveNormalAttacks: 0,
     };
   });
   cb.setRerollCount(0);

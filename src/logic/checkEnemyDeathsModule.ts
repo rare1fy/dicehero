@@ -93,16 +93,40 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
             }
           });
         }, 300);
-        // 垮波次：保留玩家剩余出牌/重投/连击状态（Bug-21：垮波次≠回合结束）
-        // playsLeft: 保留当前值（至少1），防止自动endTurn；maxPlays重置用于下回合
-        // comboCount/lastPlayHandType: 保留连击链（影锋刺客跨波次继续连击）
-        // freeRerollsLeft: 保留剩余免费重投
-        // Bug-4：法师吟唱（不出牌）时保留 chargeStacks 和屯牌；出了牌时重置吟唱状态
-        // battleTurn重置为1：新波次敌人是全新实体，AI周期应从头开始
-        // playsThisWave=0从新波次起算（仅instakill challenge内部使用）
+        // [2026-05-07] 波次切换 = 回合自然结束：重置所有 per-turn 状态，让玩家先手开新回合。
+        // 相比早期"保留 playsLeft/连击/重投"的复杂规则，简化为：
+        //   - playsLeft 回满 maxPlays
+        //   - freeRerollsLeft 回满 freeRerollsPerTurn
+        //   - 连击链/上一牌型/卖血层数/临时重投奖励全部清零
+        //   - armor/instakillChallenge/battleTurn 按波次新开计算
+        //   - battleTurn 从 1 起算，玩家回合（isEnemyTurn=false）
+        //   - 法师吟唱：维持"本回合未出牌则保留"的既有含义（此处用 prev.playsLeft >= maxPlays 判定）
         setGame(prev => {
           const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
-          return { ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: Math.max(prev.playsLeft, 1), freeRerollsLeft: prev.freeRerollsLeft, armor: 0, chargeStacks: isMageChanting ? prev.chargeStacks : 0, mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0, bloodRerollCount: 0, comboCount: prev.comboCount, lastPlayHandType: prev.lastPlayHandType, lockedElement: isMageChanting ? prev.lockedElement : undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1, boomerangFreeReroll: 0, comboFreeReroll: 0 };
+          return {
+            ...prev,
+            currentWaveIndex: nextWaveIdx,
+            targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
+            isEnemyTurn: false,
+            playsLeft: prev.maxPlays,
+            freeRerollsLeft: prev.freeRerollsPerTurn,
+            armor: 0,
+            chargeStacks: isMageChanting ? prev.chargeStacks : 0,
+            mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
+            bloodRerollCount: 0,
+            comboCount: 0,
+            lastPlayHandType: undefined,
+            lockedElement: isMageChanting ? prev.lockedElement : undefined,
+            instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
+            instakillCompleted: false,
+            playsThisWave: 0,
+            rerollsThisWave: 0,
+            battleTurn: 1,
+            boomerangFreeReroll: 0,
+            comboFreeReroll: 0,
+            hpLostThisTurn: 0,
+            consecutiveNormalAttacks: 0,
+          };
         });
         setRerollCount(0);
         setWaveAnnouncement(nextWaveIdx + 1);

@@ -112,7 +112,7 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     keepUnplayed: false,
     hp: 90,
     maxHp: 90,
-    initialDice: ['standard', 'standard', 'standard', 'r_quickdraw', 'r_combomastery'],
+    initialDice: ['standard', 'standard', 'standard', 'standard', 'r_quickdraw', 'r_combomastery'],
     passiveDesc: '【连击】每回合出牌2次；第2次伤害+20%；同牌型再+25%；暗影残骰是连击核心',
     skills: [
       { name: '双刃连击', desc: '每回合可出牌2次，第2次出牌伤害+20%' },
