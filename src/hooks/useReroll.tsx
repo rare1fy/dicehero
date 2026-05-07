@@ -17,7 +17,6 @@ import { ELEMENT_NAMES } from '../utils/uiHelpers';
 import { getRerollHpCost } from '../logic/rerollCalc';
 import { PixelCoin } from '../components/PixelIcons';
 import type { BattleState } from './useBattleState';
-import type { DiceElement } from '../types/dice';
 
 export function useReroll(state: BattleState) {
   const {
@@ -134,14 +133,17 @@ export function useReroll(state: BattleState) {
     }
 
     // 落定：弃骰抽新
-    // Bug-1: temp_rogue(暗影残骰)走原地重掷面值，不走bag系统
-    // 原因：temp_rogue不在玩家骰子库中，走bag会被替换成其他类型骰子+污染弃骰库
-    const tempRerollIds = new Set(toReroll.filter(d => d.isTemp).map(d => d.id));
+    // [2026-05-07] 暗影残骰（isTemp/temp_rogue）重投规则变更：
+    //   旧：原地重掷面值（因不在玩家骰子库中，避免被替换为其他类型+污染弃骰库）
+    //   新：丢弃原残骰 + 从骰子库抽新骰子补位（既能凑牌又能过牌）
+    //       残骰本身不进 discardPile（不属于玩家正式骰子库）
     const normalRerollDefIds = toReroll.filter(d => !d.isTemp).map(d => d.diceDefId);
+    const tempCount = toReroll.filter(d => d.isTemp).length;
 
-    // 预先计算抽牌结果，以便 setGame/setDice 在同一批次更新
+    // 预先计算抽牌结果：正常骰子进 discardPile，暗影残骰槽位也从 bag 抽新但残骰自身不进弃牌堆
     const newDiscard = [...game.discardPile, ...normalRerollDefIds];
-    const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(game.diceBag, newDiscard, normalRerollDefIds.length);
+    const totalDrawCount = normalRerollDefIds.length + tempCount;
+    const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(game.diceBag, newDiscard, totalDrawCount);
     if (shuffled) {
       setShuffleAnimating(true);
       setTimeout(() => setShuffleAnimating(false), 800);
@@ -163,14 +165,21 @@ export function useReroll(state: BattleState) {
       let drawIdx = 0;
       const newDice = prevDice.map(d => {
         if (!rerollIds.has(d.id)) return { ...d, rolling: false };
-        if (tempRerollIds.has(d.id)) {
-          const def = getDiceDef(d.diceDefId);
-          return { ...d, value: rollDiceDef(def), rolling: false, selected: false };
-        }
+        // 暗影残骰和正常骰子现在都从 drawn 池子里取新骰子
         if (drawIdx < drawn.length) {
           const newDie = drawn[drawIdx];
           drawIdx++;
-          return { ...newDie, id: d.id, rolling: false, selected: false };
+          // 保留原槽位的 id（React key 稳定）；清空暗影残骰标记（换成正式骰子了）
+          return {
+            ...newDie,
+            id: d.id,
+            rolling: false,
+            selected: false,
+            isTemp: false,
+            isShadowRemnant: false,
+            shadowRemnantPersistent: false,
+            shadowRemnantSurvived: false,
+          };
         }
         return { ...d, rolling: false, selected: false };
       });
