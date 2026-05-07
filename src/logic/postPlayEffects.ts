@@ -1,4 +1,4 @@
-/**
+﻿/**
 * postPlayEffects.ts — 出牌后效处理
 * checkEnemyDeaths 已提取到 checkEnemyDeathsModule.ts
 * instakillChallengeAid 已提取到 instakillChallengeAid.ts (ARCH-G)
@@ -18,6 +18,7 @@ import { buildRelicContext } from '../engine/buildRelicContext';
 import { checkHands } from '../utils/handEvaluator';
 import { checkChallenge } from '../utils/instakillChallenge';
 import { STATUS_INFO } from '../data/statusInfo';
+import { getKillXp, applyXpGain } from './xpSystem';
 
 // --- Context 接口 ---
 
@@ -79,6 +80,25 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   const killCount = enemies.filter(e => e.hp <= 0).length;
   if (killCount > 0) {
     setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + killCount }));
+  }
+
+  // ===== 经验值增益：按当前节点类型给奖励 =====
+  // killedEnemiesData 在下方计算，这里先用 hasAoe/finalEnemyHp 推导一个即时击杀计数
+  const immediateKills = hasAoe
+    ? enemies.filter(e => {
+        let dmg = outcome.damage; let arm = e.armor;
+        if (outcome.armorBreak) arm = 0;
+        if (arm > 0) dmg = Math.max(0, dmg - arm);
+        return e.hp > 0 && (e.hp - dmg) <= 0;
+      }).length
+    : (finalEnemyHp <= 0 ? 1 : 0);
+  if (immediateKills > 0) {
+    const currentNode = game.map.find(n => n.id === game.currentNodeId);
+    const xpGain = getKillXp(currentNode?.type, immediateKills);
+    setGame(prev => {
+      const r = applyXpGain(prev, xpGain);
+      return { ...prev, level: r.level, xp: r.xp, xpToNext: r.xpToNext, lastXpGain: xpGain, lastXpGainAt: Date.now() };
+    });
   }
   // on_kill 遗物效果：检查是否有敌人被击杀（Pre-compute killed enemies synchronously，避免 stale closure）
   const killedEnemiesData: Array<{uid: string, overkill: number}> = [];

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * gameInit.ts — 游戏状态初始化（职业系统版）
  */
 
@@ -83,5 +83,8 @@ export function createInitialGameState(classId?: ClassId): GameState {
     rerollsThisWave: 0,
     boomerangFreeReroll: 0,
     comboFreeReroll: 0,
+    level: 1,
+    xp: 0,
+    xpToNext: 50,
   };
 }

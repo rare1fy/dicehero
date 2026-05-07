@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PlayerHudView.tsx — 战斗下半区：玩家HUD
  * ARCH-F Round2 从 DiceHeroGame.tsx 提取
  */
@@ -18,6 +18,7 @@ import { DiceFacePattern } from './DiceFacePattern';
 import { ElementBadge } from './PixelDiceShapes';
 import { DiceBagPanel } from './DiceBagPanel';
 import { MiniDice } from './MiniDice';
+import { LevelXpBadge } from './LevelXpBadge';
 import { ClassIcon } from './ClassIcons';
 import { CLASS_DEFS, type ClassId } from '../data/classes';
 import BuffTooltip from './BuffTooltip';
@@ -100,6 +101,8 @@ export function PlayerHudView() {
               <><PixelHeart size={1} /><span className="font-bold text-[11px] text-[var(--dungeon-text)] pixel-text-shadow">守夜人</span></>
             )}
           </motion.div>
+          {/* 等级徽章 + 弹出经验条 */}
+          <LevelXpBadge level={game.level || 1} xp={game.xp || 0} xpToNext={game.xpToNext || 50} lastXpGain={game.lastXpGain} lastXpGainAt={game.lastXpGainAt} />
           <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
             {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
             {(game.chantShield || 0) > 0 && <BuffTooltip label={`屏障${game.chantShield}`} icon={<PixelMagic size={1.5} />} color="rgb(125,211,252)" bgColor="rgba(56,189,248,0.15)" borderColor="rgba(56,189,248,0.5)" title={`奥术屏障 ${game.chantShield}`} desc="减免一切伤害，包括中毒、灼烧等持续伤害。每回合开始时清空。" />}

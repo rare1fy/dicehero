@@ -137,6 +137,13 @@ export interface GameState {
   boomerangFreeReroll?: number;        // 回旋骰子弹回后获得的免费重投次数（每回合重置）
   comboFreeReroll?: number;            // 盗贼连击预备给予的免费重投次数（每回合重置）
   gmKillWave?: number;                 // GM 调试：杀死当前波次敌人（timestamp，让 useEffect 通过值变化触发）
+
+  // ============ 经验 / 等级系统 ============
+  level: number;                       // 当前等级（初始 1）
+  xp: number;                          // 当前经验值（本级累积）
+  xpToNext: number;                    // 升到下一级所需经验
+  lastXpGain?: number;                 // 最近一次经验获取量（用于触发 HUD 弹出动画）
+  lastXpGainAt?: number;               // 最近一次经验获取时间戳
 }
 
 // ============================================================
