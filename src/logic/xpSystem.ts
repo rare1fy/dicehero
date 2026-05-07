@@ -1,4 +1,4 @@
-﻿/**
+/**
  * xpSystem.ts — 经验 / 等级系统
  * 纯函数，不产生副作用。用于在击杀结算时计算经验增益并处理升级。
  */
@@ -49,4 +49,67 @@ export function applyXpGain(game: GameState, gain: number): XpApplyResult {
   }
 
   return { level, xp, xpToNext, levelsGained };
+}
+
+// ============ 升级三选一奖励系统 ============
+
+/** 升级奖励类别（每次升级三类各抽一个，共 3 选 1） */
+export type LevelRewardCategory = 'survival' | 'offense' | 'resource';
+
+export interface LevelRewardDef {
+  id: string;
+  category: LevelRewardCategory;
+  title: string;
+  description: string;
+  /** 纯函数：返回要 patch 到 GameState 的字段（永久累加） */
+  apply: (game: GameState) => Partial<GameState>;
+}
+
+/**
+ * 固定三张（每类 1 张），等级越高，同一张牌叠加效果线性成长。
+ * 刘叔定调：
+ *  - 生存：+最大生命（同步补满）
+ *  - 攻击：+基础伤害（所有出牌最终伤害累加）
+ *  - 资源：+金币收益百分比
+ * 禁：暴击、临时 buff、+手牌/重投（这些影响出牌节奏）
+ */
+export const LEVEL_UP_REWARDS: Record<LevelRewardCategory, LevelRewardDef> = {
+  survival: {
+    id: 'survival_hp',
+    category: 'survival',
+    title: '血之韧性',
+    description: '最大生命 +8，并立即回复 8 点生命',
+    apply: (g) => ({
+      levelMaxHpBonus: (g.levelMaxHpBonus || 0) + 8,
+      maxHp: g.maxHp + 8,
+      hp: Math.min(g.maxHp + 8, g.hp + 8),
+    }),
+  },
+  offense: {
+    id: 'offense_damage',
+    category: 'offense',
+    title: '利刃精通',
+    description: '每次出牌的基础伤害 +2',
+    apply: (g) => ({
+      levelDamageBonus: (g.levelDamageBonus || 0) + 2,
+    }),
+  },
+  resource: {
+    id: 'resource_gold',
+    category: 'resource',
+    title: '贪婪之眼',
+    description: '金币收益 +15%（永久叠加）',
+    apply: (g) => ({
+      levelGoldBonus: (g.levelGoldBonus || 0) + 0.15,
+    }),
+  },
+};
+
+/** 取出三类奖励（每次升级 1 类 × 3 = 3 选 1） */
+export function getLevelUpChoices(): LevelRewardDef[] {
+  return [
+    LEVEL_UP_REWARDS.survival,
+    LEVEL_UP_REWARDS.offense,
+    LEVEL_UP_REWARDS.resource,
+  ];
 }

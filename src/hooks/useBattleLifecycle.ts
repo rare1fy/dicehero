@@ -476,7 +476,7 @@ export function useBattleLifecycle(state: BattleState) {
       map: 'explore', merchant: 'explore', campfire: 'explore',
       event: 'explore', diceReward: 'explore', loot: 'explore',
       skillSelect: 'explore', treasure: 'explore',
-      start: 'start',
+      start: 'start', classSelect: 'start',
       chapterTransition: 'stop', gameover: 'stop', victory: 'stop',
     };
     const action = bgmMap[game.phase];

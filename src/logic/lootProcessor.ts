@@ -64,7 +64,10 @@ export function processCollectLoot(
   // 处理不同类型的战利品
   switch (item.type) {
     case 'gold': {
-      const gold = item.value || 0;
+      const rawGold = item.value || 0;
+      // 等级奖励「贪婪之眼」：金币收益累加百分比加成（永久）
+      const goldMult = 1 + (state.levelGoldBonus || 0);
+      const gold = Math.floor(rawGold * goldMult);
       nextState.souls += gold;
       logs.push(`获得了 ${gold} 金币。`);
       break;

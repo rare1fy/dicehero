@@ -190,4 +190,11 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
     outcome.damage = Math.floor(outcome.damage * (1 + comboFinisherBonus));
     addFloatingText(`连击终结! +${Math.round(comboFinisherBonus * 100)}%`, 'text-yellow-300', undefined, 'player');
   }
+
+  // === 等级奖励「利刃精通」：升级累加的基础伤害 ===
+  const lvlDmg = game.levelDamageBonus || 0;
+  if (lvlDmg > 0 && outcome.damage > 0) {
+    outcome.damage += lvlDmg;
+    addFloatingText('精通+' + lvlDmg, 'text-cyan-200', undefined, 'player');
+  }
 }

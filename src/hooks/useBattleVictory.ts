@@ -7,7 +7,7 @@ import { startTransition } from 'react';
 import type { Relic } from '../types/game';
 import { incrementFloorsCleared, tickHourglass } from '../engine/relicUpdates';
 import { buildRelicContext } from '../engine/buildRelicContext';
-import { playSound } from '../utils/sound';
+import { playSound, startBGM } from '../utils/sound';
 import { buildLootItems, resolvePostVictoryPhase } from '../logic/lootHandler';
 import { processCollectLoot, processFinishLoot } from '../logic/lootProcessor';
 import { generateShopItems } from '../logic/shopGenerator';
@@ -117,6 +117,11 @@ export function useBattleVictory(
           isEnemyTurn: false,
         };
       }); // end setGame
+      /* EXPLORE_BGM_BOOST */
+      if (postVictory.phase === 'diceReward' || postVictory.phase === 'victory' || postVictory.phase === 'chapterTransition') {
+        // chapterTransition 自己会 stop，不影响；diceReward / victory 尽快切到 explore
+        if (postVictory.phase === 'diceReward') { startBGM('explore'); }
+      }
     }); // end startTransition
 
     // ---- 第二步：异步处理遗物 on_battle_end + 战利品构建 ----

@@ -105,10 +105,19 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       emitXpKill({ enemyUid: uid, xp: xpPerKill, at: now + i });
     });
 
-    // 2) 更新 GameState 的 level / xp / xpToNext
+    // 2) 更新 GameState 的 level / xp / xpToNext；升级则入队待领奖
     setGame(prev => {
       const r = applyXpGain(prev, xpGain);
-      return { ...prev, level: r.level, xp: r.xp, xpToNext: r.xpToNext, lastXpGain: xpGain, lastXpGainAt: now };
+      const nextQueue = [...(prev.pendingLevelUps || []), ...r.levelsGained];
+      return {
+        ...prev,
+        level: r.level,
+        xp: r.xp,
+        xpToNext: r.xpToNext,
+        lastXpGain: xpGain,
+        lastXpGainAt: now,
+        pendingLevelUps: nextQueue,
+      };
     });
   }
 

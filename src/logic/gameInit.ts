@@ -1,4 +1,4 @@
-﻿/**
+/**
  * gameInit.ts — 游戏状态初始化（职业系统版）
  */
 
@@ -86,5 +86,9 @@ export function createInitialGameState(classId?: ClassId): GameState {
     level: 1,
     xp: 0,
     xpToNext: 50,
+    levelMaxHpBonus: 0,
+    levelDamageBonus: 0,
+    levelGoldBonus: 0,
+    pendingLevelUps: [],
   };
 }
