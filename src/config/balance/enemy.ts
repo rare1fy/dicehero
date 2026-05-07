@@ -5,7 +5,8 @@ export const ENEMY_ATTACK_MULT = {
   /** 近战(warrior)攻击倍率 */
   warrior: 1.3,
   /** 远程(ranger)主攻击倍率 */
-  rangerHit: 0.40,
+  // [2026-05-07] 砍半：起始值过高，成长型伤害 hitCount 递增会让实战/面板脱节
+  rangerHit: 0.20,
   /** 远程(ranger)追击每层额外伤害递增 */
   rangerAttackCountStep: 2,
   /** 减速(slow)时攻击倍率 */

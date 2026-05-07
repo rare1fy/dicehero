@@ -35,10 +35,11 @@ interface NodeWeight {
 }
 
 /** 标准概率权重（杀戮尖塔风格） */
+// [2026-05-07] 精英权重 12 → 20，遗物掉落太难触发；普通战斗 45 → 40，事件 20 → 17 各让一点给精英。
 const STANDARD_WEIGHTS: NodeWeight[] = [
-  { type: 'enemy',    weight: 45 },
-  { type: 'event',    weight: 20 },
-  { type: 'elite',    weight: 12 },
+  { type: 'enemy',    weight: 40 },
+  { type: 'event',    weight: 17 },
+  { type: 'elite',    weight: 20 },
   { type: 'campfire', weight: 12 },
   { type: 'merchant', weight: 6 },
   { type: 'treasure', weight: 5 },

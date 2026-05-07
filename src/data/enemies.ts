@@ -146,8 +146,9 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
   }
 
   // Normal: 1-2 waves
-  const multiWaveChance = depth >= 9 ? 0.85 : depth >= 5 ? 0.70 : depth >= 3 ? 0.50 : depth >= 1 ? 0.25 : 0;
-  const waveCount = Math.random() < multiWaveChance ? 2 : 1;
+  // [2026-05-07] 前期(depth>=1)强制至少2波以延长战斗时长、降低一波速秒带来的玩家流失；
+  //              depth=0 教学层保留单波。
+  const waveCount = depth >= 1 ? 2 : 1;
   const waves: BattleWave[] = [];
   for (let w = 0; w < waveCount; w++) {
     const enemyCount = depth === 0 ? 1 : depth <= 1 ? (Math.random() < 0.4 ? 1 : 2) : depth <= 4 ? (Math.random() < 0.5 ? 2 : 3) : depth <= 9 ? (Math.random() < 0.3 ? 2 : 3) : Math.min(4, 3 + Math.floor(Math.random() * 2));

@@ -2,11 +2,12 @@
  * instakillChallengeAid.ts — 洞察弱点挑战达成后的战斗援助效果
  *
  * 当玩家完成洞察弱点挑战（instakillChallenge）时，随机触发一种援助效果：
- *  1. 全场敌人百分比伤害
- *  2. 全场敌人HP降至N%
- *  3. 全场敌人施加灼烧+中毒
- *  4. 立刻补抽1颗骰子
- *  5. 骰子库全部替换为随机强力骰子
+ *  1. 全场敌人百分比伤害（25%）
+ *  2. 全场敌人HP降至N%（25%）
+ *  3. 全场敌人施加灼烧+中毒（25%）
+ *  4. 立刻补抽1颗骰子（25%）
+ *
+ * [2026-05-07] 移除"骰子库全部替换为随机强力骰子"效果（破坏性过强，摧毁玩家构筑）
  *
  * 从 postPlayEffects.ts 拆出 (ARCH-G)
  *
@@ -25,17 +26,6 @@ import type { PostPlayContext } from './postPlayEffects';
 import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasLimitBreaker } from '../engine/relicQueries';
-
-// --- 强力骰子池（效果5用） ---
-const STRONG_DICE_POOL = [
-  { id: 'blade', name: '锋刃骰子' },
-  { id: 'amplify', name: '倍增骰子' },
-  { id: 'split', name: '分裂骰子' },
-  { id: 'magnet', name: '磁吸骰子' },
-  { id: 'joker', name: '小丑骰子' },
-  { id: 'chaos', name: '混沌骰子' },
-  { id: 'elemental', name: '元素骰子' },
-] as const;
 
 /**
  * 检测洞察弱点挑战是否刚完成，若是则随机触发一种战斗援助效果。
@@ -74,7 +64,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     }, delay);
   };
 
-  if (aidRoll < 0.2) {
+  if (aidRoll < 0.25) {
     // 效果1：对全场敌人造成大量伤害（基于敌人最大HP的百分比）
     const pct = isBoss ? 0.3 : 0.5;
     const dmgText = `${Math.round(pct * 100)}%`;
@@ -101,7 +91,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         setTimeout(() => setScreenShake(false), 300);
       }, 0);
     });
-  } else if (aidRoll < 0.4) {
+  } else if (aidRoll < 0.5) {
     // 效果2：全场敌人HP降至N%（保底1HP，不杀死）
     const targetPct = isBoss ? 0.5 : 0.35;
     const pctText = `${Math.round(targetPct * 100)}%`;
@@ -124,7 +114,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         setTimeout(() => setScreenShake(false), 300);
       }, 0);
     });
-  } else if (aidRoll < 0.6) {
+  } else if (aidRoll < 0.75) {
     // 效果3：全场敌人施加大量灼烧+中毒
     const stacks = 3 + depth + (chapter - 1) * 2;
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
@@ -149,7 +139,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         affectedUids.forEach(uid => setEnemyEffectForUid(uid, 'debuff'));
       }, 0);
     });
-  } else if (aidRoll < 0.8) {
+  } else {
     // 效果4：立刻补抽1颗骰子
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
     addToast(`◆ 洞察弱点！立刻补抽1颗骰子！`, 'buff');
@@ -169,19 +159,6 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
         addFloatingText(`+1骰子`, 'text-yellow-300', undefined, 'player');
       }
-    });
-  } else {
-    // 效果5：骰子库全部临时替换为随机一种强力骰子
-    const pick = STRONG_DICE_POOL[Math.floor(Math.random() * STRONG_DICE_POOL.length)];
-    addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-    addToast(`◆ 洞察弱点！骰子库全部变为${pick.name}！`, 'buff');
-    addLog(`洞察弱点达成！骰子库临时替换为${pick.name}`);
-    scheduleAidEffect(800, () => {
-      setGame(prev => ({
-        ...prev,
-        diceBag: prev.diceBag.map(() => pick.id),
-        discardPile: prev.discardPile.map(() => pick.id),
-      }));
     });
   }
 }

@@ -40,6 +40,7 @@ import { DamagePreviewCard } from './DamagePreviewCard';
 import { useBattleContext } from '../contexts/BattleContext';
 import { formatDescription } from '../utils/richText';
 import { ANIMATION_TIMING } from '../config';
+import { getDisplayAttackDmg } from '../logic/attackCalc';
 
 export function EnemyStageView() {
   const {
@@ -321,7 +322,7 @@ export function EnemyStageView() {
               {enemy.combatType === 'ranger' && <><PixelAttackIntent size={2} /><span className="ml-0.5">弓</span></>}
               {enemy.combatType === 'caster' && <><PixelMagic size={2} /><span className="ml-0.5">术</span></>}
               {enemy.combatType === 'priest' && <><PixelHeart size={2} /><span className="ml-0.5">牧</span></>}
-              <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{enemy.attackDmg}</span>
+              <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{getDisplayAttackDmg(enemy)}</span>
             </div>
             <div className="text-center mb-0.5">
               <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '近' : '远'}</span>

@@ -75,3 +75,28 @@ export function getRangerFollowUpDmg(
 ): number {
   return Math.max(1, Math.floor(enemy.attackDmg * ENEMY_ATTACK_MULT.rangerHit) + attackCount + 1);
 }
+
+/**
+ * 计算敌人在面板 UI 上应显示的"当前实际攻击力"（供玩家预判）
+ *
+ * [2026-05-07] 此前 UI 直接读 enemy.attackDmg，而 ranger 实际打出的值是
+ * `floor(attackDmg × 0.2) + hitCount`，且 hitCount 每次攻击递增 +2，
+ * 导致成长期面板数值脱节。此函数对齐实战值。
+ *
+ * 不考虑玩家状态（虚弱/易伤）和减速，因为这些是战斗瞬时修正，
+ * 面板只展示"敌人自身当前的攻击能力"。
+ */
+export function getDisplayAttackDmg(enemy: Enemy): number {
+  let val = enemy.attackDmg;
+  if (enemy.combatType === 'warrior') {
+    val = Math.floor(val * ENEMY_ATTACK_MULT.warrior);
+  } else if (enemy.combatType === 'ranger') {
+    const nextHitCount = enemy.attackCount ?? 0;
+    val = Math.max(1, Math.floor(val * ENEMY_ATTACK_MULT.rangerHit) + nextHitCount);
+  }
+  const strength = enemy.statuses.find(s => s.type === 'strength');
+  if (strength) val += strength.value;
+  const weak = enemy.statuses.find(s => s.type === 'weak');
+  if (weak) val = Math.max(1, Math.floor(val * STATUS_EFFECT_MULT.weak));
+  return val;
+}

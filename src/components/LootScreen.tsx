@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
 import { MiniDice } from './MiniDice';
 import { getDiceDef } from '../data/dice';
 import { formatDescription } from '../utils/richText';
+import { ChestOpenOverlay } from './ChestOpenOverlay';
 
 export const LootScreen: React.FC = () => {
   const { game, collectLoot, finishLoot } = useGameContext();
+  // 挑战宝箱开启演出状态：记录正在播放动画的 lootId
+  const [chestOpeningId, setChestOpeningId] = useState<string | null>(null);
+
+  const handleLootClick = useCallback((item: { id: string; type: string; collected: boolean }) => {
+    if (item.collected) return;
+    // 挑战宝箱：先播放演出，演出结束再真正入账
+    if (item.type === 'challengeChest') {
+      setChestOpeningId(item.id);
+      return;
+    }
+    collectLoot(item.id);
+  }, [collectLoot]);
+
+  const handleChestDone = useCallback(() => {
+    if (chestOpeningId) {
+      collectLoot(chestOpeningId);
+      setChestOpeningId(null);
+    }
+  }, [chestOpeningId, collectLoot]);
 
   return (
 <div className="flex flex-col h-full bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] p-5 overflow-y-auto">
@@ -49,7 +69,7 @@ export const LootScreen: React.FC = () => {
           transition={{ delay: i * 0.1 }}
           whileHover={!item.collected ? { scale: 1.02, x: 4 } : {}}
           whileTap={!item.collected ? { scale: 0.98 } : {}}
-          onClick={() => collectLoot(item.id)}
+          onClick={() => handleLootClick(item)}
           disabled={item.collected}
           className={`w-full pixel-panel p-4 transition-all text-left flex items-center gap-4 group relative overflow-hidden`}
           style={{ borderColor: item.collected ? 'var(--dungeon-panel-border)' : info.borderColor }}
@@ -93,6 +113,7 @@ export const LootScreen: React.FC = () => {
       </motion.button>
     )}
   </div>
+  {chestOpeningId && <ChestOpenOverlay onDone={handleChestDone} />}
 </div>
   );
 };
