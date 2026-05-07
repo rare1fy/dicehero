@@ -12,6 +12,7 @@ import { useBattleContext } from '../contexts/BattleContext';
 import { useGameContext } from '../contexts/GameContext';
 import { EnemyStageView } from './EnemyStageView';
 import { PlayerHudView } from './PlayerHudView';
+import { RelicPanelView } from './RelicPanelView';
 
 export function BattleSceneView() {
   const { game } = useGameContext();
@@ -41,6 +42,9 @@ export function BattleSceneView() {
 
       {/* 下半区：玩家HUD */}
       <PlayerHudView />
+
+      {/* 遗物库（底部条状按钮 + 弹起浮层 + 结算时自动展开+刷光） */}
+      <RelicPanelView />
     </motion.div>
   );
 }

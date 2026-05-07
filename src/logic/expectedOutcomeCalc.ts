@@ -104,6 +104,9 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
 
   // ─── 遗物 on_play 效果 ───
   game.relics.filter(r => r.trigger === 'on_play').forEach(relic => {
+    // [Bug-11] 魔法手套：tempDrawBonus 和 counter 不在预览阶段应用，
+    // 改为在 postPlayEffects.ts 中实际出牌时处理，避免预览切换牌型时 tempDrawBonus 残留
+    const isExtraHandSlot = relic.id === 'extra_hand_slot';
     // counter 机制（铁血战旗等计数型遗物）
     if (relic.maxCounter !== undefined) {
       const currentCounter = game.relics.find(r2 => r2.id === relic.id)?.counter || 0;
@@ -137,9 +140,17 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
       holyPurify += (typeof res.purifyDebuff === 'number' ? res.purifyDebuff : 1);
       details.push('净化');
     }
-    if (res.tempDrawBonus) {
+    // [Bug-11] 魔法手套 tempDrawBonus 只做预览显示，不推入 pendingSideEffects
+    if (res.tempDrawBonus && !isExtraHandSlot) {
       pendingSideEffects.push({ type: 'setRelicTempDrawBonus', value: res.tempDrawBonus });
       details.push('下回合+1手牌');
+    }
+    // 魔法手套预览显示
+    if (res.tempDrawBonus && isExtraHandSlot) {
+      const gloveCounter = game.relics.find(r2 => r2.id === 'extra_hand_slot')?.counter || 0;
+      if (gloveCounter === 0) {
+        details.push('下回合+1手牌');
+      }
     }
     if (res.grantExtraPlay) {
       pendingSideEffects.push({ type: 'grantExtraPlay', value: res.grantExtraPlay });

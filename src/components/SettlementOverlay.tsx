@@ -29,8 +29,12 @@ export function SettlementOverlay() {
     <AnimatePresence>
       {settlementPhase && settlementData && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] pointer-events-none"
-          style={{ background: 'rgba(0,0,0,0.7)' }}
+          className="fixed top-0 left-0 right-0 z-[160] flex items-start justify-center pt-[8vh] pointer-events-none"
+          style={{
+            // 演出背景：上半屏黑色渐变至透明，让演出卡片在暗背景上更醒目
+            height: '55vh',
+            background: 'linear-gradient(180deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%)',
+          }}
         >
           <div className="flex flex-col items-center animate-fade-in">
             {/* 牌型卡片 */}

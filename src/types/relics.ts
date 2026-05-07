@@ -118,6 +118,8 @@ export type PassiveRelicKey =
   | 'unlockBloodReroll';     // extra_free_reroll: 解锁卖血重投
   // 注意：'extraDraw' 不是被动遗物字段，没有遗物返回此字段
 
+import type { ClassId } from '../data/classes';
+
 export interface Relic {
   id: string;
   name: string;
@@ -126,6 +128,8 @@ export interface Relic {
   rarity: RelicRarity;
   trigger: RelicTrigger;
   effect: (context: RelicContext) => RelicEffect;
+  // 职业限制：undefined=通用遗物，'warrior'/'mage'/'rogue'=仅该职业在常规商店可见
+  classRestriction?: ClassId;
   // 计数型遗物
   counter?: number;        // 当前计数值
   maxCounter?: number;      // 最大计数（用于显示进度）

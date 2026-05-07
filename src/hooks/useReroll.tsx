@@ -32,11 +32,12 @@ export function useReroll(state: BattleState) {
   } = state;
 
   // ==================== Reroll 计算属性 ====================
-  const currentRerollCost = getRerollHpCost(rerollCount, game.relics, game.freeRerollsPerTurn || 1, game.maxHp, game.playerClass || 'warrior');
+  const effectiveFreeRerollsPerTurn = (game.freeRerollsPerTurn || 1) + (game.boomerangFreeReroll || 0) + (game.comboFreeReroll || 0);
+  const currentRerollCost = getRerollHpCost(rerollCount, game.relics, effectiveFreeRerollsPerTurn, game.maxHp, game.playerClass || 'warrior');
   const canReroll = currentRerollCost !== -1;
   const canAffordReroll = canReroll && (currentRerollCost <= 0 || game.hp > currentRerollCost);
   const extraFreeRerollsForDisplay = sumPassiveRelicValue(game.relics, 'extraReroll');
-  const freeRerollsRemaining = Math.max(0, (game.freeRerollsPerTurn || 1) + extraFreeRerollsForDisplay - rerollCount);
+  const freeRerollsRemaining = Math.max(0, effectiveFreeRerollsPerTurn + extraFreeRerollsForDisplay - rerollCount);
 
   // ==================== rerollSelected ====================
   const rerollSelected = async () => {
@@ -48,7 +49,7 @@ export function useReroll(state: BattleState) {
       return;
     }
 
-    let hpCost = getRerollHpCost(rerollCount, game.relics, game.freeRerollsPerTurn || 1, game.maxHp, game.playerClass || 'warrior');
+    let hpCost = getRerollHpCost(rerollCount, game.relics, effectiveFreeRerollsPerTurn, game.maxHp, game.playerClass || 'warrior');
     if (hpCost === -1) {
       addToast('免费重投次数已用完', 'info');
       return;
@@ -133,55 +134,70 @@ export function useReroll(state: BattleState) {
     }
 
     // 落定：弃骰抽新
-    const tempRerollIds = new Set(toReroll.filter(d => d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.id));
-    const normalRerollDefIds = toReroll.filter(d => !d.isTemp || d.diceDefId === 'temp_rogue').map(d => d.diceDefId);
+    // Bug-1: temp_rogue(暗影残骰)走原地重掷面值，不走bag系统
+    // 原因：temp_rogue不在玩家骰子库中，走bag会被替换成其他类型骰子+污染弃骰库
+    const tempRerollIds = new Set(toReroll.filter(d => d.isTemp).map(d => d.id));
+    const normalRerollDefIds = toReroll.filter(d => !d.isTemp).map(d => d.diceDefId);
 
-    setGame(prev => {
-      const newDiscard = [...prev.discardPile, ...normalRerollDefIds];
-      const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(prev.diceBag, newDiscard, normalRerollDefIds.length);
-      if (shuffled) {
-        setShuffleAnimating(true);
-        setTimeout(() => setShuffleAnimating(false), 800);
-        addToast(' 弃骰库洗回骰子库', 'info');
-      }
+    // 预先计算抽牌结果，以便 setGame/setDice 在同一批次更新
+    const newDiscard = [...game.discardPile, ...normalRerollDefIds];
+    const { drawn, newBag, newDiscard: finalDiscard, shuffled } = drawFromBag(game.diceBag, newDiscard, normalRerollDefIds.length);
+    if (shuffled) {
+      setShuffleAnimating(true);
+      setTimeout(() => setShuffleAnimating(false), 800);
+      addToast(' 弃骰库洗回骰子库', 'info');
+    }
 
-      setTimeout(() => {
-        setDice(prevDice => {
-          let drawIdx = 0;
-          const newDice = prevDice.map(d => {
-            if (!rerollIds.has(d.id)) return { ...d, rolling: false };
-            if (tempRerollIds.has(d.id)) {
-              const def = getDiceDef(d.diceDefId);
-              const boost = sumPassiveRelicValue(game.relics, 'rerollPointBoost');
-              return { ...d, value: Math.min(9, rollDiceDef(def) + boost), rolling: false, selected: false };
-            }
-            if (drawIdx < drawn.length) {
-              const newDie = drawn[drawIdx];
-              drawIdx++;
-              return { ...newDie, id: d.id, rolling: false, selected: false };
-            }
-            return { ...d, rolling: false, selected: false };
-          });
-          const result = applyDiceSpecialEffects(newDice, { hasLimitBreaker: hasLimitBreaker(game.relics), lockedElement: game.lockedElement });
-          addLog(`重掷结果: ${result.filter(nd => rerollIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
-          return result;
-        });
-      }, 0);
+    // 同步设置游戏状态和骰子状态，避免 setTimeout(0) 导致的中间帧闪烁
+    setGame(prev => ({
+      ...prev,
+      diceBag: newBag,
+      discardPile: finalDiscard,
+    }));
 
-      return {
-        ...prev,
-        diceBag: newBag,
-        discardPile: finalDiscard,
-      };
+    // 混沌骰面: 每回合第一次重投时，所有手中骰子点数+1（6不变）
+    const chaosBoost = sumPassiveRelicValue(game.relics, 'rerollPointBoost');
+    const isFirstReroll = rerollCount === 0;
+
+    setDice(prevDice => {
+      let drawIdx = 0;
+      const newDice = prevDice.map(d => {
+        if (!rerollIds.has(d.id)) return { ...d, rolling: false };
+        if (tempRerollIds.has(d.id)) {
+          const def = getDiceDef(d.diceDefId);
+          return { ...d, value: rollDiceDef(def), rolling: false, selected: false };
+        }
+        if (drawIdx < drawn.length) {
+          const newDie = drawn[drawIdx];
+          drawIdx++;
+          return { ...newDie, id: d.id, rolling: false, selected: false };
+        }
+        return { ...d, rolling: false, selected: false };
+      });
+
+      // 混沌骰面: 首次重投时对所有非spent骰子+1（6不变）
+      const boostedDice = (chaosBoost > 0 && isFirstReroll)
+        ? newDice.map(d => (d.spent || d.value >= 6) ? d : { ...d, value: d.value + chaosBoost })
+        : newDice;
+
+      const result = applyDiceSpecialEffects(boostedDice, { hasLimitBreaker: hasLimitBreaker(game.relics), lockedElement: game.lockedElement });
+      addLog(`重掷结果: ${result.filter(nd => rerollIds.has(nd.id)).map(nd => `${nd.value}(${ELEMENT_NAMES[nd.element]})`).join(', ')}`);
+      return result;
     });
 
+    // 混沌骰面浮动文本（仅在有骰子实际被boost时显示）
+    if (chaosBoost > 0 && isFirstReroll) {
+      const hasBoostedDie = dice.some(d => !d.spent && d.value < 6);
+      if (hasBoostedDie) {
+        addFloatingText(`混沌骰面: 全体+${chaosBoost}`, 'text-purple-400', undefined, 'player');
+      }
+    }
+
     playSound('dice_lock');
-    await new Promise(r => setTimeout(r, 300));
-    setDice(prev => prev.map(d => d.rolling ? { ...d, rolling: false } : d));
 
     // 狂掷风暴：免费重投不消耗次数
     const freeChance = sumRelicValueByTrigger(game.relics, 'on_reroll', 'freeRerollChance');
-    const isFreeReroll = (getRerollHpCost(rerollCount, game.relics, game.freeRerollsPerTurn || 1, game.maxHp, game.playerClass || 'warrior') <= 0);
+    const isFreeReroll = (getRerollHpCost(rerollCount, game.relics, effectiveFreeRerollsPerTurn, game.maxHp, game.playerClass || 'warrior') <= 0);
     if (freeChance > 0 && isFreeReroll && Math.random() < freeChance) {
       addFloatingText('幸运！免费次数保留', 'text-yellow-300', undefined, 'player');
     } else {

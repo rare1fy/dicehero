@@ -8,10 +8,12 @@ import { useEffect, useRef } from 'react';
 import type { Die, MapNode, Enemy, GameState, Relic } from '../types/game';
 import { createInitialGameState } from '../logic/gameInit';
 import { drawFromBag, initDiceBag } from '../data/diceBag';
+import { getDiceDef, rollDiceDef } from '../data/dice';
 import { getEnemiesForNode } from '../data/enemies';
 import { generateChallenge } from '../utils/instakillChallenge';
 import { generateMap } from '../utils/mapGenerator';
 import { generateShopItems } from '../logic/shopGenerator';
+import type { ClassId } from '../data/classes';
 import { generateStartingRelicChoices } from '../data/skillModules';
 import { ALL_RELICS } from '../data/relics';
 import { resetCompassCounter, incrementFloorsCleared, updateRelicCounter, tickHourglass } from '../engine/relicUpdates';
@@ -173,7 +175,7 @@ export function useBattleLifecycle(state: BattleState) {
     }));
     if (node.type === 'enemy' || node.type === 'elite' || node.type === 'boss') {
       if (node.depth === 0) {
-        const relicChoices = generateStartingRelicChoices(game.relics.map(r => r.id));
+        const relicChoices = generateStartingRelicChoices(game.relics.map(r => r.id), game.playerClass as ClassId | undefined);
         setStartingRelicChoices(relicChoices);
         setPendingBattleNode(node);
         setGame(prev => ({ ...prev, phase: 'skillSelect', currentNodeId: node.id }));
@@ -185,7 +187,7 @@ export function useBattleLifecycle(state: BattleState) {
       setCampfireView('main');
       setGame(prev => ({ ...prev, phase: 'campfire', currentNodeId: node.id }));
     } else if (node.type === 'merchant') {
-      const shopItems = generateShopItems(game.relics.map(r => r.id));
+      const shopItems = generateShopItems(game.relics.map(r => r.id), game.playerClass as ClassId | undefined);
       setGame(prev => ({ ...prev, phase: 'merchant', currentNodeId: node.id, shopItems }));
     } else if (node.type === 'treasure') {
       setGame(prev => ({ ...prev, phase: 'treasure', currentNodeId: node.id }));
@@ -210,11 +212,27 @@ export function useBattleLifecycle(state: BattleState) {
         keptDice = keptDice.slice(keptDice.length - handLimit);
         setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...excess.filter(d => !d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.diceDefId)] }));
       }
+    } else if (g.playerClass === 'rogue') {
+      // Bug-21: 波次转换时保留持久暗影残骰（垮波次≠回合结束，影锋刺客跨波次继续连击）
+      // 与 executeDrawPhase 保持一致：保留但清除 persistent 标记（下回合结束时销毁）
+      const persistentShadow = dice.filter(d => d.isShadowRemnant && d.shadowRemnantPersistent && !d.spent);
+      if (persistentShadow.length > 0) {
+        keptDice = persistentShadow.map(d => ({ ...d, shadowRemnantPersistent: false, isTemp: true }));
+      }
     }
 
     const handDefIds = (g.playerClass === 'mage' && !forceResetHand ? [] : dice.filter(d => !d.spent && !d.isTemp && d.diceDefId !== 'temp_rogue')).map(d => d.diceDefId);
     const currentDiscard = [...g.discardPile, ...handDefIds];
-    const relicDrawBonus = 0;
+    // Bug-4 fix: 处理 tempDrawCountBonus（薛定谔的袋子）和 relicTempDrawBonus（魔法手套）
+    const schrodingerBonus = g.tempDrawCountBonus || 0;
+    const relicDrawBonus = g.relicTempDrawBonus || 0;
+    if (relicDrawBonus > 0) {
+      addFloatingText(`魔法手套+${relicDrawBonus}手牌`, 'text-cyan-300', undefined, 'player');
+    }
+    // 重置临时加成（与 executeDrawPhase 一致）
+    if (schrodingerBonus > 0 || relicDrawBonus > 0) {
+      setGame(prev => ({ ...prev, tempDrawCountBonus: 0, relicTempDrawBonus: 0 }));
+    }
 
     const chargeStacks = forceResetHand ? 0 : (g.chargeStacks || 0);
     const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
@@ -238,7 +256,7 @@ export function useBattleLifecycle(state: BattleState) {
       setTimeout(() => addFloatingText(`连击心得+${rogueDrawBonus}手牌`, 'text-green-300', undefined, 'player'), 300);
       setGame(prev => ({ ...prev, rogueComboDrawBonus: 0 }));
     }
-    const count = Math.max(0, handLimit - keptDice.filter(d => d.diceDefId !== 'temp_rogue' && !d.isBonusDraw).length) + relicDrawBonus + rogueDrawBonus;
+    const count = Math.max(0, handLimit + schrodingerBonus + relicDrawBonus + rogueDrawBonus - keptDice.filter(d => d.diceDefId !== 'temp_rogue' && !d.isBonusDraw).length);
 
     const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, currentDiscard, count);
 
@@ -247,9 +265,52 @@ export function useBattleLifecycle(state: BattleState) {
             setTimeout(() => setShuffleAnimating(false), 800);
       addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
     }
+    // Bug-4 fix: 处理法师保留骰子的累积加成（与 executeDrawPhase 一致）
+    // bonusOnKeep: 蓄能水晶保留时+2点
+    // bonusPerTurnKept: 星辰骰子每保留1回合+1点（有上限）
+    // rerollOnKeep: 时光骰子保留时自动重投
+    // bonusMultOnKeep: 法力涌动保留时给伤害倍率
+    const keptDiceWithBonuses = keptDice.map(d => {
+      const def = getDiceDef(d.diceDefId);
+      let newValue = d.value;
+      // bonusOnKeep: 保留到下回合时点数+N
+      if (def.onPlay?.bonusOnKeep) {
+        newValue = Math.min(6, newValue + def.onPlay.bonusOnKeep);
+        addFloatingText(`${def.name}+${def.onPlay.bonusOnKeep}点`, 'text-cyan-400', undefined, 'player');
+      }
+      // bonusPerTurnKept: 每保留1回合+N点（累积有上限）
+      if (def.onPlay?.bonusPerTurnKept) {
+        const cap = def.onPlay.keepBonusCap || 99;
+        const accumulated = d.keptBonusAccum || 0;
+        if (accumulated < cap) {
+          const bonus = Math.min(def.onPlay.bonusPerTurnKept, cap - accumulated);
+          newValue = Math.min(6, newValue + bonus);
+          addFloatingText(`${def.name}+${bonus}点(${accumulated + bonus}/${cap})`, 'text-purple-400', undefined, 'player');
+          return { ...d, value: newValue, selected: false, kept: true, keptBonusAccum: accumulated + bonus, bounceGrowCount: 0, boomerangUsed: false };
+        }
+      }
+      return { ...d, value: newValue, selected: false, kept: true, bounceGrowCount: 0, boomerangUsed: false };
+    });
+    // rerollOnKeep: 时光骰子保留时自动重投
+    keptDiceWithBonuses.forEach((d, idx) => {
+      const def = getDiceDef(d.diceDefId);
+      if (def.onPlay?.rerollOnKeep) {
+        keptDiceWithBonuses[idx] = { ...d, value: rollDiceDef(def), rolling: false };
+        addFloatingText(`${def.name}自动重投`, 'text-blue-400', undefined, 'player');
+      }
+    });
+    // bonusMultOnKeep: 法力涌动保留时给伤害倍率
+    const keepMultBonus = keptDiceWithBonuses.reduce((sum, d) => {
+      const def = getDiceDef(d.diceDefId);
+      return sum + (def.onPlay?.bonusMultOnKeep || 0);
+    }, 0);
+    if (keepMultBonus > 0) {
+      setGame(prev => ({ ...prev, mageOverchargeMult: (prev.mageOverchargeMult || 0) + keepMultBonus }));
+      addFloatingText(`蓄力倍率+${Math.round(keepMultBonus * 100)}%`, 'text-purple-400', undefined, 'player');
+    }
+
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
-    const resetKeptDice = keptDice.map(d => ({ ...d, bounceGrowCount: 0, boomerangUsed: false }));
-    setDice([...resetKeptDice, ...drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 }))]);
+    setDice([...keptDiceWithBonuses, ...drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 }))]);
 
     await performDiceRollAnimation({
       drawn,
@@ -321,6 +382,8 @@ export function useBattleLifecycle(state: BattleState) {
   useEffect(() => {
     if (gmPendingVictory) {
       setGmPendingVictory(false);
+      // Bug-3: 胜利前清除死亡特效，避免 phase清空enemies useEffect 重复等待
+      setEnemyEffects({}); setDyingEnemies(new Set());
       handleVictoryRef.current();
     }
   }, [gmPendingVictory]);
@@ -330,7 +393,11 @@ export function useBattleLifecycle(state: BattleState) {
     if (gmPendingNextWave && game.phase === 'battle') {
       setGmPendingNextWave(false);
       const nextWaveIdx = game.currentWaveIndex + 1;
-      if (nextWaveIdx >= game.battleWaves.length) { handleVictoryRef.current(); return; }
+      if (nextWaveIdx >= game.battleWaves.length) {
+        // Bug-3: 胜利前清除死亡特效
+        setEnemyEffects({}); setDyingEnemies(new Set());
+        handleVictoryRef.current(); return;
+      }
       const nextWave = game.battleWaves[nextWaveIdx].enemies;
       const currentNode = game.map.find(n => n.id === game.currentNodeId);
       const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 200;
@@ -345,6 +412,8 @@ export function useBattleLifecycle(state: BattleState) {
         }
         // Bug-3: 波次转换前确认死亡动画已播完
         await new Promise(r => setTimeout(r, ANIMATION_TIMING.waveTransitionDeathBuffer));
+        // Bug-14: 先标记 isEnemyTurn=true 防止自动 endTurn 在 Boss 入场动画期间触发
+        setGame(prev => ({ ...prev, isEnemyTurn: true }));
         setEnemies(nextWave);
         setEnemyEffects({}); setDyingEnemies(new Set());
         if (isBossWave && nextWave[0]) {
@@ -359,7 +428,7 @@ export function useBattleLifecycle(state: BattleState) {
         // Bug-4：法师吟唱（不出牌）时保留 chargeStacks 和屯牌；出了牌时重置吟唱状态
         setGame(prev => {
           const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
-          return { ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: Math.max(prev.playsLeft, 1), freeRerollsLeft: Math.max(prev.freeRerollsLeft, 1), armor: 0, chargeStacks: isMageChanting ? prev.chargeStacks : 0, mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0, bloodRerollCount: 0, comboCount: prev.comboCount, lockedElement: isMageChanting ? prev.lockedElement : undefined, lastPlayHandType: prev.lastPlayHandType, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1 };
+          return { ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: Math.max(prev.playsLeft, 1), freeRerollsLeft: prev.freeRerollsLeft, armor: 0, chargeStacks: isMageChanting ? prev.chargeStacks : 0, mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0, bloodRerollCount: 0, comboCount: prev.comboCount, lockedElement: isMageChanting ? prev.lockedElement : undefined, lastPlayHandType: prev.lastPlayHandType, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1, boomerangFreeReroll: 0, comboFreeReroll: 0 };
         });
         setRerollCount(0);
         setWaveAnnouncement(nextWaveIdx + 1);
@@ -395,15 +464,19 @@ export function useBattleLifecycle(state: BattleState) {
   // ==================== phase清空enemies ====================
   useEffect(() => {
     if (game.phase === 'diceReward' || game.phase === 'map') {
-      // Bug-3: 检查是否有敌人正在播放死亡动画（effect === 'death'），如果有则延迟清空
+      // Bug-3: 检查是否有敌人正在播放死亡动画（effect === 'death'）
+      // 正常情况下 handleVictory 前已清除特效，此检查仅作安全兜底
       const hasDyingEnemy = enemies.some(e => {
         const effect = state.enemyEffects[e.uid];
         return e.hp <= 0 && effect === 'death';
       });
       if (hasDyingEnemy) {
+        // 仅等死亡动画剩余时间（最长 enemyDeathDuration），不再等完整 cleanupDelay
         const timer = setTimeout(() => {
           setEnemies([]);
-        }, ANIMATION_TIMING.victoryEnemyCleanupDelay);
+          setEnemyEffects({});
+          setDyingEnemies(new Set());
+        }, ANIMATION_TIMING.enemyDeathDuration);
         return () => clearTimeout(timer);
       }
       setEnemies([]);

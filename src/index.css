@@ -2214,9 +2214,9 @@ input[type="range"]::-moz-range-track {
 /* 左手 — 持骰子 */
 .hand-left {
   position: absolute;
-  left: -20px;
-  bottom: -40px;
-  transform: rotate(15deg) scale(1);
+  left: -32px;
+  bottom: -42px;
+  transform: rotate(15deg) scale(0.92);
   transform-origin: bottom left;
   z-index: 5;
   transition: transform 0.15s ease;
@@ -2224,24 +2224,24 @@ input[type="range"]::-moz-range-track {
 
 /* 左手空闲呼吸 */
 @keyframes hand-idle-left {
-  0%, 100% { transform: rotate(15deg) translateY(0); }
-  50% { transform: rotate(17deg) translateY(-3px); }
+  0%, 100% { transform: rotate(15deg) scale(0.92) translateY(0); }
+  50% { transform: rotate(17deg) scale(0.92) translateY(-3px); }
 }
 
 .hand-left:not(.hand-left-rolling):not(.hand-left-throw) {
   animation: hand-idle-left 3s ease-in-out infinite;
 }
 
-/* 摇骰子动画 — 骰子发光飞出再飞回 */
+/* 摇骰子动画 — 骰子发光飞出再飞回（整体 *0.92） */
 @keyframes hand-roll-dice {
-  0% { transform: rotate(15deg) translateY(0) scale(1); filter: brightness(1); }
-  10% { transform: rotate(30deg) translateY(-40px) scale(1.15); filter: brightness(1.3); }
-  20% { transform: rotate(-10deg) translateY(-65px) translateX(15px) scale(1.2); filter: brightness(1.5); }
-  35% { transform: rotate(35deg) translateY(-50px) translateX(-10px) scale(1.15); filter: brightness(1.3); }
-  50% { transform: rotate(5deg) translateY(-60px) translateX(20px) scale(1.18); filter: brightness(1.4); }
-  65% { transform: rotate(25deg) translateY(-40px) translateX(-5px) scale(1.1); filter: brightness(1.2); }
-  80% { transform: rotate(10deg) translateY(-20px) scale(1.05); filter: brightness(1.1); }
-  100% { transform: rotate(15deg) translateY(0) scale(1); filter: brightness(1); }
+  0% { transform: rotate(15deg) translateY(0) scale(0.92); filter: brightness(1); }
+  10% { transform: rotate(30deg) translateY(-40px) scale(1.06); filter: brightness(1.3); }
+  20% { transform: rotate(-10deg) translateY(-65px) translateX(15px) scale(1.10); filter: brightness(1.5); }
+  35% { transform: rotate(35deg) translateY(-50px) translateX(-10px) scale(1.06); filter: brightness(1.3); }
+  50% { transform: rotate(5deg) translateY(-60px) translateX(20px) scale(1.09); filter: brightness(1.4); }
+  65% { transform: rotate(25deg) translateY(-40px) translateX(-5px) scale(1.01); filter: brightness(1.2); }
+  80% { transform: rotate(10deg) translateY(-20px) scale(0.97); filter: brightness(1.1); }
+  100% { transform: rotate(15deg) translateY(0) scale(0.92); filter: brightness(1); }
 }
 
 .hand-left-rolling {
@@ -2253,13 +2253,13 @@ input[type="range"]::-moz-range-track {
   filter: drop-shadow(0 0 12px rgba(140,100,240,0.8)) drop-shadow(0 0 24px rgba(100,60,200,0.4)) !important;
 }
 
-/* 投掷动画 */
+/* 投掷动画（整体 *0.92） */
 @keyframes hand-throw-dice {
-  0% { transform: rotate(15deg) translateY(0) scale(1); }
-  20% { transform: rotate(40deg) translateY(-40px) translateX(30px) scale(1.2); filter: brightness(1.5); }
-  50% { transform: rotate(-10deg) translateY(-70px) translateX(60px) scale(1.3); filter: brightness(1.8); }
-  80% { transform: rotate(20deg) translateY(-20px) translateX(20px) scale(1.05); filter: brightness(1.1); }
-  100% { transform: rotate(15deg) translateY(0) scale(1); filter: brightness(1); }
+  0% { transform: rotate(15deg) translateY(0) scale(0.92); }
+  20% { transform: rotate(40deg) translateY(-40px) translateX(30px) scale(1.10); filter: brightness(1.5); }
+  50% { transform: rotate(-10deg) translateY(-70px) translateX(60px) scale(1.20); filter: brightness(1.8); }
+  80% { transform: rotate(20deg) translateY(-20px) translateX(20px) scale(0.97); filter: brightness(1.1); }
+  100% { transform: rotate(15deg) translateY(0) scale(0.92); filter: brightness(1); }
 }
 
 .hand-left-throw {
@@ -2269,18 +2269,19 @@ input[type="range"]::-moz-range-track {
 /* 右手 — 持剑 */
 .hand-right {
   position: absolute;
-  right: -20px;
-  bottom: -40px;
-  transform: rotate(-15deg) scale(1);
+  right: -32px;
+  bottom: -42px;
+  transform: rotate(-15deg) scale(0.92);
   transform-origin: bottom right;
   z-index: 5;
+  overflow: visible;
   transition: transform 0.15s ease;
 }
 
 /* 右手空闲呼吸 */
 @keyframes hand-idle-right {
-  0%, 100% { transform: rotate(-15deg) translateY(0); }
-  50% { transform: rotate(-13deg) translateY(-3px); }
+  0%, 100% { transform: rotate(-15deg) scale(0.92) translateY(0); }
+  50% { transform: rotate(-13deg) scale(0.92) translateY(-3px); }
 }
 
 .hand-right:not(.hand-right-attacking) {
@@ -2288,31 +2289,31 @@ input[type="range"]::-moz-range-track {
   animation-delay: 0.5s;
 }
 
-/* ���ֹ����ӿ� �� ����Ȼ���ն���������棩 */
+/* 右手攻击：自然挥斩动画（整体 *0.92 与 idle 缩放保持一致） */
 @keyframes hand-sword-slash {
   0% { 
-    transform: rotate(-15deg) translateY(0) translateX(0) scale(1); 
+    transform: rotate(-15deg) translateY(0) translateX(0) scale(0.92); 
   }
   15% { 
-    transform: rotate(-55deg) translateY(-30px) translateX(15px) scale(1.15); 
+    transform: rotate(-55deg) translateY(-30px) translateX(15px) scale(1.06); 
   }
   30% { 
-    transform: rotate(50deg) translateY(-90px) translateX(-110px) scale(1.45); 
+    transform: rotate(50deg) translateY(-90px) translateX(-110px) scale(1.33); 
     filter: brightness(1.6);
   }
   42% { 
-    transform: rotate(55deg) translateY(-100px) translateX(-125px) scale(1.5); 
+    transform: rotate(55deg) translateY(-100px) translateX(-125px) scale(1.38); 
     filter: brightness(1.8);
   }
   55% { 
-    transform: rotate(35deg) translateY(-70px) translateX(-80px) scale(1.3); 
+    transform: rotate(35deg) translateY(-70px) translateX(-80px) scale(1.20); 
     filter: brightness(1.3);
   }
   75% { 
-    transform: rotate(5deg) translateY(-25px) translateX(-20px) scale(1.08); 
+    transform: rotate(5deg) translateY(-25px) translateX(-20px) scale(0.99); 
   }
   100% { 
-    transform: rotate(-15deg) translateY(0) translateX(0) scale(1); 
+    transform: rotate(-15deg) translateY(0) translateX(0) scale(0.92); 
   }
 }
 
@@ -2346,9 +2347,8 @@ input[type="range"]::-moz-range-track {
   50% { filter: brightness(1.3) drop-shadow(0 0 8px var(--glow-color)) drop-shadow(0 0 16px var(--glow-color)); }
 }
 
-/* 战士：红色火焰粒子 */
+/* 战士：红色火焰粒子（集中在斧头顶端，避免飘出右手区域与左手重叠） */
 .weapon-active-warrior {
-  position: relative;
   --glow-color: rgba(220,60,40,0.6);
   animation: weapon-glow-breathe 1.5s ease-in-out infinite;
 }
@@ -2356,35 +2356,34 @@ input[type="range"]::-moz-range-track {
 .weapon-active-warrior::after {
   content: '';
   position: absolute;
-  width: 4px; height: 4px;
+  width: 3px; height: 3px;
   background: #ff4030;
   image-rendering: pixelated;
   pointer-events: none;
-  z-index: 5;
-  animation: weapon-particle-rise 0.8s steps(4) infinite;
+  z-index: 6;
+  animation: weapon-particle-rise 0.9s steps(4) infinite;
 }
 .weapon-active-warrior::before {
-  left: 30%; top: 10%;
+  left: 45%; top: 4%;
   box-shadow:
-    6px 4px 0 #ff6040,
-    -4px 8px 0 #e04020,
-    12px 2px 0 #ff8060,
-    -8px 12px 0 #c03010;
+    3px 2px 0 #ff6040,
+    -2px 4px 0 #e04020,
+    5px 6px 0 #ff8060,
+    -4px 8px 0 #c03010;
   animation-delay: 0s;
 }
 .weapon-active-warrior::after {
-  right: 30%; top: 5%;
+  left: 55%; top: 8%;
   box-shadow:
-    -6px 6px 0 #ff5030,
-    4px 10px 0 #e04020,
-    -10px 2px 0 #ff7050,
-    8px 14px 0 #d03818;
-  animation-delay: 0.4s;
+    -3px 3px 0 #ff5030,
+    2px 5px 0 #e04020,
+    -5px 7px 0 #ff7050,
+    4px 9px 0 #d03818;
+  animation-delay: 0.45s;
 }
 
-/* 法师：紫色魔法粒子 */
+/* 法师：紫色魔法粒子（集中在法杖顶端） */
 .weapon-active-mage {
-  position: relative;
   --glow-color: rgba(130,60,240,0.5);
   animation: weapon-glow-breathe 2s ease-in-out infinite;
 }
@@ -2392,35 +2391,34 @@ input[type="range"]::-moz-range-track {
 .weapon-active-mage::after {
   content: '';
   position: absolute;
-  width: 3px; height: 3px;
+  width: 2px; height: 2px;
   background: #a060ff;
   image-rendering: pixelated;
   pointer-events: none;
-  z-index: 5;
-  animation: weapon-particle-rise 1.2s steps(6) infinite;
+  z-index: 6;
+  animation: weapon-particle-rise 1.3s steps(6) infinite;
 }
 .weapon-active-mage::before {
-  left: 25%; top: 15%;
+  left: 42%; top: 6%;
   box-shadow:
-    8px 2px 0 #c080ff,
-    -6px 6px 0 #8040e0,
-    14px 8px 0 #b070ff,
-    -2px 12px 0 #9050f0;
+    4px 1px 0 #c080ff,
+    -3px 3px 0 #8040e0,
+    6px 5px 0 #b070ff,
+    -1px 7px 0 #9050f0;
   animation-delay: 0s;
 }
 .weapon-active-mage::after {
-  right: 25%; top: 10%;
+  left: 58%; top: 10%;
   box-shadow:
-    -8px 4px 0 #b070ff,
-    6px 8px 0 #9050f0,
-    -12px 10px 0 #c080ff,
-    2px 14px 0 #8040e0;
-  animation-delay: 0.6s;
+    -4px 2px 0 #b070ff,
+    3px 4px 0 #9050f0,
+    -6px 6px 0 #c080ff,
+    1px 8px 0 #8040e0;
+  animation-delay: 0.65s;
 }
 
-/* 盗贼：绿色毒雾粒子 */
+/* 盗贼：绿色毒雾粒子（集中在匕首顶端） */
 .weapon-active-rogue {
-  position: relative;
   --glow-color: rgba(60,220,100,0.5);
   animation: weapon-glow-breathe 1.2s ease-in-out infinite;
 }
@@ -2428,30 +2426,30 @@ input[type="range"]::-moz-range-track {
 .weapon-active-rogue::after {
   content: '';
   position: absolute;
-  width: 3px; height: 3px;
+  width: 2px; height: 2px;
   background: #40e060;
   image-rendering: pixelated;
   pointer-events: none;
-  z-index: 5;
-  animation: weapon-particle-rise 0.7s steps(4) infinite;
+  z-index: 6;
+  animation: weapon-particle-rise 0.8s steps(4) infinite;
 }
 .weapon-active-rogue::before {
-  left: 20%; top: 8%;
+  left: 40%; top: 4%;
   box-shadow:
-    4px 6px 0 #60ff80,
-    -6px 2px 0 #30c050,
-    10px 10px 0 #50f070,
-    -2px 14px 0 #40d060;
+    2px 3px 0 #60ff80,
+    -3px 1px 0 #30c050,
+    5px 5px 0 #50f070,
+    -1px 7px 0 #40d060;
   animation-delay: 0s;
 }
 .weapon-active-rogue::after {
-  right: 20%; top: 12%;
+  left: 60%; top: 8%;
   box-shadow:
-    -4px 4px 0 #50f070,
-    6px 8px 0 #30c050,
-    -8px 12px 0 #60ff80,
-    2px 6px 0 #40e060;
-  animation-delay: 0.35s;
+    -2px 2px 0 #50f070,
+    3px 4px 0 #30c050,
+    -4px 6px 0 #60ff80,
+    1px 3px 0 #40e060;
+  animation-delay: 0.4s;
 }
 
 

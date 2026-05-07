@@ -3,6 +3,8 @@
  *
  * 从 DiceHeroGame.tsx 提取（ARCH-F Round2）。
  * 包含：遗物库收起按钮、遗物详情弹窗、遗物库半窗口浮层、外层遗物详情弹窗
+ * 2026-05-07: 拆出 RelicPanelOverlay（仅浮层+刷光）供战斗结算演出使用，
+ *             避免战斗界面重复渲染收起按钮条。
  */
 
 import React from 'react';
@@ -60,94 +62,116 @@ export function RelicPanelView() {
       )}
 
       {/* 遗物库半窗口浮层 */}
-      <AnimatePresence>
-        {showRelicPanel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[150] bg-black/50"
-            onClick={() => setShowRelicPanel(false)}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="absolute bottom-0 left-0 right-0 max-h-[55vh]"
-              style={{
-                background: 'linear-gradient(180deg, rgba(16,14,20,0.98) 0%, rgba(10,8,14,0.99) 100%)',
-                borderTop: '3px solid var(--pixel-gold)',
-                boxShadow: '0 -4px 24px rgba(0,0,0,0.6), 0 -1px 0 rgba(212,160,48,0.15)',
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              {/* 顶部栏 */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--dungeon-panel-border)]">
-                <span className="text-[11px] font-black text-[var(--pixel-gold)] tracking-wider pixel-text-shadow"
-                  style={{ textShadow: '0 0 6px rgba(212,160,48,0.4)' }}>
-                  遗物库 ({game.relics.length})
-                </span>
-                <button
-                  onClick={() => setShowRelicPanel(false)}
-                  className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] px-1 py-0.5 transition-colors"
-                >
-                  <PixelClose size={2} />
-                </button>
-              </div>
-              {/* 遗物网格 */}
-              <div className="overflow-y-auto p-3" style={{ maxHeight: 'calc(55vh - 40px)' }}>
-                {game.relics.length === 0 && (
-                  <div className="flex items-center justify-center py-6 opacity-30">
-                    <span className="text-[10px] text-[var(--dungeon-text-dim)]">暂无遗物</span>
-                  </div>
-                )}
-                {/* 遗物区 */}
-                {game.relics.length > 0 && (
-                  <>
-                    <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider mb-1.5">遗物</div>
-                    <div className="grid grid-cols-6 gap-1.5 mb-3">
-                      {game.relics.map((relic, i) => {
-                        const isActive = expectedOutcome?.triggeredAugments?.some(ta => ta.relicId === relic.id) || false;
-                        const isFlashing = flashingRelicIds.includes(relic.id);
-                        return (
-                          <div
-                            key={relic.id + "-rp-" + i}
-                            className={`flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
-                              isActive
-                                ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.2)] to-[rgba(180,120,30,0.08)]"
-                                : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
-                            }`}
-                            style={{
-                              borderRadius: '3px',
-                              padding: '4px 2px 3px',
-                              ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.3)' } : {}),
-                              ...(isFlashing ? { boxShadow: '0 0 16px rgba(255,255,255,0.9), 0 0 30px rgba(212,160,48,0.8)', animation: 'relic-flash 0.6s ease-out' } : {}),
-                            }}
-                            onClick={() => setSelectedRelic(relic)}
-                          >
-                            <RelicPixelIcon relicId={relic.id} size={2.5} />
-                            <span className="text-[6px] font-bold text-[var(--dungeon-text-dim)] mt-0.5 truncate max-w-full px-0.5 leading-none text-center">
-                              {relic.name.length > 4 ? relic.name.slice(0, 4) : relic.name}
-                            </span>
-                            {relic.counter !== undefined && (
-                              <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none">
-                                {relic.counter}{relic.counterLabel || ''}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-                {/* [ARCH-4] 增强模块区已移除 — 统一到遗物 */}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <RelicPanelOverlay />
     </>
+  );
+}
+
+/**
+ * 遗物库浮层（仅浮层 + 刷光效果，不含收起按钮条）
+ * 由 setShowRelicPanel(true) 触发显示，结算演出时遗物 icon 自动随 flashingRelicIds 刷光。
+ * 拆出此组件让 BattleSceneView 可以单独使用浮层而不重复渲染收起按钮。
+ */
+export function RelicPanelOverlay() {
+  const {
+    game,
+    expectedOutcome,
+    flashingRelicIds,
+    setSelectedRelic,
+    showRelicPanel,
+    setShowRelicPanel,
+    settlementPhase,
+  } = useBattleContext();
+
+  // 结算演出期间（settlementPhase 非空）自动弹开时不渲染背景黑幕，避免遮挡演出区域
+  const isDuringSettlement = settlementPhase !== null && settlementPhase !== undefined;
+
+  return (
+    <AnimatePresence>
+      {showRelicPanel && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={`absolute inset-0 z-[150] ${isDuringSettlement ? 'pointer-events-none' : 'bg-black/50'}`}
+          onClick={() => !isDuringSettlement && setShowRelicPanel(false)}
+        >
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="absolute bottom-0 left-0 right-0 max-h-[55vh] pointer-events-auto"
+            style={{
+              background: 'linear-gradient(180deg, rgba(16,14,20,0.98) 0%, rgba(10,8,14,0.99) 100%)',
+              borderTop: '3px solid var(--pixel-gold)',
+              boxShadow: '0 -4px 24px rgba(0,0,0,0.6), 0 -1px 0 rgba(212,160,48,0.15)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 顶部栏 */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--dungeon-panel-border)]">
+              <span className="text-[11px] font-black text-[var(--pixel-gold)] tracking-wider pixel-text-shadow"
+                style={{ textShadow: '0 0 6px rgba(212,160,48,0.4)' }}>
+                遗物库 ({game.relics.length})
+              </span>
+              <button
+                onClick={() => setShowRelicPanel(false)}
+                className="text-[var(--dungeon-text-dim)] hover:text-[var(--dungeon-text)] px-1 py-0.5 transition-colors"
+              >
+                <PixelClose size={2} />
+              </button>
+            </div>
+            {/* 遗物网格 */}
+            <div className="overflow-y-auto p-3" style={{ maxHeight: 'calc(55vh - 40px)' }}>
+              {game.relics.length === 0 && (
+                <div className="flex items-center justify-center py-6 opacity-30">
+                  <span className="text-[10px] text-[var(--dungeon-text-dim)]">暂无遗物</span>
+                </div>
+              )}
+              {game.relics.length > 0 && (
+                <>
+                  <div className="text-[8px] text-[var(--dungeon-text-dim)] font-bold tracking-wider mb-1.5">遗物</div>
+                  <div className="grid grid-cols-6 gap-1.5 mb-3">
+                    {game.relics.map((relic, i) => {
+                      const isActive = expectedOutcome?.triggeredAugments?.some(ta => ta.relicId === relic.id) || false;
+                      const isFlashing = flashingRelicIds.includes(relic.id);
+                      return (
+                        <div
+                          key={relic.id + "-rp-" + i}
+                          className={`flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ${
+                            isActive
+                              ? "border-[var(--pixel-gold)] bg-gradient-to-b from-[rgba(212,160,48,0.2)] to-[rgba(180,120,30,0.08)]"
+                              : "bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] hover:border-[var(--dungeon-text-dim)]"
+                          }`}
+                          style={{
+                            borderRadius: '3px',
+                            padding: '4px 2px 3px',
+                            ...(isActive ? { boxShadow: '0 0 8px rgba(212,160,48,0.3)' } : {}),
+                            ...(isFlashing ? { boxShadow: '0 0 16px rgba(255,255,255,0.9), 0 0 30px rgba(212,160,48,0.8)', animation: 'relic-flash 0.6s ease-out' } : {}),
+                          }}
+                          onClick={() => setSelectedRelic(relic)}
+                        >
+                          <RelicPixelIcon relicId={relic.id} size={2.5} />
+                          <span className="text-[6px] font-bold text-[var(--dungeon-text-dim)] mt-0.5 truncate max-w-full px-0.5 leading-none text-center">
+                            {relic.name.length > 4 ? relic.name.slice(0, 4) : relic.name}
+                          </span>
+                          {relic.counter !== undefined && (
+                            <span className="text-[6px] font-mono font-bold text-[var(--pixel-orange-light)] leading-none">
+                              {relic.counter}{relic.counterLabel || ''}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

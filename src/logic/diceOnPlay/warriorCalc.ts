@@ -84,8 +84,10 @@ export function applyWarriorCalc(
     }
   }
   if (op.scaleWithSelfDamage) {
+    // bloodRerollCount * 2 ≈ 本回合嗜血重投导致自伤占maxHP的百分比
+    // 每损失maxHP的1%，最终伤害提升20%（Bug-15: 从2%上调至20%，与其他传奇骰子对齐）
     const selfDmgThisTurn = (game.bloodRerollCount || 0) * 2;
-    out.multiplier *= (1 + selfDmgThisTurn * 0.02);
+    out.multiplier *= (1 + selfDmgThisTurn * 0.20);
   }
   if (op.damageFromArmor) {
     out.extraDamage += Math.floor((game.armor + out.extraArmor) * op.damageFromArmor);

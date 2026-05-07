@@ -28,13 +28,17 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
     } = ctx;
 
     await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay)); // Wait for death animation to complete
-    // Use pre-computed finalEnemyHp (accurate: includes armor reduction, avoids stale closure)
+
+    // [Bug-23] 异步等待后检查战斗是否已结束（防止 handleVictory 被重复调用）
+    if (gameRef.current.phase !== 'battle') return;
+
+    // Bug-3: 死亡动画已在 enemyDeathCleanupDelay (2200ms) 等待期间完成
+    // 无需额外等待，直接检查存活敌人
     
-    // For single target, check if target died
+    // 单体攻击：检查目标是否死亡，若存活则无需波次检测
     if (!hasAoe) {
       const targetDied = finalEnemyHp <= 0;
       if (targetDied) {
-        await new Promise(r => setTimeout(r, 700));
         const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== targetUid);
         if (remainingAlive.length > 0) {
           setGame(prev => ({ ...prev, targetEnemyUid: (remainingAlive.find(e => e.combatType === 'guardian') || remainingAlive[0]).uid }));
@@ -42,17 +46,14 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
           return;
         }
       } else {
-        return; // Target alive, no wave check needed
+        return; // 目标存活，无需波次检测
       }
     }
     
-    // Check if all enemies in current wave are dead
-    // AOE: use enemies closure (1200ms later state should be updated)
-    // Single target: finalEnemyHp <= 0 confirmed above, anyAlive = false
+    // 全灭检测：AOE 用伤害快照判定，单体已确认目标死亡
     const anyAlive = hasAoe ? enemies.some(e => e.hp - outcome.damage > 0) : false;
     
     if (!anyAlive) {
-      await new Promise(r => setTimeout(r, 700));
       const nextWaveIdx = game.currentWaveIndex + 1;
       if (nextWaveIdx < game.battleWaves.length) {
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
@@ -69,6 +70,9 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
         // Bug-3 安全兜底：确认所有死亡动画已播完再替换敌人数组
         // 防止 framer-motion 退出过渡被强制中断导致"闪没"
         await new Promise(r => setTimeout(r, ANIMATION_TIMING.waveTransitionDeathBuffer));
+        // Bug-14: 先标记 isEnemyTurn=true 防止自动 endTurn 在 Boss 入场动画期间触发
+        // setEnemies(nextWave) 后 enemies 有存活敌人 + dice 全 spent + isEnemyTurn=false → 自动 endTurn
+        setGame(prev => ({ ...prev, isEnemyTurn: true }));
         setEnemies(nextWave);
         setEnemyEffects({}); setDyingEnemies(new Set());
         // Boss场景内演出：缩放前冲+抖动+笑声
@@ -98,7 +102,7 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
         // playsThisWave=0从新波次起算（仅instakill challenge内部使用）
         setGame(prev => {
           const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
-          return { ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: Math.max(prev.playsLeft, 1), freeRerollsLeft: Math.max(prev.freeRerollsLeft, 1), armor: 0, chargeStacks: isMageChanting ? prev.chargeStacks : 0, mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0, bloodRerollCount: 0, comboCount: prev.comboCount, lastPlayHandType: prev.lastPlayHandType, lockedElement: isMageChanting ? prev.lockedElement : undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1 };
+          return { ...prev, currentWaveIndex: nextWaveIdx, targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null, isEnemyTurn: false, playsLeft: Math.max(prev.playsLeft, 1), freeRerollsLeft: prev.freeRerollsLeft, armor: 0, chargeStacks: isMageChanting ? prev.chargeStacks : 0, mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0, bloodRerollCount: 0, comboCount: prev.comboCount, lastPlayHandType: prev.lastPlayHandType, lockedElement: isMageChanting ? prev.lockedElement : undefined, instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type), instakillCompleted: false, playsThisWave: 0, rerollsThisWave: 0, battleTurn: 1, boomerangFreeReroll: 0, comboFreeReroll: 0 };
         });
         setRerollCount(0);
         setWaveAnnouncement(nextWaveIdx + 1);
@@ -113,6 +117,9 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
         rollAllDice(!isMageChanting);
         return;
       }
+      // Bug-3: 胜利前清除死亡特效，避免 phase清空enemies useEffect 检测到 hasDyingEnemy
+      // 后再等一轮 2200ms（已播放完的死亡动画不需要重复等待）
+      setEnemyEffects({}); setDyingEnemies(new Set());
       handleVictory();
     }
   };

@@ -205,48 +205,6 @@ export const getDiceDef = (id: string): DiceDef => {
 };
 
 // ============================================================
-// 骰子升级体系
-// ============================================================
-
-export const getUpgradedFaces = (def: DiceDef, _level: number): number[] => {
-  // 升级不再改变点数面，而是强化骰子的特殊效果
-  return def.faces;
-};
-
-export const getDiceLevelScale = (level: number): number => {
-  return 1 + (level - 1) * 0.5;
-};
-
-
-/** 获取升级后的onPlay效果（强化特殊效果，而非点数） */
-export const getUpgradedOnPlay = (def: DiceDef, level: number): DiceDef['onPlay'] => {
-  if (level <= 1) return def.onPlay;
-  const bonus = level - 1; // Lv2 = +1, Lv3 = +2
-  
-  if (!def.onPlay) {
-    // 无特殊效果的骰子：升级后获得额外伤害
-    // 普通骰子 Lv2=+3, Lv3=+6; 灌铅 Lv2=+4, Lv3=+8
-    const baseBonusDmg = def.id === 'heavy' ? 4 : def.id === 'elemental' ? 3 : 3;
-    return { bonusDamage: bonus * baseBonusDmg };
-  }
-  
-  const op = { ...def.onPlay };
-  // 锋刃骰子: Lv1=5, Lv2=8, Lv3=11（每级+3）
-  if (op.bonusDamage) op.bonusDamage = op.bonusDamage + bonus * 3;
-  // 倍增骰子: Lv1=1.2, Lv2=1.35, Lv3=1.5（每级+0.15）
-  if (op.bonusMult) op.bonusMult = Number((op.bonusMult + bonus * 0.15).toFixed(2));
-  if (op.selfDamage) op.selfDamage = Math.max(1, op.selfDamage - bonus); // 减少副作用
-  return op;
-};
-
-/** 获取升级后的元素效果倍率 */
-export const getElementLevelBonus = (level: number): number => {
-  return 1 + (level - 1) * 0.5; // Lv1=1x, Lv2=1.5x, Lv3=2x
-};
-
-export const DICE_MAX_LEVEL = 3;
-
-// ============================================================
 // 骰子构筑奖励池 — 加权随机，所有骰子都有机会
 // ============================================================
 

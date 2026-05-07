@@ -49,7 +49,7 @@ export const VictoryScreen: React.FC = () => {
   // 特殊骰子统计
   const specialDice = game.ownedDice
     .filter(d => d.defId !== 'standard')
-    .map(d => ({ name: getDiceDef(d.defId).name, level: d.level }));
+    .map(d => ({ name: getDiceDef(d.defId).name }));
 
   return (
     <div className="flex flex-col h-[100dvh] w-full max-w-md mx-auto bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] relative overflow-hidden sm:border-x-3 border-[var(--dungeon-panel-border)] scanlines">
@@ -153,7 +153,7 @@ export const VictoryScreen: React.FC = () => {
               {specialDice.map((d, i) => (
                 <span key={i} className="text-[9px] px-1.5 py-0.5 bg-[rgba(255,255,255,0.05)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)] font-bold"
                   style={{ borderRadius: '2px' }}>
-                  {d.name}{d.level > 1 ? ` Lv.${d.level}` : ''}
+                  {d.name}
                 </span>
               ))}
             </div>

@@ -9,6 +9,7 @@
 
 import type { Enemy, GameState, LootItem, Relic } from '../types/game';
 import { getRelicRewardPool, pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
+import type { ClassId } from '../data/classes';
 import { DICE_BY_RARITY } from '../data/dice';
 import { LOOT_CONFIG, CHAPTER_CONFIG } from '../config';
 
@@ -33,15 +34,16 @@ export function buildLootItems(params: {
     { id: 'gold', type: 'gold', value: baseGold, collected: false }
   ];
 
-  // Boss rewards: +1 draw count (手牌上限+1)
+  // Boss rewards: +1 draw count (手牌上限+1) — 仅终层Boss，中层Boss不给
   const victoryNode = game.map.find(n => n.id === game.currentNodeId);
-  if (victoryNode?.type === 'boss') {
+  const mapMaxDepth = Math.max(...game.map.map(n => n.depth));
+  const isFinalBoss = victoryNode?.type === 'boss' && victoryNode.depth >= mapMaxDepth;
+  if (isFinalBoss) {
     loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
   }
 
   // Elite rewards: +1 Dice, +2 Global Rerolls, or +1 Free Reroll per turn
   // 中Boss(非终Boss)也走骰子奖励，不随机给重roll
-  const mapMaxDepth = Math.max(...game.map.map(n => n.depth));
   const isMidBoss = victoryNode?.type === 'boss' && victoryNode.depth < mapMaxDepth;
   if (isMidBoss) {
     // 中Boss必给+1骰子（额外的，在diceReward阶段选新骰子之外再加一颗手牌）
@@ -67,7 +69,7 @@ export function buildLootItems(params: {
                      allWaveEnemies.some(e => e.rerollReward) ? 'elite' : 'enemy';
   const relicDropChance = battleType === 'enemy' ? 0 : 1.0;
   if (Math.random() < relicDropChance) {
-    const relicPool = getRelicRewardPool(battleType as 'elite' | 'boss');
+    const relicPool = getRelicRewardPool(battleType as 'elite' | 'boss', game.playerClass as ClassId | undefined);
     const ownedRelicIds = game.relics.map(r => r.id);
     const newRelics = pickRandomRelics(relicPool, 1, ownedRelicIds);
     if (newRelics.length > 0) {

@@ -138,6 +138,7 @@ export const bloodForgeArmor: Relic = {
   icon: 'blade',
   rarity: 'uncommon',
   trigger: 'on_reroll',
+  classRestriction: 'warrior',
   effect: (ctx) => ({ armor: ctx.isBloodReroll ? 8 : 0 }),
 };
 
@@ -149,6 +150,7 @@ export const undyingSpirit: Relic = {
   icon: 'grail',
   rarity: 'rare',
   trigger: 'on_play',
+  classRestriction: 'warrior',
   effect: (ctx) => ({
     damage: (ctx.currentHp || 100) <= (ctx.maxHp || 100) * 0.5 ? 8 : 0,
     armor: (ctx.currentHp || 100) <= (ctx.maxHp || 100) * 0.5 ? 5 : 0,
@@ -163,6 +165,7 @@ export const chargeCore: Relic = {
   icon: 'crystal',
   rarity: 'uncommon',
   trigger: 'on_turn_end',
+  classRestriction: 'mage',
   effect: (ctx) => ({
     armor: ctx.didNotPlay ? 4 : 0,
     heal: ctx.didNotPlay ? 3 : 0,
@@ -177,6 +180,7 @@ export const overflowMana: Relic = {
   icon: 'prism',
   rarity: 'rare',
   trigger: 'on_play',
+  classRestriction: 'mage',
   effect: (ctx) => ({
     multiplier: (ctx.handSize || 0) >= 5 ? 1.25 : 1,
   }),
@@ -190,6 +194,7 @@ export const comboLeech: Relic = {
   icon: 'fangs',
   rarity: 'uncommon',
   trigger: 'on_play',
+  classRestriction: 'rogue',
   effect: (ctx) => ({
     heal: (ctx.isComboPlay && ctx.handType !== '普通攻击') ? 6 : 0,
   }),
@@ -203,12 +208,13 @@ export const venomCrystal: Relic = {
   icon: 'prism',
   rarity: 'rare',
   trigger: 'on_play',
+  classRestriction: 'rogue',
   effect: (ctx) => ({
     damage: (ctx.targetPoisonStacks || 0) >= 8 ? 15 : 0,
   }),
 };
 
-/** 通用：魔法手套 - 打出对子时，下回合临时+1手牌（需1回合CD，对子才触发） */
+/** 通用：魔法手套 - 打出对子时，下回合临时+1手牌（触发后需1次出牌冷却） */
 export const extraHandSlot: Relic = {
   id: 'extra_hand_slot',
   name: '魔法手套',
@@ -216,10 +222,10 @@ export const extraHandSlot: Relic = {
   icon: 'hand',
   rarity: 'rare',
   trigger: 'on_play',
-  maxCounter: 2,
+  counter: 0,           // 冷却标记：0=可触发，1=冷却中
   counterLabel: 'CD',
   effect: (ctx) => ({
-    // 每2次出牌触发1次，且只有对子才给tempDrawBonus
+    // 仅预览显示用，实际触发逻辑在 postPlayEffects.ts 中
     tempDrawBonus: ctx.handType === '对子' ? 1 : 0,
   }),
 };

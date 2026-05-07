@@ -81,7 +81,7 @@ export interface DiceDef {
     splashToRandom?: boolean;    // 对场上随机另一敌人造成同等点数伤害
     aoeDamagePercent?: number;   // 对全体敌人造成点数×比例的AOE伤害（旋风斩）
     splinterDamage?: number;     // 溢出伤害×比例传导给随机其他敌人
-    comboSplashDamage?: boolean;  // 连锁打击：第2次及以上连击时对随机另一敌人造成本骰子点数独立伤害
+    comboSplashDamage?: number;   // 连锁打击：第2次及以上连击时对随机另一敌人造成骰子点数×倍率的独立伤害
     triggerAllElements?: boolean; // 触发全部元素
     // 盗贼特殊
     comboBonus?: number;         // 连击倍率加成

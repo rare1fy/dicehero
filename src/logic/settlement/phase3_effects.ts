@@ -12,7 +12,7 @@
  * [!] outcome.damage 在"盗贼连击终结倍率"处被 mutate，为原文件 L442 的已有行为，忠实迁移
  */
 
-import { getDiceDef, getUpgradedOnPlay } from '../../data/dice';
+import { getDiceDef } from '../../data/dice';
 import { STATUS_INFO } from '../../data/statusInfo';
 import { FURY_CONFIG } from '../../config/gameBalance';
 import type { SettlementContext } from './types';
@@ -39,8 +39,7 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
   selected.forEach(d => {
     const def = getDiceDef(d.diceDefId);
     if (skipOnPlaySettlement || !def.onPlay) return;
-    const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
-    const op = getUpgradedOnPlay(def, diceLevel) || def.onPlay;
+    const op = def.onPlay;
     if (op.bonusDamage) allEffects.push({ name: def.name, rawValue: op.bonusDamage, detail: `伤害+${op.bonusDamage}`, type: 'damage' });
     if (op.bonusMult) allEffects.push({ name: def.name, rawMult: op.bonusMult, detail: `倍率+${Math.round((op.bonusMult - 1) * 100)}%`, type: 'mult' });
     if (op.scaleWithHits) {
@@ -109,10 +108,14 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
     if (op.transferDebuff) allEffects.push({ name: def.name, detail: '转移负面→敌人', type: 'status' });
     if (op.detonateAllOnLastPlay) allEffects.push({ name: def.name, detail: '引爆全部负面', type: 'damage' });
     if (op.bounceAndGrow) allEffects.push({ name: def.name, detail: '弹回+点数+1', type: 'status' });
-    if (op.boomerangPlay) allEffects.push({ name: def.name, detail: '弹回+下次免费', type: 'status' });
+    if (op.boomerangPlay) allEffects.push({ name: def.name, detail: '弹回+免费重投', type: 'status' });
     if (op.lowHpOverrideValue && op.lowHpThreshold && game.hp / game.maxHp < op.lowHpThreshold) allEffects.push({ name: def.name, detail: `低血→点数${op.lowHpOverrideValue}`, type: 'damage' });
     if (op.scaleWithBloodRerolls && game.bloodRerollCount) allEffects.push({ name: def.name, detail: `搏命+${Math.min(game.bloodRerollCount, 3)}面值`, type: 'damage' });
-    if (op.scaleWithSelfDamage) allEffects.push({ name: def.name, detail: '自伤→伤害加成', type: 'mult' });
+    if (op.scaleWithSelfDamage) {
+      const selfDmgPercent = (game.bloodRerollCount || 0) * 2;
+      const bonusPercent = Math.round(selfDmgPercent * 20);
+      allEffects.push({ name: def.name, detail: `自伤→+${bonusPercent}%伤害`, type: 'mult' });
+    }
     if (op.tauntAll) allEffects.push({ name: def.name, detail: '嘲讽全体敌人', type: 'status' });
     if (op.freezeBonus) allEffects.push({ name: def.name, detail: `冻结+${op.freezeBonus}回合`, type: 'status' });
     if (op.swapWithUnselected) allEffects.push({ name: def.name, detail: '交换最高点数', type: 'damage' });

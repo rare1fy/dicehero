@@ -2,12 +2,19 @@
  * rogueComboEffects.ts — 影锋刺客连击效果处理
  *
  * ARCH-I: 从 useBattleCombat.tsx playHand 中提取的影锋刺客职业专属连击逻辑。
- * 包含连击预备（减重投次数）和连击终击（伤害加成提示）。
+ * 包含连击预备（增加免费重投次数）和连击终击（伤害加成提示）。
+ *
+ * Bug-19 修复：连击预备从 "rerollCount -= 1"（减法，仅退回已用重投）改为
+ * "comboFreeReroll += 1"（加法，无条件给+1免费重投），确保第二次出牌前
+ * 总是获得1次额外免费重投，与"重掷骰子应算回合内"的设计意图一致。
  */
+
+import type React from 'react';
+import type { GameState } from '../types/game';
 
 /** 连击效果回调集合 */
 export interface RogueComboCallbacks {
-  setRerollCount: (fn: (prev: number) => number) => void;
+  setGame: React.Dispatch<React.SetStateAction<GameState>>;
   addFloatingText: (text: string, className: string, icon: unknown, target: string) => void;
 }
 
@@ -15,7 +22,15 @@ export interface RogueComboCallbacks {
  * 处理影锋刺客连击预备效果（连击第0击）
  *
  * 条件：影锋刺客 + 当前连击数为0
- * 效果：200ms 后重投次数 -1 + 浮动文字提示
+ * 效果：同步 comboFreeReroll +1 + 浮动文字提示
+ *
+ * 修复说明（Bug-19）：
+ * - 旧逻辑：setTimeout 200ms 后 rerollCount -= 1（仅退回已用重投，且 setTimeout 引入竞态）
+ * - 新逻辑：同步 comboFreeReroll += 1（无条件增加1次免费重投，纳入 effectiveFreeRerollsPerTurn）
+ * - 设计意图：第一次出牌应作为"连击预备"为第二次出牌提供免费重投机会，
+ *   不应因第一次出牌前未使用重投而浪费这个加成
+ * - 移除 setTimeout：函数式更新 prev => ({ ...prev, comboFreeReroll: ... }) 是原子的，
+ *   不需要延迟等待其他 state 更新；浮动文字用 200ms setTimeout 延迟显示以避免与出牌动画冲突
  */
 export function handleRogueComboPrep(
   playerClass: string,
@@ -23,8 +38,8 @@ export function handleRogueComboPrep(
   cb: RogueComboCallbacks,
 ): void {
   if (playerClass === 'rogue' && currentCombo === 0) {
+    cb.setGame(prev => ({ ...prev, comboFreeReroll: (prev.comboFreeReroll || 0) + 1 }));
     setTimeout(() => {
-      cb.setRerollCount(prev => Math.max(0, prev - 1));
       cb.addFloatingText('连击预备: +1免费重投', 'text-cyan-300', undefined, 'player');
     }, 200);
   }

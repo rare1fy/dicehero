@@ -128,6 +128,7 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     // Read latest game state from ref (setTimeout ensures prior setGame calls are flushed)
     const g = gameRef.current;
     setRerollCount(0);
+    setGame(prev => ({ ...prev, boomerangFreeReroll: 0, comboFreeReroll: 0 }));
     // 计算抽牌数：法师按蓄力上限（硬顶6），战士可能+1
     const chargeBonus = g.playerClass === 'mage' ? (g.chargeStacks || 0) : 0;
     const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
@@ -262,12 +263,12 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
         setDice(pd => pd.map(d => d.rolling ? { ...d, value: rollDiceDef(getDiceDef(d.diceDefId)) } : d));
         if (f === 3) playSound('reroll');
       }
-      setDice(pd => pd.map(d => ({ ...d, rolling: false, kept: false })));
-      // 元素骰子坍缩 + 小丑骰子1-9随机
-      setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: hasLimitBreaker(game.relics) , lockedElement: game.lockedElement }));
+      // 合并为一次 setDice：rolling=false + kept=false + 元素坍缩/小丑随机同步应用，避免中间帧闪烁
+      setDice(pd => {
+        const settled = pd.map(d => ({ ...d, rolling: false, kept: false }));
+        return applyDiceSpecialEffects(settled, { hasLimitBreaker: hasLimitBreaker(game.relics) , lockedElement: game.lockedElement });
+      });
       playSound('dice_lock');
-      await new Promise(r => setTimeout(r, 200));
-      setDice(prev => [...prev]);
     };
     doRoll();
   }, 100);

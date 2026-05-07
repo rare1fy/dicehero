@@ -6,7 +6,8 @@
  */
 
 import type { Relic, ShopItem } from '../types/game';
-import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
+import { pickRandomRelics, RELICS_BY_RARITY, filterRelicsByClass } from '../data/relics';
+import type { ClassId } from '../data/classes';
 import { DICE_BY_RARITY } from '../data/dice';
 import { SHOP_CONFIG } from '../config/gameBalance';
 
@@ -17,18 +18,23 @@ import { SHOP_CONFIG } from '../config/gameBalance';
  * - 始终添加"骰子净化"选项
  *
  * @param ownedRelicIds 已拥有的遗物ID列表（用于排除）
+ * @param playerClass 当前职业（用于遗物职业筛选：通用遗物+匹配职业遗物）
  * @returns 商店商品数组
  */
-export function generateShopItems(ownedRelicIds: string[]): ShopItem[] {
+export function generateShopItems(ownedRelicIds: string[], playerClass?: ClassId): ShopItem[] {
   const [minPrice, maxPrice] = SHOP_CONFIG.priceRange;
   const randPrice = () => Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
 
   // 构建候选商品池
   const candidateItems: ShopItem[] = [];
 
-  // 候选：遗物
-  const shuffledRelics = pickRandomRelics(
+  // 候选：遗物（职业筛选：通用遗物 + 匹配当前职业的遗物）
+  const relicPool = filterRelicsByClass(
     [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare],
+    playerClass,
+  );
+  const shuffledRelics = pickRandomRelics(
+    relicPool,
     3,
     ownedRelicIds,
   );

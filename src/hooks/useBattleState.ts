@@ -43,6 +43,8 @@ export function useBattleState() {
 
   // ==================== 敌人状态 ====================
   const [enemies, setEnemies] = useState<Enemy[]>([]);
+  const enemiesRef = useRef(enemies);
+  enemiesRef.current = enemies;
   const [rerollCount, setRerollCount] = useState(0);
   const targetEnemyUid = game.targetEnemyUid;
   const targetEnemy = (() => {
@@ -233,6 +235,7 @@ export function useBattleState() {
     // Refs
     gameRef,
     playsPerEnemyRef,
+    enemiesRef,
 
     // 选牌 UI
     selectedHandTypeInfo, setSelectedHandTypeInfo,

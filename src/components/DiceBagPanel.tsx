@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getDiceDef, getUpgradedFaces } from '../data/dice';
+import { getDiceDef } from '../data/dice';
 import { RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { PixelDice, PixelClose } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
@@ -132,7 +132,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                           {isTooltipActive && (
                             <div className="w-full mt-1 p-1.5 rounded-sm text-[8px] leading-snug text-center"
                               style={{ background: 'rgba(0,0,0,0.6)', border: `1px solid ${RARITY_COLORS[def.rarity]}40` }}>
-                              <div className="text-[var(--dungeon-text-dim)] mb-0.5">[{getUpgradedFaces(def, 1).join(',')}]</div>
+                              <div className="text-[var(--dungeon-text-dim)] mb-0.5">[{def.faces.join(',')}]</div>
                               <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
                             </div>
                           )}

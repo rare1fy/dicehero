@@ -19,8 +19,6 @@ export const SHOP_CONFIG = {
 export const CAMPFIRE_CONFIG = {
   /** 休息恢复量 */
   restHeal: 40,
-  /** 模块强化费用系数: cost = level * costPerLevel */
-  upgradeCostPerLevel: 20,
   /** 模块最大等级 */
   maxRelicLevel: 5,
 } as const;

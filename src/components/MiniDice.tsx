@@ -10,7 +10,6 @@ import { DiceFacePattern } from './DiceFacePattern';
 import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
 import { PixelDice } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
-import { getUpgradedFaces } from '../data/dice';
 
 /** 骰子defId -> 缩略图主色 (与手牌CSS一致) */
 const DICE_MINI_COLORS: Record<string, { bg: string; border: string; dot: string }> = {

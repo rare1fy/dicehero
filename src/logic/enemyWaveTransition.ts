@@ -50,7 +50,7 @@ export function tryWaveTransition(
       targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
       isEnemyTurn: false,
       playsLeft: Math.max(prev.playsLeft, 1),
-      freeRerollsLeft: Math.max(prev.freeRerollsLeft, 1),
+      freeRerollsLeft: prev.freeRerollsLeft,
       armor: 0,
       chargeStacks: isMageChanting ? prev.chargeStacks : 0,
       mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
@@ -63,6 +63,8 @@ export function tryWaveTransition(
       playsThisWave: 0,
       rerollsThisWave: 0,
       battleTurn: 1,
+      boomerangFreeReroll: 0,
+      comboFreeReroll: 0,
     };
   });
   cb.setRerollCount(0);

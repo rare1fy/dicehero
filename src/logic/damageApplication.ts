@@ -167,6 +167,18 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       }
       return { ...e, hp: newHp, armor: arm, statuses: newStatuses };
     }));
+    // shadowClonePlay: 影分身 — AOE路径下对原目标追加50%伤害
+    const hasShadowCloneAoe = selected.some(d => getDiceDef(d.diceDefId).onPlay?.shadowClonePlay);
+    if (hasShadowCloneAoe && outcome.damage > 0) {
+      const cloneDmg = Math.floor(outcome.damage * 0.5);
+      if (cloneDmg > 0) {
+        setEnemies(prev => prev.map(e => {
+          if (e.uid !== targetUid || e.hp <= 0) return e;
+          const afterArmor = Math.max(0, cloneDmg - e.armor);
+          return { ...e, hp: Math.max(0, e.hp - afterArmor), armor: Math.max(0, e.armor - cloneDmg) };
+        }));
+      }
+    }
   } else {
     // Single target
     let remainingDamage = outcome.damage;
@@ -181,6 +193,22 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       remainingDamage -= absorbed;
     }
     finalEnemyHp = targetEnemy.hp - remainingDamage; // 保留负值用于overkill计算
+
+    // shadowClonePlay: 影分身 — 追加50%伤害的额外攻击（同步应用，使 checkEnemyDeaths 正确检测击杀）
+    const hasShadowClone = selected.some(d => getDiceDef(d.diceDefId).onPlay?.shadowClonePlay);
+    if (hasShadowClone && outcome.damage > 0) {
+      const cloneDmg = Math.floor(outcome.damage * 0.5);
+      if (cloneDmg > 0) {
+        let cloneRemainingDmg = cloneDmg;
+        if (!outcome.armorBreak && enemyArmor > 0) {
+          const cloneAbsorbed = Math.min(enemyArmor, cloneRemainingDmg);
+          enemyArmor -= cloneAbsorbed;
+          cloneRemainingDmg -= cloneAbsorbed;
+        }
+        finalEnemyHp -= cloneRemainingDmg;
+      }
+    }
+
     // Player attack hit feedback
     setScreenShake(true);
     setTimeout(() => setScreenShake(false), 200);
@@ -266,10 +294,11 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       }
     }
   }
-  // comboSplashDamage: 连锁打击 — 第2次及以上连击时，对随机另一敌人造成本骰子点数独立伤害
+  // comboSplashDamage: 连锁打击 — 第2次及以上连击时，对随机另一敌人造成骰子点数×倍率的独立伤害
   const comboSplashDie = selected.find(d => getDiceDef(d.diceDefId).onPlay?.comboSplashDamage);
   if (comboSplashDie && (game.comboCount || 0) >= 1) {
-    const splashDmg = comboSplashDie.value;
+    const splashMult = getDiceDef(comboSplashDie.diceDefId).onPlay?.comboSplashDamage || 1;
+    const splashDmg = comboSplashDie.value * splashMult;
     const otherAlive = enemies.filter(e => e.uid !== targetUid && e.hp > 0);
     if (otherAlive.length > 0) {
       const splashTarget = otherAlive[Math.floor(Math.random() * otherAlive.length)];

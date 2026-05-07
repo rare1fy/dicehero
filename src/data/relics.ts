@@ -9,6 +9,7 @@
  */
 
 import type { Relic } from '../types/game';
+import type { ClassId } from './classes';
 
 // 体系一~三：基础打工 / 倍率起飞 / 经济续航
 import {
@@ -201,17 +202,29 @@ export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush, universalPair, doubleStrike, extraFreeReroll],
 };
 
+/** 过滤遗物池：通用遗物 + 匹配当前职业的职业遗物 */
+export const filterRelicsByClass = (relics: Relic[], playerClass?: string): Relic[] => {
+  if (!playerClass) return relics;
+  return relics.filter(r => !r.classRestriction || r.classRestriction === playerClass);
+};
+
 /** 获取遗物奖励池 */
-export const getRelicRewardPool = (source: 'elite' | 'boss' | 'treasure' | 'merchant' | 'event'): Relic[] => {
+export const getRelicRewardPool = (source: 'elite' | 'boss' | 'treasure' | 'merchant' | 'event', playerClass?: ClassId): Relic[] => {
+  let pool: Relic[];
   switch (source) {
     case 'elite':
     case 'treasure':
     case 'merchant':
     case 'event':
-      return [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+      pool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+      break;
     case 'boss':
-      return [...RELICS_BY_RARITY.rare, ...RELICS_BY_RARITY.legendary];
+      pool = [...RELICS_BY_RARITY.rare, ...RELICS_BY_RARITY.legendary];
+      break;
   }
+  // merchant/event 来源不过滤职业（游荡商人可出售其他职业遗物）
+  if (source === 'merchant' || source === 'event') return pool;
+  return filterRelicsByClass(pool, playerClass);
 };
 
 /** 随机抽取N个不重复遗物 */

@@ -80,5 +80,7 @@ export function createInitialGameState(classId?: ClassId): GameState {
     instakillCompleted: false,
     playsThisWave: 0,
     rerollsThisWave: 0,
+    boomerangFreeReroll: 0,
+    comboFreeReroll: 0,
   };
 }

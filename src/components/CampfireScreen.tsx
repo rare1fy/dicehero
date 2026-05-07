@@ -1,33 +1,26 @@
-﻿/**
+/**
  * CampfireScreen.tsx — 篝火营地主视图（ARCH-G 拆分后）
  *
- * 仅保留主视图 + 子视图路由，升级/净化逻辑已提取为独立组件。
+ * 仅保留主视图 + 子视图路由，净化逻辑已提取为独立组件。
+ * Bug-6: 强化骰子模块已删除（页面样式过时+效果全炸）。
  */
 
 import React, { useState } from 'react';
-import { MiniDice } from './MiniDice';
 import { useGameContext } from '../contexts/GameContext';
-import { getDiceDef, DICE_MAX_LEVEL } from '../data/dice';
 import { playSound } from '../utils/sound';
-import { PixelCampfire, PixelHeart, PixelDice, PixelFlame, PixelSoulCrystal } from './PixelIcons';
+import { PixelCampfire, PixelHeart, PixelFlame, PixelSoulCrystal } from './PixelIcons';
 import { CAMPFIRE_CONFIG } from '../config';
-import { CampfireUpgradeView } from './CampfireUpgradeView';
 import { CampfirePurifyView } from './CampfirePurifyView';
 
-type ViewMode = 'main' | 'upgrade' | 'purify';
+type ViewMode = 'main' | 'purify';
 
 export const CampfireScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
   const [viewMode, setViewMode] = useState<ViewMode>('main');
-  const [selectedDiceIdx, setSelectedDiceIdx] = useState<number | null>(null);
   const [campfireUsed, setCampfireUsed] = useState(false);
 
   if (viewMode === 'purify') {
     return <CampfirePurifyView onBack={() => setViewMode('main')} onUsed={() => setCampfireUsed(true)} />;
-  }
-
-  if (viewMode === 'upgrade') {
-    return <CampfireUpgradeView onBack={() => setViewMode('main')} onUsed={() => setCampfireUsed(true)} />;
   }
 
   return (
@@ -40,7 +33,7 @@ export const CampfireScreen: React.FC = () => {
         <p className="text-[8px] mb-6 px-4 text-center leading-relaxed">
           <span className="text-[var(--pixel-orange)] font-bold">※ 营地只能选择一项行动 ※</span>
           <br />
-          <span className="text-[var(--dungeon-text-dim)]">休整、强化、净化、撤离</span>
+          <span className="text-[var(--dungeon-text-dim)]">休整、净化、撤离</span>
           <span className="text-[var(--pixel-red)] font-bold"> 只能执行其中一项</span>
           <span className="text-[var(--dungeon-text-dim)]">，选择后立即离开营地。</span>
         </p>
@@ -63,20 +56,6 @@ export const CampfireScreen: React.FC = () => {
               <div className="text-[9px] text-[var(--dungeon-text-dim)]">回复 {CAMPFIRE_CONFIG.restHeal} 点生命值</div>
             </div>
             <PixelHeart size={4} />
-          </button>
-
-          {/* 强化骰子 */}
-          <button
-            disabled={campfireUsed}
-            onClick={() => setViewMode('upgrade')}
-            className={`w-full p-4 pixel-panel flex items-center justify-between transition-all group ${campfireUsed ? 'opacity-40 cursor-not-allowed' : ''}`}
-            style={{ borderColor: 'var(--pixel-cyan)' }}
-          >
-            <div className="text-left">
-              <div className="text-base font-bold text-[var(--pixel-cyan)] pixel-text-shadow">强化骰子</div>
-              <div className="text-[9px] text-[var(--dungeon-text-dim)]">消耗金币升级骰子，提升点数和效果</div>
-            </div>
-            {selectedDiceIdx !== null ? <MiniDice defId={game.ownedDice[selectedDiceIdx]?.defId || "standard"} size={32} /> : <PixelDice size={4} />}
           </button>
 
           {/* 净化骰子 */}

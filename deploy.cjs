@@ -1,5 +1,5 @@
 /**
- * Dice Hero 部署脚本 v5.1
+ * Dice Hero 部署脚本 v6.0
  *
  * 用法: node deploy.cjs
  *
@@ -8,7 +8,8 @@
  *   [E2] 行数硬闸       -> 扫描 src 下 ts/tsx, 单文件 <= 600 行
  *   [1]  Vite 构建      -> 单文件 bundle
  *   [2]  资源内联       -> 字体/音频/移动端优化
- *   [3]  推送到 master  -> GitHub Pages 从 master 根目录读取
+ *   [3]  输出到 docs/   -> GitHub Pages 从 master /docs 读取
+ *   [4]  推送 master    -> 根目录 index.html 保持开发版, dev/prod 互不干扰
  *
  * 规则来源: C:\\Users\\slimboiliu\\.agent\\context\\RULES.md 铁律 E
  * 禁用 emoji, 统一使用 [PASS]/[WARN]/[ERROR]
@@ -104,12 +105,21 @@ function pushToPages() {
     }).trim();
     if (!originUrl) throw new Error('未找到 remote.origin');
 
+    // docs/ 子目录方案：产物放 docs/index.html
+    // GitHub Pages 源需设为 master /docs（互不污染根目录 index.html dev 版）
+    const docsDir = path.join(__dirname, 'docs');
+    if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
+
+    // 1) 产物：dicehero-mobile.html → docs/index.html
     fs.copyFileSync(
       path.join(__dirname, 'dicehero-mobile.html'),
-      path.join(__dirname, 'index.html')
+      path.join(docsDir, 'index.html')
     );
+    // 2) .nojekyll：防止 GitHub Pages 把 docs/_xxx 当 Jekyll 下划线路径忽略
+    fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
 
-    execSync('git add index.html -f', { cwd: __dirname });
+    // 一次性提交所有改动（源码 + 产物）
+    execSync('git add -A', { cwd: __dirname });
     try {
       execSync('git commit -m "部署: 自动更新 [skip ci]"', { cwd: __dirname });
     } catch (_) {

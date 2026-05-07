@@ -172,7 +172,7 @@ const WARRIOR_DICE: DiceDef[] = [
 
   // === Legendary (2) ===
   { id: 'w_bloodgod', name: '血神之眼', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
-    description: '本回合每损失最大HP的1%，最终伤害提升2%', onPlay: { scaleWithSelfDamage: true } },
+    description: '本回合每损失最大HP的1%，最终伤害提升20%', onPlay: { scaleWithSelfDamage: true } },
   { id: 'w_overlord', name: '霸体铠甲', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
     description: '出牌时获得20点护甲，最终伤害按当前护甲总量的20%提升', onPlay: { armor: 20, damageFromArmor: 0.2 } },
 ];
@@ -258,11 +258,11 @@ const ROGUE_DICE: DiceDef[] = [
   { id: 'r_shadow_clone', name: '影分身', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'uncommon',
     description: '出牌结算后，自动追加一次额外攻击，伤害为本次的50%', onPlay: { shadowClonePlay: true } },
   { id: 'r_boomerang', name: '回旋刃', element: 'normal', faces: [2,3,3,4,4,5], rarity: 'uncommon',
-    description: '首次出牌后弹回手牌，下次使用不消耗出牌次数', onPlay: { boomerangPlay: true } },
+    description: '首次出牌后弹回手牌，获得一次免费重投', onPlay: { boomerangPlay: true } },
   { id: 'r_corrosion', name: '蚀骨毒液', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'uncommon',
     description: '对目标追加固定伤害，数值为目标身上毒层数的2倍；连击时引爆目标25%毒层为即时伤害', onPlay: { poisonScaleDamage: 2, comboDetonatePoison: 0.25 } },
   { id: 'r_chain_strike', name: '连锁打击', element: 'normal', faces: [2,2,3,3,4,4], rarity: 'uncommon',
-    description: '作为连击出牌时，对随机另一个敌人造成等于本骰子点数的独立伤害', onPlay: { comboSplashDamage: true } },
+    description: '作为连击出牌时，对随机另一个敌人造成本骰子点数2倍的独立伤害', onPlay: { comboSplashDamage: 2 } },
   { id: 'r_shadowstrike', name: '剔骨', element: 'normal', faces: [3,3,4,4,5,5], rarity: 'uncommon',
     description: '连击次数越多伤害越高：每层连击使本次伤害+100%', onPlay: { comboScaleDamage: 2.0 } },
 

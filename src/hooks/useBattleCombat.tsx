@@ -42,7 +42,7 @@ export function useBattleCombat(
     enemies, setEnemies,
     rerollCount, setRerollCount,
     targetEnemyUid, targetEnemy,
-    gameRef, playsPerEnemyRef,
+    gameRef, playsPerEnemyRef, enemiesRef,
     setShuffleAnimating, setDiceDrawAnim,
     setEnemyEffectForUid,
     setEnemyEffects, setDyingEnemies,
@@ -151,8 +151,12 @@ export function useBattleCombat(
     const selected = dice.filter(d => d.selected && !d.spent);
     if (selected.length === 0) { addToast('请先选择骰子'); return; }
     if (enemies.length === 0 || !targetEnemy) return;
+    // [Bug-23] 检查目标敌人是否存活——战斗结束后盗贼补出牌次数不应允许对已死敌人出牌
+    if (targetEnemy.hp <= 0) return;
     if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
     if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
+    // [Bug-23] 检查是否还有存活的敌人——所有敌人已死时不再允许出牌
+    if (!enemies.some(e => e.hp > 0)) return;
 
     const targetUidForTracking = targetEnemy.uid;
     const playsBefore = playsPerEnemyRef.current[targetUidForTracking] || 0;
@@ -171,7 +175,7 @@ export function useBattleCombat(
       lastPlayHandType: thisHandType,
     }));
 
-    handleRogueComboPrep(game.playerClass, currentCombo, { setRerollCount, addFloatingText });
+    handleRogueComboPrep(game.playerClass, currentCombo, { setGame, addFloatingText });
     handleRogueComboHit(game.playerClass, currentCombo, thisHandType, addFloatingText);
 
     const outcome = expectedOutcome;
@@ -255,10 +259,10 @@ export function useBattleCombat(
       setScreenShake, setPlayerEffect: setPlayerEffect as React.Dispatch<React.SetStateAction<string | null>>, showEnemyQuote, getEnemyQuotes, pickQuote,
       setRerollCount, setWaveAnnouncement, setDice, rollAllDice,
       buildRelicContext, hasFatalProtection, triggerHourglass,
-      handleVictory: victory.handleVictory, gameRef,
+      handleVictory: victory.handleVictory, gameRef, enemiesRef,
     });
-    const enemyTurnHp = await executeEnemyTurn(game, enemies, dice, rerollCount, enemyAICb);
-    let currentPlayerHp = enemyTurnHp;
+    const enemyTurnResult = await executeEnemyTurn(game, enemies, dice, rerollCount, enemyAICb);
+    let currentPlayerHp = enemyTurnResult.hp;
 
     await new Promise(r => setTimeout(r, 100));
 
@@ -279,6 +283,12 @@ export function useBattleCombat(
       return;
     }
 
+    // Bug-21: DOT 击杀触发波次转换时，tryWaveTransition 已设置好状态
+    // （isEnemyTurn=false, playsLeft保留, 新骰子已抽），不应被 endTurn 覆盖
+    if (enemyTurnResult.waveTransitioned) {
+      return;
+    }
+
     // [BUG-FIX-v2] 在回调内检查 gameover 状态，防止覆盖 enemyAI 设置的 gameover
     // 此回调可能在 await 之后执行，此时 gameRef.current 已更新
     setGame(prev => {
@@ -293,6 +303,8 @@ export function useBattleCombat(
         freeRerollsLeft: prev.freeRerollsPerTurn,
         hpLostThisTurn: 0,
         consecutiveNormalAttacks: 0,
+        boomerangFreeReroll: 0,
+        comboFreeReroll: 0,
       };
     });
 
@@ -331,6 +343,31 @@ export function useBattleCombat(
 
   useEffect(() => {
     const unspentDice = dice.filter(d => !d.spent);
+    // [Bug-1 fix] 自动 endTurn 触发条件：
+    //   (a) 所有骰子已 spent —— 即使有 grantExtraPlay 给的额外 playsLeft，
+    //       手里没骰子可打了也应自动结束回合
+    //   (b) playsLeft <= 0 + 没有 boomerang/bounceAndGrow 弹回的骰子 —— 兜底
+    const noPlayableDice = unspentDice.length === 0;
+    const noPlaysLeft = game.playsLeft <= 0;
+    const shouldAutoEnd = noPlayableDice || noPlaysLeft;
+
+    // [DIAG-AUTOEND] dev 诊断：每当条件变化打一次状态
+    if (import.meta.env?.DEV && game.phase === 'battle' && !game.isEnemyTurn) {
+      // eslint-disable-next-line no-console
+      console.log('[AutoEndCheck]', {
+        phase: game.phase,
+        isEnemyTurn: game.isEnemyTurn,
+        enemiesAlive: enemies.filter(e => e.hp > 0).length,
+        playerHp: game.hp,
+        playsLeft: game.playsLeft,
+        unspentCount: unspentDice.length,
+        rolling: dice.some(d => d.rolling),
+        playing: dice.some(d => d.playing),
+        shouldAutoEnd,
+        willTrigger: game.phase === 'battle' && !game.isEnemyTurn && enemies.length > 0 && enemies.some(e => e.hp > 0) && game.hp > 0 && dice.length > 0 && !dice.some(d => d.rolling) && !dice.some(d => d.playing) && shouldAutoEnd,
+      });
+    }
+
     if (
       game.phase === 'battle' &&
       !game.isEnemyTurn &&
@@ -340,12 +377,23 @@ export function useBattleCombat(
       dice.length > 0 &&
       !dice.some(d => d.rolling) &&
       !dice.some(d => d.playing) &&
-      unspentDice.length === 0
+      shouldAutoEnd
     ) {
       const timer = setTimeout(() => {
         // [BUG-FIX-v2] 再次确认状态未变（闭包中的 game 可能已过期）
         const g = gameRef.current;
-        if (g.phase !== 'battle' || g.isEnemyTurn || g.hp <= 0) return;
+        if (g.phase !== 'battle' || g.isEnemyTurn || g.hp <= 0) {
+          if (import.meta.env?.DEV) console.log('[AutoEndAbort] phase/turn/hp invalid', g.phase, g.isEnemyTurn, g.hp);
+          return;
+        }
+        // 二次校验：必须仍然满足"无可玩骰子"或"无出牌次数"才能结束
+        const stillNoDice = !dice.some(d => !d.spent);
+        const stillNoPlays = g.playsLeft <= 0;
+        if (!stillNoDice && !stillNoPlays) {
+          if (import.meta.env?.DEV) console.log('[AutoEndAbort] state changed', { stillNoDice, stillNoPlays, playsLeft: g.playsLeft });
+          return;
+        }
+        if (import.meta.env?.DEV) console.log('[AutoEndFire] calling endTurn()');
         endTurn();
       }, 1000);
       return () => clearTimeout(timer);

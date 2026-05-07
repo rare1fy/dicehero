@@ -9,7 +9,7 @@ import type React from 'react';
 import type { Die, GameState, Enemy, HandResult, DiceElement } from '../types/game';
 import type { ExpectedOutcomeResult } from './expectedOutcomeTypes';
 import type { EnemyQuotes } from '../config/enemies';
-import { getDiceDef } from '../data/dice';
+import { getDiceDef, rollDiceDef } from '../data/dice';
 import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasOverflowConduit, hasLimitBreaker } from '../engine/relicQueries';
@@ -213,7 +213,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       tempDieToGrant = {
         id: Date.now() + 8000,
         diceDefId: 'temp_rogue',
-        value: Math.floor(Math.random() * 4) + 2, // 点数2-5
+        value: rollDiceDef(getDiceDef('temp_rogue')), // Bug-1: 走正常面值逻辑(faces:[1,1,2,2,3,3])
         element: 'normal' as DiceElement,
         selected: false,
         spent: false,
@@ -226,6 +226,8 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
 
   // === 暗影残骰连击奖励逻辑 ===
   const currentComboForShadow = game.comboCount || 0;
+  // [Bug-23] 检查是否还有存活敌人——所有敌人已死时不再给额外出牌/补骰
+  const hasAliveEnemies = enemies.some(e => e.hp > 0);
   if (game.playerClass === 'rogue' && currentComboForShadow >= 1) {
     // comboPersistShadow: 连击心得 — 连击时暗影残骰变为持久型（跨回合保留）
     const hasComboPersist = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboPersistShadow);
@@ -235,7 +237,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     }
     // comboGrantPlay: 袖箭连击 — 连击时+1出牌机会
     const hasComboPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboGrantPlay);
-    if (hasComboPlay) {
+    if (hasComboPlay && hasAliveEnemies) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
       addFloatingText('连击袖箭: +1出牌!', 'text-cyan-400', undefined, 'player');
     }
@@ -275,9 +277,9 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       }
       // 超过3次后正常消耗
     }
-    // boomerangPlay: 回旋骰子 — 首次出牌弹回，同时标记下次出牌免费
+    // boomerangPlay: 回旋骰子 — 首次出牌弹回，同时标记给一次免费重投
     if (def.onPlay?.boomerangPlay && !(d.boomerangUsed)) {
-      // 标记已用过本回合弹回，下次出牌免费（由 playsLeft 不减处理）
+      // 标记已用过本回合弹回，免费重投由 boomerangFreeReroll 处理
       return { ...d, selected: false, playing: false, spent: false, boomerangUsed: true };
     }
     return { ...d, spent: true, selected: false, playing: false };
@@ -285,13 +287,36 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   
   // grantExtraPlay: 影舞骰子给予额外出牌机会
   const hasExtraPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantExtraPlay);
-  if (hasExtraPlay) {
+  if (hasExtraPlay && hasAliveEnemies) {
     setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
     addFloatingText('+1出牌机会', 'text-green-400', undefined, 'player');
   }
 
+  // [Bug-11] 魔法手套：打出对子时下回合临时+1手牌（触发后1次出牌冷却）
+  // 从 expectedOutcomeCalc 移到此处，确保只在实际出牌时应用 tempDrawBonus，
+  // 避免预览阶段切换牌型时 tempDrawBonus 残留到非对子牌型
+  const gloveRelic = game.relics.find(r => r.id === 'extra_hand_slot');
+  if (gloveRelic) {
+    const gloveCounter = gloveRelic.counter || 0;
+    if (bestHand === '对子' && gloveCounter === 0) {
+      // 触发：对子牌型 + 冷却就绪 → 下回合+1手牌 + 进入冷却
+      setGame(prev => ({
+        ...prev,
+        relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + 1,
+        relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: 1 } : r),
+      }));
+      addFloatingText('魔法手套: 下回合+1手牌!', 'text-cyan-300', undefined, 'player');
+    } else if (gloveCounter > 0) {
+      // 冷却中：每次出牌递减冷却计数
+      setGame(prev => ({
+        ...prev,
+        relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: Math.max(0, (r.counter || 0) - 1) } : r),
+      }));
+    }
+  }
+
   // grantPlayOnThird: 三连闪 — 第3次出牌时+1出牌机会
-  if ((game.comboCount || 0) >= 2) {
+  if ((game.comboCount || 0) >= 2 && hasAliveEnemies) {
     const hasPlayOnThird = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantPlayOnThird);
     if (hasPlayOnThird) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
@@ -318,11 +343,13 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     addFloatingText(`连击心得: +${tempDieFixedDice.length}临时骰`, 'text-green-300', undefined, 'player');
   }
 
-  // boomerangPlay: 回旋骰子已弹回，给下次出牌免费（playsLeft不减）
-  const hasBoomerangBounced = selectedDiceForSpent.some(d => d.boomerangUsed);
-  if (hasBoomerangBounced) {
-    setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-    addFloatingText('回旋: 下次出牌免费!', 'text-cyan-300', undefined, 'player');
+  // boomerangPlay: 回旋骰子弹回时，给一次免费重投
+  // 注意：必须用骰子定义的 boomerangPlay 属性 + 原始 boomerangUsed 状态判断，
+  // 因为 selectedDiceForSpent 是 setDice 之前的快照，boomerangUsed 在本次 setDice 中才设为 true
+  const hasBoomerangJustBounced = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.boomerangPlay && !d.boomerangUsed);
+  if (hasBoomerangJustBounced && hasAliveEnemies) {
+    setGame(prev => ({ ...prev, boomerangFreeReroll: (prev.boomerangFreeReroll || 0) + 1 }));
+    addFloatingText('回旋: +1免费重投!', 'text-cyan-300', undefined, 'player');
   }
 
   // doublePoisonOnCombo: 蚀骨毒液 — 连击时目标毒层翻倍
@@ -340,17 +367,12 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     }
   }
 
-  // shadowClonePlay: 影分身 — 触发后自动再执行一次50%伤害的出牌（不消耗出牌次数）
+  // shadowClonePlay: 影分身 — 延迟显示伤害文本（伤害已在 damageApplication 中同步应用）
   const hasShadowClone = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.shadowClonePlay);
   if (hasShadowClone && outcome.damage > 0) {
     const cloneDmg = Math.floor(outcome.damage * 0.5);
     if (cloneDmg > 0) {
       setTimeout(() => {
-        setEnemies(prev => prev.map(e => {
-          if (e.uid !== targetUid) return e;
-          const afterArmor = Math.max(0, cloneDmg - e.armor);
-          return { ...e, hp: e.hp - afterArmor, armor: Math.max(0, e.armor - cloneDmg) };
-        }));
         addFloatingText(`影分身: ${cloneDmg}伤害`, 'text-purple-400', undefined, 'enemy');
       }, 400);
     }

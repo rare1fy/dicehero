@@ -60,6 +60,8 @@ export function buildBattleGameState(
     instakillCompleted: false,
     playsThisWave: 0,
     rerollsThisWave: 0,
+    boomerangFreeReroll: 0,
+    comboFreeReroll: 0,
   };
 }
 
@@ -98,12 +100,13 @@ export async function performDiceRollAnimation(
 
   for (let f = 0; f < DICE_FRAME_TIMES.length; f++) {
     await new Promise(resolve => setTimeout(resolve, DICE_FRAME_TIMES[f]));
+    // Bug-4 fix: 只重掷 rolling 中的骰子，保留已保持骰子的值和累积加成
     setDice(prev => prev.map(d => {
+      if (!d.rolling) return d;
       const def = getDiceDef(d.diceDefId);
       const elems = ['fire', 'ice', 'thunder', 'poison', 'holy'] as const;
       const randElem = def.isElemental ? elems[Math.floor(Math.random() * elems.length)] : d.element;
-      const boost = isStartBattle ? sumPassiveRelicValue(game.relics, 'rerollPointBoost') : 0;
-      const rawValue = rollDiceDef(def) + boost;
+      const rawValue = rollDiceDef(def);
       return { ...d, value: Math.min(9, rawValue), element: randElem as Die['element'] };
     }));
     if (f === DICE_SOUND_FRAME) playSound('reroll');
@@ -112,8 +115,11 @@ export async function performDiceRollAnimation(
     }
   }
 
-  setDice(prev => prev.map(d => ({ ...d, rolling: false })));
-  setDice(prev => applyDiceSpecialEffects(prev, { hasLimitBreaker: hasLimitBreaker(game.relics), lockedElement: game.lockedElement }));
+  // 合并为一次 setDice：rolling=false + 元素坍缩/小丑随机同步应用，避免中间帧闪烁
+  setDice(prev => {
+    const settled = prev.map(d => ({ ...d, rolling: false }));
+    return applyDiceSpecialEffects(settled, { hasLimitBreaker: hasLimitBreaker(game.relics), lockedElement: game.lockedElement });
+  });
   playSound('dice_lock');
   addLog(`[骰] ${drawn.map(d => `${d.value}(${ELEMENT_NAMES[d.element]})`).join(' ')}`);
 }

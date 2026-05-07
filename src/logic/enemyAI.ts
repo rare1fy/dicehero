@@ -55,6 +55,7 @@ export interface EnemyAICallbacks {
   triggerHourglass: typeof TriggerHourglassFn;
   handleVictory: () => void;
   gameRef: { current: GameState };
+  enemiesRef: { current: Enemy[] };
 }
 
 // === 辅助：对DOT结算结果执行副作用 ===
@@ -90,13 +91,18 @@ function applyDotSettlementSideEffects(logs: DotLogEntry[], cb: EnemyAICallbacks
  * 7. 精英/Boss叠护甲
  * 8. 敌人回合结束→玩家回合（灼烧结算+状态递减）
  */
+export interface EnemyTurnResult {
+  hp: number;
+  waveTransitioned: boolean;
+}
+
 export async function executeEnemyTurn(
   game: GameState,
   enemies: Enemy[],
   dice: Die[],
   rerollCount: number,
   cb: EnemyAICallbacks
-): Promise<number> {
+): Promise<EnemyTurnResult> {
   // 0. 标记进入敌人回合
   cb.setGame(prev => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, blackMarketUsedThisTurn: false }));
 
@@ -126,7 +132,7 @@ export async function executeEnemyTurn(
   });
 
   await new Promise(r => setTimeout(r, 600));
-  if (cb.gameRef.current.hp <= 0) { cb.playSound('player_death'); return 0; }
+  if (cb.gameRef.current.hp <= 0) { cb.playSound('player_death'); return { hp: 0, waveTransitioned: false }; }
 
   // 2. 敌人灼烧结算（纯函数 + 副作用分离）
   let burnResult: { updatedEnemies: Enemy[]; allDead: boolean; logs: DotLogEntry[] } | null = null;
@@ -142,9 +148,11 @@ export async function executeEnemyTurn(
   await new Promise(r => setTimeout(r, 600));
   if (burnResult?.allDead) {
     await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
+    // Bug-3: 胜利前清除死亡特效，避免 phase清空enemies useEffect 重复等待
+    cb.setEnemyEffects({}); cb.setDyingEnemies(new Set());
     const currentGame = cb.gameRef.current;
     if (!tryWaveTransition(currentGame, cb)) cb.handleVictory();
-    return cb.gameRef.current.hp;
+    return { hp: cb.gameRef.current.hp, waveTransitioned: true };
   }
 
   // 3. 敌人中毒结算（纯函数 + 副作用分离）
@@ -161,9 +169,11 @@ export async function executeEnemyTurn(
   await new Promise(r => setTimeout(r, 600));
   if (poisonResult?.allDead) {
     await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
+    // Bug-3: 胜利前清除死亡特效，避免 phase清空enemies useEffect 重复等待
+    cb.setEnemyEffects({}); cb.setDyingEnemies(new Set());
     const currentGame = cb.gameRef.current;
     if (!tryWaveTransition(currentGame, cb)) cb.handleVictory();
-    return cb.gameRef.current.hp;
+    return { hp: cb.gameRef.current.hp, waveTransitioned: true };
   }
 
   // 4. 每个存活敌人执行AI决策
@@ -223,8 +233,11 @@ export async function executeEnemyTurn(
       await cb.enemyPreAction(e, 'heal');
       cb.setEnemyEffectForUid(e.uid, 'skill');
       cb.playSound('enemy_skill');
-      const allies = currentEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
-      const sr = executePriestSkill(e, allies, cb.gameRef.current);
+      // Bug-22: 使用最新敌人状态选择治疗目标（currentEnemies快照可能过时）
+      const freshEnemies = cb.enemiesRef.current;
+      const freshSelf = freshEnemies.find(en => en.uid === e.uid) || e;
+      const allies = freshEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
+      const sr = executePriestSkill(freshSelf, allies, cb.gameRef.current);
       for (const [uid, updates] of sr.enemyUpdates) {
         cb.setEnemies(prev => prev.map(en => en.uid === uid ? { ...en, ...updates } : en));
       }
@@ -332,9 +345,8 @@ export async function executeEnemyTurn(
     const currentOwnedDice = cb.gameRef.current.ownedDice;
     const furyDice = currentOwnedDice.find(od => od.defId === 'w_fury');
     if (furyDice) {
-      const furyLevel = furyDice.level || 1;
-      cb.setGame(prev => ({ ...prev, furyBonusDamage: (prev.furyBonusDamage || 0) + furyLevel }));
-      cb.addFloatingText(`怒火+${furyLevel}`, 'text-orange-400', undefined, 'player');
+      cb.setGame(prev => ({ ...prev, furyBonusDamage: (prev.furyBonusDamage || 0) + 1 }));
+      cb.addFloatingText(`怒火+1`, 'text-orange-400', undefined, 'player');
     }
 
     // Ranger 追击
@@ -436,5 +448,5 @@ export async function executeEnemyTurn(
     return { ...prev, battleTurn: nextTurn, hp: newHp, statuses: nextStatuses, isEnemyTurn: false };
   });
 
-  return returnHp;
+  return { hp: returnHp, waveTransitioned: false };
 }

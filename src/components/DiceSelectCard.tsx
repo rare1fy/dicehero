@@ -1,40 +1,29 @@
 /**
- * DiceSelectCard.tsx — 篝火界面骰子选择卡片（升级/净化共用）
+ * DiceSelectCard.tsx — 篝火界面骰子选择卡片（净化用）
  *
  * 从 CampfireScreen.tsx 提取（ARCH-G）。
- * 消除 upgrade/purify 两视图中的重复骰子卡片代码。
+ * Bug-6: 强化骰子模块已删除，此组件仅用于净化视图。
  */
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { getDiceDef, getUpgradedFaces, DICE_MAX_LEVEL } from '../data/dice';
+import { getDiceDef } from '../data/dice';
 import { RARITY_LABELS, RARITY_TEXT_COLORS, ElementBadge } from './PixelDiceShapes';
 import { getDiceElementClass } from '../utils/uiHelpers';
 
 interface DiceSelectCardProps {
   defId: string;
-  level: number;
   index: number;
   isSelected: boolean;
-  selectColor: 'gold' | 'red';
   onSelect: () => void;
 }
 
-export function DiceSelectCard({ defId, level, index, isSelected, selectColor, onSelect }: DiceSelectCardProps) {
+export function DiceSelectCard({ defId, index, isSelected, onSelect }: DiceSelectCardProps) {
   const def = getDiceDef(defId);
-  const currentFaces = getUpgradedFaces(def, level);
 
   const borderClass = isSelected
-    ? selectColor === 'gold'
-      ? 'border-[var(--pixel-gold)] bg-[rgba(212,160,48,0.15)] shadow-[0_0_12px_rgba(212,160,48,0.4)]'
-      : 'border-[var(--pixel-red)] bg-[rgba(224,60,49,0.15)] shadow-[0_0_12px_rgba(224,60,49,0.4)]'
+    ? 'border-[var(--pixel-red)] bg-[rgba(224,60,49,0.15)] shadow-[0_0_12px_rgba(224,60,49,0.4)]'
     : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]';
-
-  const badgeIcon = selectColor === 'gold'
-    ? <span className="text-[8px] text-black font-black">●</span>
-    : <span className="text-[8px] text-white font-black">✖</span>;
-
-  const badgeBg = selectColor === 'gold' ? 'bg-[var(--pixel-gold)]' : 'bg-[var(--pixel-red)]';
 
   return (
     <motion.button
@@ -64,22 +53,17 @@ export function DiceSelectCard({ defId, level, index, isSelected, selectColor, o
       <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-0.5 text-center leading-tight">
         {def.name}
       </div>
-      <div className={`text-[7px] font-bold mb-0.5 ${
-        level >= 3 ? 'text-[var(--pixel-gold)]' : level >= 2 ? 'text-[var(--pixel-cyan)]' : 'text-[var(--dungeon-text-dim)]'
-      }`}>
-        Lv.{level}
-      </div>
       <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-0.5">
-        [{currentFaces.join(',')}]
+        [{def.faces.join(',')}]
       </div>
       {isSelected && (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className={`absolute -top-1.5 -right-1.5 w-4 h-4 ${badgeBg} flex items-center justify-center`}
+          className={`absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] flex items-center justify-center`}
           style={{ borderRadius: '2px' }}
         >
-          {badgeIcon}
+          <span className="text-[8px] text-white font-black">✖</span>
         </motion.div>
       )}
     </motion.button>

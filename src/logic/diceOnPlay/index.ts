@@ -10,7 +10,7 @@
  */
 
 import type { Die } from '../../types/game';
-import { getDiceDef, getUpgradedOnPlay, getElementLevelBonus } from '../../data/dice';
+import { getDiceDef } from '../../data/dice';
 
 import {
   applyElementEffect,
@@ -43,22 +43,19 @@ export function processDiceOnPlayEffects(
   if (skipOnPlay) return out;
 
   const def = getDiceDef(d.diceDefId);
-  const diceLevel = game.ownedDice.find(od => od.defId === d.diceDefId)?.level || 1;
-  const levelBonus = getElementLevelBonus(diceLevel);
-  const totalElementBonus = elementBonus * levelBonus;
 
   // ─── 元素骰子效果（元素骰子直接 return，不走职业分支）───
   const activeElement = unifiedElement || d.collapsedElement;
   if (def.isElemental && activeElement) {
-    applyElementEffect(activeElement, d.value, totalElementBonus, elementBonus, targetEnemy, out);
+    applyElementEffect(activeElement, d.value, elementBonus, elementBonus, targetEnemy, out);
     // 双元素（棱镜骰子）
     if (d.secondElement && d.secondElement !== d.collapsedElement) {
-      applySecondElementEffect(d.secondElement, d.value, totalElementBonus, elementBonus, targetEnemy, out);
+      applySecondElementEffect(d.secondElement, d.value, elementBonus, elementBonus, targetEnemy, out);
     }
     return out;
   }
 
-  // ─── 反噬（selfDamage）— 非 upgraded onPlay，用 def.onPlay 原始值 ───
+  // ─── 反噬（selfDamage）— 用 def.onPlay 原始值 ───
   if (def.onPlay?.selfDamage) {
     if (game.hp + out.extraHeal > def.onPlay.selfDamage) {
       out.extraHeal -= def.onPlay.selfDamage;
@@ -66,8 +63,7 @@ export function processDiceOnPlayEffects(
   }
 
   if (!def.onPlay) return out;
-  const upgradedOp = getUpgradedOnPlay(def, diceLevel);
-  const op = upgradedOp || def.onPlay;
+  const op = def.onPlay;
 
   // [ARCH] depth 字段已从 GameState 移除 — 使用地图节点深度近似
   const currentDepth = game.map.find(n => n.id === game.currentNodeId)?.depth ?? 0;
@@ -90,7 +86,7 @@ export function processDiceOnPlayEffects(
 
   // ─── 战士 / 法师 / 盗贼效果 ───
   applyWarriorCalc(op, d, ctx, out);
-  applyMageCalc(op, d, ctx, out, def, totalElementBonus);
+  applyMageCalc(op, d, ctx, out, def, elementBonus);
   applyRogueCalc(op, d, ctx, out);
 
   return out;

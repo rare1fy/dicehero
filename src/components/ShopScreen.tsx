@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { playSound } from '../utils/sound';
 import { PixelCoin, PixelStar, PixelDice, PixelFlame, PixelClose } from './PixelIcons';
-import { getDiceDef, getUpgradedFaces } from '../data/dice';
+import { getDiceDef } from '../data/dice';
 import { ShopItem, GameState } from '../types/game';
 import { MiniDice } from './MiniDice';
 import { getDiceElementClass } from '../utils/uiHelpers';
@@ -105,7 +105,7 @@ const MerchantScreen: React.FC = () => {
             <div className="text-center py-10 text-[var(--dungeon-text-dim)] text-xs">没有可移除的骰子</div>
           ) : removableDice.map((d) => {
             const def = getDiceDef(d.defId);
-            const faces = getUpgradedFaces(def, d.level);
+            const faces = def.faces;
             const isSelected = removeDiceIdx === d.index;
             const avgVal = (faces.reduce((a, b) => a + b, 0) / faces.length).toFixed(1);
             return (
@@ -129,7 +129,6 @@ const MerchantScreen: React.FC = () => {
                   <span className="font-bold">{avgVal}</span>
                 )}
                 <span className="text-[7px] text-[var(--dungeon-text-dim)] mt-0.5">{def.name}</span>
-                <span className="text-[6px] text-[var(--dungeon-text-dim)]">Lv.{d.level}</span>
                 {def.element !== 'normal' && (
                   <div className="absolute top-0.5 right-0.5 pointer-events-none">
                     <ElementBadge element={def.element} size={7} />

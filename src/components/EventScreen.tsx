@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
+import { pickRandomRelics, RELICS_BY_RARITY, filterRelicsByClass } from '../data/relics';
 import { PixelQuestion, PixelHeart, PixelSkull, PixelStar, PixelFlame, PixelShopBag, PixelRefresh } from './PixelIcons';
 import { formatDescription } from '../utils/richText';
 import { playSound } from '../utils/sound';
-import { getDiceDef, getUpgradedFaces } from '../data/dice';
+import { getDiceDef } from '../data/dice';
 import { EVENTS_POOL, UPGRADEABLE_HAND_TYPES, type EventConfig, type EventOptionConfig } from '../config';
 
 /** 图标ID到组件的映射 */
@@ -112,7 +112,7 @@ export const EventScreen: React.FC = () => {
       }
       case 'grantRelic': {
         // 获得一个随机遗物
-        const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
+        const relicPool = filterRelicsByClass([...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare], game.playerClass);
         const picks = pickRandomRelics(relicPool, 1, game.relics.map(r => r.id));
         if (picks.length > 0) {
           const relic = picks[0];
@@ -199,7 +199,7 @@ export const EventScreen: React.FC = () => {
         <div className="flex justify-center gap-2.5 flex-wrap max-w-sm relative z-10">
           {removableDice.map((d) => {
             const def = getDiceDef(d.defId);
-            const faces = getUpgradedFaces(def, d.level);
+            const faces = def.faces;
             const isSelected = removeDiceIdx === d.index;
             return (
               <motion.button
@@ -215,7 +215,7 @@ export const EventScreen: React.FC = () => {
                 style={{ borderRadius: '4px' }}
               >
                 <div className="text-[10px] font-bold text-[var(--dungeon-text-bright)] mb-0.5">{def.name}</div>
-                <div className="text-[8px] text-[var(--dungeon-text-dim)]">Lv.{d.level} [{faces.join(',')}]</div>
+                <div className="text-[8px] text-[var(--dungeon-text-dim)]">[{faces.join(',')}]</div>
                 {isSelected && (
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                     className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--pixel-red)] flex items-center justify-center" style={{ borderRadius: '2px' }}>

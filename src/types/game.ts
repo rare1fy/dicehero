@@ -132,6 +132,8 @@ export interface GameState {
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）
   rerollsThisWave?: number;            // 本波重投次数（挑战追踪用）
   tempDrawCountBonus?: number;         // 洞察弱点临时骰子上限加成（战斗结束清除）
+  boomerangFreeReroll?: number;        // 回旋骰子弹回后获得的免费重投次数（每回合重置）
+  comboFreeReroll?: number;            // 盗贼连击预备给予的免费重投次数（每回合重置）
   gmKillWave?: number;                 // GM 调试：杀死当前波次敌人（timestamp，让 useEffect 通过值变化触发）
 }
 

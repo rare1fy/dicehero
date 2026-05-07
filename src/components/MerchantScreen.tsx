@@ -24,7 +24,7 @@ interface MerchantItem {
   sold: boolean;
 }
 
-function generateMerchantItems(chapter: number): MerchantItem[] {
+function generateMerchantItems(chapter: number, ownedRelicIds: string[] = []): MerchantItem[] {
   const items: MerchantItem[] = [];
   const itemTypes = ['dice', 'relic', 'heal', 'reroll'];
   const shuffled = [...itemTypes].sort(() => Math.random() - 0.5);
@@ -56,7 +56,7 @@ function generateMerchantItems(chapter: number): MerchantItem[] {
       }
       case 'relic': {
         const relicPool = [...RELICS_BY_RARITY.common, ...RELICS_BY_RARITY.uncommon, ...RELICS_BY_RARITY.rare];
-        const relicPicks = pickRandomRelics(relicPool, 1, []);
+        const relicPicks = pickRandomRelics(relicPool, 1, ownedRelicIds);
         if (relicPicks.length === 0) continue;
         const relicPick = relicPicks[0];
         const basePrice = relicPick.rarity === 'rare' ? 60 : relicPick.rarity === 'uncommon' ? 45 : 30;
@@ -99,7 +99,7 @@ const PRICE_TAG_COLORS = {
 
 export const MerchantScreen: React.FC = () => {
   const { game, setGame, addToast, addLog } = useGameContext();
-  const [items, setItems] = useState<MerchantItem[]>(() => generateMerchantItems(game.chapter));
+  const [items, setItems] = useState<MerchantItem[]>(() => generateMerchantItems(game.chapter, game.relics.map(r => r.id)));
   const [_buyingId, setBuyingId] = useState<string | null>(null);
 
   const buyItem = useCallback((item: MerchantItem) => {

@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { getDiceDef, getUpgradedFaces } from '../data/dice';
+import { getDiceDef } from '../data/dice';
 import { playSound } from '../utils/sound';
 import { PixelFlame } from './PixelIcons';
 import { getOnPlayDescription } from './PixelDiceShapes';
@@ -25,7 +25,7 @@ export function CampfirePurifyView({ onBack, onUsed }: Props) {
 
   const purifiableDice = useMemo(() => {
     return game.ownedDice
-      .map((d, i) => ({ defId: d.defId, level: d.level, index: i }));
+      .map((d, i) => ({ defId: d.defId, index: i }));
   }, [game.ownedDice]);
 
   const target = selectedIdx !== null ? game.ownedDice[selectedIdx] : null;
@@ -50,10 +50,8 @@ export function CampfirePurifyView({ onBack, onUsed }: Props) {
               <DiceSelectCard
                 key={d.index}
                 defId={d.defId}
-                level={d.level}
                 index={d.index}
                 isSelected={selectedIdx === d.index}
-                selectColor="red"
                 onSelect={() => setSelectedIdx(selectedIdx === d.index ? null : d.index)}
               />
             ))}
@@ -62,13 +60,12 @@ export function CampfirePurifyView({ onBack, onUsed }: Props) {
 
         {target && (() => {
           const def = getDiceDef(target.defId);
-          const currentFaces = getUpgradedFaces(def, target.level);
           const onPlayDesc = getOnPlayDescription(def.onPlay);
 
           return (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pixel-panel p-3 mt-3">
               <div className="text-center text-xs font-bold text-[var(--pixel-red)] mb-2 pixel-text-shadow">确认移除</div>
-              <div className="text-center text-[10px] text-[var(--dungeon-text-bright)]">{def.name} Lv.{target.level} [{currentFaces.join(',')}]</div>
+              <div className="text-center text-[10px] text-[var(--dungeon-text-bright)]">{def.name} [{def.faces.join(',')}]</div>
               {onPlayDesc && <div className="text-[8px] text-[var(--pixel-cyan)] text-center mt-1">出牌效果: {onPlayDesc}</div>}
               <div className="text-[9px] text-[var(--pixel-orange)] text-center mt-1 font-bold">
                 {game.ownedDice.length <= 6 ? '骰子库已达最少数量（6颗），无法移除' : '免费移除（不可撤回）'}

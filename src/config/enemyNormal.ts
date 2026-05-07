@@ -16,11 +16,11 @@ import type { EnemyConfig } from './enemyTypes';
 export const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_ghoul', name: '食尸鬼', emoji: '', chapter: 1,
-    baseHp: 28, baseDmg: 7, category: 'normal', combatType: 'warrior',
+    baseHp: 28, baseDmg: 10, category: 'normal', combatType: 'warrior',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
-      { type: '攻击', baseValue: 7 },
-      { type: '攻击', baseValue: 9, description: '撕咬' },
+      { type: '攻击', baseValue: 10 },
+      { type: '攻击', baseValue: 12, description: '撕咬' },
       { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
     ]}],
     quotes: {
@@ -33,12 +33,12 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_spider', name: '剧毒蛛母', emoji: '', chapter: 1,
-    baseHp: 18, baseDmg: 3, category: 'normal', combatType: 'ranger',
+    baseHp: 18, baseDmg: 6, category: 'normal', combatType: 'ranger',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
-      { type: '攻击', baseValue: 4 },
-      { type: '攻击', baseValue: 4 },
+      { type: '攻击', baseValue: 6 },
+      { type: '攻击', baseValue: 6 },
     ]}],
     quotes: {
       enter: ['嘶嘶……陷阱已经布好了……', '（密集的爬行声）'],
@@ -50,13 +50,13 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_treant', name: '腐化树人', emoji: '', chapter: 1,
-    baseHp: 42, baseDmg: 4, category: 'normal', combatType: 'guardian',
+    baseHp: 42, baseDmg: 7, category: 'normal', combatType: 'guardian',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 8 },
-      { type: '攻击', baseValue: 5 },
+      { type: '攻击', baseValue: 7 },
       { type: '防御', baseValue: 6 },
-      { type: '攻击', baseValue: 7, description: '根须缠绕' },
+      { type: '攻击', baseValue: 10, description: '根须缠绕' },
     ]}],
     quotes: {
       enter: ['这片……森林……不欢迎你……', '（树根从地面涌出）'],
@@ -68,11 +68,11 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_banshee', name: '哀嚎女妖', emoji: '', chapter: 1,
-    baseHp: 16, baseDmg: 3, category: 'normal', combatType: 'caster',
+    baseHp: 16, baseDmg: 8, category: 'normal', combatType: 'caster',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
-      { type: '攻击', baseValue: 5 },
+      { type: '攻击', baseValue: 8 },
       { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
     ]}],
     quotes: {
@@ -85,12 +85,12 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_wolf_priest', name: '月光狼灵', emoji: '', chapter: 1,
-    baseHp: 20, baseDmg: 2, category: 'normal', combatType: 'priest',
+    baseHp: 20, baseDmg: 7, category: 'normal', combatType: 'priest',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
-      { type: '攻击', baseValue: 4 },
+      { type: '攻击', baseValue: 7 },
     ]}],
     quotes: {
       enter: ['呜——月光指引着我……', '嗅到了……猎物的气息……'],

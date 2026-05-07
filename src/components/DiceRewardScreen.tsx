@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
-import { getDiceDef, getDiceRewardPool, getUpgradedFaces } from '../data/dice';
+import { getDiceDef, getDiceRewardPool } from '../data/dice';
 import { ElementBadge, RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
 import { formatDescription } from '../utils/richText';
 
@@ -135,13 +135,13 @@ export const DiceRewardScreen: React.FC = () => {
     setGame(prev => ({ ...prev, phase: 'loot' }));
   };
 
-  const renderDiceCard = (defId: string, level: number, isSelected: boolean, onClick: () => void, showLevel = true) => {
+  const renderDiceCard = (defId: string, _level: number, isSelected: boolean, onClick: () => void, showLevel = false) => {
     const def = getDiceDef(defId);
-    const faces = getUpgradedFaces(def, level);
+    const faces = def.faces;
 
     return (
       <motion.button
-        key={defId + '-' + level}
+        key={defId}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
@@ -181,19 +181,8 @@ export const DiceRewardScreen: React.FC = () => {
           {def.name}
         </div>
 
-        {/* 等级 */}
-        {showLevel && level > 0 && (
-          <div className={`text-[7px] font-bold mb-0.5 ${
-            level >= 3 ? 'text-[var(--pixel-gold)]' : level >= 2 ? 'text-[var(--pixel-cyan)]' : 'text-[var(--dungeon-text-dim)]'
-          }`}>
-            Lv.{level}
-          </div>
-        )}
-
-        {/* 面值（不显示均值） */}
-        <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-1">
-          [{faces.join(',')}]
-        </div>
+        {/* 面值 */}
+        <div className="text-[8px] text-[var(--dungeon-text-dim)] mb-1">[{faces.join(',')}]</div>
 
         {/* 骰子描述（唯一说明，富文本高亮，字号放大） */}
         <div className="text-[9px] text-[var(--dungeon-text)] leading-snug text-center flex-1">
@@ -332,7 +321,7 @@ export const DiceRewardScreen: React.FC = () => {
         </div>
         <div className="flex justify-center gap-1 flex-wrap">
           {game.ownedDice.map((d, i) => (
-            <div key={i} title={`${getDiceDef(d.defId).name} Lv.${d.level}`}>
+            <div key={i} title={getDiceDef(d.defId).name}>
               <MiniDice defId={d.defId} size={16} />
             </div>
           ))}

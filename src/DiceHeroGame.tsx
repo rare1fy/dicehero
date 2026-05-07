@@ -43,6 +43,7 @@ import { BattleSceneView } from './components/BattleSceneView';
 import { useBattleState } from './hooks/useBattleState';
 import { useBattleLifecycle } from './hooks/useBattleLifecycle';
 import { useBattleCombat } from './hooks/useBattleCombat';
+import { useGlobalClickCooldown } from './hooks/useGlobalClickCooldown';
 
 // --- Context Builders ---
 import { buildGameContext, buildBattleContext } from './contexts/contextBuilders';
@@ -54,6 +55,9 @@ const loadMeta = () => {
 };
 
 export default function DiceHeroGame() {
+  // 全局按钮点击冷却（0.5秒CD）
+  useGlobalClickCooldown();
+
   // === Phase G: 战斗状态聚合 ===
   const state = useBattleState();
 

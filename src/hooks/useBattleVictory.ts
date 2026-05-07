@@ -11,6 +11,7 @@ import { playSound } from '../utils/sound';
 import { buildLootItems, resolvePostVictoryPhase } from '../logic/lootHandler';
 import { processCollectLoot, processFinishLoot } from '../logic/lootProcessor';
 import { generateShopItems } from '../logic/shopGenerator';
+import type { ClassId } from '../data/classes';
 import { ANIMATION_TIMING } from '../config';
 import type { BattleState } from './useBattleState';
 import type { BattleLifecycle } from './useBattleLifecycle';
@@ -85,13 +86,19 @@ export function useBattleVictory(
         }
 
         if (postVictory.phase === 'chapterTransition') {
+          // Bug-10: 终层Boss(非最终章)奖励 drawCount+1 + 诅咒(敌人HP+25%)
+          const newDrawCount = Math.min(6, prev.drawCount + 1);
+          const newEnemyHpMultiplier = newDrawCount > prev.drawCount
+            ? prev.enemyHpMultiplier + 0.25
+            : prev.enemyHpMultiplier;
           return {
             ...prev,
             ownedDice: cleanedOwnedDice,
             diceBag: cleanedDiceBag,
             discardPile: cleanedDiscardPile,
-            drawCount: cleanedDrawCount,
+            drawCount: newDrawCount,
             tempDrawCountBonus: 0,
+            enemyHpMultiplier: newEnemyHpMultiplier,
             stats: { ...s, bossesWon: postVictory.bossesWon },
             relics: updatedRelics,
             map: newMap,
@@ -183,7 +190,7 @@ export function useBattleVictory(
     if (next === 4 || next === 9) {
       setGame(prev => ({ ...prev, phase: 'campfire', currentNode: next }));
     } else if (next === 5) {
-      const shopItems = generateShopItems(game.relics.map(r => r.id));
+      const shopItems = generateShopItems(game.relics.map(r => r.id), game.playerClass as ClassId | undefined);
       setGame(prev => ({ ...prev, phase: 'merchant', currentNode: next, shopItems }));
     } else if (next === 7) {
       setGame(prev => ({ ...prev, phase: 'event', currentNode: next }));
