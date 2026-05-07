@@ -69,9 +69,14 @@ export function useBattleVictory(
         // 地图标记
         const newMap = prev.map.map(n => n.id === prev.currentNodeId ? { ...n, completed: true } : n);
 
+        // [LEVEL-BONUS 2026-05-08] 生息印记：每层地图结束后回血
+        const mapHeal = prev.levelMapHeal || 0;
+        const healedHp = mapHeal > 0 ? Math.min(prev.maxHp, prev.hp + mapHeal) : prev.hp;
+
         if (postVictory.phase === 'victory') {
           return {
             ...prev,
+            hp: healedHp,
             ownedDice: cleanedOwnedDice,
             diceBag: cleanedDiceBag,
             discardPile: cleanedDiscardPile,
@@ -89,6 +94,7 @@ export function useBattleVictory(
           // [2026-05-07] 章节中层Boss不再产出 drawCount+1 奖励，固定加手牌上限的设定只有关底Boss才给
           return {
             ...prev,
+            hp: healedHp,
             ownedDice: cleanedOwnedDice,
             diceBag: cleanedDiceBag,
             discardPile: cleanedDiscardPile,
@@ -105,6 +111,7 @@ export function useBattleVictory(
         // diceReward 阶段：先切换 phase，lootItems 在下一步异步补充
         return {
           ...prev,
+          hp: healedHp,
           ownedDice: cleanedOwnedDice,
           diceBag: cleanedDiceBag,
           discardPile: cleanedDiscardPile,

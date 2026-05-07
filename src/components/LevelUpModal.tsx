@@ -10,7 +10,7 @@
  *
  * 美术：严格像素风，复用 fusion-pixel 字体、PixelIcons 图标、章节配色风格
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameContext } from '../contexts/GameContext';
 import { getLevelUpChoices, type LevelRewardDef, type LevelRewardCategory } from '../logic/xpSystem';
@@ -45,9 +45,11 @@ export const LevelUpModal: React.FC = () => {
     });
   };
 
-  if (!currentLevel) return null;
+  // 每次"新的一级"弹出时才重新抽一组三张；消费一次后弹下一级时再抽。
+  // 必须在早 return 之前调用，满足 React Hooks 规则
+  const choices = useMemo(() => getLevelUpChoices(), [currentLevel]);
 
-  const choices = getLevelUpChoices();
+  if (!currentLevel) return null;
 
   return (
     <AnimatePresence>

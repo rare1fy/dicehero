@@ -119,8 +119,8 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
         newHandMult += ((handDef.mult || 1) - 1) + levelBonusMult;
       }
     });
-    const newBaseDamage = Math.floor(newX * newHandMult);
-    const newTotalDamage = Math.floor((newBaseDamage + (outcome.damage - Math.floor(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+    const newBaseDamage = Math.ceil(newX * newHandMult);
+    const newTotalDamage = Math.ceil((newBaseDamage + (outcome.damage - Math.ceil(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
     outcome.damage = Math.max(0, newTotalDamage);
     outcome.bestHand = newBestHand;
     outcome.X = newX;
@@ -157,8 +157,8 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
         newHandMult += ((handDef.mult || 1) - 1) + levelBonusMult;
       }
     });
-    const newBaseDamage = Math.floor(newX * newHandMult);
-    const newTotalDamage = Math.floor((newBaseDamage + (outcome.damage - Math.floor(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+    const newBaseDamage = Math.ceil(newX * newHandMult);
+    const newTotalDamage = Math.ceil((newBaseDamage + (outcome.damage - Math.ceil(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
     // 更新 outcome 的伤害值（用闭包变量）
     outcome.damage = Math.max(0, newTotalDamage);
     outcome.bestHand = newBestHand;

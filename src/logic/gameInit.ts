@@ -85,10 +85,16 @@ export function createInitialGameState(classId?: ClassId): GameState {
     comboFreeReroll: 0,
     level: 1,
     xp: 0,
-    xpToNext: 50,
+    xpToNext: 30,
     levelMaxHpBonus: 0,
     levelDamageBonus: 0,
+    levelDamageMultBonus: 0,
+    levelPierceBonus: 0,
+    levelStartArmor: 0,
+    levelMapHeal: 0,
     levelGoldBonus: 0,
+    levelSoulBonus: 0,
+    levelXpBonus: 0,
     pendingLevelUps: [],
   };
 }

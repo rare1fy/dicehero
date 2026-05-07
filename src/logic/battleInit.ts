@@ -36,7 +36,7 @@ export function buildBattleGameState(
     phase: 'battle',
     battleTurn: 1,
     currentNodeId: node.id,
-    armor: 0,
+    armor: prev.levelStartArmor || 0, // [LEVEL-BONUS 2026-05-08] 壁垒之心：永久初始护甲
     chantShield: 0,
     statuses: [],
     playsPerEnemy: {},

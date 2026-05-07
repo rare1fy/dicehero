@@ -217,27 +217,38 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   }
 
   // ─── 最终伤害计算 ───
-  const totalDamage = Math.floor(baseDamage * multiplier) + extraDamage + pierceDamage;
+  // [Bug-FIX 2026-05-08] 伤害倍率统一向上取整（刘叔规则）：
+  //   例 3×1.2=3.6 应打 4 点，而不是 floor 吞 1 点。
+  //   以下所有乘法倍率都走 Math.ceil。
+  // [LEVEL-BONUS 2026-05-08] 等级奖励：
+  //   · levelDamageBonus (利刃精通)  → 与 extraDamage 同级相加
+  //   · levelDamageMultBonus (战意共鸣) → 与 multiplier 同级相乘
+  //   · levelPierceBonus (破甲之怒)   → 与 pierceDamage 同级相加（穿透）
+  const lvlDmgAdd    = game.levelDamageBonus     || 0;
+  const lvlMultAdd   = game.levelDamageMultBonus || 0;
+  const lvlPierceAdd = game.levelPierceBonus     || 0;
+  const finalMultiplier = multiplier * (1 + lvlMultAdd);
+  const totalDamage = Math.ceil(baseDamage * finalMultiplier) + extraDamage + lvlDmgAdd + pierceDamage + lvlPierceAdd;
 
   let modifiedDamage = totalDamage;
   const playerWeak = game.statuses.find(s => s.type === 'weak');
-  if (playerWeak) modifiedDamage = Math.floor(modifiedDamage * 0.75);
+  if (playerWeak) modifiedDamage = Math.ceil(modifiedDamage * 0.75);
 
   const enemyVulnerable = targetEnemy?.statuses.find(s => s.type === 'vulnerable');
-  if (enemyVulnerable) modifiedDamage = Math.floor(modifiedDamage * 1.5);
+  if (enemyVulnerable) modifiedDamage = Math.ceil(modifiedDamage * 1.5);
 
   // 战士【血怒战意】（封顶走 FURY_CONFIG）
   const effectiveFuryStacks = game.playerClass === 'warrior' ? Math.min(bloodRerollCount, FURY_CONFIG.maxStack) : 0;
   if (effectiveFuryStacks > 0) {
-    modifiedDamage = Math.floor(modifiedDamage * (1 + effectiveFuryStacks * FURY_CONFIG.damagePerStack));
+    modifiedDamage = Math.ceil(modifiedDamage * (1 + effectiveFuryStacks * FURY_CONFIG.damagePerStack));
   }
   // 战士【狂暴本能】
   if (game.playerClass === 'warrior' && warriorRageMult > 0) {
-    modifiedDamage = Math.floor(modifiedDamage * (1 + warriorRageMult));
+    modifiedDamage = Math.ceil(modifiedDamage * (1 + warriorRageMult));
   }
   // 盗贼【连击加成】
   if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && bestHand !== '普通攻击') {
-    modifiedDamage = Math.floor(modifiedDamage * 1.2);
+    modifiedDamage = Math.ceil(modifiedDamage * 1.2);
   }
 
   return {
@@ -247,10 +258,10 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
     baseDamage,
     baseHandValue,
     handMultiplier,
-    extraDamage: modifiedDamage - baseDamage - pierceDamage,
-    pierceDamage,
+    extraDamage: modifiedDamage - baseDamage - pierceDamage - lvlPierceAdd,
+    pierceDamage: pierceDamage + lvlPierceAdd,
     armorBreak,
-    multiplier,
+    multiplier: finalMultiplier,
     triggeredAugments,
     bestHand,
     statusEffects,

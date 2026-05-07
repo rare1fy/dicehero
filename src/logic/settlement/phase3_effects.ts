@@ -151,6 +151,21 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
     allEffects.push({ name: '连击', detail: '+20%', type: 'mult', rawMult: 1.2, icon: 'zap' });
   }
 
+  // === 等级奖励：利刃精通（基础伤害+）/ 战意共鸣（倍率+%）/ 破甲之怒（穿透+）===
+  //    与遗物/骰子效果一样走挨个结算演出，而不是在最后偷偷加一笔
+  const lvlDmg = game.levelDamageBonus || 0;
+  if (lvlDmg > 0 && outcome.damage > 0) {
+    allEffects.push({ name: '利刃精通', rawValue: lvlDmg, detail: `伤害+${lvlDmg}`, type: 'damage', icon: 'blade' });
+  }
+  const lvlMult = game.levelDamageMultBonus || 0;
+  if (lvlMult > 0 && outcome.damage > 0) {
+    allEffects.push({ name: '战意共鸣', rawMult: 1 + lvlMult, detail: `倍率+${Math.round(lvlMult * 100)}%`, type: 'mult', icon: 'flame' });
+  }
+  const lvlPierce = game.levelPierceBonus || 0;
+  if (lvlPierce > 0 && outcome.damage > 0) {
+    allEffects.push({ name: '破甲之怒', rawValue: lvlPierce, detail: `穿透+${lvlPierce}`, type: 'damage', icon: 'blade' });
+  }
+
   // 逐个展示效果
   for (let i = 0; i < allEffects.length; i++) {
     setSettlementData(prev => prev ? {
@@ -189,12 +204,5 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
   if (comboFinisherBonus > 0) {
     outcome.damage = Math.floor(outcome.damage * (1 + comboFinisherBonus));
     addFloatingText(`连击终结! +${Math.round(comboFinisherBonus * 100)}%`, 'text-yellow-300', undefined, 'player');
-  }
-
-  // === 等级奖励「利刃精通」：升级累加的基础伤害 ===
-  const lvlDmg = game.levelDamageBonus || 0;
-  if (lvlDmg > 0 && outcome.damage > 0) {
-    outcome.damage += lvlDmg;
-    addFloatingText('精通+' + lvlDmg, 'text-cyan-200', undefined, 'player');
   }
 }

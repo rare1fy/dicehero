@@ -18,7 +18,7 @@ import { buildRelicContext } from '../engine/buildRelicContext';
 import { checkHands } from '../utils/handEvaluator';
 import { checkChallenge } from '../utils/instakillChallenge';
 import { STATUS_INFO } from '../data/statusInfo';
-import { getKillXp, applyXpGain } from './xpSystem';
+import { rollKillXp, applyXpGain } from './xpSystem';
 import { emitXpKill } from './xpEvents';
 
 // --- Context 接口 ---
@@ -96,13 +96,15 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
 
   if (killedUids.length > 0) {
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
-    const xpPerKill = getKillXp(currentNode?.type, 1);
-    const xpGain = xpPerKill * killedUids.length;
+    // 每只敌人随机掉落 XP（刘叔 2026-05-08：不再固定值，给随机区间）
+    const xpMult = 1 + (game.levelXpBonus || 0);
+    const perKillRolled: number[] = killedUids.map(() => Math.max(1, Math.round(rollKillXp(currentNode?.type) * xpMult)));
+    const xpGain = perKillRolled.reduce((s, v) => s + v, 0);
 
     // 1) 派发"爆经验碎片"事件：一只敌人一个事件，XpShardLayer 读 DOM 位置
     const now = Date.now();
     killedUids.forEach((uid, i) => {
-      emitXpKill({ enemyUid: uid, xp: xpPerKill, at: now + i });
+      emitXpKill({ enemyUid: uid, xp: perKillRolled[i], at: now + i });
     });
 
     // 2) 更新 GameState 的 level / xp / xpToNext；升级则入队待领奖
@@ -221,7 +223,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   if (killedEnemiesData.length > 0) {
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
     const currentDepth = currentNode?.depth || 0;
-    const depthMult = game.soulCrystalMultiplier + currentDepth * 0.1;
+    const depthMult = game.soulCrystalMultiplier + currentDepth * 0.1 + (game.levelSoulBonus || 0);
     let totalSoulGain = 0;
     killedEnemiesData.forEach(killedData => {
       if (killedData.overkill > 0) {
@@ -245,7 +247,17 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
 
   // Mark dice as spent & add to discard pile
   const selectedDiceForSpent = dice.filter(d => d.selected && !d.spent);
-  const spentDefIds = selectedDiceForSpent.filter(d => !d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.diceDefId);
+  // [Bug-FIX 2026-05-08] 飞刀/回旋等"弹回"骰子不消耗不丢弃，必须排除出 spentDefIds
+  //   否则 discardPile 会多出一个 defId，下次洗牌时手牌保留 + 牌库多一颗，造成"凭空多出一颗"的现象。
+  const isBouncing = (d: Die): boolean => {
+    const def = getDiceDef(d.diceDefId);
+    if (def.onPlay?.bounceAndGrow && (d.bounceGrowCount || 0) < 3) return true;
+    if (def.onPlay?.boomerangPlay && !d.boomerangUsed) return true;
+    return false;
+  };
+  const spentDefIds = selectedDiceForSpent
+    .filter(d => !d.isTemp && d.diceDefId !== 'temp_rogue' && !isBouncing(d))
+    .map(d => d.diceDefId);
   // 盗贼骰子补充：检查 grantShadowDie（只补1颗）
   let tempDieToGrant: Die | null = null;
   if (game.playerClass === 'rogue') {

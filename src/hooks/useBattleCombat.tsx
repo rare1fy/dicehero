@@ -262,6 +262,12 @@ export function useBattleCombat(
     if (gameRef.current.phase === 'gameover') {
       return;
     }
+    // [LEVEL-UP-PAUSE 2026-05-08] 升级弹窗期间完全冻结敌人回合：
+    //   轮询直到玩家领完所有 pendingLevelUps 奖励再继续推进。
+    while ((gameRef.current.pendingLevelUps?.length || 0) > 0) {
+      await new Promise(r => setTimeout(r, 200));
+      if ((gameRef.current.phase as string) === 'gameover') return;
+    }
 
     await processTurnEnd({
       game, enemies, dice, rerollCount,
@@ -390,6 +396,7 @@ export function useBattleCombat(
     if (
       game.phase === 'battle' &&
       !game.isEnemyTurn &&
+      (game.pendingLevelUps?.length || 0) === 0 && // 升级弹窗期间不自动结束回合
       enemies.length > 0 &&
       enemies.some(e => e.hp > 0) &&
       game.hp > 0 &&
@@ -405,6 +412,10 @@ export function useBattleCombat(
           if (import.meta.env?.DEV) console.log('[AutoEndAbort] phase/turn/hp invalid', g.phase, g.isEnemyTurn, g.hp);
           return;
         }
+        // [LEVEL-UP-PAUSE] 定时器触发时若仍在弹窗中，放弃这次自动 endTurn
+        if ((g.pendingLevelUps?.length || 0) > 0) {
+          return;
+        }
         // 二次校验：必须仍然满足"无可玩骰子"或"无出牌次数"才能结束
         const stillNoDice = !dice.some(d => !d.spent);
         const stillNoPlays = g.playsLeft <= 0;
@@ -417,7 +428,7 @@ export function useBattleCombat(
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft]);
+  }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft, game.pendingLevelUps]);
 
   // 将 handleVictory 注入到 lifecycle 的 ref
   handleVictoryRef.current = victory.handleVictory;

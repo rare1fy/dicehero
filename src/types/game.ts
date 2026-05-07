@@ -147,7 +147,13 @@ export interface GameState {
   // 升级永久成长（累加式，不会重置）
   levelMaxHpBonus?: number;            // 升级累计最大生命加成
   levelDamageBonus?: number;           // 升级累计出牌基础伤害加成（加法）
+  levelDamageMultBonus?: number;       // 升级累计伤害倍率加成（0.08 = +8%，叠加）
+  levelPierceBonus?: number;           // 升级累计穿透伤害加成
+  levelStartArmor?: number;            // 升级累计战斗开局初始护甲
+  levelMapHeal?: number;               // 升级累计每层地图结束回血
   levelGoldBonus?: number;             // 升级累计金币收益百分比（0.15 = +15%）
+  levelSoulBonus?: number;             // 升级累计魂晶倍率加成
+  levelXpBonus?: number;               // 升级累计经验值加成
   pendingLevelUps?: number[];          // 待领奖的升级级数队列（FIFO）
 }
 

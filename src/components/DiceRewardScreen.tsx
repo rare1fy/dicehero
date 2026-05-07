@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { getDiceDef, getDiceRewardPool } from '../data/dice';
@@ -8,7 +8,7 @@ import { formatDescription } from '../utils/richText';
 import { MiniDice } from './MiniDice';
 import { getDiceElementClass } from '../utils/uiHelpers';
 import { PixelDiceRenderer, hasPixelRenderer } from './PixelDiceRenderer';
-import { playSound } from '../utils/sound';
+import { playSound, startBGM } from '../utils/sound';
 import { DICE_REWARD_REFRESH } from '../config/gameBalance';
 import { PixelCoin } from './PixelIcons';
 
@@ -20,6 +20,14 @@ export const DiceRewardScreen: React.FC = () => {
   const [selectedNewDice, setSelectedNewDice] = useState<string | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
   const [confirmed, setConfirmed] = useState(false);
+
+  // [BGM-FIX 2026-05-08] 挂载时兜底启动探索 BGM：
+  //   战斗胜利 → diceReward 阶段切换存在 startTransition 低优先级时序，
+  //   外层 useEffect 的 startBGM('explore') 偶尔会被异步竞态吃掉，导致这里一片寂静。
+  //   组件 mount 时直接再调一次；同类型短路，不会打断已播放的 BGM。
+  useEffect(() => {
+    startBGM('explore');
+  }, []);
 
   // 根据战斗类型决定奖励池
   const battleType = useMemo(() => {
