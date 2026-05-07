@@ -14,7 +14,6 @@ console.log('📦 内联字体文件...');
 const fontFiles = [
   { name: 'fusion-pixel-12px-monospaced-zh_hans.woff2', mime: 'font/woff2' },
   { name: 'fusion-pixel-12px-monospaced-latin.woff2', mime: 'font/woff2' },
-  { name: 'AaWeiWeiDianZhenTi-2.ttf', mime: 'font/truetype' }
 ];
 
 for (const font of fontFiles) {

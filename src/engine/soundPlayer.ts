@@ -72,6 +72,13 @@ export const setBgmEnabled = (enabled: boolean): void => {
 
 let currentBgmType = '';
 
+/**
+ * BGM 切换代数标记：每次 playBGM 调用自增。
+ * 用于在异步过程（淡入/淡出）中识别"自己是否已被新的切换顶替"。
+ * 避免并发调用导致新旧 BGM 重叠。
+ */
+let bgmGeneration = 0;
+
 // [Bug-FIX 2026-05-07] 浏览器 autoplay 策略兜底：
 // 首次 playBGM 在用户尚未与页面交互时被静默拒绝。我们在拒绝时记录 pending 类型，
 // 并安装一次性 pointerdown 监听，等待首次用户交互后自动重试播放。
@@ -97,46 +104,67 @@ const installUserGestureUnlock = (): void => {
   window.addEventListener('touchstart', handler, { once: true });
 };
 
-const fadeOutAudio = async (audio: HTMLAudioElement, duration: number): Promise<void> => {
-  const startVol = audio.volume;
-  const steps = 20;
+// 新 BGM 淡入（旧 BGM 已立即停止，不再重叠播放）
+const FADE_IN_DURATION = 400;
+const fadeInAudio = async (audio: HTMLAudioElement, targetVol: number, duration: number, gen: number): Promise<void> => {
+  const steps = 10;
   const stepDuration = duration / steps;
-  
-  for (let i = 0; i < steps; i++) {
-    audio.volume = startVol * (1 - i / steps);
+  for (let i = 1; i <= steps; i++) {
+    // 如果本次切换已被新调用顶替，立刻停止并停音
+    if (gen !== bgmGeneration) {
+      try { audio.pause(); } catch {}
+      return;
+    }
+    audio.volume = targetVol * (i / steps);
     await new Promise(r => setTimeout(r, stepDuration));
   }
-  audio.pause();
 };
 
 export const playBGM = async (type: 'start' | 'explore' | 'battle'): Promise<void> => {
   if (!bgmEnabled) return;
   await resumeAudioContext();
-  
-  if (mp3BgmPlaying && currentBgmType === type) return;
-  
-  // 淡出当前BGM
-  if (mp3Audio && mp3BgmPlaying) {
-    const oldAudio = mp3Audio;
+
+  // 同类型短路（允许多次调用同类型 BGM 而不打断播放）
+  if (mp3BgmPlaying && currentBgmType === type && mp3Audio && !mp3Audio.paused) return;
+
+  // 标记本次切换代数，后续异步 step 若被覆盖则自行终止
+  const myGen = ++bgmGeneration;
+
+  // 立即停止旧 BGM（不渐弱，避免新旧重叠）
+  if (mp3Audio) {
+    try { mp3Audio.pause(); } catch {}
     mp3Audio = null;
-    mp3BgmPlaying = false;
-    await fadeOutAudio(oldAudio, FADE_DURATION);
   }
-  
+  mp3BgmPlaying = false;
+
   const src = MP3_BGM_MAP[type];
   if (!src) return;
-  
-  mp3Audio = new Audio(src);
-  mp3Audio.loop = true;
-  mp3Audio.volume = masterVolume * BGM_VOLUME_SCALE;
-  
+
+  const newAudio = new Audio(src);
+  newAudio.loop = true;
+  newAudio.volume = 0; // 从 0 淡入
+
+  // 绑定本次切换；若此时 myGen 已过期则放弃
+  if (myGen !== bgmGeneration) return;
+  mp3Audio = newAudio;
+
   try {
-    await mp3Audio.play();
+    await newAudio.play();
+    // 再次校验：await 期间可能已被更新
+    if (myGen !== bgmGeneration) {
+      try { newAudio.pause(); } catch {}
+      return;
+    }
     mp3BgmPlaying = true;
     currentBgmType = type;
     pendingBgmType = null;
-  } catch (e) {
+    // 渐入到目标音量
+    void fadeInAudio(newAudio, masterVolume * BGM_VOLUME_SCALE, FADE_IN_DURATION, myGen);
+  } catch {
     mp3BgmPlaying = false;
+    if (myGen === bgmGeneration) {
+      mp3Audio = null;
+    }
     // 浏览器 autoplay 拒绝：标记待播类型并等待首次用户交互
     pendingBgmType = type;
     installUserGestureUnlock();
@@ -147,13 +175,14 @@ export const playBGM = async (type: 'start' | 'explore' | 'battle'): Promise<voi
 export const startBGM = playBGM;
 
 export const stopBGMImmediate = (): void => {
+  bgmGeneration++; // 让进行中的淡入立即失效
   if (mp3Audio) {
-    mp3Audio.pause();
+    try { mp3Audio.pause(); } catch {}
     mp3Audio = null;
   }
   mp3BgmPlaying = false;
   currentBgmType = '';
-  
+
   // 停止合成器BGM
   _bgmOscillators.forEach(osc => {
     try { osc.stop(); } catch {}
@@ -164,15 +193,8 @@ export const stopBGMImmediate = (): void => {
 };
 
 export const stopBGM = async (): Promise<void> => {
-  if (mp3Audio && mp3BgmPlaying) {
-    const oldAudio = mp3Audio;
-    mp3Audio = null;
-    mp3BgmPlaying = false;
-    currentBgmType = '';
-    await fadeOutAudio(oldAudio, FADE_DURATION);
-  } else {
-    stopBGMImmediate();
-  }
+  // 切换到停止状态，直接立即停（不再渐出，避免残留）
+  stopBGMImmediate();
 };
 
 export const getCurrentBGMType = (): string => currentBgmType;
