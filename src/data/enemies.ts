@@ -145,18 +145,27 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
     ];
   }
 
-  // Normal: 1-2 waves
-  // [2026-05-07] 前期(depth>=1)强制至少2波以延长战斗时长、降低一波速秒带来的玩家流失；
-  //              depth=0 教学层保留单波。
-  const waveCount = depth >= 1 ? 2 : 1;
+  // Normal: 2-3 waves
+  // [2026-05-07] 战斗节奏调优：
+  //   - 所有普通战斗（含第一场 depth=0）保底 2 波，提升单场爽感
+  //   - depth>=5 起 50% 概率 3 波；depth>=10 80% 概率 3 波（中后期高潮战斗）
+  const threeWaveChance = depth >= 10 ? 0.8 : depth >= 5 ? 0.5 : depth >= 3 ? 0.2 : 0;
+  const waveCount = Math.random() < threeWaveChance ? 3 : 2;
   const waves: BattleWave[] = [];
   for (let w = 0; w < waveCount; w++) {
-    const enemyCount = depth === 0 ? 1 : depth <= 1 ? (Math.random() < 0.4 ? 1 : 2) : depth <= 4 ? (Math.random() < 0.5 ? 2 : 3) : depth <= 9 ? (Math.random() < 0.3 ? 2 : 3) : Math.min(4, 3 + Math.floor(Math.random() * 2));
+    // depth=0 第一场保护：每波 1~2 只低难度，避免新手挫败
+    const enemyCount = depth === 0
+      ? (w === 0 ? 1 : (Math.random() < 0.5 ? 1 : 2))
+      : depth <= 1 ? (Math.random() < 0.4 ? 1 : 2)
+      : depth <= 4 ? (Math.random() < 0.5 ? 2 : 3)
+      : depth <= 9 ? (Math.random() < 0.3 ? 2 : 3)
+      : Math.min(4, 3 + Math.floor(Math.random() * 2));
     const waveEnemies: Enemy[] = [];
     for (let i = 0; i < enemyCount; i++) {
       const pool = getAvailableEnemies(depth, chapter);
       const config = pool[Math.floor(Math.random() * pool.length)];
-      const waveScale = w === 0 ? 1 : 0.8;
+      // 第一波 1.0x，第二波 0.8x，第三波 0.7x（第三波再弱一档，避免疲劳）
+      const waveScale = w === 0 ? 1 : w === 1 ? 0.8 : 0.7;
       const enemy = buildEnemy(config, hpScale * waveScale, dmgScale * waveScale);
       if (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') {
         enemy.distance = depth === 0 ? 1 : 2;
