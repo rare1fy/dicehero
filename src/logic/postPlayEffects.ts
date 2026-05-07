@@ -227,7 +227,16 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   // === 暗影残骰连击奖励逻辑 ===
   const currentComboForShadow = game.comboCount || 0;
   // [Bug-23] 检查是否还有存活敌人——所有敌人已死时不再给额外出牌/补骰
-  const hasAliveEnemies = enemies.some(e => e.hp > 0);
+  // [Bug-FIX 2026-05-07] 用本次出牌结果（finalEnemyHp/hasAoe）修正目标敌人状态：
+  //   之前 `enemies` 是 playHand 时的闭包快照（applyDamageToEnemies 前），
+  //   会把"这次击杀目标"误判为仍存活，导致 grantExtraPlay 错误 +1，
+  //   进而引发"切波次后 playsLeft=2"等异常。
+  const hasAliveEnemies = enemies.some(e => {
+    if (e.uid === targetUid) return finalEnemyHp > 0;
+    // AOE 情况：其他敌人也可能被本次伤害击杀；非 AOE 时保持原 hp 判定
+    if (hasAoe) return (e.hp - outcome.damage) > 0;
+    return e.hp > 0;
+  });
   if (game.playerClass === 'rogue' && currentComboForShadow >= 1) {
     // comboPersistShadow: 连击心得 — 连击时暗影残骰变为持久型（跨回合保留）
     const hasComboPersist = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboPersistShadow);

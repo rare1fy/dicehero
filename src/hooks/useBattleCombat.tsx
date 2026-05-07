@@ -235,6 +235,17 @@ export function useBattleCombat(
       setScreenShake,
     });
 
+    // [Bug-FIX 2026-05-07] 波次切换期间 autoEndTurn guard
+    // 场景：单体攻击击杀"整波仅存"目标 → checkEnemyDeaths 异步延迟 2200ms 后才切波次。
+    // 窗口期内 enemies 全部 hp=0 且 isEnemyTurn=false，若 useEffect 误判为"应该 endTurn"
+    // 则会走 endTurn → executeEnemyTurn → playsLeft 重置为 maxPlays（新回合）。
+    // 修复：出牌打空当前波次时立即设 isEnemyTurn=true 作 guard，
+    // checkEnemyDeaths 切完波次后会在 setGame 里恢复 isEnemyTurn=false。
+    const waveAllDead = enemies.every(e => e.uid === targetUid ? finalEnemyHp <= 0 : e.hp <= 0);
+    if (waveAllDead) {
+      setGame(prev => ({ ...prev, isEnemyTurn: true }));
+    }
+
     // 出牌后效处理
     const postPlayCtx = {
       game, gameRef, enemies, dice, selected, settleDice, outcome,
