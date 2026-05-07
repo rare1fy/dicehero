@@ -19,6 +19,7 @@ import type { BattleContextType } from './contexts/BattleContext';
 import { StartScreen } from './components/StartScreen';
 import { GlobalTopBar } from './components/GlobalTopBar';
 import { XpShardLayer } from './components/XpShardLayer';
+import { SoulShardLayer } from './components/SoulShardLayer';
 import { LevelUpModal } from './components/LevelUpModal';
 import { MapScreen } from './components/MapScreen';
 import { ShopScreen } from './components/ShopScreen';
@@ -135,6 +136,7 @@ export default function DiceHeroGame() {
 
       <GlobalTopBar />
       <XpShardLayer />
+      <SoulShardLayer />
       <LevelUpModal />
 
       {/* 战斗转场遮罩 */}

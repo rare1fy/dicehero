@@ -20,6 +20,7 @@ import { checkChallenge } from '../utils/instakillChallenge';
 import { STATUS_INFO } from '../data/statusInfo';
 import { rollKillXp, applyXpGain } from './xpSystem';
 import { emitXpKill } from './xpEvents';
+import { emitSoulGain } from './soulEvents';
 
 // --- Context 接口 ---
 
@@ -107,13 +108,14 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       emitXpKill({ enemyUid: uid, xp: perKillRolled[i], at: now + i });
     });
 
-    // 2) 更新 GameState 的 level / xp / xpToNext；升级暂存入 battleLevelUps
-    //    [LEVEL-PAUSE 2026-05-08] 不再立即 push 到 pendingLevelUps，避免战斗中途弹窗打断节奏
-    //    & 避免死亡动画未播完就出升级界面。
-    //    真正的 pendingLevelUps 入队搬迁发生在 handleVictory（死亡动画 + 清理后）。
+    // 2) 更新 GameState 的 level / xp / xpToNext；升级立即入 pendingLevelUps。
+    //    [LEVEL-PAUSE 2026-05-08 v2] 刘叔原意：升级立即暂停战斗、等死亡动画完才弹窗。
+    //    入队时刻就是"击杀发生时刻"；真正弹窗时刻由 LevelUpModal 订阅 pendingLevelUps 决定；
+    //    死亡动画等待在 checkEnemyDeaths 的 enemyDeathCleanupDelay 里。
+    //    checkEnemyDeaths 会在 2200ms 后继续等 pendingLevelUps 清空才推进胜利/波次切换。
     setGame(prev => {
       const r = applyXpGain(prev, xpGain);
-      const nextBattleLv = [...(prev.battleLevelUps || []), ...r.levelsGained];
+      const nextQueue = [...(prev.pendingLevelUps || []), ...r.levelsGained];
       return {
         ...prev,
         level: r.level,
@@ -121,7 +123,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
         xpToNext: r.xpToNext,
         lastXpGain: xpGain,
         lastXpGainAt: now,
-        battleLevelUps: nextBattleLv,
+        pendingLevelUps: nextQueue,
       };
     });
   }
@@ -228,12 +230,14 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     const currentDepth = currentNode?.depth || 0;
     const depthMult = game.soulCrystalMultiplier + currentDepth * 0.1 + (game.levelSoulBonus || 0);
     let totalSoulGain = 0;
+    const perEnemyGain: Array<{ uid: string; gain: number }> = [];
     killedEnemiesData.forEach(killedData => {
       if (killedData.overkill > 0) {
         const enemy = enemies.find(e => e.uid === killedData.uid);
         const cappedOverkill = Math.min(killedData.overkill, enemy?.maxHp || 50);
         // 降低基础系数：0.5→0.15，通过商店涨价控制产销比
         const gain = Math.max(1, Math.ceil(cappedOverkill * depthMult * 0.15));
+        perEnemyGain.push({ uid: killedData.uid, gain });
         totalSoulGain += gain;
       }
     });
@@ -243,7 +247,12 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
         blackMarketQuota: (prev.blackMarketQuota || 0) + totalSoulGain,
         totalOverkillThisRun: (prev.totalOverkillThisRun || 0) + totalSoulGain,
       }));
-      addFloatingText(`+${totalSoulGain} 魂晶`, 'text-purple-300', undefined, 'player', true);
+      // [SOUL-SHARD 2026-05-08] 改为魂晶碎片从敌人位置飞向顶栏魂晶 badge，
+      //   不再用 addFloatingText('player') 让飘字叠在玩家头上与 XP 碎片混淆。
+      const now = Date.now();
+      perEnemyGain.forEach((e, i) => {
+        emitSoulGain({ enemyUid: e.uid, amount: e.gain, at: now + i });
+      });
       addToast(`+${totalSoulGain} 魂晶 (${Math.round(depthMult * 100)}%倍率)`, 'buff');
     }
   }

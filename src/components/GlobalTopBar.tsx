@@ -44,7 +44,12 @@ export const GlobalTopBar: React.FC = () => {
     <div className="flex justify-between items-center px-3 py-1.5 bg-[var(--dungeon-bg-light)] border-b-3 border-[var(--dungeon-panel-border)] z-30 shrink-0 tex-iron-panel">
       <div className="flex items-center gap-1.5">
         {/* 魂晶 */}
-        <div className="flex items-center gap-1 text-purple-400 font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative" style={{borderRadius:'2px'}} {...soulTip.handlers}>
+        <div
+          data-soul-badge
+          className="flex items-center gap-1 text-purple-400 font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative"
+          style={{borderRadius:'2px'}}
+          {...soulTip.handlers}
+        >
           <span className="relative">
             <PixelSoulCrystal size={2} />
             <span className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 text-[8px] text-purple-200 whitespace-nowrap leading-none font-bold" style={{textShadow:'0 0 2px #000, 0 0 2px #000'}}>{Math.round(actualMult * 100)}%</span>

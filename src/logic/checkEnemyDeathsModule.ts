@@ -32,6 +32,14 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
     // [Bug-23] 异步等待后检查战斗是否已结束（防止 handleVictory 被重复调用）
     if (gameRef.current.phase !== 'battle') return;
 
+    // [LEVEL-PAUSE 2026-05-08 v2] 死亡动画播完了，如果这次击杀触发了升级，
+    //   让 LevelUpModal 先弹出、玩家领完奖再继续推进（handleVictory / 波次切换 全部冻结）。
+    //   效果：击杀 → 死亡动画 2200ms → 升级弹窗（游戏静止） → 玩家选奖 → 胜利/下一波。
+    while ((gameRef.current.pendingLevelUps?.length || 0) > 0) {
+      await new Promise(r => setTimeout(r, 150));
+      if (gameRef.current.phase !== 'battle') return; // 被外部切走就放弃
+    }
+
     // Bug-3: 死亡动画已在 enemyDeathCleanupDelay (2200ms) 等待期间完成
     // 无需额外等待，直接检查存活敌人
     
