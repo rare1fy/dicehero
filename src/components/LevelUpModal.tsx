@@ -72,19 +72,19 @@ export const LevelUpModal: React.FC = () => {
             transition={{ duration: 0.4, ease: 'backOut' }}
             className="flex items-center gap-2"
           >
-            <PixelStar size={2} style={{ filter: 'drop-shadow(0 0 8px #ffd24a) drop-shadow(0 0 14px #ffd24a)' }} />
+            <PixelStar size={2} />
             <span
               style={{
                 fontSize: 22,
                 fontWeight: 900,
                 color: '#fff2a0',
                 letterSpacing: '0.08em',
-                textShadow: '0 0 8px rgba(255,210,74,0.9), 0 2px 0 rgba(0,0,0,0.9)',
+                textShadow: '0 2px 0 rgba(0,0,0,0.9)',
               }}
             >
               LEVEL UP · Lv{currentLevel}
             </span>
-            <PixelStar size={2} style={{ filter: 'drop-shadow(0 0 8px #ffd24a) drop-shadow(0 0 14px #ffd24a)' }} />
+            <PixelStar size={2} />
           </motion.div>
 
           <motion.div
@@ -115,8 +115,7 @@ export const LevelUpModal: React.FC = () => {
                     border: 'none',
                     boxShadow:
                       '0 0 0 1px ' + meta.color + ', ' +
-                      'inset 0 0 0 1px rgba(0,0,0,0.6), ' +
-                      '0 0 10px ' + meta.glow,
+                      'inset 0 0 0 1px rgba(0,0,0,0.6)',
                     imageRendering: 'pixelated',
                   }}
                 >
@@ -150,7 +149,7 @@ export const LevelUpModal: React.FC = () => {
                             fontSize: 14,
                             fontWeight: 900,
                             color: meta.color,
-                            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 4px ' + meta.glow,
+                            textShadow: '0 1px 0 rgba(0,0,0,0.9)',
                           }}
                         >
                           {reward.title}

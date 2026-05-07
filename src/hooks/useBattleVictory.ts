@@ -73,6 +73,11 @@ export function useBattleVictory(
         const mapHeal = prev.levelMapHeal || 0;
         const healedHp = mapHeal > 0 ? Math.min(prev.maxHp, prev.hp + mapHeal) : prev.hp;
 
+        // [LEVEL-PAUSE 2026-05-08] 把战斗期间累积的升级搬到 pendingLevelUps。
+        //   只有在死亡动画+清理完成、走到这里的瞬间，LevelUpModal 才开始感知到 pendingLevelUps 非空。
+        //   视觉时序：死亡动画 → 清理 → LevelUpModal 浮现 → 领完奖 → 看到 DiceRewardScreen。
+        const mergedPendingLv = [...(prev.pendingLevelUps || []), ...(prev.battleLevelUps || [])];
+
         if (postVictory.phase === 'victory') {
           return {
             ...prev,
@@ -87,6 +92,8 @@ export function useBattleVictory(
             map: newMap,
             phase: 'victory',
             isEnemyTurn: false,
+            pendingLevelUps: mergedPendingLv,
+            battleLevelUps: [],
           };
         }
 
@@ -105,6 +112,8 @@ export function useBattleVictory(
             map: newMap,
             phase: 'chapterTransition',
             isEnemyTurn: false,
+            pendingLevelUps: mergedPendingLv,
+            battleLevelUps: [],
           };
         }
 
@@ -122,6 +131,8 @@ export function useBattleVictory(
           map: newMap,
           phase: 'diceReward',
           isEnemyTurn: false,
+          pendingLevelUps: mergedPendingLv,
+          battleLevelUps: [],
         };
       }); // end setGame
       /* EXPLORE_BGM_BOOST */

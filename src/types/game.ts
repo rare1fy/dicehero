@@ -155,6 +155,7 @@ export interface GameState {
   levelSoulBonus?: number;             // 升级累计魂晶倍率加成
   levelXpBonus?: number;               // 升级累计经验值加成
   pendingLevelUps?: number[];          // 待领奖的升级级数队列（FIFO）
+  battleLevelUps?: number[];           // 战斗期间暂存的升级级数（胜利时统一并入 pendingLevelUps）
 }
 
 // ============================================================

@@ -107,10 +107,13 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       emitXpKill({ enemyUid: uid, xp: perKillRolled[i], at: now + i });
     });
 
-    // 2) 更新 GameState 的 level / xp / xpToNext；升级则入队待领奖
+    // 2) 更新 GameState 的 level / xp / xpToNext；升级暂存入 battleLevelUps
+    //    [LEVEL-PAUSE 2026-05-08] 不再立即 push 到 pendingLevelUps，避免战斗中途弹窗打断节奏
+    //    & 避免死亡动画未播完就出升级界面。
+    //    真正的 pendingLevelUps 入队搬迁发生在 handleVictory（死亡动画 + 清理后）。
     setGame(prev => {
       const r = applyXpGain(prev, xpGain);
-      const nextQueue = [...(prev.pendingLevelUps || []), ...r.levelsGained];
+      const nextBattleLv = [...(prev.battleLevelUps || []), ...r.levelsGained];
       return {
         ...prev,
         level: r.level,
@@ -118,7 +121,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
         xpToNext: r.xpToNext,
         lastXpGain: xpGain,
         lastXpGainAt: now,
-        pendingLevelUps: nextQueue,
+        battleLevelUps: nextBattleLv,
       };
     });
   }
