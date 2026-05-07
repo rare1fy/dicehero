@@ -1,13 +1,14 @@
 ﻿/**
  * LevelXpBadge.tsx — 等级徽章 + 可弹出经验条
  *
- * 设计要点（2026-05-08 刘叔指令）：
- *  1. 占位在玩家 HUD 状态行，形态 = 像素星 + Lv 数字
- *  2. 点击徽章：向上弹出经验条（显示 当前/下一级）；再点收起
- *  3. 接收经验：自动弹出 → 经验碎片从徽章飞入经验条 → 经验条条填充 → 2s 后自动收起
- *  4. 升级：经验条闪白 + 徽章 scale 弹跳 + "LV UP" 浮字
+ * 设计要点（2026-05-08 刘叔 review 迭代）：
+ *  - 徽章：去掉紫色外框，只保留像素星 + "Lv N" 文字（带像素描边）
+ *  - 经验条：去重边框 + 刻度，单条圆角像素进度条，右侧小字 xp/next
+ *  - 自动消失：无论是自动弹出（收到经验）还是手动点击，都统一在 2s 后收起
+ *  - 不在 xp=0 时闪出 "+0"（只有 lastXpGain>0 时才播动画；进度条宽度用 initial=animate 避免从 100% 闪到 0%）
+ *  - 升级：徽章金色闪光 + scale 弹跳 + "LV UP" 浮字
  *
- * 像素风 & fusion-pixel 字体，复用 PixelStar / 现有 CSS 变量。
+ *  碎片飞入动画已拆到 <XpShardLayer>（全屏层），本组件只负责徽章 + 经验条显示。
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,93 +18,92 @@ interface LevelXpBadgeProps {
   level: number;
   xp: number;
   xpToNext: number;
-  /** 最近一次获得的经验量（未使用时传 undefined） */
   lastXpGain?: number;
-  /** 最近一次获得的时间戳，变化会触发"接收动画" */
   lastXpGainAt?: number;
 }
 
+const AUTO_CLOSE_MS = 2000;
+
 export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext, lastXpGain, lastXpGainAt }) => {
-  const [manuallyOpen, setManuallyOpen] = useState(false);
-  const [autoOpen, setAutoOpen] = useState(false);
-  const [shards, setShards] = useState<number[]>([]);  // 飞行中的经验碎片 id 列表
+  const [open, setOpen] = useState(false);
   const [levelUpFlash, setLevelUpFlash] = useState(false);
   const [levelUpLabel, setLevelUpLabel] = useState<number | null>(null);
   const prevLevelRef = useRef(level);
   const prevGainAtRef = useRef<number | undefined>(lastXpGainAt);
   const autoCloseTimerRef = useRef<number | null>(null);
+  const pct = Math.min(100, Math.max(0, Math.round((xp / Math.max(1, xpToNext)) * 100)));
 
-  const open = manuallyOpen || autoOpen;
-  const pct = Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100));
+  const scheduleAutoClose = () => {
+    if (autoCloseTimerRef.current) window.clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = window.setTimeout(() => setOpen(false), AUTO_CLOSE_MS);
+  };
 
-  // 监听经验增益事件
+  // 收到经验增益 → 弹出经验条（只有 lastXpGain>0 才触发，避免初始闪现）
   useEffect(() => {
     if (lastXpGainAt && lastXpGainAt !== prevGainAtRef.current) {
       prevGainAtRef.current = lastXpGainAt;
-      const gain = lastXpGain || 0;
-      if (gain <= 0) return;
-
-      setAutoOpen(true);
-
-      // 按经验量生成 3-6 个碎片，错峰飞入
-      const shardCount = Math.min(6, Math.max(3, Math.floor(gain / 10)));
-      const ids: number[] = [];
-      for (let i = 0; i < shardCount; i++) ids.push(Date.now() + i);
-      setShards(ids);
-      // 每个碎片存活 0.6s，错峰发射
-      ids.forEach((id, idx) => {
-        setTimeout(() => {
-          setShards(prev => prev.filter(x => x !== id));
-        }, 600 + idx * 80);
-      });
-
-      // 2s 后自动收起
-      if (autoCloseTimerRef.current) window.clearTimeout(autoCloseTimerRef.current);
-      autoCloseTimerRef.current = window.setTimeout(() => {
-        setAutoOpen(false);
-      }, 2000);
+      if ((lastXpGain || 0) > 0) {
+        setOpen(true);
+        scheduleAutoClose();
+      }
     }
   }, [lastXpGainAt, lastXpGain]);
 
-  // 监听升级
+  // 升级
   useEffect(() => {
     if (level > prevLevelRef.current) {
       setLevelUpFlash(true);
       setLevelUpLabel(level);
-      setAutoOpen(true);
+      setOpen(true);
+      scheduleAutoClose();
       window.setTimeout(() => setLevelUpFlash(false), 600);
       window.setTimeout(() => setLevelUpLabel(null), 1600);
-      if (autoCloseTimerRef.current) window.clearTimeout(autoCloseTimerRef.current);
-      autoCloseTimerRef.current = window.setTimeout(() => setAutoOpen(false), 2500);
     }
     prevLevelRef.current = level;
   }, [level]);
 
+  // 点击徽章 → 开/关，开的话也启动 2s 自动消失
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (open) {
+      setOpen(false);
+      if (autoCloseTimerRef.current) window.clearTimeout(autoCloseTimerRef.current);
+    } else {
+      setOpen(true);
+      scheduleAutoClose();
+    }
+  };
+
   return (
-    <div className="relative shrink-0" style={{ fontFamily: '"fusion-pixel", monospace' }}>
-      {/* 徽章本体 —— 像素星 + Lv 数字 */}
+    <div
+      className="relative shrink-0 flex items-center gap-0.5"
+      data-xp-badge="1"
+      style={{ fontFamily: '"fusion-pixel", monospace' }}
+    >
+      {/* 徽章本体 —— 裸像素星 + Lv 数字（无外框） */}
       <motion.button
-        onClick={(e) => { e.stopPropagation(); setManuallyOpen(v => !v); }}
+        onClick={handleClick}
         animate={levelUpFlash ? { scale: [1, 1.4, 1], rotate: [0, -6, 6, 0] } : { scale: 1, rotate: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center gap-0.5 px-1 py-0.5 cursor-pointer"
-        style={{
-          background: levelUpFlash
-            ? 'linear-gradient(180deg, rgba(255,240,160,1) 0%, rgba(232,184,48,0.9) 100%)'
-            : 'linear-gradient(180deg, rgba(60,40,90,0.85) 0%, rgba(30,20,60,0.95) 100%)',
-          border: '2px solid ' + (levelUpFlash ? '#fff9c4' : '#c080ff'),
-          borderRadius: 2,
-          boxShadow: levelUpFlash
-            ? '0 0 12px rgba(255,240,160,0.9), 0 0 20px rgba(232,184,48,0.6)'
-            : '0 0 6px rgba(160,80,224,0.4)',
-          minWidth: 34,
-          height: 16,
-          lineHeight: 1,
-        }}
+        className="flex items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0 leading-none"
+        style={{ height: 14 }}
         title="点击查看经验"
       >
-        <PixelStar size={1} />
-        <span className="text-[10px] font-black tracking-wider pixel-text-shadow" style={{ color: levelUpFlash ? '#3a1a00' : '#fff' }}>
+        <PixelStar
+          size={1}
+          style={{
+            filter: levelUpFlash
+              ? 'drop-shadow(0 0 4px #fff7b0) drop-shadow(0 0 8px #ffd24a)'
+              : 'drop-shadow(0 0 2px rgba(192,128,255,0.55))',
+          }}
+        />
+        <span
+          className="text-[10px] font-black tracking-wider pixel-text-shadow"
+          style={{
+            color: levelUpFlash ? '#fff2a0' : '#e8d8ff',
+            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(160,80,224,0.55)',
+          }}
+        >
           Lv{level}
         </span>
       </motion.button>
@@ -131,84 +131,54 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
         )}
       </AnimatePresence>
 
-      {/* 弹出的经验条（绝对定位到徽章上方） */}
+      {/* 弹出的经验条 */}
       <AnimatePresence>
         {open && (
           <motion.div
             key="xpbar"
-            initial={{ opacity: 0, y: 6, scaleX: 0.3 }}
-            animate={{ opacity: 1, y: 0, scaleX: 1 }}
-            exit={{ opacity: 0, y: 6, scaleX: 0.5 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="absolute left-0 pointer-events-none z-[102]"
-            style={{
-              bottom: 'calc(100% + 4px)',
-              transformOrigin: 'left center',
-              width: 120,
-            }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="absolute left-0 pointer-events-none z-[102] flex items-center gap-1"
+            style={{ bottom: 'calc(100% + 3px)', whiteSpace: 'nowrap' }}
           >
-            {/* 经验条容器 */}
+            {/* 主体经验条：像素风单条 */}
             <div
               className="relative"
               style={{
-                height: 10,
-                background: 'rgba(10,6,20,0.92)',
-                border: '2px solid #c080ff',
-                borderRadius: 2,
-                boxShadow: '0 0 10px rgba(160,80,224,0.55), inset 0 0 4px rgba(0,0,0,0.6)',
-                padding: 1,
+                width: 96,
+                height: 6,
+                background: 'rgba(8,4,18,0.88)',
+                boxShadow: '0 0 0 1px rgba(160,80,224,0.9), 0 0 6px rgba(160,80,224,0.5)',
               }}
             >
               <motion.div
                 className="h-full"
+                initial={{ width: pct + '%' }}
                 animate={{ width: pct + '%' }}
-                transition={{ duration: 0.45, ease: 'easeOut' }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
                 style={{
                   background: levelUpFlash
-                    ? 'linear-gradient(90deg, #fff9c4 0%, #ffd24a 50%, #fff9c4 100%)'
-                    : 'linear-gradient(90deg, #a050e0 0%, #c080ff 50%, #e0a0ff 100%)',
-                  boxShadow: '0 0 6px rgba(192,128,255,0.8)',
+                    ? 'linear-gradient(90deg, #fff9c4 0%, #ffd24a 50%, #fff2a0 100%)'
+                    : 'linear-gradient(90deg, #a050e0 0%, #d09aff 50%, #f0c8ff 100%)',
+                  boxShadow: '0 0 4px rgba(208,154,255,0.9)',
                 }}
               />
-              {/* 刻度小段 */}
-              <div className="absolute inset-0 pointer-events-none" style={{
-                backgroundImage: 'repeating-linear-gradient(90deg, transparent 0, transparent 11px, rgba(0,0,0,0.35) 11px, rgba(0,0,0,0.35) 12px)',
-              }} />
             </div>
-            {/* 数字标签 */}
-            <div className="flex items-center justify-between mt-0.5" style={{ fontSize: 8, lineHeight: 1 }}>
-              <span style={{ color: '#c080ff', textShadow: '0 1px 0 rgba(0,0,0,0.7)' }}>EXP</span>
-              <span className="font-mono font-bold" style={{ color: '#fff', textShadow: '0 1px 0 rgba(0,0,0,0.7)' }}>
-                {xp}/{xpToNext}
-              </span>
-            </div>
-
-            {/* 经验碎片飞入动画 —— 从徽章左下（起点 0,30）飞到经验条中部 */}
-            <AnimatePresence>
-              {shards.map((id, idx) => (
-                <motion.span
-                  key={id}
-                  initial={{ opacity: 0, x: 0, y: 30, scale: 0.4, rotate: 0 }}
-                  animate={{
-                    opacity: [0, 1, 1, 0],
-                    x: [0, 18 + idx * 12, 40 + idx * 12],
-                    y: [30, 10, 5],
-                    scale: [0.4, 1.1, 0.6],
-                    rotate: [0, 120 + idx * 30, 240],
-                  }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.55, delay: idx * 0.06, ease: 'easeOut' }}
-                  className="absolute"
-                  style={{
-                    left: 0, top: 0,
-                    width: 6, height: 6,
-                    background: 'linear-gradient(180deg, #e0a0ff 0%, #a050e0 100%)',
-                    borderRadius: 1,
-                    boxShadow: '0 0 6px rgba(192,128,255,0.9), 0 0 12px rgba(160,80,224,0.6)',
-                  }}
-                />
-              ))}
-            </AnimatePresence>
+            {/* 右侧数字 */}
+            <span
+              className="font-mono font-bold"
+              style={{
+                fontSize: 9,
+                color: '#e8d8ff',
+                textShadow: '0 1px 0 rgba(0,0,0,0.9)',
+                letterSpacing: '0.02em',
+                lineHeight: 1,
+              }}
+            >
+              {xp}/{xpToNext}
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

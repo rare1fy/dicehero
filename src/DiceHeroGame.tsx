@@ -18,6 +18,7 @@ import { BattleContext } from './contexts/BattleContext';
 import type { BattleContextType } from './contexts/BattleContext';
 import { StartScreen } from './components/StartScreen';
 import { GlobalTopBar } from './components/GlobalTopBar';
+import { XpShardLayer } from './components/XpShardLayer';
 import { MapScreen } from './components/MapScreen';
 import { ShopScreen } from './components/ShopScreen';
 import { CampfireScreen } from './components/CampfireScreen';
@@ -132,6 +133,7 @@ export default function DiceHeroGame() {
       <div className="absolute inset-0 pixel-grid-bg opacity-15 pointer-events-none" />
 
       <GlobalTopBar />
+      <XpShardLayer />
 
       {/* 战斗转场遮罩 */}
       {battleTransition !== 'none' && (

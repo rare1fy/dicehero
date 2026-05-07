@@ -1,4 +1,4 @@
-﻿/**
+/**
 * postPlayEffects.ts — 出牌后效处理
 * checkEnemyDeaths 已提取到 checkEnemyDeathsModule.ts
 * instakillChallengeAid 已提取到 instakillChallengeAid.ts (ARCH-G)
@@ -19,6 +19,7 @@ import { checkHands } from '../utils/handEvaluator';
 import { checkChallenge } from '../utils/instakillChallenge';
 import { STATUS_INFO } from '../data/statusInfo';
 import { getKillXp, applyXpGain } from './xpSystem';
+import { emitXpKill } from './xpEvents';
 
 // --- Context 接口 ---
 
@@ -83,23 +84,34 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   }
 
   // ===== 经验值增益：按当前节点类型给奖励 =====
-  // killedEnemiesData 在下方计算，这里先用 hasAoe/finalEnemyHp 推导一个即时击杀计数
-  const immediateKills = hasAoe
+  // 同步推导本次出牌击杀的敌人 uid 列表（enemies 快照，setEnemies 尚未生效）
+  const killedUids: string[] = hasAoe
     ? enemies.filter(e => {
         let dmg = outcome.damage; let arm = e.armor;
         if (outcome.armorBreak) arm = 0;
         if (arm > 0) dmg = Math.max(0, dmg - arm);
         return e.hp > 0 && (e.hp - dmg) <= 0;
-      }).length
-    : (finalEnemyHp <= 0 ? 1 : 0);
-  if (immediateKills > 0) {
+      }).map(e => e.uid)
+    : (finalEnemyHp <= 0 ? [targetUid] : []);
+
+  if (killedUids.length > 0) {
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
-    const xpGain = getKillXp(currentNode?.type, immediateKills);
+    const xpPerKill = getKillXp(currentNode?.type, 1);
+    const xpGain = xpPerKill * killedUids.length;
+
+    // 1) 派发"爆经验碎片"事件：一只敌人一个事件，XpShardLayer 读 DOM 位置
+    const now = Date.now();
+    killedUids.forEach((uid, i) => {
+      emitXpKill({ enemyUid: uid, xp: xpPerKill, at: now + i });
+    });
+
+    // 2) 更新 GameState 的 level / xp / xpToNext
     setGame(prev => {
       const r = applyXpGain(prev, xpGain);
-      return { ...prev, level: r.level, xp: r.xp, xpToNext: r.xpToNext, lastXpGain: xpGain, lastXpGainAt: Date.now() };
+      return { ...prev, level: r.level, xp: r.xp, xpToNext: r.xpToNext, lastXpGain: xpGain, lastXpGainAt: now };
     });
   }
+
   // on_kill 遗物效果：检查是否有敌人被击杀（Pre-compute killed enemies synchronously，避免 stale closure）
   const killedEnemiesData: Array<{uid: string, overkill: number}> = [];
   if (hasAoe) {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EnemyStageView.tsx — 战斗上半区：敌人舞台
  *
  * 从 DiceHeroGame.tsx 提取（ARCH-F Round2）。
@@ -258,6 +258,7 @@ export function EnemyStageView() {
         return (
           <motion.div
             key={enemy.uid}
+            data-enemy-uid={enemy.uid}
             onClick={() => {
               const aliveGuardian = enemies.find(e => e.hp > 0 && e.combatType === 'guardian' && e.uid !== enemy.uid);
               if (aliveGuardian && enemy.combatType !== 'guardian') {
