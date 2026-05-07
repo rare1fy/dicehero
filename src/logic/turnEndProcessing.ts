@@ -11,6 +11,7 @@ import type React from 'react';
 import type { Die, GameState, Enemy } from '../types/game';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
+import { absorbPlayerDamage } from './battleHelpers';
 
 // ============================================================
 // Context 接口
@@ -51,36 +52,39 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
 
   // === 职业回合结束处理 ===
   // 法师【星界吟唱】：未出牌时吟唱+1（手牌上限3→4→5→6递增），到6后继续吟唱给倍率
+  // [2026-05-07] 吟唱不再加护甲，改为【奥术屏障】：减免一切伤害（含 DOT），和护甲一样每回合清空。
+  //              屏障数值：4 + 当前蓄力层数 * 2（1→4, 2→6, 3→8, 4→10, 5→12...）
   const playedThisTurn = game.playsLeft < game.maxPlays; // 本回合是否出过牌
   if (game.playerClass === 'mage' && !playedThisTurn) {
     const currentCharge = game.chargeStacks || 0;
     const maxChargeForHand = 6 - game.drawCount; // drawCount=3 → 最多蓄力3层到达上限6
-    
+    const shieldGain = 4 + currentCharge * 2;
+
     if (currentCharge >= maxChargeForHand) {
       // 手牌上限已达6颗，继续蓄力给伤害倍率加成（每次+10%）
       const overchargeBonus = 0.1;
-      const chargeArmor = 6 + currentCharge * 2;
       setGame(prev => ({
         ...prev,
         chargeStacks: currentCharge + 1,
         mageOverchargeMult: (prev.mageOverchargeMult || 0) + overchargeBonus,
-        armor: prev.armor + chargeArmor,
+        chantShield: (prev.chantShield || 0) + shieldGain,
       }));
       addFloatingText(`过充! 伤害+${Math.round(((game.mageOverchargeMult || 0) + overchargeBonus) * 100)}%`, 'text-purple-400', undefined, 'player');
-      addFloatingText(`+${chargeArmor}护甲`, 'text-blue-400', undefined, 'player');
+      addFloatingText(`奥术屏障+${shieldGain}`, 'text-cyan-300', undefined, 'player');
     } else {
       // 正常吟唱：手牌上限+1
       const newChargeStacks = currentCharge + 1;
       const newHandLimit = Math.min(6, game.drawCount + newChargeStacks);
-      const chargeArmor = 6 + currentCharge * 2;
       setGame(prev => ({
-        ...prev, chargeStacks: newChargeStacks, armor: prev.armor + chargeArmor,
+        ...prev,
+        chargeStacks: newChargeStacks,
+        chantShield: (prev.chantShield || 0) + shieldGain,
       }));
       addFloatingText(`吟唱 ${newHandLimit}/6`, 'text-purple-400', undefined, 'player');
-      addFloatingText(`+${chargeArmor}护甲`, 'text-blue-400', undefined, 'player');
+      addFloatingText(`奥术屏障+${shieldGain}`, 'text-cyan-300', undefined, 'player');
     }
   } else if (game.playerClass === 'mage' && playedThisTurn) {
-    // 出了牌就重置吟唱和过充倍率
+    // 出了牌就重置吟唱和过充倍率（chantShield 由回合开始清零统一处理）
     setGame(prev => ({ ...prev, chargeStacks: 0, mageOverchargeMult: 0 }));
   }
 
@@ -147,13 +151,12 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
       if (totalTauntDmg > 0) {
         setTimeout(() => {
           setGame(prev => {
-            const armored = prev.armor;
-            const afterArmor = Math.max(0, totalTauntDmg - armored);
-            const newArmor = Math.max(0, armored - totalTauntDmg);
+            const absorb = absorbPlayerDamage(totalTauntDmg, prev.chantShield || 0, prev.armor, false);
             return {
               ...prev,
-              hp: Math.max(0, prev.hp - afterArmor),
-              armor: newArmor,
+              hp: Math.max(0, prev.hp - absorb.hpDamage),
+              armor: absorb.newArmor,
+              chantShield: absorb.newShield,
             };
           });
           addFloatingText(`-${totalTauntDmg}`, 'text-red-500', undefined, 'player');

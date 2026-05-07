@@ -317,6 +317,7 @@ export function useBattleCombat(
         ...prev,
         isEnemyTurn: false,
         armor: 0,
+        chantShield: 0,
         playsLeft: prev.maxPlays,
         freeRerollsLeft: prev.freeRerollsPerTurn,
         hpLostThisTurn: 0,

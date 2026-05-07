@@ -101,6 +101,7 @@ export function PlayerHudView() {
           </motion.div>
           <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
             {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
+            {(game.chantShield || 0) > 0 && <BuffTooltip label={`屏障${game.chantShield}`} icon={<PixelMagic size={1.5} />} color="rgb(125,211,252)" bgColor="rgba(56,189,248,0.15)" borderColor="rgba(56,189,248,0.5)" title={`奥术屏障 ${game.chantShield}`} desc="减免一切伤害，包括中毒、灼烧等持续伤害。每回合开始时清空。" />}
             {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
             {game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0 && (() => {
               const fs = Math.min(game.bloodRerollCount || 0, FURY_CONFIG.maxStack);
@@ -109,7 +110,7 @@ export function PlayerHudView() {
             })()}
             {game.playerClass === 'warrior' && (game.warriorRageMult || 0) > 0 && <BuffTooltip label={`狂暴+${Math.round((game.warriorRageMult || 0) * 100)}%`} icon={<PixelFlame size={1.5} />} color="rgb(255,80,40)" bgColor="rgba(255,60,20,0.15)" borderColor="rgba(255,60,20,0.4)" title={`狂暴本能 +${Math.round((game.warriorRageMult || 0) * 100)}%`} desc={`手牌达到6颗上限时，按受伤百分比(${Math.round((1 - game.hp / game.maxHp) * 100)}%)获得等比例伤害加成。`} />}
             {game.playerClass === 'mage' && (game.mageOverchargeMult || 0) > 0 && <BuffTooltip label={`+${Math.round((game.mageOverchargeMult || 0) * 100)}%`} icon={<PixelMagic size={1.5} />} color="rgb(192,132,252)" bgColor="rgba(160,80,255,0.15)" borderColor="rgba(160,80,255,0.4)" title={`过充吟唱 +${Math.round((game.mageOverchargeMult || 0) * 100)}%`} desc="手牌满6颗后继续吟唱，每回合+10%伤害倍率。出牌后重置。" />}
-            {game.playerClass === 'mage' && (game.chargeStacks || 0) > 0 && <BuffTooltip label={`蓄${game.chargeStacks}层`} icon={<PixelMagic size={1.5} />} color="rgb(168,148,232)" bgColor="rgba(120,80,200,0.15)" borderColor="rgba(120,80,200,0.4)" title={`星界吟唱 Lv.${game.chargeStacks}`} desc={`手牌上限${Math.min(6, game.drawCount + (game.chargeStacks || 0))}/6，吟唱回合+${6 + (game.chargeStacks || 0) * 2}护甲。出牌后重置所有吟唱。`} />}
+            {game.playerClass === 'mage' && (game.chargeStacks || 0) > 0 && <BuffTooltip label={`蓄${game.chargeStacks}层`} icon={<PixelMagic size={1.5} />} color="rgb(168,148,232)" bgColor="rgba(120,80,200,0.15)" borderColor="rgba(120,80,200,0.4)" title={`星界吟唱 Lv.${game.chargeStacks}`} desc={`手牌上限${Math.min(6, game.drawCount + (game.chargeStacks || 0))}/6，吟唱时获得奥术屏障+${4 + (game.chargeStacks || 0) * 2}（减免一切伤害含DOT）。出牌后重置所有吟唱。`} />}
             {game.playerClass === 'rogue' && (game.comboCount || 0) > 0 && <BuffTooltip label={`连击${game.comboCount}`} icon={<PixelZap size={1.5} />} color="rgb(96,208,128)" bgColor="rgba(48,160,80,0.15)" borderColor="rgba(48,160,80,0.4)" title={`连击 ×${game.comboCount}`} desc={`第2次出牌伤害+20%。两次相同牌型（非普攻）额外+25%。剩余${game.playsLeft}次出牌。回合结束重置。`} />}
           </div>
           <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] shrink-0" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>

@@ -37,6 +37,7 @@ export function buildBattleGameState(
     battleTurn: 1,
     currentNodeId: node.id,
     armor: 0,
+    chantShield: 0,
     statuses: [],
     playsPerEnemy: {},
     chargeStacks: 0,

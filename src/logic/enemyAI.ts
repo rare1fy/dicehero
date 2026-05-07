@@ -22,6 +22,7 @@ import { executePriestSkill, executeCasterSkill, tickStatuses } from './enemySki
 import { processEliteDice, processEliteArmor } from './elites';
 import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
 import { tryWaveTransition } from './enemyWaveTransition';
+import { absorbPlayerDamage } from './battleHelpers';
 import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config';
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
@@ -107,28 +108,36 @@ export async function executeEnemyTurn(
   cb.setGame(prev => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, blackMarketUsedThisTurn: false }));
 
   // 1. 玩家中毒结算（E5: death check 在回调内部完成）
+  // [2026-05-07] 奥术屏障优先抵挡 DOT；护甲对 DOT 无效（bypassArmor=true）
   cb.setGame((prev: GameState) => {
     let nextStatuses = [...prev.statuses];
     let poisonDamage = 0;
     const poison = prev.statuses.find(s => s.type === 'poison');
     if (poison && poison.value > 0) {
       poisonDamage = poison.value;
-      cb.addLog(`你因中毒受到了 ${poisonDamage} 点伤害。`);
-      cb.addFloatingText(`-${poisonDamage}`, 'text-purple-400', undefined, 'player');
       nextStatuses = nextStatuses.map(s => s.type === 'poison' ? { ...s, value: s.value - 1 } : s).filter(s => s.value > 0);
     }
-    let newHp = Math.max(0, prev.hp - poisonDamage);
+    const absorb = absorbPlayerDamage(poisonDamage, prev.chantShield || 0, prev.armor, true);
+    if (absorb.absorbedByShield > 0) {
+      cb.addLog(`奥术屏障吸收了 ${absorb.absorbedByShield} 点中毒伤害。`);
+      cb.addFloatingText(`屏障-${absorb.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+    }
+    if (absorb.hpDamage > 0) {
+      cb.addLog(`你因中毒受到了 ${absorb.hpDamage} 点伤害。`);
+      cb.addFloatingText(`-${absorb.hpDamage}`, 'text-purple-400', undefined, 'player');
+    }
+    let newHp = Math.max(0, prev.hp - absorb.hpDamage);
     if (newHp <= 0 && prev.hp > 0) {
       if (cb.hasFatalProtection(prev.relics)) {
         newHp = prev.hp;
-        return { ...prev, hp: newHp, relics: cb.triggerHourglass(prev.relics), statuses: nextStatuses };
+        return { ...prev, hp: newHp, chantShield: absorb.newShield, relics: cb.triggerHourglass(prev.relics), statuses: nextStatuses };
       }
-      return { ...prev, hp: 0, phase: 'gameover' as const, statuses: nextStatuses };
+      return { ...prev, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses };
     }
     if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
       return { ...prev, phase: 'gameover' as const };
     }
-    return { ...prev, hp: newHp, statuses: nextStatuses };
+    return { ...prev, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses };
   });
 
   await new Promise(r => setTimeout(r, 600));
@@ -294,17 +303,14 @@ export async function executeEnemyTurn(
         isSlowed,
       });
 
-      let newArmor = prev.armor;
-      let newHp = prev.hp;
-      let absorbed = 0;
-      if (newArmor > 0) { absorbed = Math.min(newArmor, damage); newArmor -= absorbed; }
-      const hpDmg = damage - absorbed;
-      if (hpDmg > 0) newHp = Math.max(0, newHp - hpDmg);
+      const absorb = absorbPlayerDamage(damage, prev.chantShield || 0, prev.armor, false);
+      const newHp = Math.max(0, prev.hp - absorb.hpDamage);
       const hpLost = prev.hp - newHp;
 
-      if (absorbed > 0) cb.addFloatingText(`-${absorbed}`, 'text-blue-400', undefined, 'player');
-      if (hpDmg > 0) cb.addFloatingText(`-${hpDmg}`, 'text-red-500', undefined, 'player');
-      if (absorbed === 0 && hpDmg === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
+      if (absorb.absorbedByShield > 0) cb.addFloatingText(`屏障-${absorb.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+      if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
+      if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', undefined, 'player');
+      if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
 
       cb.setPlayerEffect('flash');
       cb.addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
@@ -317,11 +323,11 @@ export async function executeEnemyTurn(
 
       if (newHp <= 0 && prev.hp > 0) {
         if (cb.hasFatalProtection(prev.relics)) {
-          return { ...prev, hp: prev.hp, armor: prev.armor, relics: cb.triggerHourglass(prev.relics) };
+          return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb.newShield, relics: cb.triggerHourglass(prev.relics) };
         }
-        return { ...prev, hp: 0, phase: 'gameover' as const, armor: newArmor };
+        return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb.newArmor, chantShield: absorb.newShield };
       }
-      return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
+      return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
     });
 
     // on_damage_taken 遗物
@@ -356,24 +362,21 @@ export async function executeEnemyTurn(
       const secondHit = getRangerFollowUpDmg(e, hitCount);
 
       cb.setGame((prev: GameState) => {
-        let newArmor = prev.armor;
-        let newHp = prev.hp;
-        let abs2 = 0;
-        if (newArmor > 0) { abs2 = Math.min(newArmor, secondHit); newArmor -= abs2; }
-        const hpD2 = secondHit - abs2;
-        if (hpD2 > 0) newHp = Math.max(0, newHp - hpD2);
+        const absorb2 = absorbPlayerDamage(secondHit, prev.chantShield || 0, prev.armor, false);
+        const newHp = Math.max(0, prev.hp - absorb2.hpDamage);
         const hpLost = prev.hp - newHp;
 
-        if (abs2 > 0) cb.addFloatingText(`-${abs2}`, 'text-blue-400', undefined, 'player');
-        if (hpD2 > 0) cb.addFloatingText(`-${hpD2}`, 'text-orange-400', undefined, 'player');
+        if (absorb2.absorbedByShield > 0) cb.addFloatingText(`屏障-${absorb2.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+        if (absorb2.absorbedByArmor > 0) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
+        if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', undefined, 'player');
 
         if (newHp <= 0 && prev.hp > 0) {
           if (cb.hasFatalProtection(prev.relics)) {
-            return { ...prev, hp: prev.hp, armor: prev.armor, relics: cb.triggerHourglass(prev.relics) };
+            return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb2.newShield, relics: cb.triggerHourglass(prev.relics) };
           }
-          return { ...prev, hp: 0, phase: 'gameover' as const, armor: newArmor };
+          return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb2.newArmor, chantShield: absorb2.newShield };
         }
-        return { ...prev, hp: newHp, armor: newArmor, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
+        return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
       });
       cb.addLog(`${e.name} 追击造成 ${secondHit} 伤害！`);
       cb.playSound('enemy');
@@ -425,27 +428,35 @@ export async function executeEnemyTurn(
     const burn = prev.statuses.find(s => s.type === 'burn');
     if (burn && burn.value > 0) {
       burnDamage = burn.value;
-      cb.addLog(`你因灼烧受到了 ${burnDamage} 点伤害。`);
-      cb.addFloatingText(`-${burnDamage}`, 'text-orange-500', undefined, 'player');
       nextStatuses = nextStatuses.filter(s => s.type !== 'burn');
     }
+    // [2026-05-07] 灼烧 DOT：奥术屏障抵挡，护甲无效
+    const absorb = absorbPlayerDamage(burnDamage, prev.chantShield || 0, prev.armor, true);
+    if (absorb.absorbedByShield > 0) {
+      cb.addLog(`奥术屏障吸收了 ${absorb.absorbedByShield} 点灼烧伤害。`);
+      cb.addFloatingText(`屏障-${absorb.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+    }
+    if (absorb.hpDamage > 0) {
+      cb.addLog(`你因灼烧受到了 ${absorb.hpDamage} 点伤害。`);
+      cb.addFloatingText(`-${absorb.hpDamage}`, 'text-orange-500', undefined, 'player');
+    }
     nextStatuses = tickStatuses(nextStatuses);
-    let newHp = Math.max(0, prev.hp - burnDamage);
+    let newHp = Math.max(0, prev.hp - absorb.hpDamage);
     if (newHp <= 0 && prev.hp > 0) {
       if (cb.hasFatalProtection(prev.relics)) {
         newHp = prev.hp;
         returnHp = newHp;
-        return { ...prev, battleTurn: nextTurn, hp: newHp, statuses: nextStatuses, isEnemyTurn: false, relics: cb.triggerHourglass(prev.relics) };
+        return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, isEnemyTurn: false, relics: cb.triggerHourglass(prev.relics) };
       }
       returnHp = 0;
-      return { ...prev, battleTurn: nextTurn, hp: 0, phase: 'gameover' as const, statuses: nextStatuses, isEnemyTurn: false };
+      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, isEnemyTurn: false };
     }
     if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
       returnHp = 0;
       return { ...prev, battleTurn: nextTurn, phase: 'gameover' as const, isEnemyTurn: false };
     }
     returnHp = newHp;
-    return { ...prev, battleTurn: nextTurn, hp: newHp, statuses: nextStatuses, isEnemyTurn: false };
+    return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, isEnemyTurn: false };
   });
 
   return { hp: returnHp, waveTransitioned: false };

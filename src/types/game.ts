@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // types/game.ts — 统一重导出入口 + 本地类型
 // ============================================================
 
@@ -63,6 +63,8 @@ export interface GameState {
   hp: number;
   maxHp: number;
   armor: number;
+  /** 法师【奥术屏障】：吟唱回合叠加的伤害免疫层，优先于 armor 抵挡一切伤害（含 DOT），每新回合清零 */
+  chantShield: number;
   freeRerollsLeft: number;
   freeRerollsPerTurn: number;
   globalRerolls: number;

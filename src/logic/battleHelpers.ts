@@ -45,3 +45,55 @@ export function getDepthVisuals(distance: number) {
   const depthZ = distance >= 3 ? 1 : distance === 2 ? 3 : distance === 1 ? 5 : 7;
   return { depthScale, depthY, depthBrightness, depthZ };
 }
+
+/**
+ * 玩家受到伤害时的屏障/护甲抵挡计算（纯函数）
+ *
+ * [2026-05-07] 法师【奥术屏障】新增：
+ * - `chantShield` 优先抵挡所有伤害（包括 DOT 中毒/灼烧），护甲无法吸收的 DOT 也能抵
+ * - `armor` 仅抵挡普通伤害（非 DOT）
+ *
+ * @param incoming 入射伤害
+ * @param chantShield 当前奥术屏障层数
+ * @param armor 当前护甲（可选；DOT 伤害应传 0 或跳过此参数）
+ * @param bypassArmor 是否绕过 armor（DOT 场景：true → armor 不吸收）
+ * @returns { absorbedByShield, absorbedByArmor, hpDamage, newShield, newArmor }
+ */
+export function absorbPlayerDamage(
+  incoming: number,
+  chantShield: number,
+  armor: number,
+  bypassArmor: boolean = false,
+): {
+  absorbedByShield: number;
+  absorbedByArmor: number;
+  hpDamage: number;
+  newShield: number;
+  newArmor: number;
+} {
+  let remaining = Math.max(0, incoming);
+  let absorbedByShield = 0;
+  let absorbedByArmor = 0;
+
+  // 1) 奥术屏障优先吸收（一切伤害）
+  if (chantShield > 0 && remaining > 0) {
+    absorbedByShield = Math.min(chantShield, remaining);
+    remaining -= absorbedByShield;
+  }
+
+  // 2) 护甲吸收（DOT 场景绕过）
+  let newArmor = armor;
+  if (!bypassArmor && armor > 0 && remaining > 0) {
+    absorbedByArmor = Math.min(armor, remaining);
+    remaining -= absorbedByArmor;
+    newArmor = armor - absorbedByArmor;
+  }
+
+  return {
+    absorbedByShield,
+    absorbedByArmor,
+    hpDamage: remaining,
+    newShield: chantShield - absorbedByShield,
+    newArmor,
+  };
+}

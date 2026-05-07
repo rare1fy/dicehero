@@ -52,6 +52,7 @@ export function tryWaveTransition(
       playsLeft: prev.maxPlays,
       freeRerollsLeft: prev.freeRerollsPerTurn,
       armor: 0,
+      chantShield: 0,
       chargeStacks: isMageChanting ? prev.chargeStacks : 0,
       mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
       bloodRerollCount: 0,

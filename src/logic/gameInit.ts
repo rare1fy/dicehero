@@ -25,6 +25,7 @@ export function createInitialGameState(classId?: ClassId): GameState {
     hp: classDef?.hp ?? PLAYER_INITIAL.hp,
     maxHp: classDef?.maxHp ?? PLAYER_INITIAL.maxHp,
     armor: PLAYER_INITIAL.armor,
+    chantShield: 0,
     freeRerollsLeft: classDef?.freeRerolls ?? PLAYER_INITIAL.freeRerollsPerTurn,
     freeRerollsPerTurn: classDef?.freeRerolls ?? PLAYER_INITIAL.freeRerollsPerTurn,
     globalRerolls: PLAYER_INITIAL.globalRerolls,
