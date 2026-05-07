@@ -131,12 +131,10 @@ export function useBattleCombat(
     });
   }, [dice, currentHands]);
 
-  // 遗物副作用
-  useEffect(() => {
-    if (expectedOutcome && expectedOutcome.pendingSideEffects.length > 0) {
-      applyPendingSideEffects(expectedOutcome.pendingSideEffects, setGame, setRerollCount);
-    }
-  }, [expectedOutcome]);
+  // [Bug-FIX 2026-05-07] 删除预览阶段自动应用 pendingSideEffects 的 useEffect。
+  // 原实现每当 expectedOutcome 重算（选/取消选骰子）就执行 setRelicCounter / grantExtraPlay 等
+  // 写入操作，导致铁血战旗 counter 在预览中累加、playsLeft 异常+1 等严重逻辑错误。
+  // pendingSideEffects 现统一在真正出牌时（playHand 内部）调用 applyPendingSideEffects 一次。
 
   // AOE state
   const isAoeActive = useMemo(() => {
@@ -175,11 +173,31 @@ export function useBattleCombat(
       lastPlayHandType: thisHandType,
     }));
 
+    // [Bug-FIX 2026-05-07] 严格重投规则：每次出牌后清零所有未使用的免费重投。
+    // 下次出牌的免费重投只能依赖该次新得的奖励（comboFreeReroll/boomerangFreeReroll）。
+    // 实现：把 rerollCount 拉到当前 effective 上限（基础+临时全视为已用）+ 清掉临时奖励字段。
+    // 注意：必须在 handleRogueComboPrep 之前执行，避免误清"本次出牌新发的"奖励。
+    {
+      const baseFree = game.freeRerollsPerTurn || 1;
+      const tempBoomerang = game.boomerangFreeReroll || 0;
+      const tempCombo = game.comboFreeReroll || 0;
+      const effectiveCap = baseFree + tempBoomerang + tempCombo;
+      setRerollCount(prev => Math.max(prev, effectiveCap));
+      setGame(prev => ({ ...prev, boomerangFreeReroll: 0, comboFreeReroll: 0 }));
+    }
+
     handleRogueComboPrep(game.playerClass, currentCombo, { setGame, addFloatingText });
     handleRogueComboHit(game.playerClass, currentCombo, thisHandType, addFloatingText);
 
     const outcome = expectedOutcome;
     if (!outcome) return;
+
+    // [Bug-FIX 2026-05-07] 实际出牌时统一应用预览阶段计算出的副作用
+    // （铁血战旗 counter 推进/重置、grantExtraPlay、grantFreeReroll、tempDrawBonus 等）
+    if (outcome.pendingSideEffects.length > 0) {
+      applyPendingSideEffects(outcome.pendingSideEffects, setGame, setRerollCount);
+    }
+
     if (outcome.goldBonus && outcome.goldBonus > 0) {
       setGame(prev => ({ ...prev, souls: prev.souls + outcome.goldBonus, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + outcome.goldBonus } }));
       addFloatingText(`+${outcome.goldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player');

@@ -72,6 +72,31 @@ export const setBgmEnabled = (enabled: boolean): void => {
 
 let currentBgmType = '';
 
+// [Bug-FIX 2026-05-07] 浏览器 autoplay 策略兜底：
+// 首次 playBGM 在用户尚未与页面交互时被静默拒绝。我们在拒绝时记录 pending 类型，
+// 并安装一次性 pointerdown 监听，等待首次用户交互后自动重试播放。
+let pendingBgmType: 'start' | 'explore' | 'battle' | null = null;
+let unlockListenerInstalled = false;
+
+const installUserGestureUnlock = (): void => {
+  if (unlockListenerInstalled || typeof window === 'undefined') return;
+  unlockListenerInstalled = true;
+  const handler = () => {
+    window.removeEventListener('pointerdown', handler);
+    window.removeEventListener('keydown', handler);
+    window.removeEventListener('touchstart', handler);
+    if (pendingBgmType && bgmEnabled) {
+      const t = pendingBgmType;
+      pendingBgmType = null;
+      // 异步重试：在 stack 清空后调用，确保用户手势栈仍生效
+      setTimeout(() => { void playBGM(t); }, 0);
+    }
+  };
+  window.addEventListener('pointerdown', handler, { once: true });
+  window.addEventListener('keydown', handler, { once: true });
+  window.addEventListener('touchstart', handler, { once: true });
+};
+
 const fadeOutAudio = async (audio: HTMLAudioElement, duration: number): Promise<void> => {
   const startVol = audio.volume;
   const steps = 20;
@@ -109,8 +134,12 @@ export const playBGM = async (type: 'start' | 'explore' | 'battle'): Promise<voi
     await mp3Audio.play();
     mp3BgmPlaying = true;
     currentBgmType = type;
+    pendingBgmType = null;
   } catch (e) {
     mp3BgmPlaying = false;
+    // 浏览器 autoplay 拒绝：标记待播类型并等待首次用户交互
+    pendingBgmType = type;
+    installUserGestureUnlock();
   }
 };
 
