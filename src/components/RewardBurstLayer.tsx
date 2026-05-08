@@ -156,7 +156,7 @@ export const RewardBurstLayer: React.FC = () => {
                 x: [0, sx, sx, midX, ex],
                 y: [0, sy, sy, midY, ey],
                 opacity: [0, 1, 1, 1, 0],
-                scale: [0.3, 1.3, 1.05, 0.95, 0.6],
+                scale: [0.4, 1.5, 1.2, 1.05, 0.85],
               }}
               transition={{
                 duration: total / 1000,
@@ -165,10 +165,10 @@ export const RewardBurstLayer: React.FC = () => {
               }}
               style={{
                 position: 'absolute',
-                left: it.startX - 14,
-                top: it.startY - 14,
-                width: 28,
-                height: 28,
+                left: it.startX - 22,
+                top: it.startY - 22,
+                width: 44,
+                height: 44,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -176,7 +176,7 @@ export const RewardBurstLayer: React.FC = () => {
               }}
             >
               <div style={{ position: 'relative', zIndex: 1 }}>
-                <IconComp size={2} />
+                <IconComp size={3} />
               </div>
             </motion.div>
           );
