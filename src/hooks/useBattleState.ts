@@ -11,7 +11,6 @@ import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from '../config/enemies';
 import { ANIMATION_TIMING } from '../config';
 import { playSound, startBGM, stopBGM } from '../utils/sound';
 import type { EnemyEffectType, PlayerEffectType, SettlementPhase, SettlementData } from '../contexts/BattleContext';
-import { onRewardFloat, emitRewardFloat } from '../logic/rewardEvents';
 
 /** 扩展特效类型：包含 hit/debuff（战斗引擎内部使用，不暴露到 Context） */
 export type InternalEnemyEffectType = EnemyEffectType | 'hit' | 'debuff';
@@ -155,21 +154,7 @@ export function useBattleState() {
   const [pendingBattleNode, setPendingBattleNode] = useState<MapNode | null>(null);
 
   // ==================== 工具函数 ====================
-  // [REWARD-GATE 2026-05-08] 奖励色约定：text-amber-200 = 统一金色奖励飘字。
-  // 演出期堆积，演出结束 flush；非演出期直通（行为不变）。
-  const REWARD_FLOAT_COLOR = 'text-amber-200';
-
   const addFloatingText = (text: string, color: string = 'text-red-500', icon?: React.ReactNode, target: 'player' | 'enemy' = 'enemy', large = false) => {
-    // [REWARD-GATE] 金色奖励飘字走闸门队列（配合 rewardEvents.setRewardBusy）
-    // 其他颜色（伤害红、治疗绿、盾蓝、净化青等）是演出本身的一部分，直通渲染。
-    if (color === REWARD_FLOAT_COLOR && !large) {
-      emitRewardFloat(text, color, icon, target);
-      return;
-    }
-    return addFloatingTextImmediate(text, color, icon, target, large);
-  };
-
-  const addFloatingTextImmediate = (text: string, color: string = 'text-red-500', icon?: React.ReactNode, target: 'player' | 'enemy' = 'enemy', large = false) => {
     // [DEDUP] 防 StrictMode 下 setGame updater 内部调 addFloatingText 被双触发
     // 同 target + 同 text + 同 color 在 150ms 内只发一次
     const key = `${target}|${text}|${color}`;
@@ -200,17 +185,6 @@ export function useBattleState() {
   const addLog = (msg: string) => {
     setGame(prev => ({ ...prev, logs: [msg, ...prev.logs].slice(0, 15) }));
   };
-
-  // [REWARD-GATE 2026-05-08] 订阅奖励飘字闸门：
-  // 业务侧调用 emitRewardFloat() 时，若处于演出期就堆队列；演出结束 flush 时回调到这里，
-  // 直接走 Immediate 渲染（绕过自动路由，避免二次入队死循环）。
-  useEffect(() => {
-    const off = onRewardFloat((text, color, icon, target) => {
-      addFloatingTextImmediate(text, color, icon as React.ReactNode, target);
-    });
-    return () => { off(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return {
     // 核心状态
