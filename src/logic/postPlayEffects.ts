@@ -21,10 +21,14 @@ import { STATUS_INFO } from '../data/statusInfo';
 import { rollKillXp, applyXpGain } from './xpSystem';
 import { emitXpKill } from './xpEvents';
 import { emitSoulGain } from './soulEvents';
-import { PixelRefresh } from '../components/PixelIcons';
+import { PixelRefresh, PixelDice, PixelCards } from '../components/PixelIcons';
 
 /** 浮字用的 refresh icon，统一由 PixelRefresh 渲染，避免冗长文字 */
 const rerollIcon = () => React.createElement(PixelRefresh, { size: 1.5 });
+/** 浮字用的 骰子 icon（接应 / 临时骰等"获得骰子"类飘字） */
+const diceIcon = () => React.createElement(PixelDice, { size: 1.5 });
+/** 浮字用的 牌 icon（+出牌机会类飘字） */
+const cardsIcon = () => React.createElement(PixelCards, { size: 1.5 });
 
 // --- Context 接口 ---
 
@@ -317,7 +321,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     const hasComboPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboGrantPlay);
     if (hasComboPlay && hasAliveEnemies) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-      addFloatingText('连击袖箭: +1出牌!', 'text-cyan-400', undefined, 'player');
+      addFloatingText('连击袖箭: +1', 'text-cyan-400', cardsIcon(), 'player');
     }
   }
 
@@ -340,7 +344,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       const processed = applyDiceSpecialEffects(newDice, { hasLimitBreaker: hasLimitBreaker(g.relics), lockedElement: g.lockedElement });
       setDice(pd => [...pd, ...processed.map(d => ({ ...d, justAdded: true }))]);
       setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
-      addFloatingText(`接应: +${bagDrawCount}骰子`, 'text-cyan-300', undefined, 'player');
+      addFloatingText(`接应: +${bagDrawCount}`, 'text-cyan-300', diceIcon(), 'player');
     }, 300);
   }
   
@@ -418,7 +422,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       };
     });
     setDice(prev => [...prev, ...newTempDice]);
-    addFloatingText(`连击心得: +${tempDieFixedDice.length}临时骰`, 'text-green-300', undefined, 'player');
+      addFloatingText(`连击心得: +${tempDieFixedDice.length}`, 'text-green-300', diceIcon(), 'player');
   }
 
   // boomerangPlay: 回旋骰子弹回时，给一次免费重投

@@ -23,9 +23,14 @@
  */
 
 import type { PostPlayContext } from './postPlayEffects';
+import React from 'react';
 import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasLimitBreaker } from '../engine/relicQueries';
+import { PixelDice } from '../components/PixelIcons';
+
+/** 浮字用的骰子 icon（"获得骰子"类飘字统一入口） */
+const diceIcon = () => React.createElement(PixelDice, { size: 1.5 });
 
 /**
  * 检测洞察弱点挑战是否刚完成，若是则随机触发一种战斗援助效果。
@@ -166,7 +171,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         const processed = applyDiceSpecialEffects([newDie], { hasLimitBreaker: hasLimitBreaker(latest.relics), lockedElement: latest.lockedElement });
         setDice(prev => [...prev, ...processed.map(d => ({ ...d, justAdded: true }))]);
         setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
-        addFloatingText(`+1骰子`, 'text-yellow-300', undefined, 'player');
+        addFloatingText(`+1`, 'text-yellow-300', diceIcon(), 'player');
       }
     });
   }
