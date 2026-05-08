@@ -471,6 +471,7 @@ export function EnemyStageView() {
         bossName={bossTaunt.name}
         chapter={bossTaunt.chapter}
         lines={bossTaunt.lines}
+        onDismiss={bossTaunt.onDismiss}
       />
     </div>
   );

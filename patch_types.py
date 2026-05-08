@@ -1,9 +1,11 @@
-﻿content = open('src/types/game.ts', encoding='utf-8').read()
-old = 'bossPreviewSeen?: number[];          // 已触发过路上预告的章节列表（防重复）\n}'
-new = 'bossPreviewSeen?: number[];          // 已触发过路上预告的章节列表（防重复）\n  bossRoamSeen?: string[];             // 已触发过Boss路过嘲讽演出（防重复）\n}'
+﻿content=open('F:/UGit/dicehero2/src/hooks/useBattleState.ts',encoding='utf-8').read()
+
+old = "bossTaunt, setBossTaunt] = useState<{ visible: boolean; name: string; chapter: number; lines: string[] }>({ visible: false, name: '', chapter: 1, lines: [] });"
+new = "bossTaunt, setBossTaunt] = useState<{ visible: boolean; name: string; chapter: number; lines: string[]; onDismiss?: () => void }>({ visible: false, name: '', chapter: 1, lines: [] });"
+
 if old in content:
     content = content.replace(old, new)
-    open('src/types/game.ts', 'w', encoding='utf-8').write(content)
+    open('F:/UGit/dicehero2/src/hooks/useBattleState.ts','w',encoding='utf-8').write(content)
     print('OK')
 else:
     print('NOT FOUND')

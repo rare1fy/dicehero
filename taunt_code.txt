@@ -95,7 +95,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
           <motion.div
             initial={{ opacity: 0, scaleX: 0.2 }}
             animate={
-              phase === 'enter' || phase === 'talk1' || phase === 'talk2'
+              phase !== 'exit' && phase !== 'idle'
                 ? { opacity: [0, 0.7, 0.4], scaleX: [0.2, 1.3, 1.0], transition: { duration: 0.5 } }
                 : { opacity: 0, transition: { duration: 0.2 } }
             }
@@ -126,7 +126,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}
-            animate={phase === 'enter' || phase === 'talk1' || phase === 'talk2' ? { opacity: 1 } : { opacity: 0 }}
+            animate={phase !== 'exit' && phase !== 'idle' ? { opacity: 1 } : { opacity: 0 }}
             transition={{ duration: 0.2, delay: 0.28 }}
             style={{
               marginTop: '6px',

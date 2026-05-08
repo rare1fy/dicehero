@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useBattleLifecycle.ts — 战斗生命周期 Hook
  * 提取自 DiceHeroGame.tsx Phase H (Round3)
  * 包含 startBattle / startNode / rollAllDice / resetGame / handleSelectStartingRelic / handleSkipStartingRelic
@@ -75,27 +75,36 @@ export function useBattleLifecycle(state: BattleState) {
       return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult, game.chapter);
     })();
     const firstWave = waves[0]?.enemies || [];
-    setEnemies(firstWave);
+    // [BOSS-ROAM 2026-05-08] 路过嘲讽场景：演出期间不刷小怪（空场景），演出结束后才 setEnemies
+    // 非路过嘲讽场景（boss节点或非第一场）正常立刻 setEnemies
+    const willShowRoamTaunt = node.type !== 'boss'
+      && node.depth === 0
+      && !(game.bossRoamSeen || []).includes(`${game.chapter}-intro`);
+    if (!willShowRoamTaunt) {
+      setEnemies(firstWave);
+    }
     setEnemyEffects({}); setDyingEnemies(new Set());
     setEnemyQuotes({});
     setEnemyQuotedLowHp(new Set());
     // [BOSS-TAUNT 2026-05-08] Boss 战不走普通 enter 气泡（会被下面的 bossTaunt 短剧取代），避免重复
     const isBossNode = node.type === 'boss';
-    setTimeout(() => {
-      firstWave.forEach((e, idx) => {
-        if (isBossNode && e.configId.startsWith('boss_')) return;
-        const q = getEnemyQuotes(e.configId);
-        const line = pickQuote(q?.enter);
-        if (line) {
-          setTimeout(() => {
-            showEnemyQuote(e.uid, line, 3000);
-            playSound('enemy_speak');
-            setEnemyEffectForUid(e.uid, 'speaking');
-            setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
-          }, idx * 400);
-        }
-      });
-    }, 300);
+    if (!willShowRoamTaunt) {
+      setTimeout(() => {
+        firstWave.forEach((e, idx) => {
+          if (isBossNode && e.configId.startsWith('boss_')) return;
+          const q = getEnemyQuotes(e.configId);
+          const line = pickQuote(q?.enter);
+          if (line) {
+            setTimeout(() => {
+              showEnemyQuote(e.uid, line, 3000);
+              playSound('enemy_speak');
+              setEnemyEffectForUid(e.uid, 'speaking');
+              setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
+            }, idx * 400);
+          }
+        });
+      }, 300);
+    }
     setPlayerEffect(null);
 
     // ★ 先写入 battleGameState（phase=battle），让战斗场景在黑屏下完成渲染
@@ -176,17 +185,40 @@ export function useBattleLifecycle(state: BattleState) {
         const tauntLines = enterLines.length >= 2
           ? [enterLines[0], enterLines[enterLines.length - 1]]
           : [enterLines[0], enterLines[0]];
-        // 场景就绪后直接触发 Boss 登场演出（已嵌入战斗场景，不需要先切黑屏）
+        // Boss 路过嘲讽：先收黑屏，让场景可见（此时enemies为空，小怪区干净）
         setBattleTransition('fadeOut');
         await new Promise(r => setTimeout(r, 280));
         setBattleTransition('none');
         await new Promise(r => setTimeout(r, 60));
-        // 播Boss路过嘲讽
-        setBossTaunt({ visible: true, name: bossName, chapter: game.chapter || 1, lines: tauntLines });
-        playSound('boss_laugh');
-        await new Promise(r => setTimeout(r, 2600));
-        setBossTaunt(prev => ({ ...prev, visible: false }));
+        // 播Boss路过嘲讽 — 等玩家点击完两句台词后 resolve
+        await new Promise<void>(resolve => {
+          setBossTaunt({
+            visible: true,
+            name: bossName,
+            chapter: game.chapter || 1,
+            lines: tauntLines,
+            onDismiss: resolve,
+          });
+          playSound('boss_laugh');
+        });
+        setBossTaunt(prev => ({ ...prev, visible: false, onDismiss: undefined }));
         await new Promise(r => setTimeout(r, 200));
+        // 演出结束后才刷出小怪 + enter 台词
+        setEnemies(firstWave);
+        setTimeout(() => {
+          firstWave.forEach((e, ei) => {
+            const q = getEnemyQuotes(e.configId);
+            const line = pickQuote(q?.enter);
+            if (line) {
+              setTimeout(() => {
+                showEnemyQuote(e.uid, line, 3000);
+                playSound('enemy_speak');
+                setEnemyEffectForUid(e.uid, 'speaking');
+                setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
+              }, ei * 400);
+            }
+          });
+        }, 200);
       } else {
         setBattleTransition('fadeOut');
         setTimeout(() => setBattleTransition('none'), 300);

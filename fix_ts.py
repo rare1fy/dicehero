@@ -1,0 +1,7 @@
+﻿content = open('F:/UGit/dicehero2/src/hooks/useBattleLifecycle.ts', encoding='utf-8').read()
+lines = content.split('\n')
+print('line 80:', repr(lines[79]))
+print('line 81:', repr(lines[80]))
+print('line 82:', repr(lines[81]))
+print('line 83:', repr(lines[82]))
+print('line 84:', repr(lines[83]))

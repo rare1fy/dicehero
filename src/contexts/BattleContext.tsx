@@ -88,7 +88,7 @@ export interface BattleContextType {
   // === 转场/波次状态 ===
   battleTransition: 'none' | 'fadeIn' | 'hold' | 'fadeOut';
   bossEntrance: { visible: boolean; name: string; chapter: number };
-  bossTaunt: { visible: boolean; name: string; chapter: number; lines: string[] };
+  bossTaunt: { visible: boolean; name: string; chapter: number; lines: string[]; onDismiss?: () => void };
   waveAnnouncement: number | null;
   setWaveAnnouncement: (n: number | null) => void;
   showWaveDetail: boolean;
