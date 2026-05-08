@@ -71,9 +71,10 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   const spriteAnimate =
     phase === 'enter'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,               rotate: 0 } :
     phase === 'talk1'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,               rotate: 0 } :
-    phase === 'approach' ? { y: 70,   opacity: 1, scale: 1.18, x: [0, -5, 5, -4, 4, -3, 3, 0], rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
-    phase === 'talk2'    ? { y: 70,   opacity: 1, scale: 1.18, x: 0,               rotate: 0 } :
-    phase === 'exit'     ? { y: 70,   opacity: 0, scale: 0.9,  x: 0,               rotate: 0 } :
+    // [FIX 2026-05-08] approach/talk2 不再纵向下压，靠 scale 1.18 传达"逼近"感
+    phase === 'approach' ? { y: 0,    opacity: 1, scale: 1.18, x: [0, -5, 5, -4, 4, -3, 3, 0], rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
+    phase === 'talk2'    ? { y: 0,    opacity: 1, scale: 1.18, x: 0,               rotate: 0 } :
+    phase === 'exit'     ? { y: 0,    opacity: 0, scale: 0.9,  x: 0,               rotate: 0 } :
                            { y: -220, opacity: 0, scale: 0.35, x: 0,               rotate: 0 };
 
   const spriteTransition =
@@ -82,7 +83,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     phase === 'exit'     ? { duration: 0.36, ease: 'easeIn' as const } :
     { duration: 0.18 };
 
-  const bubbleOffsetY = phase === 'talk2' ? 70 : 0;
+  const bubbleOffsetY = 0; // [FIX 2026-05-08] 不再下移，Boss 不动气泡也不动
 
   const [tapHint, setTapHint] = useState(true);
   useEffect(() => {
@@ -105,11 +106,12 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
             inset: 0,
             zIndex: 1000,
             pointerEvents: interactive ? 'all' : 'none',
+            // [FIX 2026-05-08] 锚定到屏幕上 1/3，避开玩家血条/骰盘/回合按钮等底部 UI
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            paddingBottom: '15%',
+            justifyContent: 'flex-start',
+            paddingTop: '22%',
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -177,7 +179,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
             initial={{ opacity: 0, y: -220 }}
             animate={{
               opacity: phase === 'exit' ? 0 : 1,
-              y: phase === 'approach' || phase === 'talk2' ? 70 : 0,
+              y: 0, // [FIX 2026-05-08] 名牌不跟随下压
             }}
             transition={{ duration: 0.25, delay: phase === 'enter' ? 0.3 : 0 }}
             style={{
@@ -207,10 +209,8 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  position: 'absolute',
-                  bottom: '8%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
+                  // [FIX 2026-05-08] 从 bottom:8% 绝对定位改为 flex 流内，紧跟 Boss 名牌下方，避免被底部 UI 遮挡
+                  marginTop: '16px',
                   fontFamily: '"fusion-pixel", monospace',
                   fontSize: '11px',
                   color: glowColor,
