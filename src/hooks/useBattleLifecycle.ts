@@ -5,6 +5,7 @@
  * + GM useEffects + BGM useEffect + phase清空enemies useEffect
  */
 import { useEffect, useRef } from 'react';
+import * as React from 'react';
 import type { Die, MapNode, Enemy, GameState, Relic } from '../types/game';
 import { createInitialGameState } from '../logic/gameInit';
 import { drawFromBag, initDiceBag } from '../data/diceBag';
@@ -19,6 +20,7 @@ import { ALL_RELICS } from '../data/relics';
 import { BOSS_DISPATCH_LINES, MINION_FORCED_LINES } from '../data/bossTauntDispatch';
 import { resetCompassCounter, incrementFloorsCleared, updateRelicCounter, tickHourglass } from '../engine/relicUpdates';
 import { buildRelicContext } from '../engine/buildRelicContext';
+import { PixelCards, PixelBloodDrop } from '../components/PixelIcons';
 import { CHAPTER_CONFIG, ANIMATION_TIMING } from '../config';
 import { CHAPTER_BOSSES } from '../components/MapNodeRenderer';
 import { BOSS_ENEMIES } from '../config/enemies';
@@ -190,7 +192,7 @@ export function useBattleLifecycle(state: BattleState) {
     const drawCountBonus = 0;
     const startWarriorBonus = (game.playerClass === 'warrior' && game.hp <= game.maxHp * 0.5) ? 1 : 0;
     if (startWarriorBonus > 0) {
-      setTimeout(() => addFloatingText('血怒补牌+1', 'text-red-400', undefined, 'player'), 500);
+    setTimeout(() => addFloatingText('+1', 'text-red-400', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 500);
     }
     const freshCount = Math.min(6, game.drawCount + drawCountBonus + startWarriorBonus);
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
@@ -302,7 +304,7 @@ export function useBattleLifecycle(state: BattleState) {
     const schrodingerBonus = g.tempDrawCountBonus || 0;
     const relicDrawBonus = g.relicTempDrawBonus || 0;
     if (relicDrawBonus > 0) {
-      addFloatingText(`魔法手套+${relicDrawBonus}手牌`, 'text-cyan-300', undefined, 'player');
+      addFloatingText(`+${relicDrawBonus}`, 'text-cyan-300', React.createElement(PixelCards, { size: 1.5 }), 'player');
     }
     // 重置临时加成（与 executeDrawPhase 一致）
     if (schrodingerBonus > 0 || relicDrawBonus > 0) {
@@ -312,7 +314,7 @@ export function useBattleLifecycle(state: BattleState) {
     const chargeStacks = forceResetHand ? 0 : (g.chargeStacks || 0);
     const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
     if (warriorBonus > 0) {
-      setTimeout(() => addFloatingText('血怒补牌+1', 'text-red-400', undefined, 'player'), 200);
+      setTimeout(() => addFloatingText('+1', 'text-red-400', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 200);
     }
     const rawHandLimit = g.playerClass === 'mage' ? (g.drawCount + chargeStacks) : (g.drawCount + warriorBonus);
     const handLimit = Math.min(6, rawHandLimit);
@@ -328,7 +330,7 @@ export function useBattleLifecycle(state: BattleState) {
     }
     const rogueDrawBonus = (g.playerClass === 'rogue' && (g.rogueComboDrawBonus || 0) > 0) ? (g.rogueComboDrawBonus || 0) : 0;
     if (rogueDrawBonus > 0) {
-      setTimeout(() => addFloatingText(`连击心得+${rogueDrawBonus}手牌`, 'text-green-300', undefined, 'player'), 300);
+      setTimeout(() => addFloatingText(`+${rogueDrawBonus}`, 'text-green-300', React.createElement(PixelCards, { size: 1.5 }), 'player'), 300);
       setGame(prev => ({ ...prev, rogueComboDrawBonus: 0 }));
     }
     const count = Math.max(0, handLimit + schrodingerBonus + relicDrawBonus + rogueDrawBonus - keptDice.filter(d => d.diceDefId !== 'temp_rogue' && !d.isBonusDraw).length);

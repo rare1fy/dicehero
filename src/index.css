@@ -353,6 +353,21 @@
   box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
 }
 
+/* 奥术屏障血条 —— 青色条纹 + 柔光，用于 chantShield > 0（优先于护甲） */
+.pixel-hp-fill-shield {
+  background: repeating-linear-gradient(
+    90deg,
+    #7dd3fc 0px,
+    #7dd3fc 4px,
+    #2a7a8a 4px,
+    #2a7a8a 8px
+  );
+  box-shadow:
+    inset 0 -2px 0 rgba(0,0,0,0.3),
+    inset 0 0 6px rgba(216,246,255,0.5),
+    0 0 6px rgba(125,211,252,0.55);
+}
+
 /* === �������� === */
 .pixel-dice {
   width: 52px;

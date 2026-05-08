@@ -8,10 +8,19 @@
  */
 
 import type React from 'react';
+import * as ReactNS from 'react';
 import type { Die, GameState, Enemy } from '../types/game';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
 import { absorbPlayerDamage } from './battleHelpers';
+import { PixelArcaneShield, PixelShield, PixelHeart } from '../components/PixelIcons';
+
+/** 浮字用 奥术屏障 icon —— 法师吟唱+过充回合专用 */
+const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 1.5 });
+/** 浮字用 护甲 icon */
+const armorIcon = () => ReactNS.createElement(PixelShield, { size: 1.5 });
+/** 浮字用 生命 icon */
+const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.5 });
 
 // ============================================================
 // Context 接口
@@ -70,7 +79,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
         chantShield: (prev.chantShield || 0) + shieldGain,
       }));
       addFloatingText(`过充! 伤害+${Math.round(((game.mageOverchargeMult || 0) + overchargeBonus) * 100)}%`, 'text-purple-400', undefined, 'player');
-      addFloatingText(`奥术屏障+${shieldGain}`, 'text-cyan-300', undefined, 'player');
+      addFloatingText(`+${shieldGain}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
     } else {
       // 正常吟唱：手牌上限+1
       const newChargeStacks = currentCharge + 1;
@@ -81,7 +90,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
         chantShield: (prev.chantShield || 0) + shieldGain,
       }));
       addFloatingText(`吟唱 ${newHandLimit}/6`, 'text-purple-400', undefined, 'player');
-      addFloatingText(`奥术屏障+${shieldGain}`, 'text-cyan-300', undefined, 'player');
+      addFloatingText(`+${shieldGain}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
     }
   } else if (game.playerClass === 'mage' && playedThisTurn) {
     // 出了牌就重置吟唱和过充倍率（chantShield 由回合开始清零统一处理）
@@ -94,7 +103,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
       const def = getDiceDef(d.diceDefId);
       if (def.onPlay?.healOnSkip) {
         setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + def.onPlay!.healOnSkip!) }));
-        addFloatingText(`+${def.onPlay.healOnSkip}HP`, 'text-green-400', undefined, 'player');
+        addFloatingText(`+${def.onPlay.healOnSkip}`, 'text-green-400', heartIcon(), 'player');
       }
       // purifyOneOnSkip: 冥想回合净化1层
       if (def.onPlay?.purifyOneOnSkip) {
@@ -119,11 +128,11 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
     // 蓄力晶核：未出牌时加护甲+回血
     if (effect.armor && effect.armor > 0) {
       setGame(prev => ({ ...prev, armor: prev.armor + effect.armor! }));
-      addFloatingText(`+${effect.armor}护甲`, 'text-blue-400', undefined, 'player');
+      addFloatingText(`+${effect.armor}`, 'text-blue-400', armorIcon(), 'player');
     }
     if (effect.heal && effect.heal > 0) {
       setGame(prev => ({ ...prev, hp: Math.min(prev.maxHp, prev.hp + effect.heal!) }));
-      addFloatingText(`+${effect.heal}HP`, 'text-green-400', undefined, 'player');
+      addFloatingText(`+${effect.heal}`, 'text-green-400', heartIcon(), 'player');
     }
     // 薛定谔的袋子：drawCountBonus
     if (effect.drawCountBonus && effect.drawCountBonus > 0) {

@@ -376,4 +376,41 @@ export const PixelXpSpark: React.FC<{ size?: number; className?: string }> = ({ 
       <rect x="3" y="3" width="2" height="2" fill="#d8ecff" />
     </svg>
   );
+};
+
+/**
+ * 奥术屏障 — 六边形能量盾 + 中心星芒
+ * 青色调（区别于蓝色护甲）："魔法 + 盾 + 光"三合一
+ * 8×8 网格
+ */
+export const PixelArcaneShield: React.FC<{ size?: number; className?: string }> = ({ size = 2, className }) => {
+  const s = size;
+  return (
+    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated' }}>
+      {/* 六边形外轮廓 —— 深青描边 */}
+      <rect x="2" y="0" width="4" height="1" fill="#2a7a8a" />
+      <rect x="1" y="1" width="1" height="1" fill="#2a7a8a" />
+      <rect x="6" y="1" width="1" height="1" fill="#2a7a8a" />
+      <rect x="0" y="2" width="1" height="3" fill="#2a7a8a" />
+      <rect x="7" y="2" width="1" height="3" fill="#2a7a8a" />
+      <rect x="1" y="5" width="1" height="1" fill="#2a7a8a" />
+      <rect x="6" y="5" width="1" height="1" fill="#2a7a8a" />
+      <rect x="2" y="6" width="1" height="1" fill="#2a7a8a" />
+      <rect x="5" y="6" width="1" height="1" fill="#2a7a8a" />
+      <rect x="3" y="7" width="2" height="1" fill="#2a7a8a" />
+      {/* 中间色填充 —— 青色 (#7dd3fc ≈ pixel-cyan) */}
+      <rect x="2" y="1" width="4" height="1" fill="#7dd3fc" />
+      <rect x="1" y="2" width="6" height="3" fill="#7dd3fc" />
+      <rect x="2" y="5" width="4" height="1" fill="#7dd3fc" />
+      <rect x="3" y="6" width="2" height="1" fill="#7dd3fc" />
+      {/* 暗边阴影（底部右下） */}
+      <rect x="5" y="4" width="2" height="1" fill="#4da8c2" />
+      <rect x="4" y="5" width="2" height="1" fill="#4da8c2" />
+      {/* 中心星芒 rune —— 十字+亮心 */}
+      <rect x="3" y="2" width="2" height="1" fill="#d8f6ff" />
+      <rect x="2" y="3" width="4" height="1" fill="#d8f6ff" />
+      <rect x="3" y="4" width="2" height="1" fill="#d8f6ff" />
+      <rect x="3" y="3" width="2" height="1" fill="#ffffff" />
+    </svg>
+  );
 };

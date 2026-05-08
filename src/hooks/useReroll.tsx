@@ -15,7 +15,7 @@ import { applyDiceSpecialEffects } from '../logic/diceEffects';
 import { playSound } from '../utils/sound';
 import { ELEMENT_NAMES } from '../utils/uiHelpers';
 import { getRerollHpCost } from '../logic/rerollCalc';
-import { PixelCoin } from '../components/PixelIcons';
+import { PixelCoin, PixelShield, PixelBloodDrop } from '../components/PixelIcons';
 import type { BattleState } from './useBattleState';
 
 export function useReroll(state: BattleState) {
@@ -89,15 +89,15 @@ export function useReroll(state: BattleState) {
       });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
       if (atCap) {
-        addFloatingText(`血怒已满→+${FURY_CONFIG.armorAtCap}护甲`, 'text-blue-400', undefined, 'player');
+        addFloatingText(`+${FURY_CONFIG.armorAtCap}`, 'text-blue-400', <PixelShield size={1.5} />, 'player');
       } else {
-        addFloatingText(`血怒+${Math.round(FURY_CONFIG.damagePerStack * 100)}%`, 'text-orange-400', undefined, 'player');
+        addFloatingText(`+${Math.round(FURY_CONFIG.damagePerStack * 100)}%`, 'text-orange-400', <PixelBloodDrop size={1.5} />, 'player');
       }
       if (onRerollGoldBonus > 0) {
         setTimeout(() => addFloatingText(`+${onRerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
       }
       if (onRerollArmor > 0) {
-        addFloatingText(`+${onRerollArmor}护甲`, 'text-blue-400', undefined, 'player');
+        addFloatingText(`+${onRerollArmor}`, 'text-blue-400', <PixelShield size={1.5} />, 'player');
       }
       const displayStacks = Math.min(currentFuryStacks + 1, FURY_CONFIG.maxStack);
       addLog(`嗜血消耗 ${hpCost} HP（血怒${displayStacks}/${FURY_CONFIG.maxStack}层，+${Math.round(displayStacks * FURY_CONFIG.damagePerStack * 100)}%伤害）`);
@@ -110,7 +110,7 @@ export function useReroll(state: BattleState) {
           stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + onRerollGoldBonus },
           blackMarketUsedThisTurn: onRerollGoldBonus > 0 ? true : prev.blackMarketUsedThisTurn,
         }));
-        if (onRerollArmor > 0) addFloatingText(`+${onRerollArmor}护甲`, 'text-blue-400', undefined, 'player');
+        if (onRerollArmor > 0) addFloatingText(`+${onRerollArmor}`, 'text-blue-400', <PixelShield size={1.5} />, 'player');
         if (onRerollGoldBonus > 0) addFloatingText(`+${onRerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player');
       }
     }

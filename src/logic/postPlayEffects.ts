@@ -21,7 +21,7 @@ import { STATUS_INFO } from '../data/statusInfo';
 import { rollKillXp, applyXpGain } from './xpSystem';
 import { emitXpKill } from './xpEvents';
 import { emitSoulGain } from './soulEvents';
-import { PixelRefresh, PixelDice, PixelCards } from '../components/PixelIcons';
+import { PixelRefresh, PixelDice, PixelCards, PixelHeart } from '../components/PixelIcons';
 
 /** 浮字用的 refresh icon，统一由 PixelRefresh 渲染，避免冗长文字 */
 const rerollIcon = () => React.createElement(PixelRefresh, { size: 1.5 });
@@ -29,6 +29,8 @@ const rerollIcon = () => React.createElement(PixelRefresh, { size: 1.5 });
 const diceIcon = () => React.createElement(PixelDice, { size: 1.5 });
 /** 浮字用的 牌 icon（+出牌机会类飘字） */
 const cardsIcon = () => React.createElement(PixelCards, { size: 1.5 });
+/** 浮字用的 心 icon（最大HP等生命类飘字） */
+const heartIcon = () => React.createElement(PixelHeart, { size: 1.5 });
 
 // --- Context 接口 ---
 
@@ -321,7 +323,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     const hasComboPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboGrantPlay);
     if (hasComboPlay && hasAliveEnemies) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-      addFloatingText('连击袖箭: +1', 'text-cyan-400', cardsIcon(), 'player');
+    addFloatingText('+1', 'text-cyan-400', cardsIcon(), 'player');
     }
   }
 
@@ -344,7 +346,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       const processed = applyDiceSpecialEffects(newDice, { hasLimitBreaker: hasLimitBreaker(g.relics), lockedElement: g.lockedElement });
       setDice(pd => [...pd, ...processed.map(d => ({ ...d, justAdded: true }))]);
       setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
-      addFloatingText(`接应: +${bagDrawCount}`, 'text-cyan-300', diceIcon(), 'player');
+        addFloatingText(`+${bagDrawCount}`, 'text-cyan-300', diceIcon(), 'player');
     }, 300);
   }
   
@@ -371,7 +373,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   const hasExtraPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantExtraPlay);
   if (hasExtraPlay && hasAliveEnemies) {
     setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-    addFloatingText('+1出牌机会', 'text-green-400', undefined, 'player');
+    addFloatingText('+1', 'text-green-400', cardsIcon(), 'player');
   }
 
   // [Bug-11] 魔法手套：打出对子时下回合临时+1手牌（触发后1次出牌冷却）
@@ -387,7 +389,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
         relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + 1,
         relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: 1 } : r),
       }));
-      addFloatingText('魔法手套: 下回合+1手牌!', 'text-cyan-300', undefined, 'player');
+      addFloatingText('+1', 'text-cyan-300', cardsIcon(), 'player');
     } else if (gloveCounter > 0) {
       // 冷却中：每次出牌递减冷却计数
       setGame(prev => ({
@@ -402,7 +404,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     const hasPlayOnThird = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantPlayOnThird);
     if (hasPlayOnThird) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-      addFloatingText('三连闪! +1出牌!', 'text-yellow-300', undefined, 'player');
+      addFloatingText('+1', 'text-yellow-300', cardsIcon(), 'player');
     }
   }
 
@@ -422,7 +424,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       };
     });
     setDice(prev => [...prev, ...newTempDice]);
-      addFloatingText(`连击心得: +${tempDieFixedDice.length}`, 'text-green-300', diceIcon(), 'player');
+      addFloatingText(`+${tempDieFixedDice.length}`, 'text-green-300', diceIcon(), 'player');
   }
 
   // boomerangPlay: 回旋骰子弹回时，给一次免费重投
@@ -469,7 +471,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       setGame(prev => {
         const cnt = (prev.lifefurnaceCounter || 0) + 1;
         if (cnt >= every) {
-          addFloatingText(`生命熔炉 最大HP+5`, 'text-red-300', undefined, 'player');
+          addFloatingText(`+5`, 'text-red-300', heartIcon(), 'player');
           return { ...prev, maxHp: prev.maxHp + 5, lifefurnaceCounter: 0 };
         }
         return { ...prev, lifefurnaceCounter: cnt };
@@ -481,7 +483,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     if (def.onPlay?.healOrMaxHp) {
       setGame(prev => {
         if (prev.hp >= prev.maxHp) {
-          addFloatingText(`生命熔炉 最大HP+3`, 'text-red-300', undefined, 'player');
+          addFloatingText(`+3`, 'text-red-300', heartIcon(), 'player');
           return { ...prev, maxHp: prev.maxHp + 3 };
         }
         return prev;
@@ -509,7 +511,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     setTimeout(() => {
       setDice(prev => [...prev, { ...tmpDie, justAdded: true }]);
       setTimeout(() => setDice(pd => pd.map(d => d.id === tmpDie.id ? { ...d, justAdded: false } : d)), 600);
-      addFloatingText('+1暗影残骰', 'text-green-300', undefined, 'player');
+      addFloatingText('+1', 'text-green-300', diceIcon(), 'player');
     }, 300);
   }
   

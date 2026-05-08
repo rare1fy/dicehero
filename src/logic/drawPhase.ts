@@ -9,11 +9,18 @@
  */
 
 import type React from 'react';
+import * as ReactNS from 'react';
 import type { Die, GameState } from '../types/game';
 import { getDiceDef, rollDiceDef } from '../data/dice';
 import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasRelic, hasLimitBreaker } from '../engine/relicQueries';
+import { PixelCards, PixelBloodDrop } from '../components/PixelIcons';
+
+/** 浮字用 牌 icon */
+const cardsIcon = () => ReactNS.createElement(PixelCards, { size: 1.5 });
+/** 浮字用 血滴 icon */
+const bloodIcon = () => ReactNS.createElement(PixelBloodDrop, { size: 1.5 });
 
 // ============================================================
 // Context 接口
@@ -133,7 +140,7 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     const chargeBonus = g.playerClass === 'mage' ? (g.chargeStacks || 0) : 0;
     const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
     if (warriorBonus > 0) {
-      addFloatingText('血怒补牌+1', 'text-red-400', undefined, 'player');
+      addFloatingText('+1', 'text-red-400', bloodIcon(), 'player');
     }
     const rawTargetHandSize = g.drawCount + chargeBonus + warriorBonus;
     const targetHandSize = Math.min(6, rawTargetHandSize);
@@ -151,13 +158,13 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     // 盗贼连击心得额外抽牌
     const rogueDrawBonus2 = (g.playerClass === 'rogue' && (g.rogueComboDrawBonus || 0) > 0) ? (g.rogueComboDrawBonus || 0) : 0;
     if (rogueDrawBonus2 > 0) {
-      addFloatingText(`连击心得+${rogueDrawBonus2}手牌`, 'text-green-300', undefined, 'player');
+      addFloatingText(`+${rogueDrawBonus2}`, 'text-green-300', cardsIcon(), 'player');
       setGame(prev => ({ ...prev, rogueComboDrawBonus: 0 }));
     }
     // 魔法手套遗物临时手牌加成
     const relicDrawBonus2 = g.relicTempDrawBonus || 0;
     if (relicDrawBonus2 > 0) {
-      addFloatingText(`魔法手套+${relicDrawBonus2}手牌`, 'text-cyan-300', undefined, 'player');
+      addFloatingText(`+${relicDrawBonus2}`, 'text-cyan-300', cardsIcon(), 'player');
       setGame(prev => ({ ...prev, relicTempDrawBonus: 0 }));
     }
     const needDraw = Math.max(0, targetHandSize + schrodingerBonus + rogueDrawBonus2 + relicDrawBonus2 - (remainingCount - remainingDice.filter(d => d.diceDefId === 'temp_rogue' || d.isBonusDraw).length));

@@ -9,7 +9,7 @@ import {
   PixelSkull, PixelFlame, PixelSword,
   PixelAttackIntent, PixelArrowUp, PixelArrowDown, PixelArrowRight,
   PixelMagic, PixelPoison, PixelCoin, PixelDice, PixelSoulCrystal,
-  PixelBloodDrop,
+  PixelBloodDrop, PixelArcaneShield,
 } from './PixelIcons';
 import { RelicPixelIcon } from './PixelRelicIcons';
 import { StatusIcon } from './StatusIcon';
@@ -105,7 +105,7 @@ export function PlayerHudView() {
           <LevelXpBadge level={game.level || 1} xp={game.xp || 0} xpToNext={game.xpToNext || 50} lastXpGain={game.lastXpGain} lastXpGainAt={game.lastXpGainAt} />
           <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
             {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
-            {(game.chantShield || 0) > 0 && <BuffTooltip label={`屏障${game.chantShield}`} icon={<PixelMagic size={1.5} />} color="rgb(125,211,252)" bgColor="rgba(56,189,248,0.15)" borderColor="rgba(56,189,248,0.5)" title={`奥术屏障 ${game.chantShield}`} desc="减免一切伤害，包括中毒、灼烧等持续伤害。每回合开始时清空。" />}
+            {(game.chantShield || 0) > 0 && <BuffTooltip label={`${game.chantShield}`} icon={<PixelArcaneShield size={1.5} />} color="rgb(125,211,252)" bgColor="rgba(56,189,248,0.15)" borderColor="rgba(56,189,248,0.5)" title={`奥术屏障 ${game.chantShield}`} desc="减免一切伤害，包括中毒、灼烧等持续伤害。每回合开始时清空。" />}
             {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
             {game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0 && (() => {
               const fs = Math.min(game.bloodRerollCount || 0, FURY_CONFIG.maxStack);
@@ -120,9 +120,9 @@ export function PlayerHudView() {
           <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] shrink-0" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
         </div>
         <div className={`pixel-hp-bar h-3 relative ${playerEffect === 'flash' ? 'animate-hp-flash' : ''} ${playerEffect === 'death' ? 'animate-player-death-vignette' : ''} ${game.statuses.some(s => s.type === 'poison') ? 'animate-poison-pulse' : ''} ${game.statuses.some(s => s.type === 'burn') ? 'animate-burn-edge' : ''}`}>
-          <motion.div className={`h-full ${game.armor > 0 ? 'pixel-hp-fill-armor' : getHpBarClass(game.hp, game.maxHp)}`} initial={{ width: '100%' }} animate={{ width: `${(game.hp / game.maxHp) * 100}%` }} transition={{ duration: 0.3 }} />
+          <motion.div className={`h-full ${(game.chantShield || 0) > 0 ? 'pixel-hp-fill-shield' : game.armor > 0 ? 'pixel-hp-fill-armor' : getHpBarClass(game.hp, game.maxHp)}`} initial={{ width: '100%' }} animate={{ width: `${(game.hp / game.maxHp) * 100}%` }} transition={{ duration: 0.3 }} />
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[10px] font-mono font-bold text-white pixel-text-shadow">{game.hp}/{game.maxHp} {game.armor > 0 && `[+${game.armor}]`}</span>
+            <span className="text-[10px] font-mono font-bold text-white pixel-text-shadow">{game.hp}/{game.maxHp}{(game.chantShield || 0) > 0 && ` [✦${game.chantShield}]`}{game.armor > 0 && ` [+${game.armor}]`}</span>
           </div>
         </div>
       </div>
