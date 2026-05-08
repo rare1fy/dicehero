@@ -239,6 +239,10 @@ export const PixelMusic: React.FC<PixelIconProps> = ({ size = 2, className, styl
 export const PixelCrackedHeart: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
   <IconBase pixels={D.CRACKED_HEART} ps={size} className={className} style={style} />;
 
+/** 紫色骷髅 — 法师【法术反噬】不可净化 debuff 专用 */
+export const PixelArcaneSkull: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
+  <IconBase pixels={D.ARCANE_SKULL} ps={size} className={className} style={style} />;
+
 // ===== 图标映射表 =====
 export const PIXEL_ICON_MAP = {
   sword: PixelSword,

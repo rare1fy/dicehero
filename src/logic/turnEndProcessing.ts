@@ -12,8 +12,8 @@ import * as ReactNS from 'react';
 import type { Die, GameState, Enemy } from '../types/game';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
-import { absorbPlayerDamage, calcMageChantHitPenalty, applyChantHitVulnerable } from './battleHelpers';
-import { PixelArcaneShield, PixelShield, PixelHeart, PixelCrackedHeart } from '../components/PixelIcons';
+import { absorbPlayerDamage, calcMageChantHitPenalty } from './battleHelpers';
+import { PixelArcaneShield, PixelShield, PixelHeart, PixelArcaneSkull, PixelMagic } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
 
 /** 奖励类飘字统一金色 */
@@ -25,8 +25,10 @@ const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 
 const armorIcon = () => ReactNS.createElement(PixelShield, { size: 1.5 });
 /** 浮字用 生命 icon */
 const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.5 });
-/** 浮字用 吟唱受击罚 icon —— 碎裂心形，表达施法导致肉身脆弱 */
-const crackedHeartIcon = () => ReactNS.createElement(PixelCrackedHeart, { size: 1.3 });
+/** 浮字用 法术反噬 icon —— 紫色骷髅（法师专属不可净化 debuff） */
+const arcaneSkullIcon = () => ReactNS.createElement(PixelArcaneSkull, { size: 1.3 });
+/** 浮字用 吟唱 icon —— 紫色星界法阵（与 PlayerHudView 的吟唱徽章同源） */
+const magicIcon = () => ReactNS.createElement(PixelMagic, { size: 1.3 });
 
 // ============================================================
 // Context 接口
@@ -96,14 +98,21 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
         chargeStacks: newChargeStacks,
         chantShield: (prev.chantShield || 0) + shieldGain,
       }));
-      addFloatingText(`吟唱 ${newHandLimit}/6`, 'text-purple-400', undefined, 'player');
+      addFloatingText(`吟唱 ${newHandLimit}/6`, 'text-purple-400', magicIcon(), 'player');
       addFloatingText(`奥术屏障: +${shieldGain}`, REWARD_COLOR, arcaneShieldIcon(), 'player');
       emitReward('shield', shieldGain);
     }
   } else if (game.playerClass === 'mage' && playedThisTurn) {
     // 出了牌就重置吟唱和过充倍率（chantShield 由回合开始清零统一处理）
-    // [2026-05-08] 同时清零吟唱受击次数，下一轮吟唱从 0 次开始计 2^N
-    setGame(prev => ({ ...prev, chargeStacks: 0, mageOverchargeMult: 0, mageChantHitCount: 0 }));
+    // [2026-05-08 v2] 同时清零吟唱受击次数 + 法术反噬层数
+    // —— 法术反噬必须在出牌的同一 React batch 里清零，否则下个敌人回合计算伤害时还是旧值
+    setGame(prev => ({
+      ...prev,
+      chargeStacks: 0,
+      mageOverchargeMult: 0,
+      mageChantHitCount: 0,
+      arcaneBackfire: 0,
+    }));
   }
 
   // healOnSkip: 冥想骰子 — 未出牌时手牌中有冥想骰子则回复HP
@@ -175,10 +184,10 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
           setGame(prev => {
             const absorb = absorbPlayerDamage(totalTauntDmg, prev.chantShield || 0, prev.armor, false);
             const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, totalTauntDmg);
-            let nextStatuses = prev.statuses;
             let newHitCount = prev.mageChantHitCount;
+            let newBackfire = prev.arcaneBackfire || 0;
             if (penalty) {
-              nextStatuses = applyChantHitVulnerable(prev.statuses, penalty.addedStacks);
+              newBackfire += penalty.addedStacks;
               newHitCount = penalty.newHitCount;
               chantPenaltyTaunt = penalty.addedStacks;
             }
@@ -187,12 +196,12 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
               hp: Math.max(0, prev.hp - absorb.hpDamage),
               armor: absorb.newArmor,
               chantShield: absorb.newShield,
-              statuses: nextStatuses,
               mageChantHitCount: newHitCount,
+              arcaneBackfire: newBackfire,
             };
           });
           addFloatingText(`-${totalTauntDmg}`, 'text-red-500', heartIcon(), 'player');
-          if (chantPenaltyTaunt > 0) addFloatingText(`法脉紊乱: +${chantPenaltyTaunt}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
+          if (chantPenaltyTaunt > 0) addFloatingText(`法术反噬: +${chantPenaltyTaunt}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
           addToast(`嘲讽反噬：全体敌人攻击造成${totalTauntDmg}伤害`, 'damage');
           playSound('enemy_skill');
         }, 400);

@@ -77,8 +77,14 @@ export interface GameState {
   chargeStacks?: number;       // 法师蓄力层数（连续不出牌回合数）
   mageOverchargeMult?: number; // 法师囤满后继续蓄力的额外伤害倍率加成
   /** 法师吟唱期间已被攻击次数（包含 DOT 和屏障吸收）。
-   *  每次受击 → 累加 2^N 层 vulnerable，出牌后清零（吟唱重置）。 */
+   *  每次受击 → `arcaneBackfire` 累加 2^N，出牌后清零。 */
   mageChantHitCount?: number;
+  /** 法师专属【法术反噬】debuff 层数（2026-05-08）。
+   *  - 吟唱中被打扰时累加 2^N（第1次+2 / 第2次+4 / 第3次+8...无上限）
+   *  - 每层让玩家受到的伤害额外 +10%（叠加在普通易伤之上）
+   *  - **出牌即清零**，**不可被任何净化/圣光等效果移除**
+   *  - 独立于 statuses[]，因此不受净化类技能影响 */
+  arcaneBackfire?: number;
   comboCount?: number;
   lockedElement?: string;  // 棱镜聚焦锁定的元素         // 盗贼本回合已出牌次数（连击计数）
   lastPlayHandType?: string;   // 盗贼上一次出牌的牌型（连击终结判定）

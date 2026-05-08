@@ -55,6 +55,7 @@ export function tryWaveTransition(
       chantShield: 0,
       chargeStacks: isMageChanting ? prev.chargeStacks : 0,
       mageChantHitCount: isMageChanting ? prev.mageChantHitCount : 0,
+      arcaneBackfire: isMageChanting ? prev.arcaneBackfire : 0,
       mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
       bloodRerollCount: 0,
       comboCount: 0,

@@ -12,6 +12,7 @@
 
 import type { Enemy, StatusEffect } from '../types/game';
 import { STATUS_EFFECT_MULT, ENEMY_ATTACK_MULT } from '../config';
+import { calcArcaneBackfireMult } from './battleHelpers';
 
 /** 攻击力计算的额外参数 */
 export interface AttackCalcExtras {
@@ -19,6 +20,8 @@ export interface AttackCalcExtras {
   attackCount?: number;
   /** 是否被减速 */
   isSlowed?: boolean;
+  /** 法师【法术反噬】层数（不可净化的独立 debuff） */
+  arcaneBackfire?: number;
 }
 
 /**
@@ -28,8 +31,9 @@ export interface AttackCalcExtras {
  * 1. combatType 乘数（warrior ×1.3, ranger ×0.4 + hitCount 递增）
  * 2. 力量(strength): 攻击力 + strength.value
  * 3. 虚弱(weak): 攻击力 ×STATUS_EFFECT_MULT.weak（下限1）
- * 4. 玩家易伤(vulnerable): 攻击力 ×STATUS_EFFECT_MULT.vulnerable
- * 5. 减速(slow): 仅 ranger 受影响，攻击力 ×ENEMY_ATTACK_MULT.slow
+ * 4. 玩家易伤(vulnerable): 攻击力 ×1.5（固定）
+ * 5. 法术反噬(arcaneBackfire): 攻击力 ×(1 + 0.1×层数)  —— 法师专属、不可净化
+ * 6. 减速(slow): 仅 ranger 受影响，攻击力 ×ENEMY_ATTACK_MULT.slow
  */
 export function getEffectiveAttackDmg(
   enemy: Enemy,
@@ -58,13 +62,13 @@ export function getEffectiveAttackDmg(
   const weak = enemy.statuses.find(s => s.type === 'weak');
   if (weak) val = Math.max(1, Math.floor(val * STATUS_EFFECT_MULT.weak));
 
-  // 4. 玩家易伤修正（层数生效：1层×1.5 / 每多1层 +0.25）
+  // 4. 玩家易伤修正（固定 ×1.5，不随层数变化）
   const playerVuln = playerStatuses.find(s => s.type === 'vulnerable');
-  if (playerVuln) {
-    const stacks = Math.max(1, playerVuln.value);
-    const mult = STATUS_EFFECT_MULT.vulnerable + (stacks - 1) * STATUS_EFFECT_MULT.vulnerablePerStack;
-    val = Math.floor(val * mult);
-  }
+  if (playerVuln) val = Math.floor(val * STATUS_EFFECT_MULT.vulnerable);
+
+  // 5. 法术反噬（法师专属，独立于 statuses 不可净化）
+  const backfireMult = calcArcaneBackfireMult(extras.arcaneBackfire);
+  if (backfireMult !== 1) val = Math.floor(val * backfireMult);
 
   return val;
 }
@@ -76,8 +80,12 @@ export function getEffectiveAttackDmg(
 export function getRangerFollowUpDmg(
   enemy: Enemy,
   attackCount: number,
+  arcaneBackfire?: number,
 ): number {
-  return Math.max(1, Math.floor(enemy.attackDmg * ENEMY_ATTACK_MULT.rangerHit) + attackCount + 1);
+  let val = Math.max(1, Math.floor(enemy.attackDmg * ENEMY_ATTACK_MULT.rangerHit) + attackCount + 1);
+  const backfireMult = calcArcaneBackfireMult(arcaneBackfire);
+  if (backfireMult !== 1) val = Math.floor(val * backfireMult);
+  return val;
 }
 
 /**

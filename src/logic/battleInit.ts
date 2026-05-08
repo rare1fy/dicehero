@@ -43,6 +43,7 @@ export function buildBattleGameState(
     chargeStacks: 0,
     mageOverchargeMult: 0,
     mageChantHitCount: 0,
+    arcaneBackfire: 0,
     bloodRerollCount: 0,
     comboCount: 0,
     lastPlayHandType: undefined,

@@ -15,7 +15,7 @@
 
 import type { Enemy, GameState, Die, Relic } from '../types/game';
 import * as ReactNS from 'react';
-import { PixelArcaneShield, PixelHeart, PixelShield, PixelCrackedHeart } from '../components/PixelIcons';
+import { PixelArcaneShield, PixelHeart, PixelShield, PixelArcaneSkull } from '../components/PixelIcons';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
 import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
@@ -24,7 +24,7 @@ import { executePriestSkill, executeCasterSkill, tickStatuses } from './enemySki
 import { processEliteDice, processEliteArmor } from './elites';
 import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
 import { tryWaveTransition } from './enemyWaveTransition';
-import { absorbPlayerDamage, calcMageChantHitPenalty, applyChantHitVulnerable } from './battleHelpers';
+import { absorbPlayerDamage, calcMageChantHitPenalty } from './battleHelpers';
 import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config';
 
 /** 奥术屏障吸收飘字用的 icon，独立一处避免重复 createElement */
@@ -33,8 +33,8 @@ const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 
 const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.3 });
 /** 护甲吸收/获得飘字的盾牌 icon */
 const shieldIcon = () => ReactNS.createElement(PixelShield, { size: 1.3 });
-/** 吟唱受击罚专用：碎裂心形，表达\"施法导致身体脆弱\" */
-const crackedHeartIcon = () => ReactNS.createElement(PixelCrackedHeart, { size: 1.3 });
+/** 法术反噬专用：紫色骷髅，法师专属不可净化 debuff */
+const arcaneSkullIcon = () => ReactNS.createElement(PixelArcaneSkull, { size: 1.3 });
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
 // === EnemyAI 回调接口 ===
@@ -120,7 +120,7 @@ export async function executeEnemyTurn(
 
   // 1. 玩家中毒结算（E5: death check 在回调内部完成）
   // [2026-05-07] 奥术屏障优先抵挡 DOT；护甲对 DOT 无效（bypassArmor=true）
-  // [2026-05-08] 法师吟唱期间被任何伤害（含 DOT、含屏障吸收）打扰 → 累加 2^N 层 vulnerable
+  // [2026-05-08 v2] 法师吟唱期间被任何伤害（含 DOT、含屏障吸收）打扰 → arcaneBackfire +2^N（不可净化）
   let chantPenaltyStacks = 0;
   cb.setGame((prev: GameState) => {
     let nextStatuses = [...prev.statuses];
@@ -139,12 +139,12 @@ export async function executeEnemyTurn(
       cb.addLog(`你因中毒受到了 ${absorb.hpDamage} 点伤害。`);
       cb.addFloatingText(`-${absorb.hpDamage}`, 'text-purple-400', heartIcon(), 'player');
     }
-    // 吟唱受击罚（注意：用入射 poisonDamage 判定，不用穿盾后的 hpDamage —— 屏障吸收也算"被打扰"）
+    // 吟唱受击罚（用入射 poisonDamage 判定，屏障吸收也算"被打扰"）
     const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, poisonDamage);
-    let penalizedStatuses = nextStatuses;
     let newHitCount = prev.mageChantHitCount;
+    let newBackfire = prev.arcaneBackfire || 0;
     if (penalty) {
-      penalizedStatuses = applyChantHitVulnerable(nextStatuses, penalty.addedStacks);
+      newBackfire += penalty.addedStacks;
       newHitCount = penalty.newHitCount;
       chantPenaltyStacks = penalty.addedStacks;
     }
@@ -152,16 +152,16 @@ export async function executeEnemyTurn(
     if (newHp <= 0 && prev.hp > 0) {
       if (cb.hasFatalProtection(prev.relics)) {
         newHp = prev.hp;
-        return { ...prev, hp: newHp, chantShield: absorb.newShield, relics: cb.triggerHourglass(prev.relics), statuses: penalizedStatuses, mageChantHitCount: newHitCount };
+        return { ...prev, hp: newHp, chantShield: absorb.newShield, relics: cb.triggerHourglass(prev.relics), statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
       }
-      return { ...prev, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: penalizedStatuses, mageChantHitCount: newHitCount };
+      return { ...prev, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
     }
     if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
       return { ...prev, phase: 'gameover' as const };
     }
-    return { ...prev, hp: newHp, chantShield: absorb.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount };
+    return { ...prev, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
   });
-  if (chantPenaltyStacks > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyStacks}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
+  if (chantPenaltyStacks > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyStacks}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
 
   await new Promise(r => setTimeout(r, 600));
   if (cb.gameRef.current.hp <= 0) { cb.playSound('player_death'); return { hp: 0, waveTransitioned: false }; }
@@ -325,6 +325,7 @@ export async function executeEnemyTurn(
       const damage = getEffectiveAttackDmg(e, prev.statuses, {
         attackCount: currentAttackCount,
         isSlowed,
+        arcaneBackfire: prev.arcaneBackfire,
       });
 
       const absorb = absorbPlayerDamage(damage, prev.chantShield || 0, prev.armor, false);
@@ -345,25 +346,25 @@ export async function executeEnemyTurn(
         cb.scheduleDelayedQuote(dq);
       }
 
-      // 吟唱受击罚（用入射 damage，屏障吸收也算）
+      // 吟唱受击罚（用入射 damage，屏障吸收也算；累加不可净化的 arcaneBackfire）
       const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, damage);
-      let penalizedStatuses = prev.statuses;
       let newHitCount = prev.mageChantHitCount;
+      let newBackfire = prev.arcaneBackfire || 0;
       if (penalty) {
-        penalizedStatuses = applyChantHitVulnerable(prev.statuses, penalty.addedStacks);
+        newBackfire += penalty.addedStacks;
         newHitCount = penalty.newHitCount;
         chantPenaltyMain = penalty.addedStacks;
       }
 
       if (newHp <= 0 && prev.hp > 0) {
         if (cb.hasFatalProtection(prev.relics)) {
-          return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount, relics: cb.triggerHourglass(prev.relics) };
+          return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, relics: cb.triggerHourglass(prev.relics) };
         }
-        return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb.newArmor, chantShield: absorb.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount };
+        return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
       }
-      return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
+      return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
     });
-    if (chantPenaltyMain > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyMain}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
+    if (chantPenaltyMain > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyMain}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
 
     // on_damage_taken 遗物
     const latestGame = cb.gameRef.current;
@@ -394,10 +395,12 @@ export async function executeEnemyTurn(
     if (e.combatType === 'ranger') {
       await new Promise(r => setTimeout(r, 250));
       const hitCount = currentAttackCount || 0;
-      const secondHit = getRangerFollowUpDmg(e, hitCount);
 
       let chantPenaltyR = 0;
+      let loggedSecondHit = 0;
       cb.setGame((prev: GameState) => {
+        const secondHit = getRangerFollowUpDmg(e, hitCount, prev.arcaneBackfire);
+        loggedSecondHit = secondHit;
         const absorb2 = absorbPlayerDamage(secondHit, prev.chantShield || 0, prev.armor, false);
         const newHp = Math.max(0, prev.hp - absorb2.hpDamage);
         const hpLost = prev.hp - newHp;
@@ -407,24 +410,24 @@ export async function executeEnemyTurn(
         if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', heartIcon(), 'player');
 
         const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, secondHit);
-        let penalizedStatuses = prev.statuses;
         let newHitCount = prev.mageChantHitCount;
+        let newBackfire = prev.arcaneBackfire || 0;
         if (penalty) {
-          penalizedStatuses = applyChantHitVulnerable(prev.statuses, penalty.addedStacks);
+          newBackfire += penalty.addedStacks;
           newHitCount = penalty.newHitCount;
           chantPenaltyR = penalty.addedStacks;
         }
 
         if (newHp <= 0 && prev.hp > 0) {
           if (cb.hasFatalProtection(prev.relics)) {
-            return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb2.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount, relics: cb.triggerHourglass(prev.relics) };
+            return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, relics: cb.triggerHourglass(prev.relics) };
           }
-          return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb2.newArmor, chantShield: absorb2.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount };
+          return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
         }
-        return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
+        return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
       });
-      if (chantPenaltyR > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyR}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
-      cb.addLog(`${e.name} 追击造成 ${secondHit} 伤害！`);
+      if (chantPenaltyR > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyR}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
+      cb.addLog(`${e.name} 追击造成 ${loggedSecondHit} 伤害！`);
       cb.playSound('enemy');
     }
 
@@ -488,11 +491,12 @@ export async function executeEnemyTurn(
       cb.addFloatingText(`-${absorb.hpDamage}`, 'text-orange-500', heartIcon(), 'player');
     }
     nextStatuses = tickStatuses(nextStatuses);
-    // 吟唱被灼烧打扰（用入射 burnDamage，屏障吸收也算）
+    // 吟唱被灼烧打扰（用入射 burnDamage，屏障吸收也算；累加不可净化的 arcaneBackfire）
     const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, burnDamage);
     let newHitCount = prev.mageChantHitCount;
+    let newBackfire = prev.arcaneBackfire || 0;
     if (penalty) {
-      nextStatuses = applyChantHitVulnerable(nextStatuses, penalty.addedStacks);
+      newBackfire += penalty.addedStacks;
       newHitCount = penalty.newHitCount;
       chantPenaltyBurn = penalty.addedStacks;
     }
@@ -501,19 +505,19 @@ export async function executeEnemyTurn(
       if (cb.hasFatalProtection(prev.relics)) {
         newHp = prev.hp;
         returnHp = newHp;
-        return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, isEnemyTurn: false, relics: cb.triggerHourglass(prev.relics) };
+        return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: cb.triggerHourglass(prev.relics) };
       }
       returnHp = 0;
-      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, isEnemyTurn: false };
+      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false };
     }
     if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
       returnHp = 0;
       return { ...prev, battleTurn: nextTurn, phase: 'gameover' as const, isEnemyTurn: false };
     }
     returnHp = newHp;
-    return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, isEnemyTurn: false };
+    return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false };
   });
-  if (chantPenaltyBurn > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyBurn}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
+  if (chantPenaltyBurn > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyBurn}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
 
   return { hp: returnHp, waveTransitioned: false };
 }

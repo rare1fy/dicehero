@@ -116,11 +116,8 @@ export const getSoulCrystalMult = (depth: number, currentMult: number): number =
 export const STATUS_EFFECT_MULT = {
   /** 虚弱(weak)：攻击力 ×0.75 */
   weak: 0.75,
-  /** 易伤(vulnerable) 基础倍率：1层 = ×1.5；每多1层 +0.25
-   *  → 1层 ×1.5 / 2层 ×1.75 / 3层 ×2.0 / 5层 ×2.5 / N层 ×(1.25 + 0.25N) */
+  /** 易伤(vulnerable)：受到伤害 ×1.5（固定值，不随层数变化） */
   vulnerable: 1.5,
-  /** 易伤每多 1 层的额外增伤 */
-  vulnerablePerStack: 0.25,
 } as const;
 
 // ============================================================

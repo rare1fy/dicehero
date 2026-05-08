@@ -247,11 +247,7 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   if (playerWeak) modifiedDamage = Math.ceil(modifiedDamage * 0.75);
 
   const enemyVulnerable = targetEnemy?.statuses.find(s => s.type === 'vulnerable');
-  if (enemyVulnerable) {
-    const stacks = Math.max(1, enemyVulnerable.value);
-    const mult = STATUS_EFFECT_MULT.vulnerable + (stacks - 1) * STATUS_EFFECT_MULT.vulnerablePerStack;
-    modifiedDamage = Math.ceil(modifiedDamage * mult);
-  }
+  if (enemyVulnerable) modifiedDamage = Math.ceil(modifiedDamage * STATUS_EFFECT_MULT.vulnerable);
 
   // 战士【血怒战意】（封顶走 FURY_CONFIG）
   const effectiveFuryStacks = game.playerClass === 'warrior' ? Math.min(bloodRerollCount, FURY_CONFIG.maxStack) : 0;
