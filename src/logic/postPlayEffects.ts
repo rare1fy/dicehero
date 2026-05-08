@@ -22,15 +22,15 @@ import { rollKillXp, applyXpGain } from './xpSystem';
 import { emitXpKill } from './xpEvents';
 import { emitSoulGain } from './soulEvents';
 import { PixelRefresh, PixelDice, PixelCards, PixelHeart } from '../components/PixelIcons';
+import { emitReward } from './rewardEvents';
 
-/** 浮字用的 refresh icon，统一由 PixelRefresh 渲染，避免冗长文字 */
+// 浮字 icon 工厂（统一 size=1.5）
 const rerollIcon = () => React.createElement(PixelRefresh, { size: 1.5 });
-/** 浮字用的 骰子 icon（接应 / 临时骰等"获得骰子"类飘字） */
 const diceIcon = () => React.createElement(PixelDice, { size: 1.5 });
-/** 浮字用的 牌 icon（+出牌机会类飘字） */
 const cardsIcon = () => React.createElement(PixelCards, { size: 1.5 });
-/** 浮字用的 心 icon（最大HP等生命类飘字） */
 const heartIcon = () => React.createElement(PixelHeart, { size: 1.5 });
+/** 统一奖励类飘字颜色：金色，和扣血红/扣盾蓝区分开 */
+const REWARD_COLOR = 'text-amber-200';
 
 // --- Context 接口 ---
 
@@ -77,7 +77,6 @@ export interface PostPlayContext {
 }
 
 // --- 同步部分：出牌后效处理 ---
-
 export function executePostPlayEffects(ctx: PostPlayContext): void {
   const {
     game, gameRef, enemies, dice, selected, settleDice, outcome,
@@ -95,7 +94,6 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   }
 
   // ===== 经验值增益：按当前节点类型给奖励 =====
-  // 同步推导本次出牌击杀的敌人 uid 列表（enemies 快照，setEnemies 尚未生效）
   const killedUids: string[] = hasAoe
     ? enemies.filter(e => {
         let dmg = outcome.damage; let arm = e.armor;
@@ -323,7 +321,9 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     const hasComboPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.comboGrantPlay);
     if (hasComboPlay && hasAliveEnemies) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-    addFloatingText('+1', 'text-cyan-400', cardsIcon(), 'player');
+      const cpDie = selectedDiceForSpent.find(d => getDiceDef(d.diceDefId).onPlay?.comboGrantPlay)!;
+      addFloatingText(`${getDiceDef(cpDie.diceDefId).name}: +1`, REWARD_COLOR, cardsIcon(), 'player');
+      emitReward('card', 1);
     }
   }
 
@@ -346,7 +346,10 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       const processed = applyDiceSpecialEffects(newDice, { hasLimitBreaker: hasLimitBreaker(g.relics), lockedElement: g.lockedElement });
       setDice(pd => [...pd, ...processed.map(d => ({ ...d, justAdded: true }))]);
       setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
-        addFloatingText(`+${bagDrawCount}`, 'text-cyan-300', diceIcon(), 'player');
+      const sourceDie = selectedDiceForSpent.find(d => (getDiceDef(d.diceDefId).onPlay?.drawFromBag || 0) > 0);
+      const sourceName = sourceDie ? getDiceDef(sourceDie.diceDefId).name : '接应';
+      addFloatingText(`${sourceName}: +${bagDrawCount}`, REWARD_COLOR, diceIcon(), 'player');
+      emitReward('dice', bagDrawCount);
     }, 300);
   }
   
@@ -373,7 +376,9 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   const hasExtraPlay = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantExtraPlay);
   if (hasExtraPlay && hasAliveEnemies) {
     setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-    addFloatingText('+1', 'text-green-400', cardsIcon(), 'player');
+    const epDie = selectedDiceForSpent.find(d => getDiceDef(d.diceDefId).onPlay?.grantExtraPlay)!;
+    addFloatingText(`${getDiceDef(epDie.diceDefId).name}: +1`, REWARD_COLOR, cardsIcon(), 'player');
+    emitReward('card', 1);
   }
 
   // [Bug-11] 魔法手套：打出对子时下回合临时+1手牌（触发后1次出牌冷却）
@@ -389,7 +394,8 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
         relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + 1,
         relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: 1 } : r),
       }));
-      addFloatingText('+1', 'text-cyan-300', cardsIcon(), 'player');
+      addFloatingText(`${gloveRelic.name}: +1`, REWARD_COLOR, cardsIcon(), 'player');
+      emitReward('card', 1);
     } else if (gloveCounter > 0) {
       // 冷却中：每次出牌递减冷却计数
       setGame(prev => ({
@@ -404,7 +410,9 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     const hasPlayOnThird = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.grantPlayOnThird);
     if (hasPlayOnThird) {
       setGame(prev => ({ ...prev, playsLeft: prev.playsLeft + 1 }));
-      addFloatingText('+1', 'text-yellow-300', cardsIcon(), 'player');
+      const ptDie = selectedDiceForSpent.find(d => getDiceDef(d.diceDefId).onPlay?.grantPlayOnThird)!;
+      addFloatingText(`${getDiceDef(ptDie.diceDefId).name}: +1`, REWARD_COLOR, cardsIcon(), 'player');
+      emitReward('card', 1);
     }
   }
 
@@ -424,7 +432,9 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       };
     });
     setDice(prev => [...prev, ...newTempDice]);
-      addFloatingText(`+${tempDieFixedDice.length}`, 'text-green-300', diceIcon(), 'player');
+    const tDie = tempDieFixedDice[0];
+    addFloatingText(`${getDiceDef(tDie.diceDefId).name}: +${tempDieFixedDice.length}`, REWARD_COLOR, diceIcon(), 'player');
+    emitReward('dice', tempDieFixedDice.length);
   }
 
   // boomerangPlay: 回旋骰子弹回时，给一次免费重投
@@ -433,7 +443,9 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   const hasBoomerangJustBounced = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.boomerangPlay && !d.boomerangUsed);
   if (hasBoomerangJustBounced && hasAliveEnemies) {
     setGame(prev => ({ ...prev, boomerangFreeReroll: (prev.boomerangFreeReroll || 0) + 1 }));
-    addFloatingText('+1', 'text-cyan-300', rerollIcon(), 'player');
+    const bDie = selectedDiceForSpent.find(d => getDiceDef(d.diceDefId).onPlay?.boomerangPlay)!;
+    addFloatingText(`${getDiceDef(bDie.diceDefId).name}: +1`, REWARD_COLOR, rerollIcon(), 'player');
+    emitReward('reroll', 1);
   }
 
   // doublePoisonOnCombo: 蚀骨毒液 — 连击时目标毒层翻倍
@@ -471,7 +483,8 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       setGame(prev => {
         const cnt = (prev.lifefurnaceCounter || 0) + 1;
         if (cnt >= every) {
-          addFloatingText(`+5`, 'text-red-300', heartIcon(), 'player');
+          addFloatingText(`${def.name}: +5`, REWARD_COLOR, heartIcon(), 'player');
+          emitReward('heart', 5);
           return { ...prev, maxHp: prev.maxHp + 5, lifefurnaceCounter: 0 };
         }
         return { ...prev, lifefurnaceCounter: cnt };
@@ -483,7 +496,8 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     if (def.onPlay?.healOrMaxHp) {
       setGame(prev => {
         if (prev.hp >= prev.maxHp) {
-          addFloatingText(`+3`, 'text-red-300', heartIcon(), 'player');
+          addFloatingText(`${def.name}: +3`, REWARD_COLOR, heartIcon(), 'player');
+          emitReward('heart', 3);
           return { ...prev, maxHp: prev.maxHp + 3 };
         }
         return prev;
@@ -511,7 +525,10 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     setTimeout(() => {
       setDice(prev => [...prev, { ...tmpDie, justAdded: true }]);
       setTimeout(() => setDice(pd => pd.map(d => d.id === tmpDie.id ? { ...d, justAdded: false } : d)), 600);
-      addFloatingText('+1', 'text-green-300', diceIcon(), 'player');
+      const srcDie = selectedDiceForSpent.find(d => getDiceDef(d.diceDefId).onPlay?.grantShadowDie);
+      const srcName = srcDie ? getDiceDef(srcDie.diceDefId).name : '残骰';
+      addFloatingText(`${srcName}: +1`, REWARD_COLOR, diceIcon(), 'player');
+      emitReward('dice', 1);
     }, 300);
   }
   

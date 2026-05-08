@@ -63,7 +63,7 @@ export const GlobalTopBar: React.FC = () => {
         </div>
         <div className="w-[2px] h-4 bg-[var(--dungeon-panel-border)]" />
         {/* 金币 */}
-        <div className="flex items-center gap-1 text-[var(--pixel-gold)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative" style={{borderRadius:'2px'}} {...coinTip.handlers}>
+        <div className="flex items-center gap-1 text-[var(--pixel-gold)] font-mono text-[10px] bg-[var(--dungeon-bg)] px-2 py-1 border-2 border-[var(--dungeon-panel-border)] relative" style={{borderRadius:'2px'}} data-reward-target="gold" {...coinTip.handlers}>
           <PixelCoin size={2} /> <span className="font-bold">{game.souls}</span>
           {coinTip.show && (
             <div className="absolute left-0 top-full mt-1 bg-[var(--dungeon-panel)] border-2 border-[var(--pixel-gold)] px-2 py-1 text-[8px] text-[var(--pixel-gold-light)] whitespace-nowrap z-[200] pixel-text-shadow" style={{borderRadius:'2px'}}>

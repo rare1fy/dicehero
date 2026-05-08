@@ -20,6 +20,7 @@ import { StartScreen } from './components/StartScreen';
 import { GlobalTopBar } from './components/GlobalTopBar';
 import { XpShardLayer } from './components/XpShardLayer';
 import { SoulShardLayer } from './components/SoulShardLayer';
+import { RewardBurstLayer } from './components/RewardBurstLayer';
 import { LevelUpModal } from './components/LevelUpModal';
 import { MapScreen } from './components/MapScreen';
 import { ShopScreen } from './components/ShopScreen';
@@ -138,6 +139,7 @@ export default function DiceHeroGame() {
       <GlobalTopBar />
       <XpShardLayer />
       <SoulShardLayer />
+      <RewardBurstLayer />
       <LevelUpModal />
 
       {/* 战斗转场遮罩 */}
@@ -272,3 +274,4 @@ export default function DiceHeroGame() {
 </GameContext.Provider>
   );
 }
+

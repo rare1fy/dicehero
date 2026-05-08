@@ -28,6 +28,10 @@ import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasLimitBreaker } from '../engine/relicQueries';
 import { PixelDice } from '../components/PixelIcons';
+import { emitReward } from './rewardEvents';
+
+/** 奖励类飘字统一金色 */
+const REWARD_COLOR = 'text-amber-200';
 
 /** 浮字用的骰子 icon（"获得骰子"类飘字统一入口） */
 const diceIcon = () => React.createElement(PixelDice, { size: 1.5 });
@@ -171,7 +175,8 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         const processed = applyDiceSpecialEffects([newDie], { hasLimitBreaker: hasLimitBreaker(latest.relics), lockedElement: latest.lockedElement });
         setDice(prev => [...prev, ...processed.map(d => ({ ...d, justAdded: true }))]);
         setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
-        addFloatingText(`+1`, 'text-yellow-300', diceIcon(), 'player');
+        addFloatingText(`援助: +1`, REWARD_COLOR, diceIcon(), 'player');
+        emitReward('dice', 1);
       }
     });
   }

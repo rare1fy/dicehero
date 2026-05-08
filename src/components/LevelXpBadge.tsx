@@ -1,18 +1,19 @@
-﻿/**
+/**
  * LevelXpBadge.tsx — 等级徽章 + 可弹出经验条
  *
- * 设计要点（2026-05-08 刘叔 review 迭代）：
- *  - 徽章：去掉紫色外框，只保留像素星 + "Lv N" 文字（带像素描边）
- *  - 经验条：去重边框 + 刻度，单条圆角像素进度条，右侧小字 xp/next
- *  - 自动消失：无论是自动弹出（收到经验）还是手动点击，都统一在 2s 后收起
- *  - 不在 xp=0 时闪出 "+0"（只有 lastXpGain>0 时才播动画；进度条宽度用 initial=animate 避免从 100% 闪到 0%）
- *  - 升级：徽章金色闪光 + scale 弹跳 + "LV UP" 浮字
+ * 设计要点（2026-05-08 刘叔 v3 迭代）：
+ *  - 徽章图标：用 PixelXpSpark 四瓣闪光（和经验碎片同款），颜色全线蓝色
+ *  - 徽章文字：蓝色 pixel-blue + 金色升级闪光
+ *  - 经验条：加大（宽 144 / 高 11），硬边深槽 + 纯色蓝填充 + inset 双向高光 + 4段刻度
+ *  - 自动消失：弹出后 3.5s 自动收起（从 2s 加长），给刘叔足够时间看清
+ *  - 不在 xp=0 时闪出 "+0"
+ *  - 升级：蓝→金切换 + scale 弹跳 + "LV UP" 浮字 + halo 脉动
  *
  *  碎片飞入动画已拆到 <XpShardLayer>（全屏层），本组件只负责徽章 + 经验条显示。
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PixelLevelArrow } from './PixelIcons';
+import { PixelXpSpark } from './PixelIcons';
 
 interface LevelXpBadgeProps {
   level: number;
@@ -22,7 +23,7 @@ interface LevelXpBadgeProps {
   lastXpGainAt?: number;
 }
 
-const AUTO_CLOSE_MS = 2000;
+const AUTO_CLOSE_MS = 3500;
 
 export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext, lastXpGain, lastXpGainAt }) => {
   const [open, setOpen] = useState(false);
@@ -56,13 +57,13 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
       setLevelUpLabel(level);
       setOpen(true);
       scheduleAutoClose();
-      window.setTimeout(() => setLevelUpFlash(false), 600);
-      window.setTimeout(() => setLevelUpLabel(null), 1600);
+      window.setTimeout(() => setLevelUpFlash(false), 700);
+      window.setTimeout(() => setLevelUpLabel(null), 1800);
     }
     prevLevelRef.current = level;
   }, [level]);
 
-  // 点击徽章 → 开/关，开的话也启动 2s 自动消失
+  // 点击徽章 → 开/关
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (open) {
@@ -80,28 +81,28 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
       data-xp-badge="1"
       style={{ fontFamily: '"fusion-pixel", monospace' }}
     >
-      {/* 徽章本体 —— 裸像素星 + Lv 数字（无外框） */}
+      {/* 徽章本体 —— PixelXpSpark 闪光图标 + "Lv N" 蓝色文字 */}
       <motion.button
         onClick={handleClick}
-        animate={levelUpFlash ? { scale: [1, 1.4, 1], rotate: [0, -6, 6, 0] } : { scale: 1, rotate: 0 }}
-        transition={{ duration: 0.5 }}
+        animate={levelUpFlash ? { scale: [1, 1.45, 1], rotate: [0, -8, 8, 0] } : { scale: 1, rotate: 0 }}
+        transition={{ duration: 0.6 }}
         className="flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 leading-none"
-        style={{ height: 14 }}
+        style={{ height: 16 }}
         title="点击查看经验"
       >
-        <PixelLevelArrow
+        <PixelXpSpark
           size={1}
           style={{
             filter: levelUpFlash
-              ? 'drop-shadow(0 0 4px #fff7b0) drop-shadow(0 0 8px #ffd24a)'
-              : 'drop-shadow(0 0 2px rgba(232,208,104,0.55))',
+              ? 'drop-shadow(0 0 5px #fff7b0) drop-shadow(0 0 10px #ffd24a)'
+              : 'drop-shadow(0 0 3px rgba(104,160,232,0.9)) drop-shadow(0 0 1px rgba(216,236,255,0.7))',
           }}
         />
         <span
           className="text-[10px] font-black tracking-wider pixel-text-shadow"
           style={{
-            color: levelUpFlash ? '#fff2a0' : '#e8d068',
-            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(200,168,60,0.55)',
+            color: levelUpFlash ? '#fff2a0' : '#a8d0ff',
+            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(104,160,232,0.65)',
           }}
         >
           Lv {level}
@@ -114,9 +115,9 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
           <motion.div
             key="lvup"
             initial={{ opacity: 0, y: 0, scale: 0.6 }}
-            animate={{ opacity: [0, 1, 1, 0], y: [-2, -14, -22, -30], scale: [0.6, 1.2, 1.1, 1] }}
+            animate={{ opacity: [0, 1, 1, 0], y: [-2, -14, -22, -30], scale: [0.6, 1.3, 1.2, 1.05] }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.4 }}
+            transition={{ duration: 1.5 }}
             className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-none z-[105] whitespace-nowrap"
             style={{
               fontFamily: '"fusion-pixel", monospace',
@@ -131,7 +132,7 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
         )}
       </AnimatePresence>
 
-      {/* 弹出的经验条 */}
+      {/* 弹出的经验条 —— 加大加亮（v3 迭代） */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -139,22 +140,23 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute left-0 pointer-events-none z-[102] flex items-center gap-1"
-            style={{ bottom: 'calc(100% + 3px)', whiteSpace: 'nowrap' }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="absolute left-0 pointer-events-none z-[102] flex items-center gap-1.5"
+            style={{ bottom: 'calc(100% + 4px)', whiteSpace: 'nowrap' }}
           >
-            {/* [PIXEL-REDO 2026-05-08] 经验条：硬边深槽 + 纯色填充 + 刻度，复刻 HUD HP 条风格 */}
+            {/* 深槽外框 —— 硬边 + inset 高光，加大 */}
             <div
               className="relative"
               style={{
-                width: 100,
-                height: 8,
+                width: 144,
+                height: 11,
                 background: 'var(--dungeon-bg)',
                 border: '1px solid var(--dungeon-panel-border)',
                 boxShadow:
-                  'inset 0 1px 0 rgba(0,0,0,0.7), ' +
-                  'inset 0 -1px 0 rgba(80,160,255,0.22), ' +
-                  '0 1px 0 rgba(60,140,255,0.25)',
+                  'inset 0 1px 0 rgba(0,0,0,0.75), ' +
+                  'inset 0 -1px 0 rgba(104,160,232,0.28), ' +
+                  '0 1px 0 rgba(104,160,232,0.35), ' +
+                  '0 0 6px rgba(104,160,232,0.35)',
                 imageRendering: 'pixelated',
                 borderRadius: 0,
               }}
@@ -163,12 +165,14 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
                 className="h-full"
                 initial={{ width: pct + '%' }}
                 animate={{ width: pct + '%' }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
+                transition={{ duration: 0.38, ease: 'easeOut' }}
                 style={{
-                  background: levelUpFlash ? 'var(--pixel-gold)' : 'var(--pixel-blue)',
+                  background: levelUpFlash
+                    ? 'linear-gradient(90deg, var(--pixel-gold) 0%, #ffe9a0 100%)'
+                    : 'linear-gradient(90deg, var(--pixel-blue) 0%, #a8d0ff 100%)',
                   boxShadow: levelUpFlash
-                    ? 'inset 0 1px 0 var(--pixel-gold-light), inset 0 -1px 0 var(--pixel-gold-dark)'
-                    : 'inset 0 1px 0 var(--pixel-blue-light), inset 0 -1px 0 var(--pixel-blue-dark)',
+                    ? 'inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(140,100,20,0.7), 0 0 8px rgba(232,184,48,0.6)'
+                    : 'inset 0 1px 0 rgba(216,236,255,0.75), inset 0 -1px 0 rgba(40,72,160,0.7), 0 0 6px rgba(104,160,232,0.55)',
                   imageRendering: 'pixelated',
                 }}
               />
@@ -178,9 +182,17 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
                 style={{
                   background:
                     'repeating-linear-gradient(90deg, ' +
-                      'transparent 0, transparent 24px, ' +
-                      'rgba(0,0,0,0.55) 24px, rgba(0,0,0,0.55) 25px)',
+                      'transparent 0, transparent 35px, ' +
+                      'rgba(0,0,0,0.55) 35px, rgba(0,0,0,0.55) 36px)',
                   imageRendering: 'pixelated',
+                }}
+              />
+              {/* 浅顶高光条 */}
+              <div
+                className="absolute inset-x-0 top-0 pointer-events-none"
+                style={{
+                  height: 2,
+                  background: 'linear-gradient(180deg, rgba(216,236,255,0.35) 0%, transparent 100%)',
                 }}
               />
             </div>
@@ -188,9 +200,9 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
             <span
               className="font-mono font-bold"
               style={{
-                fontSize: 9,
-                color: '#a0d0ff',
-                textShadow: '0 1px 0 rgba(0,0,0,0.9)',
+                fontSize: 10,
+                color: '#a8d0ff',
+                textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(104,160,232,0.55)',
                 letterSpacing: '0.02em',
                 lineHeight: 1,
               }}

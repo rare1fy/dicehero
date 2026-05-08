@@ -16,7 +16,10 @@ import { playSound } from '../utils/sound';
 import { ELEMENT_NAMES } from '../utils/uiHelpers';
 import { getRerollHpCost } from '../logic/rerollCalc';
 import { PixelCoin, PixelShield, PixelBloodDrop } from '../components/PixelIcons';
+import { emitReward } from '../logic/rewardEvents';
 import type { BattleState } from './useBattleState';
+
+const REWARD_COLOR = 'text-amber-200';
 
 export function useReroll(state: BattleState) {
   const {
@@ -89,15 +92,21 @@ export function useReroll(state: BattleState) {
       });
       addFloatingText(`-${hpCost}`, 'text-red-500', undefined, 'player');
       if (atCap) {
-        addFloatingText(`+${FURY_CONFIG.armorAtCap}`, 'text-blue-400', <PixelShield size={1.5} />, 'player');
+        addFloatingText(`血怒满层: +${FURY_CONFIG.armorAtCap}`, REWARD_COLOR, <PixelShield size={1.5} />, 'player');
+        emitReward('armor', FURY_CONFIG.armorAtCap);
       } else {
-        addFloatingText(`+${Math.round(FURY_CONFIG.damagePerStack * 100)}%`, 'text-orange-400', <PixelBloodDrop size={1.5} />, 'player');
+        addFloatingText(`血怒 +${Math.round(FURY_CONFIG.damagePerStack * 100)}%`, 'text-orange-400', <PixelBloodDrop size={1.5} />, 'player');
+        emitReward('fury', 1);
       }
       if (onRerollGoldBonus > 0) {
-        setTimeout(() => addFloatingText(`+${onRerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player'), 300);
+        setTimeout(() => {
+          addFloatingText(`黑市契约: +${onRerollGoldBonus}`, REWARD_COLOR, <PixelCoin size={2} />, 'player');
+          emitReward('gold', onRerollGoldBonus);
+        }, 300);
       }
       if (onRerollArmor > 0) {
-        addFloatingText(`+${onRerollArmor}`, 'text-blue-400', <PixelShield size={1.5} />, 'player');
+        addFloatingText(`重投护甲: +${onRerollArmor}`, REWARD_COLOR, <PixelShield size={1.5} />, 'player');
+        emitReward('armor', onRerollArmor);
       }
       const displayStacks = Math.min(currentFuryStacks + 1, FURY_CONFIG.maxStack);
       addLog(`嗜血消耗 ${hpCost} HP（血怒${displayStacks}/${FURY_CONFIG.maxStack}层，+${Math.round(displayStacks * FURY_CONFIG.damagePerStack * 100)}%伤害）`);
@@ -110,8 +119,14 @@ export function useReroll(state: BattleState) {
           stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + onRerollGoldBonus },
           blackMarketUsedThisTurn: onRerollGoldBonus > 0 ? true : prev.blackMarketUsedThisTurn,
         }));
-        if (onRerollArmor > 0) addFloatingText(`+${onRerollArmor}`, 'text-blue-400', <PixelShield size={1.5} />, 'player');
-        if (onRerollGoldBonus > 0) addFloatingText(`+${onRerollGoldBonus}`, 'text-yellow-400', <PixelCoin size={2} />, 'player');
+        if (onRerollArmor > 0) {
+          addFloatingText(`重投护甲: +${onRerollArmor}`, REWARD_COLOR, <PixelShield size={1.5} />, 'player');
+          emitReward('armor', onRerollArmor);
+        }
+        if (onRerollGoldBonus > 0) {
+          addFloatingText(`黑市契约: +${onRerollGoldBonus}`, REWARD_COLOR, <PixelCoin size={2} />, 'player');
+          emitReward('gold', onRerollGoldBonus);
+        }
       }
     }
 

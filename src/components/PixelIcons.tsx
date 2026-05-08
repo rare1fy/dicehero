@@ -350,10 +350,10 @@ export const PixelSoulCrystal: React.FC<{ size?: number; className?: string }> =
  * 形态：十字四尖星，中心亮白，外围深蓝描边，"能量微粒"感
  * 8×8 网格
  */
-export const PixelXpSpark: React.FC<{ size?: number; className?: string }> = ({ size = 2, className }) => {
+export const PixelXpSpark: React.FC<{ size?: number; className?: string; style?: React.CSSProperties }> = ({ size = 2, className, style }) => {
   const s = size;
   return (
-    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated' }}>
+    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated', ...style }}>
       {/* 深边 (pixel-blue-dark) */}
       <rect x="3" y="0" width="2" height="1" fill="#3860a0" />
       <rect x="3" y="7" width="2" height="1" fill="#3860a0" />

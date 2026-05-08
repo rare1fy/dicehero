@@ -12,6 +12,10 @@
 import React from 'react';
 import type { GameState } from '../types/game';
 import { PixelRefresh } from '../components/PixelIcons';
+import { emitReward } from './rewardEvents';
+
+/** 奖励类飘字统一金色 */
+const REWARD_COLOR = 'text-amber-200';
 
 /** 连击效果回调集合 */
 export interface RogueComboCallbacks {
@@ -41,7 +45,8 @@ export function handleRogueComboPrep(
   if (playerClass === 'rogue' && currentCombo === 0) {
     cb.setGame(prev => ({ ...prev, comboFreeReroll: (prev.comboFreeReroll || 0) + 1 }));
     setTimeout(() => {
-      cb.addFloatingText('+1', 'text-cyan-300', React.createElement(PixelRefresh, { size: 1.5 }), 'player');
+      cb.addFloatingText('连击袖箭: +1', REWARD_COLOR, React.createElement(PixelRefresh, { size: 1.5 }), 'player');
+      emitReward('reroll', 1);
     }, 200);
   }
 }
@@ -60,7 +65,7 @@ export function handleRogueComboHit(
 ): void {
   if (playerClass === 'rogue' && currentCombo === 1 && thisHandType !== '普通攻击') {
     setTimeout(() => {
-      addFloatingText('连击! +20%伤害', 'text-cyan-300', undefined, 'player');
+      addFloatingText('连击! +20%伤害', REWARD_COLOR, undefined, 'player');
     }, 200);
   }
 }

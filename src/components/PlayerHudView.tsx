@@ -104,13 +104,13 @@ export function PlayerHudView() {
           {/* 等级徽章 + 弹出经验条 */}
           <LevelXpBadge level={game.level || 1} xp={game.xp || 0} xpToNext={game.xpToNext || 50} lastXpGain={game.lastXpGain} lastXpGainAt={game.lastXpGainAt} />
           <div className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden no-scrollbar min-w-0">
-            {game.armor > 0 && <StatusIcon status={{ type: 'armor', value: game.armor }} align="left" />}
-            {(game.chantShield || 0) > 0 && <BuffTooltip label={`${game.chantShield}`} icon={<PixelArcaneShield size={1.5} />} color="rgb(125,211,252)" bgColor="rgba(56,189,248,0.15)" borderColor="rgba(56,189,248,0.5)" title={`奥术屏障 ${game.chantShield}`} desc="减免一切伤害，包括中毒、灼烧等持续伤害。每回合开始时清空。" />}
+            {game.armor > 0 && <span data-reward-target="armor"><StatusIcon status={{ type: 'armor', value: game.armor }} align="left" /></span>}
+            {(game.chantShield || 0) > 0 && <span data-reward-target="shield"><BuffTooltip label={`${game.chantShield}`} icon={<PixelArcaneShield size={1.5} />} color="rgb(125,211,252)" bgColor="rgba(56,189,248,0.15)" borderColor="rgba(56,189,248,0.5)" title={`奥术屏障 ${game.chantShield}`} desc="减免一切伤害，包括中毒、灼烧等持续伤害。每回合开始时清空。" /></span>}
             {game.statuses.map((s, i) => <StatusIcon key={i} status={s} align="left" />)}
             {game.playerClass === 'warrior' && (game.bloodRerollCount || 0) > 0 && (() => {
               const fs = Math.min(game.bloodRerollCount || 0, FURY_CONFIG.maxStack);
               const atCap = (game.bloodRerollCount || 0) >= FURY_CONFIG.maxStack;
-              return <BuffTooltip label={`+${Math.round(fs * FURY_CONFIG.damagePerStack * 100)}%`} icon={<PixelBloodDrop size={1.5} />} color="rgb(220,60,60)" bgColor="rgba(200,40,40,0.15)" borderColor="rgba(200,40,40,0.4)" title={`血怒 ${fs}/${FURY_CONFIG.maxStack}层${atCap ? ' [已满]' : ''}`} desc={`每次嗜血+${Math.round(FURY_CONFIG.damagePerStack * 100)}%最终伤害（最多${FURY_CONFIG.maxStack}层+${Math.round(FURY_CONFIG.maxStack * FURY_CONFIG.damagePerStack * 100)}%）。${atCap ? '叠满后卖血改为+' + FURY_CONFIG.armorAtCap + '护甲。' : ''}出牌后重置。`} />;
+              return <span data-reward-target="fury"><BuffTooltip label={`+${Math.round(fs * FURY_CONFIG.damagePerStack * 100)}%`} icon={<PixelBloodDrop size={1.5} />} color="rgb(220,60,60)" bgColor="rgba(200,40,40,0.15)" borderColor="rgba(200,40,40,0.4)" title={`血怒 ${fs}/${FURY_CONFIG.maxStack}层${atCap ? ' [已满]' : ''}`} desc={`每次嗜血+${Math.round(FURY_CONFIG.damagePerStack * 100)}%最终伤害（最多${FURY_CONFIG.maxStack}层+${Math.round(FURY_CONFIG.maxStack * FURY_CONFIG.damagePerStack * 100)}%）。${atCap ? '叠满后卖血改为+' + FURY_CONFIG.armorAtCap + '护甲。' : ''}出牌后重置。`} /></span>;
             })()}
             {game.playerClass === 'warrior' && (game.warriorRageMult || 0) > 0 && <BuffTooltip label={`狂暴+${Math.round((game.warriorRageMult || 0) * 100)}%`} icon={<PixelFlame size={1.5} />} color="rgb(255,80,40)" bgColor="rgba(255,60,20,0.15)" borderColor="rgba(255,60,20,0.4)" title={`狂暴本能 +${Math.round((game.warriorRageMult || 0) * 100)}%`} desc={`手牌达到6颗上限时，按受伤百分比(${Math.round((1 - game.hp / game.maxHp) * 100)}%)获得等比例伤害加成。`} />}
             {game.playerClass === 'mage' && (game.mageOverchargeMult || 0) > 0 && <BuffTooltip label={`+${Math.round((game.mageOverchargeMult || 0) * 100)}%`} icon={<PixelMagic size={1.5} />} color="rgb(192,132,252)" bgColor="rgba(160,80,255,0.15)" borderColor="rgba(160,80,255,0.4)" title={`过充吟唱 +${Math.round((game.mageOverchargeMult || 0) * 100)}%`} desc="手牌满6颗后继续吟唱，每回合+10%伤害倍率。出牌后重置。" />}
@@ -119,7 +119,7 @@ export function PlayerHudView() {
           </div>
           <span className="ml-auto text-[9px] font-mono font-bold text-[var(--pixel-gold)] tracking-wider px-1.5 py-0.5 bg-[rgba(212,160,48,0.1)] border border-[var(--pixel-gold-dark)] shrink-0" style={{borderRadius:"2px"}}>R{game.battleTurn}</span>
         </div>
-        <div className={`pixel-hp-bar h-3 relative ${playerEffect === 'flash' ? 'animate-hp-flash' : ''} ${playerEffect === 'death' ? 'animate-player-death-vignette' : ''} ${game.statuses.some(s => s.type === 'poison') ? 'animate-poison-pulse' : ''} ${game.statuses.some(s => s.type === 'burn') ? 'animate-burn-edge' : ''}`}>
+        <div className={`pixel-hp-bar h-3 relative ${playerEffect === 'flash' ? 'animate-hp-flash' : ''} ${playerEffect === 'death' ? 'animate-player-death-vignette' : ''} ${game.statuses.some(s => s.type === 'poison') ? 'animate-poison-pulse' : ''} ${game.statuses.some(s => s.type === 'burn') ? 'animate-burn-edge' : ''}`} data-reward-target="heart">
           <motion.div className={`h-full ${(game.chantShield || 0) > 0 ? 'pixel-hp-fill-shield' : game.armor > 0 ? 'pixel-hp-fill-armor' : getHpBarClass(game.hp, game.maxHp)}`} initial={{ width: '100%' }} animate={{ width: `${(game.hp / game.maxHp) * 100}%` }} transition={{ duration: 0.3 }} />
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-[10px] font-mono font-bold text-white pixel-text-shadow">{game.hp}/{game.maxHp}{(game.chantShield || 0) > 0 && ` [✦${game.chantShield}]`}{game.armor > 0 && ` [+${game.armor}]`}</span>
@@ -162,7 +162,7 @@ export function PlayerHudView() {
           {isWarriorRage && <div className="absolute inset-0 pointer-events-none z-[1]">{[...Array(8)].map((_, i) => (<motion.div key={`blood-particle-${i}`} className="absolute w-1.5 h-1.5" style={{ left: `${10 + i * 11}%`, bottom: 0, background: i % 3 === 0 ? '#c04040' : i % 3 === 1 ? '#a02020' : '#e06060', borderRadius: '1px', boxShadow: `0 0 4px ${i % 2 === 0 ? 'rgba(200,40,40,0.6)' : 'rgba(255,80,60,0.4)'}` }} animate={{ y: [0, -60 - Math.random() * 40], opacity: [0.8, 0], scale: [1, 0.3] }} transition={{ duration: 1.8 + Math.random() * 1.2, repeat: Infinity, delay: i * 0.35, ease: 'easeOut' }} />))}</div>}
 
           {/* 骰子库 + 流转 + 弃骰库 */}
-          <div className="flex items-center gap-1 mb-0.5 px-1 mt-1">
+          <div className="flex items-center gap-1 mb-0.5 px-1 mt-1" data-reward-target="dice">
             <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
             <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
               <div className="flex gap-px items-center justify-end flex-1 overflow-hidden">
@@ -179,7 +179,7 @@ export function PlayerHudView() {
           </div>
 
           {/* 骰子行 */}
-          <div className="flex justify-center gap-2.5 mb-1.5 min-h-[80px] items-end relative pt-[20px]">
+          <div className="flex justify-center gap-2.5 mb-1.5 min-h-[80px] items-end relative pt-[20px]" data-hand-anchor="1" data-reward-target="card">
             {dice.filter(d => !d.spent).map((die) => {
               const isHint = !die.selected && handHintIds.has(die.id) && !die.rolling;
               const isComboReady = game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 && !die.selected && !die.rolling && !die.playing && handHintIds.has(die.id);
@@ -231,7 +231,7 @@ export function PlayerHudView() {
 
           {/* 操作按钮行 */}
           <div className="flex gap-1.5 items-center">
-            <motion.button disabled={!dice.some(d => d.selected && !d.spent) || game.isEnemyTurn || dice.some(d => d.playing) || !canAffordReroll} onClick={() => { if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; } if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; } if (!dice.some(d => d.selected && !d.spent)) { addToast('请先选中要重掷的骰子'); return; } if (!canReroll) { addToast('免费重投次数已用完'); return; } rerollSelected(); }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className={`h-10 px-3 ${currentRerollCost <= 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : currentRerollCost <= 4 ? 'bg-[#4a1a1a] border-[#c04040] text-[#ff8080]' : 'bg-[#5a0a0a] border-[#ff2020] text-[#ff4040]'} disabled:opacity-30 border-3 flex items-center justify-center gap-1.5 transition-all shrink-0 relative overflow-hidden`} style={{boxShadow: currentRerollCost <= 0 ? 'inset 0 2px 0 rgba(60,200,100,0.3), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5)' : `inset 0 2px 0 rgba(255,60,60,0.25), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5), 0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)})`}}>
+            <motion.button data-reward-target="reroll" disabled={!dice.some(d => d.selected && !d.spent) || game.isEnemyTurn || dice.some(d => d.playing) || !canAffordReroll} onClick={() => { if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; } if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; } if (!dice.some(d => d.selected && !d.spent)) { addToast('请先选中要重掷的骰子'); return; } if (!canReroll) { addToast('免费重投次数已用完'); return; } rerollSelected(); }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className={`h-10 px-3 ${currentRerollCost <= 0 ? 'bg-[var(--pixel-green-dark)] border-[var(--pixel-green)] text-[var(--pixel-green-light)]' : currentRerollCost <= 4 ? 'bg-[#4a1a1a] border-[#c04040] text-[#ff8080]' : 'bg-[#5a0a0a] border-[#ff2020] text-[#ff4040]'} disabled:opacity-30 border-3 flex items-center justify-center gap-1.5 transition-all shrink-0 relative overflow-hidden`} style={{boxShadow: currentRerollCost <= 0 ? 'inset 0 2px 0 rgba(60,200,100,0.3), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5)' : `inset 0 2px 0 rgba(255,60,60,0.25), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.5), 0 0 ${Math.min(16, 6 + currentRerollCost)}px rgba(255,40,40,${Math.min(0.6, 0.2 + currentRerollCost * 0.05)})`}}>
               {currentRerollCost > 0 && <>{[...Array(Math.min(8, Math.floor(currentRerollCost / 2) + 3))].map((_, i) => (<motion.div key={i} className="absolute" style={{ width: 3, height: 3, background: `rgb(${200 + Math.floor(Math.random() * 55)}, ${20 + Math.floor(Math.random() * 30)}, ${20 + Math.floor(Math.random() * 30)})`, imageRendering: 'pixelated', left: `${10 + i * 10}%` }} initial={{ y: -8, opacity: 0 }} animate={{ y: [- 8, 16], opacity: [0, 1, 1, 0], scale: [1, 1, 0.5] }} transition={{ duration: 0.8 + i * 0.1, repeat: Infinity, delay: i * 0.12, ease: 'linear' }} />))}</>}
               {currentRerollCost <= 0 && freeRerollsRemaining > 0 && <>{[...Array(3)].map((_, i) => (<motion.div key={i} className="absolute" style={{ width: 2, height: 2, background: '#60c880', imageRendering: 'pixelated', left: `${20 + i * 25}%` }} initial={{ y: 12, opacity: 0 }} animate={{ y: -8, opacity: [0, 0.8, 0] }} transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.3, ease: 'linear' }} />))}</>}
               <PixelRefresh size={2} />
@@ -257,4 +257,4 @@ export function PlayerHudView() {
       })()}
     </div>
   );
-}
+}

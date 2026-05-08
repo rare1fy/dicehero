@@ -14,6 +14,8 @@
  */
 
 import type { Enemy, GameState, Die, Relic } from '../types/game';
+import * as ReactNS from 'react';
+import { PixelArcaneShield } from '../components/PixelIcons';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
 import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
@@ -24,6 +26,9 @@ import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
 import { tryWaveTransition } from './enemyWaveTransition';
 import { absorbPlayerDamage } from './battleHelpers';
 import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config';
+
+/** 奥术屏障吸收飘字用的 icon，独立一处避免重复 createElement */
+const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 1.5 });
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
 // === EnemyAI 回调接口 ===
@@ -37,7 +42,7 @@ export interface EnemyAICallbacks {
   enemyPreAction: (e: Enemy, quoteType: string) => Promise<boolean>;
   addLog: (msg: string) => void;
   /** [Y1] icon 参数为 string 类型（非 React.ReactNode），逻辑层不依赖 React */
-  addFloatingText: (text: string, color: string, icon?: string, target?: 'player' | 'enemy', large?: boolean) => void;
+  addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: 'player' | 'enemy', large?: boolean) => void;
   addToast: (msg: string, type: string) => void;
   playSound: (id: string) => void;
   setScreenShake: (v: boolean) => void;
@@ -120,7 +125,7 @@ export async function executeEnemyTurn(
     const absorb = absorbPlayerDamage(poisonDamage, prev.chantShield || 0, prev.armor, true);
     if (absorb.absorbedByShield > 0) {
       cb.addLog(`奥术屏障吸收了 ${absorb.absorbedByShield} 点中毒伤害。`);
-      cb.addFloatingText(`屏障-${absorb.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+      cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
     }
     if (absorb.hpDamage > 0) {
       cb.addLog(`你因中毒受到了 ${absorb.hpDamage} 点伤害。`);
@@ -307,7 +312,7 @@ export async function executeEnemyTurn(
       const newHp = Math.max(0, prev.hp - absorb.hpDamage);
       const hpLost = prev.hp - newHp;
 
-      if (absorb.absorbedByShield > 0) cb.addFloatingText(`屏障-${absorb.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+      if (absorb.absorbedByShield > 0) cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
       if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
       if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', undefined, 'player');
       if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
@@ -366,7 +371,7 @@ export async function executeEnemyTurn(
         const newHp = Math.max(0, prev.hp - absorb2.hpDamage);
         const hpLost = prev.hp - newHp;
 
-        if (absorb2.absorbedByShield > 0) cb.addFloatingText(`屏障-${absorb2.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+        if (absorb2.absorbedByShield > 0) cb.addFloatingText(`-${absorb2.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
         if (absorb2.absorbedByArmor > 0) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
         if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', undefined, 'player');
 
@@ -434,7 +439,7 @@ export async function executeEnemyTurn(
     const absorb = absorbPlayerDamage(burnDamage, prev.chantShield || 0, prev.armor, true);
     if (absorb.absorbedByShield > 0) {
       cb.addLog(`奥术屏障吸收了 ${absorb.absorbedByShield} 点灼烧伤害。`);
-      cb.addFloatingText(`屏障-${absorb.absorbedByShield}`, 'text-cyan-300', undefined, 'player');
+      cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
     }
     if (absorb.hpDamage > 0) {
       cb.addLog(`你因灼烧受到了 ${absorb.hpDamage} 点伤害。`);

@@ -21,13 +21,16 @@ import { BOSS_DISPATCH_LINES, MINION_FORCED_LINES } from '../data/bossTauntDispa
 import { resetCompassCounter, incrementFloorsCleared, updateRelicCounter, tickHourglass } from '../engine/relicUpdates';
 import { buildRelicContext } from '../engine/buildRelicContext';
 import { PixelCards, PixelBloodDrop } from '../components/PixelIcons';
-import { CHAPTER_CONFIG, ANIMATION_TIMING } from '../config';
+import { emitReward } from '../logic/rewardEvents';
+import { CHAPTER_CONFIG, ANIMATION_TIMING, MAP_CONFIG } from '../config';
 import { CHAPTER_BOSSES } from '../components/MapNodeRenderer';
 import { BOSS_ENEMIES } from '../config/enemies';
-import { MAP_CONFIG } from '../config';
 import { playSound, startBGM, stopBGM } from '../utils/sound';
 import { buildBattleGameState, performDiceRollAnimation } from '../logic/battleInit';
 import type { BattleState } from './useBattleState';
+
+/** 奖励类飘字统一金色 */
+const REWARD_COLOR = 'text-amber-200';
 
 export function useBattleLifecycle(state: BattleState) {
   const {
@@ -304,7 +307,8 @@ export function useBattleLifecycle(state: BattleState) {
     const schrodingerBonus = g.tempDrawCountBonus || 0;
     const relicDrawBonus = g.relicTempDrawBonus || 0;
     if (relicDrawBonus > 0) {
-      addFloatingText(`+${relicDrawBonus}`, 'text-cyan-300', React.createElement(PixelCards, { size: 1.5 }), 'player');
+      addFloatingText(`魔法手套: +${relicDrawBonus}`, REWARD_COLOR, React.createElement(PixelCards, { size: 1.5 }), 'player');
+      emitReward('card', relicDrawBonus);
     }
     // 重置临时加成（与 executeDrawPhase 一致）
     if (schrodingerBonus > 0 || relicDrawBonus > 0) {
@@ -323,14 +327,17 @@ export function useBattleLifecycle(state: BattleState) {
       const rageMult = Math.round(hpLostPct * 100) / 100;
       setGame(prev => ({ ...prev, warriorRageMult: rageMult }));
       if (rageMult > 0) {
-        setTimeout(() => addFloatingText(`狂暴+${Math.round(rageMult * 100)}%`, 'text-red-500', undefined, 'player'), 400);
+        setTimeout(() => addFloatingText(`狂暴 +${Math.round(rageMult * 100)}%`, 'text-red-500', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 400);
       }
     } else if (g.playerClass === 'warrior') {
       setGame(prev => ({ ...prev, warriorRageMult: 0 }));
     }
     const rogueDrawBonus = (g.playerClass === 'rogue' && (g.rogueComboDrawBonus || 0) > 0) ? (g.rogueComboDrawBonus || 0) : 0;
     if (rogueDrawBonus > 0) {
-      setTimeout(() => addFloatingText(`+${rogueDrawBonus}`, 'text-green-300', React.createElement(PixelCards, { size: 1.5 }), 'player'), 300);
+      setTimeout(() => {
+        addFloatingText(`连击补给: +${rogueDrawBonus}`, REWARD_COLOR, React.createElement(PixelCards, { size: 1.5 }), 'player');
+        emitReward('card', rogueDrawBonus);
+      }, 300);
       setGame(prev => ({ ...prev, rogueComboDrawBonus: 0 }));
     }
     const count = Math.max(0, handLimit + schrodingerBonus + relicDrawBonus + rogueDrawBonus - keptDice.filter(d => d.diceDefId !== 'temp_rogue' && !d.isBonusDraw).length);
@@ -583,15 +590,7 @@ export function useBattleLifecycle(state: BattleState) {
     }
   }, [game.phase]);
 
-  return {
-    startBattle,
-    startNode,
-    rollAllDice,
-    resetGame,
-    handleSelectStartingRelic,
-    handleSkipStartingRelic,
-    handleVictoryRef,
-  };
+  return { startBattle, startNode, rollAllDice, resetGame, handleSelectStartingRelic, handleSkipStartingRelic, handleVictoryRef };
 }
 
 export type BattleLifecycle = ReturnType<typeof useBattleLifecycle>;

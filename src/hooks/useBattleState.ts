@@ -137,6 +137,11 @@ export function useBattleState() {
 
   // ==================== 浮动文字 ====================
   const [floatingTexts, setFloatingTexts] = useState<{ id: string; text: string; x: number; y: number; color: string; icon?: React.ReactNode; target: 'player' | 'enemy'; large?: boolean }[]>([]);
+  // [FLOAT-DEDUP 2026-05-08] 防 StrictMode/updater 内副作用双触发：
+  // 1) 短时间内 (<120ms) 同 target 且 text+color 完全相同的飘字去重
+  // 2) 按 target 分队列排 lane，避免新旧飘字堆叠
+  const floatDedupRef = useRef<Map<string, number>>(new Map());
+  const floatLaneRef = useRef<{ player: number; enemy: number }>({ player: 0, enemy: 0 });
   const [_campfireView, setCampfireView] = useState<'main' | 'upgrade'>('main');
   const [skillTriggerTexts, _setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
   const [handLeftThrow, setHandLeftThrow] = useState(false);
@@ -150,9 +155,27 @@ export function useBattleState() {
 
   // ==================== 工具函数 ====================
   const addFloatingText = (text: string, color: string = 'text-red-500', icon?: React.ReactNode, target: 'player' | 'enemy' = 'enemy', large = false) => {
-    const id = `${Date.now()}-${Math.random()}`;
-    const x = Math.random() * 40 - 20;
-    const y = Math.random() * 20 - 10;
+    // [DEDUP] 防 StrictMode 下 setGame updater 内部调 addFloatingText 被双触发
+    // 同 target + 同 text + 同 color 在 150ms 内只发一次
+    const key = `${target}|${text}|${color}`;
+    const now = Date.now();
+    const last = floatDedupRef.current.get(key) || 0;
+    if (now - last < 150) return;
+    floatDedupRef.current.set(key, now);
+    // 定期清理 dedup map
+    if (floatDedupRef.current.size > 40) {
+      floatDedupRef.current.forEach((t, k) => { if (now - t > 2000) floatDedupRef.current.delete(k); });
+    }
+
+    // [LANE] 按 target 分队列错开，避免堆叠。横向在 ±80px 内轮转，纵向每条向下 22px 偏移。
+    const lane = floatLaneRef.current[target];
+    floatLaneRef.current[target] = (lane + 1) % 6;
+    // lane 0..5 对应 横向 -80/-48/-16/16/48/80，加 ±6px 随机抖动避免完全重合
+    const xBase = (lane - 2.5) * 32;
+    const x = xBase + (Math.random() * 12 - 6);
+    const y = (lane % 3) * 18 + (Math.random() * 6 - 3);
+
+    const id = `${now}-${Math.random()}`;
     setFloatingTexts(prev => [...prev, { id, text, x, y, color, icon, target, large }]);
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(t => t.id !== id));
