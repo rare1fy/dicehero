@@ -114,11 +114,11 @@ export const BossTauntScene: React.FC = () => {
   // 每句台词出现 / 屏震：用 phase 变化 effect 统一处理
   useEffect(() => {
     if (phase === 'talk1') {
-      // 第一句：低沉说话音
+      // 第一句：低沉狂笑（开场嘲讽）
       playSound('boss_laugh');
     } else if (phase === 'talk2') {
-      // 第二句：低沉说话音 + 整个战斗镜头震动（通过全局 setScreenShake 驱动 BattleSceneView 抖）
-      playSound('boss_laugh');
+      // 第二句：狂暴咆哮（升级气势，宣告全力进攻）+ 整个战斗镜头震动
+      playSound('boss_roar');
       _onShake?.();
     }
   }, [phase]);

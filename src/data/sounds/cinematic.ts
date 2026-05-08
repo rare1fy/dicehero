@@ -211,6 +211,86 @@ export const playBossLaughSound = (ctx: AudioContext, now: number, master: GainN
 };
 
 /**
+ * Boss 狂暴咆哮音效 — 比 laugh 更狂暴：撕裂低吼 + 金属刺响 + 地鸣震波
+ * 用于 Boss 出场第二句"挑衅升级"，和第一句 laugh 形成升级对比
+ */
+export const playBossRoarSound = (ctx: AudioContext, now: number, master: GainNode, masterVol: number) => {
+  // 1. 撕裂主吼：锯齿波大频带扫频，低 → 中高速掠过
+  const roar = ctx.createOscillator();
+  const roarGain = ctx.createGain();
+  const roarDist = ctx.createWaveShaper();
+  // 失真波形（轻量手写 tanh 近似）
+  const curve = new Float32Array(257);
+  for (let i = 0; i < 257; i++) {
+    const x = (i / 128) - 1;
+    curve[i] = ((3 + 22) * x) / (Math.PI + 22 * Math.abs(x));
+  }
+  roarDist.curve = curve;
+  roarDist.oversample = '4x';
+  roar.type = 'sawtooth';
+  roar.frequency.setValueAtTime(70, now);
+  roar.frequency.exponentialRampToValueAtTime(180, now + 0.35);
+  roar.frequency.exponentialRampToValueAtTime(110, now + 1.1);
+  roar.frequency.exponentialRampToValueAtTime(45, now + 1.6);
+  // 颤抖（粗糙声带感）
+  const vib = ctx.createOscillator();
+  const vibG = ctx.createGain();
+  vib.frequency.value = 22;
+  vibG.gain.value = 18;
+  vib.connect(vibG); vibG.connect(roar.frequency);
+  vib.start(now); vib.stop(now + 1.7);
+  roarGain.gain.setValueAtTime(0, now);
+  roarGain.gain.linearRampToValueAtTime(0.45 * masterVol, now + 0.08);
+  roarGain.gain.linearRampToValueAtTime(0.38 * masterVol, now + 0.9);
+  roarGain.gain.exponentialRampToValueAtTime(0.002, now + 1.65);
+  roar.connect(roarDist); roarDist.connect(roarGain); roarGain.connect(master);
+  roar.start(now); roar.stop(now + 1.7);
+
+  // 2. 金属刺响（高频撕裂，强调"狂暴"气质）
+  const metalFreqs = [820, 1240, 1680];
+  metalFreqs.forEach((f, i) => {
+    const m = ctx.createOscillator();
+    const mg = ctx.createGain();
+    const mbp = ctx.createBiquadFilter();
+    m.type = 'square';
+    m.frequency.value = f;
+    mbp.type = 'bandpass';
+    mbp.frequency.value = f;
+    mbp.Q.value = 8;
+    const t = now + 0.05 + i * 0.06;
+    mg.gain.setValueAtTime(0, t);
+    mg.gain.linearRampToValueAtTime(0.14 * masterVol, t + 0.02);
+    mg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    m.connect(mbp); mbp.connect(mg); mg.connect(master);
+    m.start(t); m.stop(t + 0.2);
+  });
+
+  // 3. 地鸣震波（低频 40Hz 正弦 + 缓慢衰减）
+  const quake = ctx.createOscillator();
+  const qGain = ctx.createGain();
+  quake.type = 'sine';
+  quake.frequency.setValueAtTime(40, now);
+  quake.frequency.linearRampToValueAtTime(32, now + 1.6);
+  qGain.gain.setValueAtTime(0, now);
+  qGain.gain.linearRampToValueAtTime(0.3 * masterVol, now + 0.15);
+  qGain.gain.setValueAtTime(0.3 * masterVol, now + 1.0);
+  qGain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+  quake.connect(qGain); qGain.connect(master);
+  quake.start(now); quake.stop(now + 1.85);
+
+  // 4. 爆裂起始（类似拳头砸地的脉冲）
+  const thump = ctx.createOscillator();
+  const thumpG = ctx.createGain();
+  thump.type = 'sine';
+  thump.frequency.setValueAtTime(120, now);
+  thump.frequency.exponentialRampToValueAtTime(38, now + 0.15);
+  thumpG.gain.setValueAtTime(0.5 * masterVol, now);
+  thumpG.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+  thump.connect(thumpG); thumpG.connect(master);
+  thump.start(now); thump.stop(now + 0.3);
+};
+
+/**
  * 沉重石门关闭音效 — 3层: 低频隆隆+金属撞击+回响
  */
 export const playGateCloseSound = (ctx: AudioContext, now: number, master: GainNode, masterVol: number) => {

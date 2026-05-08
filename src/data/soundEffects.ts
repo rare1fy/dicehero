@@ -20,6 +20,7 @@ import {
 import {
   playVictorySound, playDefeatSound, playBossAppearSound,
   playEnemyDeathSound, playPlayerDeathSound, playBossLaughSound,
+  playBossRoarSound,
   playGateCloseSound, playEnemySpeakSound,
 } from './sounds/cinematic';
 
@@ -30,7 +31,7 @@ export type SoundType =
   | 'map_move' | 'shop_buy' | 'campfire' | 'event' | 'boss_appear'
   | 'dice_lock' | 'relic_activate' | 'turn_end'
   | 'enemy_defend' | 'enemy_skill' | 'enemy_heal' | 'player_attack' | 'player_aoe'
-  | 'enemy_death' | 'player_death' | 'enemy_speak' | 'boss_laugh' | 'gate_close';
+  | 'enemy_death' | 'player_death' | 'enemy_speak' | 'boss_laugh' | 'boss_roar' | 'gate_close';
 
 /**
  * 递进音调结算音效 - 每颗骰子计分时音调升半阶
@@ -219,6 +220,7 @@ export const playSound = (type: SoundType) => {
       case 'enemy_death': return playEnemyDeathSound(ctx, now, master, masterVol);
       case 'player_death': return playPlayerDeathSound(ctx, now, master, masterVol);
       case 'boss_laugh': return playBossLaughSound(ctx, now, master, masterVol);
+      case 'boss_roar': return playBossRoarSound(ctx, now, master, masterVol);
       case 'gate_close': return playGateCloseSound(ctx, now, master, masterVol);
       case 'enemy_speak': return playEnemySpeakSound(ctx, now, master, masterVol);
     }
