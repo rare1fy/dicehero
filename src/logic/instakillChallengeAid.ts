@@ -99,20 +99,29 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     addToast(`◆ 洞察弱点！全场敌人血量降至${pctText}`, 'buff');
     addLog(`洞察弱点达成！全场敌人血量降至${pctText}`);
     scheduleAidEffect(800, () => {
-      const affectedUids: string[] = [];
-      setEnemies(prev => prev.map(e => {
-        if (e.hp <= 0) return e;
-        const cap = Math.max(1, Math.floor(e.maxHp * targetPct));
-        if (e.hp <= cap) return e;
-        affectedUids.push(e.uid);
-        return { ...e, hp: cap };
-      }));
+      // [Bug-FIX v2 2026-05-08] 先计算 affectedUids，再 setEnemies。
+      // 原来 setEnemies callback 里 push affectedUids，setTimeout(0) 时 callback 还没执行，导致 affectedUids 为空。
+      if (gameRef.current.phase !== 'battle') return;
+      const currentEnemies = gameRef.current; // 仅用于类型推导，实际读 setEnemies prev
+      const preCalcAffected: string[] = [];
+      setEnemies(prev => {
+        // 重置（闭包不污染）
+        preCalcAffected.length = 0;
+        return prev.map(e => {
+          if (e.hp <= 0) return e;
+          const cap = Math.max(1, Math.floor(e.maxHp * targetPct));
+          if (e.hp <= cap) return e;
+          preCalcAffected.push(e.uid);
+          return { ...e, hp: cap };
+        });
+      });
+      // 16ms 等 React flush，然后用 preCalcAffected 触发特效
       setTimeout(() => {
         if (gameRef.current.phase !== 'battle') return;
-        affectedUids.forEach(uid => setEnemyEffectForUid(uid, 'hit'));
+        preCalcAffected.forEach(uid => setEnemyEffectForUid(uid, 'hit'));
         setScreenShake(true);
         setTimeout(() => setScreenShake(false), 300);
-      }, 0);
+      }, 16);
     });
   } else if (aidRoll < 0.75) {
     // 效果3：全场敌人施加大量灼烧+中毒

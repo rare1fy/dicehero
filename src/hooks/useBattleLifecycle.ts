@@ -96,7 +96,7 @@ export function useBattleLifecycle(state: BattleState) {
     setPlayerEffect(null);
     if (node.type === 'boss') {
       playSound('boss_appear');
-      if (waves.length === 1) {
+      if (waves.length >= 1) { // [FIX 2026-05-08] 不限单波，Boss 挑衅演出始终触发
         const bossEnemy = firstWave[0];
         if (bossEnemy) {
           // [BOSS-TAUNT 2026-05-08] ★ 第 1 步：Boss 挑衅短演出（不可跳过 ~2.4s）

@@ -94,14 +94,14 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
           style={{
             filter: levelUpFlash
               ? 'drop-shadow(0 0 4px #fff7b0) drop-shadow(0 0 8px #ffd24a)'
-              : 'drop-shadow(0 0 2px rgba(192,128,255,0.55))',
+              : 'drop-shadow(0 0 2px rgba(80,160,255,0.55))',
           }}
         />
         <span
           className="text-[10px] font-black tracking-wider pixel-text-shadow"
           style={{
-            color: levelUpFlash ? '#fff2a0' : '#e8d8ff',
-            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(160,80,224,0.55)',
+            color: levelUpFlash ? '#fff2a0' : '#a0d0ff',
+            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(60,140,255,0.55)',
           }}
         >
           Lv{level}
@@ -150,7 +150,7 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
                 width: 96,
                 height: 6,
                 background: 'rgba(8,4,18,0.88)',
-                boxShadow: '0 0 0 1px rgba(160,80,224,0.9), 0 0 6px rgba(160,80,224,0.5)',
+                boxShadow: '0 0 0 1px rgba(48,130,255,0.9), 0 0 6px rgba(40,100,220,0.5)', // [COLOR 2026-05-08] 经验条蓝色
               }}
             >
               <motion.div
@@ -161,8 +161,8 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
                 style={{
                   background: levelUpFlash
                     ? 'linear-gradient(90deg, #fff9c4 0%, #ffd24a 50%, #fff2a0 100%)'
-                    : 'linear-gradient(90deg, #a050e0 0%, #d09aff 50%, #f0c8ff 100%)',
-                  boxShadow: '0 0 4px rgba(208,154,255,0.9)',
+                    : 'linear-gradient(90deg, #1a60e0 0%, #4090ff 50%, #80c0ff 100%)',
+                  boxShadow: '0 0 4px rgba(80,160,255,0.9)',
                 }}
               />
             </div>
@@ -171,7 +171,7 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
               className="font-mono font-bold"
               style={{
                 fontSize: 9,
-                color: '#e8d8ff',
+                color: '#a0d0ff',
                 textShadow: '0 1px 0 rgba(0,0,0,0.9)',
                 letterSpacing: '0.02em',
                 lineHeight: 1,

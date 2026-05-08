@@ -84,7 +84,7 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
     if (effect?.statusEffect) statusEffects.push({ ...effect.statusEffect });
   });
 
-  baseDamage = Math.floor(X * handMultiplier);
+  baseDamage = Math.ceil(X * handMultiplier); // [CEIL-FIX 2026-05-08] 向上取整，如3×1.2=4
 
   // 同元素手牌：护甲 += 基础伤害
   if (activeHands.some((h: string) => SAME_ELEMENT_HANDS.includes(h))) {

@@ -126,8 +126,8 @@ export const XpShardLayer: React.FC = () => {
                 top: s.startY - 4,
                 width: 8,
                 height: 8,
-                background: 'linear-gradient(135deg, #f0c8ff 0%, #c080ff 50%, #8040c0 100%)',
-                boxShadow: '0 0 6px rgba(208,154,255,0.95), 0 0 12px rgba(160,80,224,0.65)',
+                background: 'linear-gradient(135deg, #a0ff80 0%, #40c040 50%, #208020 100%)', // [COLOR 2026-05-08] 经验碎片改为绿色
+                boxShadow: '0 0 6px rgba(100,220,60,0.95), 0 0 12px rgba(60,180,40,0.65)',
                 imageRendering: 'pixelated',
               }}
             />
