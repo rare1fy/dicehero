@@ -712,6 +712,116 @@ export const RELIC_PIXEL_DATA: Record<string, string[][]> = {
     [_,R,_,Rd,_,R,_],
     [_,_,R,_,R,_,_],
   ],
+  // 血铸铠甲 - 红色血滴+甲片
+  blood_forge_armor: [
+    [_,_,_,R,_,_,_],
+    [_,_,R,Rd,R,_,_],
+    [_,D,G,R,G,D,_],
+    [D,G,W,R,W,G,D],
+    [D,G,G,Rd,G,G,D],
+    [_,D,G,Rd,G,D,_],
+    [_,_,D,D,D,_,_],
+  ],
+  // 蓄力晶核 - 蓝紫水晶核心带电弧
+  charge_core: [
+    [_,Y,_,_,_,Y,_],
+    [_,_,_,B,_,_,_],
+    [_,_,P,B,P,_,_],
+    [_,P,B,W,B,P,_],
+    [_,_,P,B,P,_,_],
+    [_,_,_,P,_,_,_],
+    [Y,_,_,_,_,_,Y],
+  ],
+  // 暗影吸取 - 暗色獠牙+血珠
+  combo_leech: [
+    [_,Pd,_,_,_,Pd,_],
+    [_,W,_,_,_,W,_],
+    [_,W,_,_,_,W,_],
+    [_,Pd,W,_,W,Pd,_],
+    [_,_,Pd,Pd,Pd,_,_],
+    [_,_,_,R,_,_,_],
+    [_,_,R,Rd,R,_,_],
+  ],
+  // 嗜血骰袋 - 红黑骰袋
+  extra_free_reroll: [
+    [_,D,D,D,D,D,_],
+    [_,D,R,R,R,D,_],
+    [_,R,W,R,R,W,R],
+    [_,R,R,W,W,R,R],
+    [_,R,W,R,R,W,R],
+    [_,Rd,R,Rd,R,Rd,_],
+    [_,_,Rd,Rd,Rd,_,_],
+  ],
+  // 魔法手套 - 蓝紫魔法手套
+  extra_hand_slot: [
+    [_,P,_,P,_,P,_],
+    [_,P,Pd,P,Pd,P,_],
+    [_,P,P,P,P,P,_],
+    [P,P,Pd,Pd,Pd,P,_],
+    [Bd,P,P,P,P,P,_],
+    [Bd,Bd,Bd,Bd,Bd,_,_],
+    [_,W,_,_,_,_,_],
+  ],
+  // 战利品骰 - 金色骰子+金币
+  kill_reroll: [
+    [_,Yd,Y,Y,Y,Yd,_],
+    [Yd,W,Yd,_,Yd,W,Yd],
+    [Y,Yd,_,Yd,_,Yd,Y],
+    [Y,_,Yd,W,Yd,_,Y],
+    [Y,Yd,_,Yd,_,Yd,Y],
+    [Yd,W,Yd,_,Yd,W,Yd],
+    [_,Yd,Y,Y,Y,Yd,_],
+  ],
+  // 满溢魔力 - 紫色魔力瓶溢出
+  overflow_mana: [
+    [_,_,P,_,P,_,_],
+    [_,_,_,P,_,_,_],
+    [_,_,D,W,D,_,_],
+    [_,D,P,P,P,D,_],
+    [_,D,P,W,P,D,_],
+    [_,D,Pd,P,Pd,D,_],
+    [_,_,D,D,D,_,_],
+  ],
+  // 净化圣水 - 蓝色水滴+光环
+  purify_water_relic: [
+    [_,_,_,W,_,_,_],
+    [_,Y,_,B,_,Y,_],
+    [_,_,B,W,B,_,_],
+    [_,B,W,C,B,B,_],
+    [_,B,B,C,Bd,B,_],
+    [_,_,Bd,B,Bd,_,_],
+    [Y,_,_,Bd,_,_,Y],
+  ],
+  // 铁壁护符 - 灰色盾牌+铆钉
+  turn_armor: [
+    [_,D,D,D,D,D,_],
+    [D,G,W,G,W,G,D],
+    [D,G,G,G,G,G,D],
+    [D,W,G,G,G,W,D],
+    [_,D,G,G,G,D,_],
+    [_,_,D,G,D,_,_],
+    [_,_,_,D,_,_,_],
+  ],
+  // 不灭斗志 - 红色火焰心
+  undying_spirit: [
+    [_,R,R,_,R,R,_],
+    [R,O,W,R,O,W,R],
+    [R,O,O,O,O,O,R],
+    [R,R,O,Y,O,R,R],
+    [_,R,R,O,R,R,_],
+    [_,_,R,O,R,_,_],
+    [_,_,_,Y,_,_,_],
+  ],
+  // 毒爆晶石 - 绿色晶石
+  venom_crystal: [
+    [_,_,_,Gr,_,_,_],
+    [_,_,Gr,W,Gr,_,_],
+    [_,Gr,W,Gr,W,Gr,_],
+    [Gr,Gr,Gr,Gr,Gr,Gr,Gr],
+    [_,Gr,W,Gr,W,Gr,_],
+    [_,_,Gr,W,Gr,_,_],
+    [_,_,_,Gr,_,_,_],
+  ],
 };
 
 // 默认图标（问号）
