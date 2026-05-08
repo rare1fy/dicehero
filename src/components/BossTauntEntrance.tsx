@@ -1,18 +1,20 @@
-﻿/**
- * BossTauntEntrance.tsx - Boss 路过嘲讽登场演出 v4 (2026-05-08)
+/**
+ * BossTauntEntrance.tsx - Boss 路过嘲讽登场演出 v7 (2026-05-08)
+ *
+ * 架构（v7 关键修改）：
+ *   - 拆成两个导出组件：
+ *     1. <BossTauntScene/>  : 场景层，挂在 EnemyStageView 内部，absolute inset:0
+ *        贴着战斗场景底部（justifyContent:flex-end），与普通敌人并排高度
+ *     2. <BossTauntHint/>   : UI 层，挂在 DiceHeroGame 根层，fixed 底部居中
+ *        点击提示不被战斗场景 overflow:hidden 截断，保证可见
+ *   - 共享状态通过外层 useBossTauntState 钩子驱动（phase 由 Scene 推进，Hint 只读展示）
  *
  * 演出时序：
- *   idle  -> enter  : Boss从上方远处(y=-220, scale=0.35)飞入居中位置(y=0, scale=1.0)
- *   enter -> talk1 : 停在中央说第一句台词（气泡在Boss上方）
- *   talk1 -> approach : 玩家点击 -> Boss向前位移到玩家面前(y=+70, scale=1.18)并震动摇晃两下
- *   approach -> talk2 : 震动结束后说第二句（更贴近屏幕底部）
- *   talk2 -> exit  : 玩家点击 -> Boss原地淡出缩小 -> onDismiss
- *
- * 布局特点：
- *   - 所有元素水平居中（flex column + items-center）
- *   - 气泡紧贴Boss上方（marginBottom: 10px 保持视觉连接）
- *   - "点击继续" 文字放屏幕底部居中
- *   - 点击响应区覆盖整个 overlay（inset:0 + pointer-events:all）
+ *   idle  -> enter   : Boss从上方飞入场景底部居中位置
+ *   enter -> talk1   : 停在中央说第一句（气泡在Boss上方）
+ *   talk1 -> approach: 玩家点击 -> Boss scale 1.18 并震动
+ *   approach -> talk2: 说第二句
+ *   talk2 -> exit    : 玩家点击 -> 淡出 -> onDismiss
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,11 +38,63 @@ const CHAPTER_GLOW: Record<number, string> = {
 
 type Phase = 'idle' | 'enter' | 'talk1' | 'approach' | 'talk2' | 'exit';
 
+// ============================================================
+// 全局 phase 状态（场景层和UI层共享）
+// 用 module-level state + subscribe 模式避免 props drilling
+// ============================================================
+let _phase: Phase = 'idle';
+let _bossName = '';
+let _chapter = 1;
+let _lines: string[] = [];
+let _onDismiss: (() => void) | undefined;
+const _listeners = new Set<() => void>();
+
+function _setPhase(p: Phase) {
+  _phase = p;
+  _listeners.forEach(fn => fn());
+}
+
+function useTauntState() {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const fn = () => tick(t => t + 1);
+    _listeners.add(fn);
+    return () => { _listeners.delete(fn); };
+  }, []);
+  return { phase: _phase, bossName: _bossName, chapter: _chapter, lines: _lines };
+}
+
+// ============================================================
+// 主入口：驱动 phase 推进，同时挂两个子层（场景层外面用，UI层用 Hint）
+// ============================================================
 export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   visible, bossName, chapter, lines, onDismiss,
 }) => {
+  useEffect(() => {
+    _bossName = bossName;
+    _chapter = chapter;
+    _lines = lines;
+    _onDismiss = onDismiss;
+    if (!visible) {
+      _setPhase('idle');
+      return;
+    }
+    _setPhase('enter');
+    const t = window.setTimeout(() => _setPhase('talk1'), 720);
+    return () => window.clearTimeout(t);
+  }, [visible, bossName, chapter, lines, onDismiss]);
+
+  // 这个组件自身不渲染任何 DOM —— 场景层和UI层是独立组件挂在不同位置
+  return null;
+};
+
+// ============================================================
+// 场景层：挂在 EnemyStageView 内部
+// absolute inset:0 + flex end -> 贴战斗场景底部，Boss 脚与敌人并排
+// ============================================================
+export const BossTauntScene: React.FC = () => {
+  const { phase, bossName, chapter, lines } = useTauntState();
   const glowColor = CHAPTER_GLOW[chapter] || CHAPTER_GLOW[1];
-  const [phase, setPhase] = useState<Phase>('idle');
 
   const safeLines = lines.length >= 2
     ? lines.slice(0, 2)
@@ -48,40 +102,153 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     ? [lines[0], lines[0]]
     : ['...', 'enjoy your last battle.'];
 
-  useEffect(() => {
-    if (!visible) { setPhase('idle'); return; }
-    setPhase('enter');
-    const t = window.setTimeout(() => setPhase('talk1'), 720);
-    return () => window.clearTimeout(t);
-  }, [visible]);
-
   const handleTap = useCallback(() => {
-    if (phase === 'talk1') {
-      setPhase('approach');
-      window.setTimeout(() => setPhase('talk2'), 680);
-    } else if (phase === 'talk2') {
-      setPhase('exit');
-      window.setTimeout(() => { onDismiss?.(); }, 380);
+    if (_phase === 'talk1') {
+      _setPhase('approach');
+      window.setTimeout(() => _setPhase('talk2'), 680);
+    } else if (_phase === 'talk2') {
+      _setPhase('exit');
+      window.setTimeout(() => { _onDismiss?.(); }, 380);
     }
-  }, [phase, onDismiss]);
+  }, []);
 
   const showBubble = phase === 'talk1' || phase === 'talk2';
   const currentLine = phase === 'talk2' ? safeLines[1] : safeLines[0];
+  const interactive = phase === 'talk1' || phase === 'talk2';
+  const active = phase !== 'idle';
 
   const spriteAnimate =
-    phase === 'enter'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,               rotate: 0 } :
-    phase === 'talk1'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,               rotate: 0 } :
-    // [FIX 2026-05-08] approach/talk2 不再纵向下压，靠 scale 1.18 传达"逼近"感
-    phase === 'approach' ? { y: 0,    opacity: 1, scale: 1.18, x: [0, -5, 5, -4, 4, -3, 3, 0], rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
-    phase === 'talk2'    ? { y: 0,    opacity: 1, scale: 1.18, x: 0,               rotate: 0 } :
-    phase === 'exit'     ? { y: 0,    opacity: 0, scale: 0.9,  x: 0,               rotate: 0 } :
-                           { y: -220, opacity: 0, scale: 0.35, x: 0,               rotate: 0 };
+    phase === 'enter'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,                                rotate: 0 } :
+    phase === 'talk1'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,                                rotate: 0 } :
+    phase === 'approach' ? { y: 0,    opacity: 1, scale: 1.18, x: [0, -5, 5, -4, 4, -3, 3, 0],      rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
+    phase === 'talk2'    ? { y: 0,    opacity: 1, scale: 1.18, x: 0,                                rotate: 0 } :
+    phase === 'exit'     ? { y: 0,    opacity: 0, scale: 0.9,  x: 0,                                rotate: 0 } :
+                           { y: -220, opacity: 0, scale: 0.35, x: 0,                                rotate: 0 };
 
   const spriteTransition =
     phase === 'enter'    ? { duration: 0.72, ease: 'easeOut' as const } :
     phase === 'approach' ? { duration: 0.68, ease: 'easeInOut' as const } :
     phase === 'exit'     ? { duration: 0.36, ease: 'easeIn' as const } :
     { duration: 0.18 };
+
+  return (
+    <AnimatePresence>
+      {active && (
+        <motion.div
+          key="boss-taunt-scene"
+          style={{
+            // 相对 EnemyStageView 根容器（flex-1 战斗场景）定位
+            // justifyContent:flex-end + paddingBottom 让 Boss 脚与小怪站位并排
+            position: 'absolute',
+            inset: 0,
+            zIndex: 60,
+            pointerEvents: interactive ? 'all' : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            // 小怪区域高度约 180px，底部留 20px 让 Boss 脚和小怪脚对齐
+            paddingBottom: '20px',
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.15 } }}
+          onClick={handleTap}
+        >
+          {/* 气泡：在 Boss 上方 */}
+          <AnimatePresence mode="wait">
+            {showBubble && (
+              <motion.div
+                key={`bubble-${phase}`}
+                initial={{ opacity: 0, y: 8, scale: 0.85 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.92 }}
+                transition={{ duration: 0.22 }}
+                style={{
+                  maxWidth: '240px',
+                  minWidth: '110px',
+                  padding: '10px 14px',
+                  marginBottom: '10px',
+                  background: 'rgba(30,18,0,0.96)',
+                  border: `2px solid ${glowColor}`,
+                  borderRadius: '3px',
+                  fontFamily: '"fusion-pixel", monospace',
+                  fontSize: '12px',
+                  lineHeight: 1.5,
+                  color: glowColor,
+                  textAlign: 'center' as const,
+                  wordBreak: 'break-word' as const,
+                  position: 'relative',
+                  pointerEvents: 'none',
+                }}
+              >
+                {currentLine}
+                <svg
+                  width="12" height="7" viewBox="0 0 12 7"
+                  style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)' }}
+                >
+                  <polygon points="0,0 12,0 6,7" fill="rgba(30,18,0,0.96)" />
+                  <line x1="0" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
+                  <line x1="12" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
+                </svg>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Boss 精灵 */}
+          <motion.div
+            initial={{ y: -220, opacity: 0, scale: 0.35, x: 0, rotate: 0 }}
+            animate={spriteAnimate}
+            transition={spriteTransition}
+            style={{
+              filter:
+                phase === 'approach'
+                  ? `drop-shadow(0 0 22px ${glowColor}) drop-shadow(0 0 50px ${glowColor}b0)`
+                  : phase === 'enter' || phase === 'talk1' || phase === 'talk2'
+                    ? `drop-shadow(0 0 14px ${glowColor}a0) drop-shadow(0 0 30px ${glowColor}60)`
+                    : `drop-shadow(0 0 8px ${glowColor}80)`,
+              imageRendering: 'pixelated',
+              pointerEvents: 'none',
+            }}
+          >
+            <PixelSprite name={bossName} size={8} />
+          </motion.div>
+
+          {/* 名牌 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: phase === 'exit' ? 0 : 1, y: 0 }}
+            transition={{ duration: 0.25, delay: phase === 'enter' ? 0.3 : 0 }}
+            style={{
+              marginTop: '6px',
+              padding: '2px 14px',
+              background: 'rgba(0,0,0,0.82)',
+              border: `1px solid ${glowColor}`,
+              borderRadius: '2px',
+              fontFamily: '"fusion-pixel", monospace',
+              fontSize: '11px',
+              color: glowColor,
+              letterSpacing: '2px',
+              textShadow: '1px 1px 0 #000',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {bossName}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ============================================================
+// UI 层：挂在 DiceHeroGame 根层，fixed 独立于战斗场景
+// ============================================================
+export const BossTauntHint: React.FC = () => {
+  const { phase, chapter } = useTauntState();
+  const glowColor = CHAPTER_GLOW[chapter] || CHAPTER_GLOW[1];
+  const showBubble = phase === 'talk1' || phase === 'talk2';
 
   const [tapHint, setTapHint] = useState(true);
   useEffect(() => {
@@ -90,146 +257,32 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     return () => window.clearInterval(t);
   }, [showBubble]);
 
-  const interactive = phase === 'talk1' || phase === 'talk2';
-
   return (
     <AnimatePresence>
-      {visible && phase !== 'idle' && (
-        <>
-          {/* ── 场景层：Boss 精灵 + 气泡（贴地，和普通敌人同一高度）── */}
-          <motion.div
-            key="boss-taunt-scene"
-            style={{
-              // [FIX v6] 改用 absolute，相对根容器定位，避免被战斗场景的 filter/overflow 截断
-              // 根容器是 relative h-[100dvh]，无 transform/filter，绝对定位安全
-              position: 'absolute',
-              inset: 0,
-              zIndex: 200,
-              pointerEvents: interactive ? 'all' : 'none',
-              // 靠底对齐，paddingBottom 让 Boss 脚底落在战斗背景"地面线"位置
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              paddingBottom: '38%',
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.15 } }}
-            onClick={handleTap}
-          >
-            {/* 气泡：在 Boss 上方 */}
-            <AnimatePresence mode="wait">
-              {showBubble && (
-                <motion.div
-                  key={`bubble-${phase}`}
-                  initial={{ opacity: 0, y: 8, scale: 0.85 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.92 }}
-                  transition={{ duration: 0.22 }}
-                  style={{
-                    maxWidth: '240px',
-                    minWidth: '110px',
-                    padding: '10px 14px',
-                    marginBottom: '10px',
-                    background: 'rgba(30,18,0,0.96)',
-                    border: `2px solid ${glowColor}`,
-                    borderRadius: '3px',
-                    fontFamily: '"fusion-pixel", monospace',
-                    fontSize: '12px',
-                    lineHeight: 1.5,
-                    color: glowColor,
-                    textAlign: 'center' as const,
-                    wordBreak: 'break-word' as const,
-                    position: 'relative',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  {currentLine}
-                  <svg
-                    width="12" height="7" viewBox="0 0 12 7"
-                    style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)' }}
-                  >
-                    <polygon points="0,0 12,0 6,7" fill="rgba(30,18,0,0.96)" />
-                    <line x1="0" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
-                    <line x1="12" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
-                  </svg>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Boss 精灵 */}
-            <motion.div
-              initial={{ y: -220, opacity: 0, scale: 0.35, x: 0, rotate: 0 }}
-              animate={spriteAnimate}
-              transition={spriteTransition}
-              style={{
-                filter:
-                  phase === 'approach'
-                    ? `drop-shadow(0 0 22px ${glowColor}) drop-shadow(0 0 50px ${glowColor}b0)`
-                    : phase === 'enter' || phase === 'talk1' || phase === 'talk2'
-                      ? `drop-shadow(0 0 14px ${glowColor}a0) drop-shadow(0 0 30px ${glowColor}60)`
-                      : `drop-shadow(0 0 8px ${glowColor}80)`,
-                imageRendering: 'pixelated',
-                pointerEvents: 'none',
-              }}
-            >
-              <PixelSprite name={bossName} size={8} />
-            </motion.div>
-
-            {/* 名牌 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: phase === 'exit' ? 0 : 1, y: 0 }}
-              transition={{ duration: 0.25, delay: phase === 'enter' ? 0.3 : 0 }}
-              style={{
-                marginTop: '6px',
-                padding: '2px 14px',
-                background: 'rgba(0,0,0,0.82)',
-                border: `1px solid ${glowColor}`,
-                borderRadius: '2px',
-                fontFamily: '"fusion-pixel", monospace',
-                fontSize: '11px',
-                color: glowColor,
-                letterSpacing: '2px',
-                textShadow: '1px 1px 0 #000',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-              }}
-            >
-              {bossName}
-            </motion.div>
-          </motion.div>
-
-          {/* ── UI 层：点击继续提示（fixed，独立于场景层，不受场景布局影响）── */}
-          <AnimatePresence>
-            {showBubble && (
-              <motion.div
-                key="tap-hint-ui"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: tapHint ? 0.85 : 0.35 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                style={{
-                  position: 'absolute',
-                  bottom: '14%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  zIndex: 1100,
-                  fontFamily: '"fusion-pixel", monospace',
-                  fontSize: '11px',
-                  color: glowColor,
-                  textShadow: '1px 1px 0 #000',
-                  pointerEvents: 'none',
-                  letterSpacing: '2px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                ▶ 点击继续 ◀
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </>
+      {showBubble && (
+        <motion.div
+          key="tap-hint-ui"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: tapHint ? 0.9 : 0.4 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'fixed',
+            bottom: '42%',      // 贴近战斗场景底部外侧，不挡玩家UI
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1100,
+            fontFamily: '"fusion-pixel", monospace',
+            fontSize: '12px',
+            color: glowColor,
+            textShadow: '1px 1px 0 #000',
+            pointerEvents: 'none',
+            letterSpacing: '2px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ▶ 点击继续 ◀
+        </motion.div>
       )}
     </AnimatePresence>
   );

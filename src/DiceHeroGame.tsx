@@ -179,15 +179,6 @@ export default function DiceHeroGame() {
         chapter={bossEntrance.chapter}
       />
 
-      {/* Boss路过嘲讽演出 — 挂在根层，避免被战斗场景的 filter/overflow 干扰 */}
-      <BossTauntEntrance
-        visible={bossTaunt.visible}
-        bossName={bossTaunt.name}
-        chapter={bossTaunt.chapter}
-        lines={bossTaunt.lines}
-        onDismiss={bossTaunt.onDismiss}
-      />
-
       <div className="flex-1 overflow-hidden relative">
         {game.phase === 'map' && <MapScreen />}
         {game.phase === 'diceReward' && <DiceRewardScreen />}
@@ -206,6 +197,13 @@ export default function DiceHeroGame() {
         )}
 
       {/* RelicDetailModal */}
+      <BossTauntEntrance
+        visible={bossTaunt.visible}
+        bossName={bossTaunt.name}
+        chapter={bossTaunt.chapter}
+        lines={bossTaunt.lines}
+        onDismiss={bossTaunt.onDismiss}
+      />
       <RelicDetailModal />
 
       {/* Calculation Modal */}
