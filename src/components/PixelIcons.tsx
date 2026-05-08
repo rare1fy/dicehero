@@ -344,3 +344,36 @@ export const PixelSoulCrystal: React.FC<{ size?: number; className?: string }> =
     </svg>
   );
 };
+
+/**
+ * 经验闪光 — 蓝色四瓣 sparkle，经验碎片专用
+ * 形态：十字四尖星，中心亮白，外围深蓝描边，"能量微粒"感
+ * 8×8 网格
+ */
+export const PixelXpSpark: React.FC<{ size?: number; className?: string }> = ({ size = 2, className }) => {
+  const s = size;
+  return (
+    <svg width={8 * s} height={8 * s} viewBox="0 0 8 8" className={className} style={{ imageRendering: 'pixelated' }}>
+      {/* 深边 (pixel-blue-dark) */}
+      <rect x="3" y="0" width="2" height="1" fill="#3860a0" />
+      <rect x="3" y="7" width="2" height="1" fill="#3860a0" />
+      <rect x="0" y="3" width="1" height="2" fill="#3860a0" />
+      <rect x="7" y="3" width="1" height="2" fill="#3860a0" />
+      <rect x="2" y="2" width="1" height="1" fill="#3860a0" />
+      <rect x="5" y="2" width="1" height="1" fill="#3860a0" />
+      <rect x="2" y="5" width="1" height="1" fill="#3860a0" />
+      <rect x="5" y="5" width="1" height="1" fill="#3860a0" />
+      {/* 中间色 (pixel-blue #68a0e8) */}
+      <rect x="3" y="1" width="2" height="1" fill="#68a0e8" />
+      <rect x="3" y="6" width="2" height="1" fill="#68a0e8" />
+      <rect x="1" y="3" width="1" height="2" fill="#68a0e8" />
+      <rect x="6" y="3" width="1" height="2" fill="#68a0e8" />
+      <rect x="3" y="2" width="2" height="1" fill="#68a0e8" />
+      <rect x="3" y="5" width="2" height="1" fill="#68a0e8" />
+      <rect x="2" y="3" width="1" height="2" fill="#68a0e8" />
+      <rect x="5" y="3" width="1" height="2" fill="#68a0e8" />
+      {/* 亮心 (亮蓝白) */}
+      <rect x="3" y="3" width="2" height="2" fill="#d8ecff" />
+    </svg>
+  );
+};

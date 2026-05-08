@@ -13,6 +13,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { onXpKill, type XpKillEvent } from '../logic/xpEvents';
 import { getCtx, createMasterGain, isSfxEnabled } from '../utils/sound';
+import { PixelXpSpark } from './PixelIcons';
 
 interface FlyingShard {
   id: string;
@@ -148,7 +149,7 @@ export const XpShardLayer: React.FC = () => {
                 x:       [0, sx, sx, ex],
                 y:       [0, sy, sy, ey],
                 opacity: [0, 1,  1,  0],
-                scale:   [0.2, 1.3, 1.0, 0.4],
+                scale:   [0.2, 1.4, 1.15, 0.5],
                 rotate:  [0, 160, 200, 360],
               }}
               transition={{
@@ -159,21 +160,31 @@ export const XpShardLayer: React.FC = () => {
               }}
               style={{
                 position: 'absolute',
-                left: s.startX - 4,
-                top:  s.startY - 4,
-                width: 8,
-                height: 8,
-                // [PIXEL-REDO 2026-05-08] 经验碎片：纯色蓝 + 硬边 1px + 双向 inset 高光阴影
-                background: 'var(--pixel-blue)',
-                border: '1px solid var(--pixel-blue-dark)',
-                boxShadow:
-                  'inset 0 1px 0 var(--pixel-blue-light), ' +
-                  'inset 0 -1px 0 var(--pixel-blue-dark), ' +
-                  '0 0 3px rgba(104,160,232,0.85)',
+                left: s.startX - 8,
+                top:  s.startY - 8,
+                width: 16,
+                height: 16,
                 imageRendering: 'pixelated',
-                borderRadius: 0,
+                filter: 'drop-shadow(0 0 4px rgba(104,160,232,0.95)) drop-shadow(0 0 2px rgba(216,236,255,0.8))',
               }}
-            />
+            >
+              {/* 柔光底 halo —— 比本体大 1.6 倍，呼吸脉冲，强化"发光"观感 */}
+              <motion.div
+                animate={{ opacity: [0.35, 0.85, 0.35], scale: [1.2, 1.6, 1.2] }}
+                transition={{ duration: 0.75, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute',
+                  inset: -4,
+                  background: 'radial-gradient(circle, rgba(168,208,255,0.85) 0%, rgba(104,160,232,0.35) 50%, transparent 80%)',
+                  pointerEvents: 'none',
+                  borderRadius: '50%',
+                }}
+              />
+              {/* 像素本体 */}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <PixelXpSpark size={2} />
+              </div>
+            </motion.div>
           );
         })}
       </AnimatePresence>

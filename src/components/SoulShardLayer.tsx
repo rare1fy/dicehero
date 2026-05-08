@@ -13,6 +13,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { onSoulGain, type SoulGainEvent } from '../logic/soulEvents';
 import { getCtx, createMasterGain, isSfxEnabled } from '../utils/sound';
+import { PixelSoulCrystal } from './PixelIcons';
 
 interface FlyingSoulShard {
   id: string;
@@ -139,13 +140,13 @@ export const SoulShardLayer: React.FC = () => {
           return (
             <motion.div
               key={s.id}
-              initial={{ x: 0, y: 0, opacity: 0, scale: 0.2, rotate: 45 }}
+              initial={{ x: 0, y: 0, opacity: 0, scale: 0.2, rotate: 0 }}
               animate={{
                 x:       [0, sx, sx, ex],
                 y:       [0, sy, sy, ey],
                 opacity: [0, 1,  1,  0],
-                scale:   [0.2, 1.4, 1.0, 0.5],
-                rotate:  [45, 200, 260, 405],
+                scale:   [0.2, 1.4, 1.15, 0.55],
+                rotate:  [0, 15, -10, 0],
               }}
               transition={{
                 duration: totalSec,
@@ -155,22 +156,30 @@ export const SoulShardLayer: React.FC = () => {
               }}
               style={{
                 position: 'absolute',
-                left: s.startX - 5,
-                top:  s.startY - 5,
-                width: 10,
-                height: 10,
-                // [PIXEL-REDO 2026-05-08] 魂晶碎片：纯紫方块 + 硬边 + 菱形旋转，与升级卡片 resource 色一致
-                background: 'var(--pixel-abyss-light)',
-                border: '1px solid var(--pixel-purple-dark)',
-                boxShadow:
-                  'inset 0 1px 0 #d8a8ff, ' +
-                  'inset 0 -1px 0 var(--pixel-purple-dark), ' +
-                  '0 0 4px rgba(168,88,232,0.9)',
+                left: s.startX - 8,
+                top:  s.startY - 8,
+                width: 16,
+                height: 16,
                 imageRendering: 'pixelated',
-                borderRadius: 0,
-                transform: 'rotate(45deg)',
+                filter: 'drop-shadow(0 0 4px rgba(168,88,232,0.95)) drop-shadow(0 0 2px rgba(216,168,255,0.8))',
               }}
-            />
+            >
+              {/* 紫色柔光 halo —— 呼吸脉冲 */}
+              <motion.div
+                animate={{ opacity: [0.35, 0.85, 0.35], scale: [1.2, 1.65, 1.2] }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute',
+                  inset: -5,
+                  background: 'radial-gradient(circle, rgba(216,168,255,0.85) 0%, rgba(155,89,182,0.4) 50%, transparent 80%)',
+                  pointerEvents: 'none',
+                  borderRadius: '50%',
+                }}
+              />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <PixelSoulCrystal size={2} />
+              </div>
+            </motion.div>
           );
         })}
       </AnimatePresence>
