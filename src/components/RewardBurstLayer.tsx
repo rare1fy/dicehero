@@ -28,7 +28,9 @@ interface FlyingReward {
 
 const BURST_DUR_MS = 320;
 const LINGER_MS = 260;
-const FLIGHT_DUR_MS = 560;
+const FLIGHT_DUR_MS = 780;
+// 飞行段中，前 FLY_HOLD_RATIO 比例保持满透明度，之后才快速淡出
+const FLY_HOLD_RATIO = 0.78;
 
 const KIND_ICON: Record<RewardKind, React.FC<{ size?: number }>> = {
   dice: PixelDice,
@@ -141,6 +143,11 @@ export const RewardBurstLayer: React.FC = () => {
           const total = BURST_DUR_MS + LINGER_MS + FLIGHT_DUR_MS;
           const t1 = BURST_DUR_MS / total;
           const t2 = (BURST_DUR_MS + LINGER_MS) / total;
+          // 飞行段内部的"保持满透明度"断点：从 t2 再往前推进一部分
+          const t3 = t2 + (1 - t2) * FLY_HOLD_RATIO;
+          // 飞行途中保持位置的中间关键点（与 t3 对齐，用于 x/y 曲线补一个锚点）
+          const midX = sx + (ex - sx) * FLY_HOLD_RATIO;
+          const midY = sy + (ey - sy) * FLY_HOLD_RATIO;
 
           const IconComp = KIND_ICON[it.kind];
           const glow = KIND_GLOW[it.kind];
@@ -150,15 +157,15 @@ export const RewardBurstLayer: React.FC = () => {
               key={it.id}
               initial={{ x: 0, y: 0, opacity: 0, scale: 0.3 }}
               animate={{
-                x: [0, sx, sx, ex],
-                y: [0, sy, sy, ey],
-                opacity: [0, 1, 1, 0],
-                scale: [0.3, 1.3, 1.05, 0.55],
+                x: [0, sx, sx, midX, ex],
+                y: [0, sy, sy, midY, ey],
+                opacity: [0, 1, 1, 1, 0],
+                scale: [0.3, 1.3, 1.05, 0.95, 0.6],
               }}
               transition={{
                 duration: total / 1000,
                 ease: 'easeInOut',
-                times: [0, t1, t2, 1],
+                times: [0, t1, t2, t3, 1],
               }}
               style={{
                 position: 'absolute',
