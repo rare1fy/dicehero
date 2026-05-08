@@ -1,39 +1,40 @@
-﻿/**
+/**
  * XpShardLayer.tsx — 经验碎片全屏飞行层
  *
- * 设计要点（2026-05-08 刘叔指令）：
- *  - 敌人击杀 → postPlayEffects 派发 XpKillEvent（带 enemyUid + xp）
- *  - 本组件是一个全屏 fixed 容器，监听事件，立即通过 DOM 查询拿到两个坐标：
- *      起点 = [data-enemy-uid] 中心
- *      终点 = [data-xp-badge] 中心
- *  - 碎片爆发时序：事件 → 延迟 ~250ms（避开敌人死亡动画前段 flash） → 爆发 → 0.65s 飞入徽章
- *  - 碎片数量：2-5 颗（按 xp 量级）
+ * 动画时序（2026-05-08 刘叔修订）：
+ *  1. 敌人死亡后 ~220ms，碎片从敌人位置爆出
+ *  2. 散落阶段（0.5s）：碎片向四周弹开约 25px，带重力感下坠，停留在原地
+ *  3. 飞行阶段（0.65s）：碎片从散落点加速飞向 LV 徽章
+ *  4. 散落开始时播放轻音效
  *
- * 像素风：紫色方块 + 发光 box-shadow，与徽章配色一致。
+ * 像素风：蓝色方块 + 蓝色 box-shadow，配色由刘叔确定。
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { onXpKill, type XpKillEvent } from '../logic/xpEvents';
+import { getCtx, createMasterGain, isSfxEnabled } from '../utils/sound';
 
 interface FlyingShard {
   id: string;
   startX: number;
   startY: number;
+  scatterX: number;   // 散落停留点
+  scatterY: number;
   endX: number;
   endY: number;
-  // 爆发方向随机偏移（让碎片有爆炸散开感）
-  burstX: number;
-  burstY: number;
-  delay: number;
+  delay: number;      // 相对于爆发基准的错峰延迟
 }
 
-const DEATH_FLASH_DELAY_MS = 220;  // 对齐敌人死亡动画的 1→1.1→1.4 前段
-const SHARD_FLIGHT_MS = 650;
+const DEATH_DELAY_MS   = 220;   // 等死亡动画前段
+const SCATTER_DUR_MS   = 380;   // 散落飞出动画时长
+const LINGER_MS        = 500;   // 停留时长
+const FLIGHT_DUR_MS    = 600;   // 飞向目标时长
+const STAGGER_MS       = 45;    // 每颗碎片错峰
 
 function countShardsForXp(xp: number): number {
-  if (xp >= 80) return 5;       // boss
-  if (xp >= 30) return 4;       // elite
-  return 3;                      // 小怪
+  if (xp >= 80) return 5;   // boss
+  if (xp >= 30) return 4;   // elite
+  return 3;                  // 小怪
 }
 
 function readCenter(el: Element | null): { x: number; y: number } | null {
@@ -42,45 +43,72 @@ function readCenter(el: Element | null): { x: number; y: number } | null {
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
+/** 轻促高频 tick —— 碎片弹出音效 */
+function playXpShardSound(): void {
+  if (!isSfxEnabled()) return;
+  const ctx = getCtx();
+  if (!ctx) return;
+  const master = createMasterGain(ctx);
+  const now = ctx.currentTime;
+  // 3 个轻 tick 快速连发
+  [0, 0.04, 0.08].forEach((offset, i) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    const freq = 1200 + i * 180;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now + offset);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + offset + 0.07);
+    g.gain.setValueAtTime(0, now + offset);
+    g.gain.linearRampToValueAtTime(0.12, now + offset + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.08);
+    osc.connect(g);
+    g.connect(master);
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.1);
+  });
+}
+
 export const XpShardLayer: React.FC = () => {
   const [shards, setShards] = useState<FlyingShard[]>([]);
   const seqRef = useRef(0);
 
   useEffect(() => {
     const off = onXpKill((ev: XpKillEvent) => {
-      // 延迟一帧读 DOM（事件派发和 React 渲染可能交错）
       requestAnimationFrame(() => {
         const enemyEl = document.querySelector('[data-enemy-uid="' + ev.enemyUid + '"]');
         const badgeEl = document.querySelector('[data-xp-badge]');
         const start = readCenter(enemyEl);
         const end = readCenter(badgeEl);
-        if (!start || !end) return; // 任何一个没找到就静默失败（敌人 DOM 已移除时会发生）
+        if (!start || !end) return;
 
         const n = countShardsForXp(ev.xp);
         const batch: FlyingShard[] = [];
         for (let i = 0; i < n; i++) {
           seqRef.current += 1;
-          // 爆发点：围绕 start 随机偏移 6-18px
-          const ang = (Math.PI * 2 * i) / n + Math.random() * 0.4;
-          const r = 10 + Math.random() * 12;
+          // 散落方向：均匀扇出 + 随机偏转
+          const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.6;
+          const r = 18 + Math.random() * 16; // 散落半径 18-34px
           batch.push({
             id: 'shard-' + ev.at + '-' + seqRef.current,
             startX: start.x,
             startY: start.y,
+            scatterX: start.x + Math.cos(ang) * r,
+            scatterY: start.y + Math.sin(ang) * r + 6,  // 微微下坠
             endX: end.x,
             endY: end.y,
-            burstX: start.x + Math.cos(ang) * r,
-            burstY: start.y + Math.sin(ang) * r - 6,
-            delay: DEATH_FLASH_DELAY_MS + i * 40,
+            delay: i * STAGGER_MS,
           });
         }
         setShards(prev => [...prev, ...batch]);
 
-        // 清理：每个碎片在 delay + 飞行时间 + 100ms 缓冲后从数组移除
-        const cleanupAt = DEATH_FLASH_DELAY_MS + n * 40 + SHARD_FLIGHT_MS + 150;
+        // 散落开始时播放音效（整批一次，不用每颗都响）
+        window.setTimeout(() => { playXpShardSound(); }, DEATH_DELAY_MS + 30);
+
+        // 清理
+        const totalDur = DEATH_DELAY_MS + n * STAGGER_MS + SCATTER_DUR_MS + LINGER_MS + FLIGHT_DUR_MS + 200;
         window.setTimeout(() => {
           setShards(prev => prev.filter(s => !batch.find(b => b.id === s.id)));
-        }, cleanupAt);
+        }, totalDur);
       });
     });
     return () => { off(); };
@@ -98,36 +126,43 @@ export const XpShardLayer: React.FC = () => {
     >
       <AnimatePresence>
         {shards.map(s => {
-          // 相对距离用于 framer-motion x/y
-          const bx = s.burstX - s.startX;
-          const by = s.burstY - s.startY;
+          // 坐标转换：framer-motion 的 x/y 是相对于 left/top 的偏移
+          const sx = s.scatterX - s.startX;
+          const sy = s.scatterY - s.startY;
           const ex = s.endX - s.startX;
           const ey = s.endY - s.startY;
+
+          // 总时长 = scatter + linger + flight
+          const totalSec = (SCATTER_DUR_MS + LINGER_MS + FLIGHT_DUR_MS) / 1000;
+          const t1 = SCATTER_DUR_MS / (SCATTER_DUR_MS + LINGER_MS + FLIGHT_DUR_MS);
+          const t2 = (SCATTER_DUR_MS + LINGER_MS) / (SCATTER_DUR_MS + LINGER_MS + FLIGHT_DUR_MS);
+
           return (
             <motion.div
               key={s.id}
-              initial={{ x: 0, y: 0, opacity: 0, scale: 0.3, rotate: 0 }}
+              initial={{ x: 0, y: 0, opacity: 0, scale: 0.2, rotate: 0 }}
               animate={{
-                x: [0, bx, ex],
-                y: [0, by, ey],
-                opacity: [0, 1, 1, 0.9],
-                scale: [0.3, 1.2, 0.85, 0.5],
-                rotate: [0, 140, 300],
+                x:       [0, sx, sx, ex],
+                y:       [0, sy, sy, ey],
+                opacity: [0, 1,  1,  0],
+                scale:   [0.2, 1.3, 1.0, 0.4],
+                rotate:  [0, 160, 200, 360],
               }}
               transition={{
-                duration: SHARD_FLIGHT_MS / 1000,
-                delay: s.delay / 1000,
-                ease: [0.25, 0.6, 0.3, 1.0],
-                times: [0, 0.25, 1],
+                duration: totalSec,
+                delay: (DEATH_DELAY_MS + s.delay) / 1000,
+                ease: 'easeInOut',
+                times: [0, t1, t2, 1],
               }}
               style={{
                 position: 'absolute',
                 left: s.startX - 4,
-                top: s.startY - 4,
+                top:  s.startY - 4,
                 width: 8,
                 height: 8,
-                background: 'linear-gradient(135deg, #a0ff80 0%, #40c040 50%, #208020 100%)', // [COLOR 2026-05-08] 经验碎片改为绿色
-                boxShadow: '0 0 6px rgba(100,220,60,0.95), 0 0 12px rgba(60,180,40,0.65)',
+                // [COLOR 2026-05-08] 经验碎片：蓝色
+                background: 'linear-gradient(135deg, #80d0ff 0%, #2080e0 55%, #0040a0 100%)',
+                boxShadow: '0 0 6px rgba(80,180,255,0.95), 0 0 12px rgba(40,120,220,0.65)',
                 imageRendering: 'pixelated',
               }}
             />
