@@ -29,32 +29,43 @@ export function buildLootItems(params: {
 }): LootItem[] {
   const { game, enemies, allWaveEnemies, bonusGold } = params;
   
-  const baseGold = enemies.reduce((s, e) => s + e.dropGold, 0) + bonusGold;
-  const loot: LootItem[] = [
-    { id: 'gold', type: 'gold', value: baseGold, collected: false }
-  ];
+  let baseGold = enemies.reduce((s, e) => s + e.dropGold, 0) + bonusGold;
 
   // Boss rewards: +1 draw count (手牌上限+1) — 仅终层Boss，中层Boss不给
   const victoryNode = game.map.find(n => n.id === game.currentNodeId);
   const mapMaxDepth = Math.max(...game.map.map(n => n.depth));
   const isFinalBoss = victoryNode?.type === 'boss' && victoryNode.depth >= mapMaxDepth;
-  if (isFinalBoss) {
-    loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
-  }
 
   // Elite rewards: 中Boss必给+1骰子（在diceReward阶段选新骰子之外再加一颗手牌）
   // 普通精英战走 LOOT_CONFIG.eliteRewards（仅金币奖励）
   // [2026-05-07] 固定加免费重投/单回合出牌/手牌上限的奖励已全部移除，改由遗物承载
+  // [2026-05-08 BUGFIX] 精英 gold 奖励直接并入基础金币，避免出现两条同 id 的 gold 战利品
   const isMidBoss = victoryNode?.type === 'boss' && victoryNode.depth < mapMaxDepth;
-  if (isMidBoss) {
-    // 中Boss走骰子奖励，不走随机elite奖励
-  } else if (enemies.find(e => e.rerollReward)?.rerollReward) {
-    const eliteRewards = LOOT_CONFIG.eliteRewards;
-    const selectedReward = eliteRewards[Math.floor(Math.random() * eliteRewards.length)];
+  const nonGoldEliteExtra: { type: LootItem['type']; value: number } | null = (() => {
+    if (isMidBoss) return null;
+    if (!enemies.find(e => e.rerollReward)?.rerollReward) return null;
+    const pool = LOOT_CONFIG.eliteRewards;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    if (picked.type === 'gold') {
+      baseGold += picked.value;
+      return null;
+    }
+    return { type: picked.type as LootItem['type'], value: picked.value };
+  })();
+
+  const loot: LootItem[] = [
+    { id: 'gold', type: 'gold', value: baseGold, collected: false }
+  ];
+
+  if (isFinalBoss) {
+    loot.push({ id: 'bossDrawCount', type: 'diceCount', value: 1, collected: false });
+  }
+
+  if (nonGoldEliteExtra) {
     loot.push({
-      id: selectedReward.type,
-      type: selectedReward.type as LootItem['type'],
-      value: selectedReward.value,
+      id: `elite-${nonGoldEliteExtra.type}`,
+      type: nonGoldEliteExtra.type,
+      value: nonGoldEliteExtra.value,
       collected: false,
     });
   }

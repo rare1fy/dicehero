@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelCoin, PixelZap, PixelRefresh, PixelDice, PixelStar } from './PixelIcons';
+import { RelicPixelIcon } from './PixelRelicIcons';
 import { MiniDice } from './MiniDice';
 import { getDiceDef } from '../data/dice';
 import { formatDescription } from '../utils/richText';
@@ -49,17 +50,23 @@ export const LootScreen: React.FC = () => {
     {game.lootItems.map((item, i) => {
       const getLootInfo = (type: string) => {
         switch (type) {
-          case 'relic': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '✨ 遗物', borderColor: 'var(--pixel-purple)' };
+          case 'relic': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '遗物', borderColor: 'var(--pixel-purple)' };
           case 'gold': return { icon: <PixelCoin size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '金币', borderColor: 'var(--pixel-gold)' };
           case 'reroll': return { icon: <PixelRefresh size={3} />, color: 'text-[var(--pixel-purple-light)]', label: '重掷强化', borderColor: 'var(--pixel-purple)' };
           case 'maxPlays': return { icon: <PixelZap size={3} />, color: 'text-[var(--pixel-red-light)]', label: '出牌次数', borderColor: 'var(--pixel-red)' };
           case 'diceCount': return { icon: <PixelDice size={3} />, color: 'text-[var(--pixel-orange-light)]', label: '骰子数量', borderColor: 'var(--pixel-orange)' };
           case 'specialDice': return { icon: null, color: 'text-[var(--pixel-green-light)]', label: '特殊骰子', borderColor: 'var(--pixel-green)' };
-          case 'challengeChest': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '🎁 挑战宝箱', borderColor: 'var(--pixel-gold)' };
+          case 'challengeChest': return { icon: <PixelStar size={3} />, color: 'text-[var(--pixel-gold-light)]', label: '挑战宝箱', borderColor: 'var(--pixel-gold)' };
           default: return { icon: <PixelStar size={3} />, color: 'text-[var(--dungeon-text-dim)]', label: '物品', borderColor: 'var(--dungeon-panel-border)' };
         }
       };
       const info = getLootInfo(item.type);
+      // [2026-05-08] 遗物奖励改用对应的像素 icon；其它类型保持 info.icon
+      const displayIcon = item.diceDefId
+        ? <MiniDice defId={item.diceDefId} size={24} />
+        : item.type === 'relic' && item.relicData
+          ? <RelicPixelIcon relicId={item.relicData.id} size={3} />
+          : info.icon;
 
       return (
         <motion.button
@@ -80,17 +87,17 @@ export const LootScreen: React.FC = () => {
             </div>
           )}
           <div className={`w-12 h-12 bg-[var(--dungeon-bg)] border-3 border-[var(--dungeon-panel-border)] flex items-center justify-center ${info.color} group-hover:border-[var(--dungeon-panel-highlight)] transition-colors`} style={{borderRadius:'2px'}}>
-            {item.diceDefId ? <MiniDice defId={item.diceDefId} size={24} /> : info.icon}
+            {displayIcon}
           </div>
           <div className="flex-1">
             <div className={`text-[8px] font-bold ${info.color} tracking-[0.1em] mb-0.5 opacity-70`}>{info.label}</div>
             <div className="text-sm font-bold text-[var(--dungeon-text-bright)] leading-none mb-0.5 pixel-text-shadow">
-              {item.type === 'gold' ? `${item.value} 金币` : 
+              {item.type === 'gold' ? `${item.value} 金币` :
                item.type === 'maxPlays' ? `+${item.value} 出牌次数` :
                item.type === 'specialDice' && item.diceDefId ? getDiceDef(item.diceDefId).name :
                item.type === 'diceCount' ? `+${item.value} 骰子` :
-               item.type === 'relic' && item.relicData ? `✨ ${item.relicData.name}` :
-               item.type === 'challengeChest' ? '🎁 洞察弱点宝箱' :
+               item.type === 'relic' && item.relicData ? item.relicData.name :
+               item.type === 'challengeChest' ? '洞察弱点宝箱' :
                `+${item.value} 每回合重掷次数`}
             </div>
             <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight">

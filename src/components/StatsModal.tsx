@@ -97,8 +97,8 @@ export const StatsModal: React.FC<StatsModalProps> = ({ onClose }) => {
 
         <SectionTitle title="出牌统计" icon={<PixelDice size={1.5} />} />
         <StatRow label="总出牌次数" value={s.totalPlays} color="var(--pixel-blue)" icon={<PixelDice size={1.5} />} />
-        <StatRow label="最常用牌型" value={topHand ? topHand[0] + ' (' + topHand[1] + '次)' : '-'} color="var(--pixel-cyan)" />
-        <StatRow label="最强牌型" value={bestHand} color="var(--pixel-gold)" icon={<PixelTrophy size={1.5} />} />
+        <StatRow label="最常用牌型" value={topHand ? getHandTypeDisplayName(topHand[0]) + ' (' + topHand[1] + '次)' : '-'} color="var(--pixel-cyan)" />
+        <StatRow label="最强牌型" value={getHandTypeDisplayName(bestHand)} color="var(--pixel-gold)" icon={<PixelTrophy size={1.5} />} />
         <StatRow label="总重掷次数" value={s.totalRerolls} color="var(--pixel-green)" icon={<PixelRefresh size={1.5} />} />
 
         {topDice.length > 0 && (

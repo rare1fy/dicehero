@@ -61,7 +61,7 @@ export function SettlementOverlay() {
                   className="text-2xl font-black tracking-wider text-[var(--pixel-gold)] pixel-text-shadow"
                   style={{ textShadow: '0 0 16px rgba(212,160,48,0.9), 0 2px 0 rgba(0,0,0,0.8)' }}
                 >
-                  {settlementData.bestHand}
+                  {getHandTypeDisplayName(settlementData.bestHand)}
                 </div>
                 {settlementData.isSameElement && (
                   <div

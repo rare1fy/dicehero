@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PlayerHudView.tsx — 战斗下半区：玩家HUD
  * ARCH-F Round2 从 DiceHeroGame.tsx 提取
  */
@@ -29,6 +29,7 @@ import { renderFloatText } from '../utils/renderFloatText';
 import { COMBAT_TYPE_DESC } from '../logic/battleHelpers';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
 import { FURY_CONFIG } from '../config/gameBalance';
+import { getHandTypeDisplayName } from '../data/handTypes';
 import { STATUS_INFO } from '../data/statusInfo';
 import { getDiceDef } from '../data/dice';
 import ReactDOM from 'react-dom';
@@ -244,7 +245,7 @@ export function PlayerHudView() {
               {game.isEnemyTurn ? (
                 <motion.div key="enemy-turn" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex-1 py-2.5 bg-[#a02820] text-[#ffc8c0] border-3 border-[#2a0808] flex items-center justify-center font-bold text-[12px] tracking-[0.1em] battle-action-btn" style={{boxShadow: 'inset 0 2px 0 #d04838, inset 0 -2px 0 #601008, 0 4px 0 #1a0404'}}><motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}>敌人行动中...</motion.div></motion.div>
               ) : dice.some(d => d.selected && !d.spent) ? (
-                <motion.button key="play" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} onClick={isNonWarriorMultiNormal ? () => addToast('不成牌型时只能出1颗骰子', 'info') : playHand} disabled={dice.some(d => d.playing) || dice.some(d => d.rolling) || game.playsLeft <= 0 || isNonWarriorMultiNormal} className={`flex-1 py-2.5 ${isNonWarriorMultiNormal ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`} style={{boxShadow: isNonWarriorMultiNormal ? 'none' : 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}><PixelPlay size={2} /> {isNonWarriorMultiNormal ? '不成牌型（仅限选1颗）' : game.playsLeft > 0 ? (game.playerClass === 'rogue' && game.playsLeft > 1 ? `出牌: ${currentHands.bestHand} (${game.playsLeft}次)` : `出牌: ${currentHands.bestHand}`) : '出牌次数耗尽'}</motion.button>
+                <motion.button key="play" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} onClick={isNonWarriorMultiNormal ? () => addToast('不成牌型时只能出1颗骰子', 'info') : playHand} disabled={dice.some(d => d.playing) || dice.some(d => d.rolling) || game.playsLeft <= 0 || isNonWarriorMultiNormal} className={`flex-1 py-2.5 ${isNonWarriorMultiNormal ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`} style={{boxShadow: isNonWarriorMultiNormal ? 'none' : 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}><PixelPlay size={2} /> {isNonWarriorMultiNormal ? '不成牌型（仅限选1颗）' : game.playsLeft > 0 ? (game.playerClass === 'rogue' && game.playsLeft > 1 ? `出牌: ${getHandTypeDisplayName(currentHands.bestHand)} (${game.playsLeft}次)` : `出牌: ${getHandTypeDisplayName(currentHands.bestHand)}`) : '出牌次数耗尽'}</motion.button>
               ) : (dice.every(d => d.spent) || game.playsLeft <= 0) ? (
                 <motion.button key="end" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} disabled={true} className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]">回合结束中...</motion.button>
               ) : (

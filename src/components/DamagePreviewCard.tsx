@@ -75,7 +75,7 @@ export function DamagePreviewCard() {
                   className="text-[12px] font-black tracking-wider text-[var(--pixel-gold-light)] pixel-text-shadow leading-tight shrink-0"
                   style={{ textShadow: '0 0 8px rgba(212,160,48,0.5)' }}
                 >
-                  {expectedOutcome.bestHand}
+                  {getHandTypeDisplayName(expectedOutcome.bestHand)}
                   {game.handLevels[expectedOutcome.bestHand] > 1 && (
                     <span className="ml-1 text-[8px] opacity-60 font-mono">Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
                   )}
