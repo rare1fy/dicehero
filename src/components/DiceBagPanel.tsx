@@ -21,6 +21,7 @@ interface DiceBagPanelProps {
 export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDice, diceBag, discardPile, position = 'left' }) => {
   const [expanded, setExpanded] = useState(false);
   const [tooltipDef, setTooltipDef] = useState<string | null>(null);
+  const [tooltipDir, setTooltipDir] = useState<'up' | 'down'>('up');
   const isLeft = position === 'left';
 
   const targetList = isLeft ? diceBag : discardPile;
@@ -98,7 +99,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
               </div>
 
               {/* 骰子网格 */}
-              <div className="flex-1 overflow-y-auto p-3">
+              <div className="flex-1 overflow-y-auto p-3 dicebag-scroll">
                 {targetList.length === 0 ? (
                   <div className="text-center py-8 text-[var(--dungeon-text-dim)] text-xs">
                     {isLeft ? '骰子库已空，弃骰库将洗回' : '弃骰库为空'}
@@ -120,7 +121,17 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                             borderRadius: '3px',
                             minWidth: '56px',
                           }}
-                          onClick={(e) => { e.stopPropagation(); setTooltipDef(isTooltipActive ? null : `${defId}-${idx}`); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isTooltipActive) { setTooltipDef(null); return; }
+                            const card = e.currentTarget as HTMLElement;
+                            const scroller = card.closest('.dicebag-scroll') as HTMLElement | null;
+                            const cardRect = card.getBoundingClientRect();
+                            const scrollerRect = scroller?.getBoundingClientRect();
+                            const spaceAbove = scrollerRect ? cardRect.top - scrollerRect.top : cardRect.top;
+                            setTooltipDir(spaceAbove < 100 ? 'down' : 'up');
+                            setTooltipDef(`${defId}-${idx}`);
+                          }}
                         >
                           <MiniDice defId={defId} size={28} highlight />
                           <span className="text-[8px] font-bold text-[var(--dungeon-text)] leading-none text-center max-w-[52px] truncate">
@@ -136,7 +147,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                               transition={{ duration: 0.15 }}
                               className="absolute left-1/2 -translate-x-1/2 p-2 text-[9px] leading-snug text-center pointer-events-none"
                               style={{
-                                bottom: 'calc(100% + 6px)',
+                                [tooltipDir === 'up' ? 'bottom' : 'top']: 'calc(100% + 6px)',
                                 width: '160px',
                                 background: 'rgba(12,10,20,0.96)',
                                 border: `2px solid ${RARITY_COLORS[def.rarity]}`,
@@ -151,11 +162,11 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                               <div
                                 className="absolute left-1/2 -translate-x-1/2"
                                 style={{
-                                  bottom: '-6px',
+                                  [tooltipDir === 'up' ? 'bottom' : 'top']: '-6px',
                                   width: 0, height: 0,
                                   borderLeft: '6px solid transparent',
                                   borderRight: '6px solid transparent',
-                                  borderTop: `6px solid ${RARITY_COLORS[def.rarity]}`,
+                                  [tooltipDir === 'up' ? 'borderTop' : 'borderBottom']: `6px solid ${RARITY_COLORS[def.rarity]}`,
                                 }}
                               />
                             </motion.div>
