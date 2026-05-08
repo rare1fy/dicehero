@@ -31,6 +31,7 @@ import type { BattleState } from './useBattleState';
 import type { BattleLifecycle } from './useBattleLifecycle';
 import { useBattleVictory } from './useBattleVictory';
 import { useReroll } from './useReroll';
+import { setRewardBusy } from '../logic/rewardEvents';
 
 export function useBattleCombat(
   state: BattleState,
@@ -162,6 +163,11 @@ export function useBattleCombat(
     // [Bug-23] 检查是否还有存活的敌人——所有敌人已死时不再允许出牌
     if (!enemies.some(e => e.hp > 0)) return;
 
+    // [REWARD-GATE v2.1 2026-05-08] 从 playHand 入口就打开闸门，覆盖 handleRogueComboPrep
+    // 等"结算演出前"的副作用飘字（盗贼连击预备 +1重投 等），关闭时机仍由 DiceHeroGame 的
+    // useEffect 监听 showDamageOverlay 非 null→null 自动 flush。
+    setRewardBusy(true);
+
     const targetUidForTracking = targetEnemy.uid;
     const playsBefore = playsPerEnemyRef.current[targetUidForTracking] || 0;
     playsPerEnemyRef.current = { ...playsPerEnemyRef.current, [targetUidForTracking]: playsBefore + 1 };
@@ -196,7 +202,7 @@ export function useBattleCombat(
     handleRogueComboHit(game.playerClass, currentCombo, thisHandType, addFloatingText);
 
     const outcome = expectedOutcome;
-    if (!outcome) return;
+    if (!outcome) { setRewardBusy(false); return; }
 
     // [Bug-FIX 2026-05-07] 实际出牌时统一应用预览阶段计算出的副作用
     // （铁血战旗 counter 推进/重置、grantExtraPlay、grantFreeReroll、tempDrawBonus 等）
@@ -266,6 +272,10 @@ export function useBattleCombat(
     }
     // [BUG-FIX-v2] 防重入：如果已经 gameover，禁止进入
     if (gameRef.current.phase === 'gameover') {
+      return;
+    }
+    // [ROLL-GUARD 2026-05-08] 骰子动画进行中禁止结束回合，防止重投/初次抽牌过程中被连点结束
+    if (dice.some(d => d.playing) || dice.some(d => d.rolling)) {
       return;
     }
     // [LEVEL-UP-PAUSE 2026-05-08] 升级弹窗期间完全冻结敌人回合：
