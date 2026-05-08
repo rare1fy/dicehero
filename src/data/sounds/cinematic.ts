@@ -211,83 +211,57 @@ export const playBossLaughSound = (ctx: AudioContext, now: number, master: GainN
 };
 
 /**
- * Boss 狂暴咆哮音效 — 比 laugh 更狂暴：撕裂低吼 + 金属刺响 + 地鸣震波
- * 用于 Boss 出场第二句"挑衅升级"，和第一句 laugh 形成升级对比
+ * Boss 狂暴咆哮音效 —— 在 BossLaugh 基础上"加狠版"
+ *
+ * 设计目标（2026-05-08 v2）：和第一句保持同一音色谱系，玩家直觉上"还是同一只 Boss 在笑"，
+ * 只是这次更急促、更愤怒。**不**换音色、不引入金属刺响/失真等异质音色。
+ *
+ * 参数对比 BossLaugh：
+ *   - 笑声起调略低 8Hz（更沉重）
+ *   - 颤音频率提高 50%（笑得更急促，怒意外露）
+ *   - 主音量从 0.28 提到 0.34（更外放，但不至于刺耳）
+ *   - 低频共鸣音量从 0.20 提到 0.26（鸣响更厚）
+ *   - 笑声段数仍是 10，节奏仍是 0.16s，整体长度保持一致
  */
 export const playBossRoarSound = (ctx: AudioContext, now: number, master: GainNode, masterVol: number) => {
-  // 1. 撕裂主吼：锯齿波大频带扫频，低 → 中高速掠过
-  const roar = ctx.createOscillator();
-  const roarGain = ctx.createGain();
-  const roarDist = ctx.createWaveShaper();
-  // 失真波形（轻量手写 tanh 近似）
-  const curve = new Float32Array(257);
-  for (let i = 0; i < 257; i++) {
-    const x = (i / 128) - 1;
-    curve[i] = ((3 + 22) * x) / (Math.PI + 22 * Math.abs(x));
-  }
-  roarDist.curve = curve;
-  roarDist.oversample = '4x';
-  roar.type = 'sawtooth';
-  roar.frequency.setValueAtTime(70, now);
-  roar.frequency.exponentialRampToValueAtTime(180, now + 0.35);
-  roar.frequency.exponentialRampToValueAtTime(110, now + 1.1);
-  roar.frequency.exponentialRampToValueAtTime(45, now + 1.6);
-  // 颤抖（粗糙声带感）
-  const vib = ctx.createOscillator();
-  const vibG = ctx.createGain();
-  vib.frequency.value = 22;
-  vibG.gain.value = 18;
-  vib.connect(vibG); vibG.connect(roar.frequency);
-  vib.start(now); vib.stop(now + 1.7);
-  roarGain.gain.setValueAtTime(0, now);
-  roarGain.gain.linearRampToValueAtTime(0.45 * masterVol, now + 0.08);
-  roarGain.gain.linearRampToValueAtTime(0.38 * masterVol, now + 0.9);
-  roarGain.gain.exponentialRampToValueAtTime(0.002, now + 1.65);
-  roar.connect(roarDist); roarDist.connect(roarGain); roarGain.connect(master);
-  roar.start(now); roar.stop(now + 1.7);
-
-  // 2. 金属刺响（高频撕裂，强调"狂暴"气质）
-  const metalFreqs = [820, 1240, 1680];
-  metalFreqs.forEach((f, i) => {
-    const m = ctx.createOscillator();
-    const mg = ctx.createGain();
-    const mbp = ctx.createBiquadFilter();
-    m.type = 'square';
-    m.frequency.value = f;
-    mbp.type = 'bandpass';
-    mbp.frequency.value = f;
-    mbp.Q.value = 8;
-    const t = now + 0.05 + i * 0.06;
-    mg.gain.setValueAtTime(0, t);
-    mg.gain.linearRampToValueAtTime(0.14 * masterVol, t + 0.02);
-    mg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-    m.connect(mbp); mbp.connect(mg); mg.connect(master);
-    m.start(t); m.stop(t + 0.2);
+  // 起调略低，曲线整体跟 laugh 一致
+  const laughNotes = [92, 112, 102, 127, 117, 142, 132, 157, 147, 172];
+  const noteDur = 0.15;
+  const noteGap = 0.16;
+  laughNotes.forEach((f, i) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    o.type = 'sawtooth';
+    const t = now + i * noteGap;
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.linearRampToValueAtTime(f * 0.65, t + noteDur);
+    // 颤音 —— 比 laugh 更急促（12+i vs 8+i）
+    const vibrato = ctx.createOscillator();
+    const vibratoG = ctx.createGain();
+    vibrato.frequency.value = 12 + i;
+    vibratoG.gain.value = 14;
+    vibrato.connect(vibratoG); vibratoG.connect(o.frequency);
+    vibrato.start(t); vibrato.stop(t + noteDur + 0.01);
+    filter.type = 'bandpass';
+    filter.frequency.value = 350 + i * 40;
+    filter.Q.value = 4;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.34 * masterVol, t + 0.015);
+    g.gain.setValueAtTime(0.30 * masterVol, t + noteDur * 0.6);
+    g.gain.exponentialRampToValueAtTime(0.01, t + noteDur);
+    o.connect(filter); filter.connect(g); g.connect(master);
+    o.start(t); o.stop(t + noteDur + 0.01);
   });
-
-  // 3. 地鸣震波（低频 40Hz 正弦 + 缓慢衰减）
-  const quake = ctx.createOscillator();
-  const qGain = ctx.createGain();
-  quake.type = 'sine';
-  quake.frequency.setValueAtTime(40, now);
-  quake.frequency.linearRampToValueAtTime(32, now + 1.6);
-  qGain.gain.setValueAtTime(0, now);
-  qGain.gain.linearRampToValueAtTime(0.3 * masterVol, now + 0.15);
-  qGain.gain.setValueAtTime(0.3 * masterVol, now + 1.0);
-  qGain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
-  quake.connect(qGain); qGain.connect(master);
-  quake.start(now); quake.stop(now + 1.85);
-
-  // 4. 爆裂起始（类似拳头砸地的脉冲）
-  const thump = ctx.createOscillator();
-  const thumpG = ctx.createGain();
-  thump.type = 'sine';
-  thump.frequency.setValueAtTime(120, now);
-  thump.frequency.exponentialRampToValueAtTime(38, now + 0.15);
-  thumpG.gain.setValueAtTime(0.5 * masterVol, now);
-  thumpG.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-  thump.connect(thumpG); thumpG.connect(master);
-  thump.start(now); thump.stop(now + 0.3);
+  // 低频共鸣：比 laugh 略响、略低
+  const bRumble = ctx.createOscillator();
+  const bRumbleG = ctx.createGain();
+  bRumble.type = 'sine'; bRumble.frequency.value = 50;
+  bRumbleG.gain.setValueAtTime(0.20 * masterVol, now);
+  bRumbleG.gain.linearRampToValueAtTime(0.26 * masterVol, now + 0.8);
+  bRumbleG.gain.exponentialRampToValueAtTime(0.001, now + laughNotes.length * noteGap + 0.3);
+  bRumble.connect(bRumbleG); bRumbleG.connect(master);
+  bRumble.start(now); bRumble.stop(now + laughNotes.length * noteGap + 0.35);
 };
 
 /**
