@@ -3,11 +3,13 @@
  * 从 enemyAI.ts 拆分，ARCH-6 Round 2
  *
  * 职责：Priest 治疗/增益/减益逻辑、Caster 毒雾/火球/诅咒逻辑、状态递减
- * 纯逻辑函数，不依赖 React
+ * 纯逻辑函数，不依赖 React 运行时（仅引用其类型/createElement 用于 icon 传递）
  */
 
+import React from 'react';
 import type { Enemy, GameState, StatusEffect } from '../types/game';
 import { PRIEST_CONFIG, CASTER_CONFIG } from '../config';
+import { PixelHeart } from '../components/PixelIcons';
 
 // === 状态辅助 ===
 
@@ -65,7 +67,7 @@ export interface PriestSkillResult {
   /** 日志消息 */
   logs: string[];
   /** 浮动文字 */
-  floats: Array<{ text: string; color: string; target: string }>;
+  floats: Array<{ text: string; color: string; target: string; icon?: React.ReactNode }>;
   /** 音效 */
   sound?: string;
 }
@@ -101,7 +103,7 @@ export function executePriestSkill(
       hp: Math.min(lowestAlly.maxHp, lowestAlly.hp + healVal),
     });
     result.logs.push(`${e.name} 治疗了 ${lowestAlly.name} ${healVal} HP。`);
-    result.floats.push({ text: `+${healVal}`, color: 'text-emerald-500', target: 'enemy' });
+    result.floats.push({ text: `+${healVal}`, color: 'text-emerald-500', target: 'enemy', icon: React.createElement(PixelHeart, { size: 1.3 }) });
     result.sound = 'enemy_heal';
   } else if (selfDamaged) {
     const healVal = Math.floor(e.attackDmg * PRIEST_CONFIG.healSelfMult);
@@ -176,7 +178,7 @@ export interface CasterSkillResult {
   /** 日志消息 */
   logs: string[];
   /** 浮动文字 */
-  floats: Array<{ text: string; color: string; target: string; delay?: number }>;
+  floats: Array<{ text: string; color: string; target: string; delay?: number; icon?: React.ReactNode }>;
 }
 
 /**

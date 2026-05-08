@@ -266,7 +266,7 @@ export async function executeEnemyTurn(
         }));
       }
       for (const log of sr.logs) cb.addLog(log);
-      for (const ft of sr.floats) cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy');
+      for (const ft of sr.floats) cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
       if (sr.sound) cb.playSound(sr.sound);
       await new Promise(r => setTimeout(r, 300));
       cb.setEnemyEffectForUid(e.uid, null);
@@ -282,8 +282,8 @@ export async function executeEnemyTurn(
       cb.setGame(prev => ({ ...prev, statuses: sr.updateStatuses(prev.statuses) }));
       for (const log of sr.logs) cb.addLog(log);
       for (const ft of sr.floats) {
-        if (ft.delay) setTimeout(() => cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy'), ft.delay);
-        else cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy');
+        if (ft.delay) setTimeout(() => cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy'), ft.delay);
+        else cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
       }
       await new Promise(r => setTimeout(r, 300));
       cb.setEnemyEffectForUid(e.uid, null);

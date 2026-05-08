@@ -15,7 +15,7 @@ import { applyDiceSpecialEffects } from '../logic/diceEffects';
 import { playSound } from '../utils/sound';
 import { ELEMENT_NAMES } from '../utils/uiHelpers';
 import { getRerollHpCost } from '../logic/rerollCalc';
-import { PixelCoin, PixelShield, PixelBloodDrop } from '../components/PixelIcons';
+import { PixelCoin, PixelShield, PixelBloodDrop, PixelHeart } from '../components/PixelIcons';
 import { emitReward } from '../logic/rewardEvents';
 import type { BattleState } from './useBattleState';
 
@@ -90,7 +90,7 @@ export function useReroll(state: BattleState) {
         const newBloodRerolls = Math.min((prev.bloodRerollCount || 0) + 1, FURY_CONFIG.maxStack);
         return { ...prev, hp: prev.hp - hpCost, bloodRerollCount: newBloodRerolls, souls: prev.souls + onRerollGoldBonus, armor: prev.armor + onRerollArmor + capArmor, stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + onRerollGoldBonus }, blackMarketUsedThisTurn: onRerollGoldBonus > 0 ? true : prev.blackMarketUsedThisTurn };
       });
-      addFloatingText(`-${hpCost}`, 'text-red-500', <PixelBloodDrop size={1.5} />, 'player');
+      addFloatingText(`-${hpCost}`, 'text-red-500', <PixelHeart size={1.3} />, 'player');
       if (atCap) {
         addFloatingText(`血怒满层: +${FURY_CONFIG.armorAtCap}`, REWARD_COLOR, <PixelShield size={1.5} />, 'player');
         emitReward('armor', FURY_CONFIG.armorAtCap);
