@@ -53,6 +53,9 @@ import { useGlobalClickCooldown } from './hooks/useGlobalClickCooldown';
 // --- Context Builders ---
 import { buildGameContext, buildBattleContext } from './contexts/contextBuilders';
 
+// --- Reward gate v2（只监听 showDamageOverlay；出牌结算弹窗显示期间堆积奖励，关闭瞬间 flush） ---
+import { setRewardBusy } from './logic/rewardEvents';
+
 const META_KEY = 'dicehero_meta';
 const loadMeta = () => {
   try { const raw = localStorage.getItem(META_KEY); if (raw) return JSON.parse(raw); } catch {}
@@ -85,6 +88,15 @@ export default function DiceHeroGame() {
   } = state;
 
   const { expectedOutcome } = combat;
+
+  // === Reward Gate v2 ===
+  // 只用 showDamageOverlay 作为判据。
+  // 结算演出期间（settlementPhase 非空）的飘字是演出本体旁白（phase3 里的利刃精通/连击终结等），
+  // 那些必须直通，否则会漏演出。只有 damage overlay 显示中的"出牌后副作用奖励"需要堆积。
+  const { showDamageOverlay } = state;
+  React.useEffect(() => {
+    setRewardBusy(showDamageOverlay !== null);
+  }, [showDamageOverlay]);
 
   // === 早期返回：特殊 phase ===
   if (game.phase === 'start') {

@@ -157,6 +157,8 @@ export function useBattleCombat(
     if (targetEnemy.hp <= 0) return;
     if (game.isEnemyTurn) { addToast('敌人回合中，无法操作'); return; }
     if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; }
+    // [ROLL-GUARD 2026-05-08] roll 动画进行中禁止出牌，防止连点造成点数/状态错乱及误触发 autoEnd
+    if (dice.some(d => d.rolling)) { addToast('骰子还在翻滚中...'); return; }
     // [Bug-23] 检查是否还有存活的敌人——所有敌人已死时不再允许出牌
     if (!enemies.some(e => e.hp > 0)) return;
 

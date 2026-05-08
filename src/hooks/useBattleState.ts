@@ -11,6 +11,7 @@ import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from '../config/enemies';
 import { ANIMATION_TIMING } from '../config';
 import { playSound, startBGM, stopBGM } from '../utils/sound';
 import type { EnemyEffectType, PlayerEffectType, SettlementPhase, SettlementData } from '../contexts/BattleContext';
+import { onDeferredFloat, emitDeferredFloat, isRewardBusy } from '../logic/rewardEvents';
 
 /** 扩展特效类型：包含 hit/debuff（战斗引擎内部使用，不暴露到 Context） */
 export type InternalEnemyEffectType = EnemyEffectType | 'hit' | 'debuff';
@@ -155,6 +156,14 @@ export function useBattleState() {
 
   // ==================== 工具函数 ====================
   const addFloatingText = (text: string, color: string = 'text-red-500', icon?: React.ReactNode, target: 'player' | 'enemy' = 'enemy', large = false) => {
+    // [REWARD-GATE v2] 金色奖励飘字（text-amber-200）在 overlay 显示期间自动走闸门堆积。
+    // 判据是 isRewardBusy()（= showDamageOverlay !== null），不碰 phase3 的紫色/黄色演出飘字。
+    // 事件/商店/回合开始等非出牌场景 busy=false，直通。
+    if (!large && color === 'text-amber-200' && isRewardBusy()) {
+      emitDeferredFloat(text, color, icon, target);
+      return;
+    }
+
     // [DEDUP] 防 StrictMode 下 setGame updater 内部调 addFloatingText 被双触发
     // 同 target + 同 text + 同 color 在 150ms 内只发一次
     const key = `${target}|${text}|${color}`;
@@ -185,6 +194,17 @@ export function useBattleState() {
   const addLog = (msg: string) => {
     setGame(prev => ({ ...prev, logs: [msg, ...prev.logs].slice(0, 15) }));
   };
+
+  // [REWARD-GATE v2] 订阅"延迟飘字"闸门：
+  // 业务侧调用 emitDeferredFloat() 的飘字会在 showDamageOverlay 显示期间堆积，
+  // overlay 关闭瞬间 flush 回调到这里 → 走 addFloatingText 正常渲染。
+  useEffect(() => {
+    const off = onDeferredFloat((text, color, icon, target) => {
+      addFloatingText(text, color, icon as React.ReactNode, target);
+    });
+    return () => { off(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     // 核心状态
