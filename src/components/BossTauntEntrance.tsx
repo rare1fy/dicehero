@@ -74,12 +74,16 @@ function useTauntState() {
 export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   visible, bossName, chapter, lines, onDismiss, onShake,
 }) => {
+  // 无条件同步最新 props 到模块级变量（每次 render 都同步，但不触发 effect）
+  // 这样 Scene 层读到的是最新值，又不会因为父组件重新传入新函数/新数组引用而让 effect 重跑
+  _bossName = bossName;
+  _chapter = chapter;
+  _lines = lines;
+  _onDismiss = onDismiss;
+  _onShake = onShake;
+
+  // 真正的演出生命周期：只看 visible 切换
   useEffect(() => {
-    _bossName = bossName;
-    _chapter = chapter;
-    _lines = lines;
-    _onDismiss = onDismiss;
-    _onShake = onShake;
     if (!visible) {
       _setPhase('idle');
       return;
@@ -87,7 +91,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     _setPhase('enter');
     const t = window.setTimeout(() => _setPhase('talk1'), 720);
     return () => window.clearTimeout(t);
-  }, [visible, bossName, chapter, lines, onDismiss, onShake]);
+  }, [visible]);
 
   // 这个组件自身不渲染任何 DOM —— 场景层和UI层是独立组件挂在不同位置
   return null;
