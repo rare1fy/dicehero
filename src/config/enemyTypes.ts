@@ -19,7 +19,14 @@ export interface PhaseConfig {
 }
 
 export interface EnemyQuotes {
+  /** 通用登场台词池（普通敌人 / 兼容旧 Boss 数据） */
   enter?: string[];
+  /** [BOSS 专用 2026-05-08] 自我介绍/亮明身份的开场池（每场各从 greet+dispatch 各抽一条组合）。
+   *  存在时优先于 enter[0] 用作"第一句" */
+  greet?: string[];
+  /** [BOSS 专用 2026-05-08] 派小弟语式（"上！"/"撕碎他！"），用作"第二句"。
+   *  存在时优先于 enter[1]/BOSS_DISPATCH_LINES 池 */
+  dispatch?: string[];
   death?: string[];
   attack?: string[];
   hurt?: string[];

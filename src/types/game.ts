@@ -183,7 +183,10 @@ export interface HandResult {
 
 export interface HandTypeDef {
   id: string;
+  /** 内部标识符（中文，与 handEvaluator 输出一致；逻辑层硬编码用此字段） */
   name: string;
+  /** UI 显示名（西幻包装版，玩家看到的名字）。缺省回退到 name */
+  displayName?: string;
   icon: React.ReactNode;
   base: number;
   mult: number;

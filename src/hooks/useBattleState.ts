@@ -83,9 +83,30 @@ export function useBattleState() {
     }, duration);
   };
 
+  /**
+   * [2026-05-08] 短期不重复缓存：保存最近用过的台词字符串，下一次抽取尽量避开。
+   * 容量 = 16，用 ref 存避免引起重渲染。Boss 台词系统重度依赖此机制减少重复感。
+   */
+  const recentQuotesRef = useRef<string[]>([]);
+  const recordRecentQuote = (s: string) => {
+    const arr = recentQuotesRef.current;
+    arr.push(s);
+    if (arr.length > 16) arr.shift();
+  };
+
+  /**
+   * pickQuote — 从池中随机取一条台词。
+   * 优先从"未在最近 16 条记录中"的候选里抽；如果池子里所有项都已用过，回退到全池随机（避免无限循环）。
+   * 不传池或池为空时返回 null。
+   */
   const pickQuote = (arr?: string[]): string | null => {
     if (!arr || arr.length === 0) return null;
-    return arr[Math.floor(Math.random() * arr.length)];
+    const recent = recentQuotesRef.current;
+    const fresh = arr.filter(s => !recent.includes(s));
+    const pool = fresh.length > 0 ? fresh : arr;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    recordRecentQuote(picked);
+    return picked;
   };
 
   const getEnemyQuotes = (enemyId: string) => {

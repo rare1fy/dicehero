@@ -41,7 +41,7 @@ export const HandGuideModal: React.FC = () => {
                     <div className="flex items-center justify-between mb-0.5">
                       <div className="flex items-center gap-1.5">
                         {ht.icon}
-                        <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)]">{ht.name}</span>
+                        <span className="text-[11px] font-bold text-[var(--dungeon-text-bright)]">{ht.displayName || ht.name}</span>
                         <span className="text-[8px] text-[var(--dungeon-text-dim)]">Lv.{level}</span>
                       </div>
                       <div className="text-[10px] font-bold">

@@ -9,6 +9,7 @@ import { PixelClose, PixelArrowDown, PixelArrowUp, PixelBloodDrop, PixelFlame, P
 import { PixelDiceRenderer } from './PixelDiceRenderer';
 import { FURY_CONFIG } from '../config/gameBalance';
 import { STATUS_INFO } from '../data/statusInfo';
+import { getHandTypeDisplayName } from '../data/handTypes';
 
 interface CalcModalProps {
   visible: boolean;
@@ -61,7 +62,7 @@ const CalcModal: React.FC<CalcModalProps> = ({ visible, onClose, expectedOutcome
               <div className="flex justify-between items-center">
                 <span className="text-[12px] text-[var(--dungeon-text-dim)]">激活牌型</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-bold text-[var(--pixel-green)]">{expectedOutcome.bestHand}</span>
+                  <span className="text-[12px] font-bold text-[var(--pixel-green)]">{getHandTypeDisplayName(expectedOutcome.bestHand)}</span>
                   {game.handLevels[expectedOutcome.bestHand] > 1 && (
                     <span className="text-[10px] bg-[var(--pixel-green-dark)] text-[var(--pixel-green)] px-1 py-0.5 border border-[var(--pixel-green)] font-bold" style={{borderRadius:'2px'}}>Lv.{game.handLevels[expectedOutcome.bestHand]}</span>
                   )}

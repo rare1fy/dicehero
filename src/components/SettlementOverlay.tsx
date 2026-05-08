@@ -21,6 +21,7 @@ import {
 import { RelicPixelIcon } from './PixelRelicIcons';
 import { PixelDiceRenderer } from './PixelDiceRenderer';
 import { useBattleContext } from '../contexts/BattleContext';
+import { getHandTypeDisplayName } from '../data/handTypes';
 
 export function SettlementOverlay() {
   const { settlementPhase, settlementData } = useBattleContext();

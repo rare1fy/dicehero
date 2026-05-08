@@ -126,20 +126,17 @@ export function useBattleLifecycle(state: BattleState) {
     setBattleTransition('none');
 
     if (needRoamTaunt) {
-      // [ROAM-TAUNT-v2 2026-05-08] 路过嘲讽（场景空）：
-      //   - 第一句用 Boss.enter[0]（登场垃圾话）
-      //   - 第二句固定为"派小弟"语式，与小弟登场联动
-      //   - 演出结束后小弟逐一出场，每人强制说一句
+      // [ROAM-TAUNT-v3 2026-05-08] 章节首战：greet→第1句（亮身份）/dispatch→第2句（派小弟）；
+      // 缺省时回退到 enter[0] / 全局 BOSS_DISPATCH_LINES 池。pickQuote 自带 16 条短期不重复。
       setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
       const chIdx = Math.max(0, (game.chapter || 1) - 1);
       const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
       const bossName = bossPair[1] || bossPair[0];
       const bossCfg = BOSS_ENEMIES.find(b => b.name === bossName && b.chapter === (game.chapter || 1));
-      const enterLines = bossCfg?.quotes?.enter || ['……'];
-      const firstLine = enterLines[0] || '……';
-      // 第二句：派小弟上场的挑衅/指令台词（随机一条）
-      const dispatchLine = BOSS_DISPATCH_LINES[Math.floor(Math.random() * BOSS_DISPATCH_LINES.length)];
-      const tauntLines = [firstLine, dispatchLine];
+      const bq = bossCfg?.quotes;
+      const firstLine = pickQuote(bq?.greet) || pickQuote(bq?.enter) || '……';
+      const secondLine = pickQuote(bq?.dispatch) || pickQuote(BOSS_DISPATCH_LINES) || '上！';
+      const tauntLines = [firstLine, secondLine];
       await new Promise<void>(resolve => {
         setBossTaunt({
           visible: true, name: bossName, chapter: game.chapter || 1,
@@ -170,10 +167,11 @@ export function useBattleLifecycle(state: BattleState) {
       playSound('boss_appear');
       const bossEnemy = firstWave[0];
       if (bossEnemy) {
-        // ★ 第 1 步：Boss 挑衅短演出（不可跳过 ~2.4s）
-        //   本尊登场 + 两句挑衅台词 → 退场
+        // [BOSS-INTRO-v3] greet+dispatch 各抽一条；缺省回退到 enter[0..1]
         const bossQuotes = getEnemyQuotes(bossEnemy.configId);
-        const tauntLines = (bossQuotes?.enter || []).slice(0, 2);
+        const line1 = pickQuote(bossQuotes?.greet) || (bossQuotes?.enter?.[0]) || '';
+        const line2 = pickQuote(bossQuotes?.dispatch) || (bossQuotes?.enter?.[1]) || '';
+        const tauntLines = [line1, line2].filter(Boolean);
         setBossTaunt({ visible: true, name: bossEnemy.name, chapter: game.chapter, lines: tauntLines });
         playSound('boss_laugh');
         await new Promise(r => setTimeout(r, 2400));

@@ -21,6 +21,7 @@ import {
 import { RelicPixelIcon } from './PixelRelicIcons';
 import { useBattleContext } from '../contexts/BattleContext';
 import { STATUS_INFO } from '../data/statusInfo';
+import { getHandTypeDisplayName } from '../data/handTypes';
 
 export function DamagePreviewCard() {
   const {
