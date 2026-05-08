@@ -33,7 +33,7 @@ import { ClassSelectScreen } from './components/ClassSelectScreen';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ChapterTransition } from './components/ChapterTransition';
 import { BossEntrance } from './components/BossEntrance';
-import { BossTauntEntrance } from './components/BossTauntEntrance';
+import { BossTauntEntrance, BossTauntHint } from './components/BossTauntEntrance';
 import { ClassInfoModal } from './components/ClassInfoModal';
 import CalcModal from './components/CalcModal';
 import { HandGuideModal } from './components/HandGuideModal';
@@ -204,6 +204,8 @@ export default function DiceHeroGame() {
         lines={bossTaunt.lines}
         onDismiss={bossTaunt.onDismiss}
       />
+      {/* Boss嘲讽点击提示 — UI层，fixed定位，独立于战斗场景 */}
+      <BossTauntHint />
       <RelicDetailModal />
 
       {/* Calculation Modal */}

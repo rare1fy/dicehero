@@ -38,8 +38,7 @@ import { PixelSprite, hasSpriteData } from './PixelSprite';
 import { SettlementOverlay } from './SettlementOverlay';
 import { DamagePreviewCard } from './DamagePreviewCard';
 import { useBattleContext } from '../contexts/BattleContext';
-
-
+import { BossTauntScene } from './BossTauntEntrance';
 import { formatDescription } from '../utils/richText';
 import { ANIMATION_TIMING } from '../config';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
@@ -465,6 +464,9 @@ export function EnemyStageView() {
       {/* 结算演出覆盖层 + 出牌预期结算卡片（2026-04-21 铁律 B.1 拆分） */}
       <SettlementOverlay />
       <DamagePreviewCard />
+
+      {/* Boss 路过嘲讽 - 场景层（v7：拆分后只负责精灵/气泡/名牌，点击提示在根层） */}
+      <BossTauntScene />
     </div>
   );
 }
