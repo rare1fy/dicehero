@@ -1,4 +1,4 @@
-/**
+﻿content = """/**
  * BossTauntEntrance.tsx — Boss 路过嘲讽登场演出（刘叔 2026-05-08 重写）
  *
  * 不再是全屏弹窗，而是 Boss 本尊真正出现在战斗场景中：
@@ -62,20 +62,38 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({ visible, bossName,
   const currentLine = phase === 'talk2' ? safeLines[1] : safeLines[0];
   const showBubble = phase === 'talk1' || phase === 'talk2';
 
-  // Boss精灵的动画对象（直接传入 animate，避免 Variants 类型限制）
-  const spriteAnimate = phase === 'enter'
-    ? { x: 0, opacity: 1, scale: [0.7, 1.18, 0.94, 1.06, 1.0] }
-    : phase === 'exit'
-    ? { x: 160, opacity: 0, scale: 0.8 }
-    : phase === 'idle'
-    ? { x: 160, opacity: 0, scale: 0.7 }
-    : { x: 0, opacity: 1, scale: 1.0 };
+  // Boss精灵的动画变体
+  const spriteVariants = {
+    hidden: { x: 160, opacity: 0, scale: 0.7 },
+    enter: {
+      x: 0,
+      opacity: 1,
+      scale: [0.7, 1.18, 0.94, 1.06, 1.0] as number[],
+      transition: {
+        x: { duration: 0.42, ease: [0.2, 0.8, 0.3, 1.0] as number[] },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.55, times: [0, 0.42, 0.65, 0.82, 1.0], ease: 'easeOut' },
+      },
+    },
+    talk: {
+      x: 0,
+      opacity: 1,
+      scale: 1.0,
+      transition: { duration: 0.18 },
+    },
+    exit: {
+      x: 160,
+      opacity: 0,
+      scale: 0.8,
+      transition: { duration: 0.38, ease: [0.5, 0.0, 0.8, 0.4] as number[] },
+    },
+  };
 
-  const spriteTransition = phase === 'enter'
-    ? { duration: 0.55, ease: 'easeOut' as const }
-    : phase === 'exit'
-    ? { duration: 0.38, ease: 'easeIn' as const }
-    : { duration: 0.18 };
+  const currentVariant =
+    phase === 'enter' ? 'enter' :
+    phase === 'exit' ? 'exit' :
+    phase === 'idle' ? 'hidden' :
+    'talk';
 
   return (
     <AnimatePresence>
@@ -162,9 +180,9 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({ visible, bossName,
 
           {/* Boss 像素本尊 — size=7 让他比普通敌人更大更有压迫感 */}
           <motion.div
-            initial={{ x: 160, opacity: 0, scale: 0.7 }}
-            animate={spriteAnimate}
-            transition={spriteTransition}
+            variants={spriteVariants}
+            initial="hidden"
+            animate={currentVariant}
             style={{
               filter: phase === 'enter'
                 ? `drop-shadow(0 0 14px ${glowColor}) drop-shadow(0 0 30px ${glowColor}80)`
@@ -178,7 +196,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({ visible, bossName,
           {/* Boss 名字标签 */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={phase === 'enter' || phase === 'talk1' || phase === 'talk2' ? { opacity: 1 } : { opacity: 0 }}
+            animate={phase !== 'idle' && phase !== 'exit' ? { opacity: 1 } : { opacity: 0 }}
             transition={{ duration: 0.2, delay: 0.3 }}
             style={{
               padding: '2px 10px',
@@ -200,3 +218,6 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({ visible, bossName,
     </AnimatePresence>
   );
 };
+"""
+open('src/components/BossTauntEntrance.tsx', 'w', encoding='utf-8').write(content)
+print('OK')

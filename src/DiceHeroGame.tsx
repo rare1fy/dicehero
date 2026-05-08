@@ -33,7 +33,6 @@ import { ClassSelectScreen } from './components/ClassSelectScreen';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ChapterTransition } from './components/ChapterTransition';
 import { BossEntrance } from './components/BossEntrance';
-import { BossTauntEntrance } from './components/BossTauntEntrance';
 import { ClassInfoModal } from './components/ClassInfoModal';
 import CalcModal from './components/CalcModal';
 import { HandGuideModal } from './components/HandGuideModal';
@@ -171,14 +170,6 @@ export default function DiceHeroGame() {
           </div>
         </div>
       )}
-
-      {/* Boss 挑衅短演出（2026-05-08 刘叔新增）：先于 BossEntrance 横幅播放 */}
-      <BossTauntEntrance
-        visible={bossTaunt.visible}
-        bossName={bossTaunt.name}
-        chapter={bossTaunt.chapter}
-        lines={bossTaunt.lines}
-      />
 
       {/* Boss出场演出遮罩 */}
       <BossEntrance

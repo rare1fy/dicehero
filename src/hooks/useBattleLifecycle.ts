@@ -176,10 +176,11 @@ export function useBattleLifecycle(state: BattleState) {
         const tauntLines = enterLines.length >= 2
           ? [enterLines[0], enterLines[enterLines.length - 1]]
           : [enterLines[0], enterLines[0]];
-        // fadeOut先收起黑屏，让战斗场景可见，再播演出
+        // 场景就绪后直接触发 Boss 登场演出（已嵌入战斗场景，不需要先切黑屏）
         setBattleTransition('fadeOut');
-        await new Promise(r => setTimeout(r, 320));
+        await new Promise(r => setTimeout(r, 280));
         setBattleTransition('none');
+        await new Promise(r => setTimeout(r, 60));
         // 播Boss路过嘲讽
         setBossTaunt({ visible: true, name: bossName, chapter: game.chapter || 1, lines: tauntLines });
         playSound('boss_laugh');
