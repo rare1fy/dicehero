@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDescription } from '../utils/richText';
 import { StatusEffect } from '../types/game';
@@ -13,6 +13,36 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center'
   const info = STATUS_INFO[status.type];
   const [showTooltip, setShowTooltip] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // [2026-05-08 BUG-FIX] Tooltip 原来同时绑 hover + click + touch，导致：
+  //   - 桌面：click 打开后 mouseleave 立刻关
+  //   - 移动：onTouchEnd 立刻把刚打开的 tooltip 关掉，完全点不开
+  // 改为：
+  //   - 桌面：mouseenter/leave 负责 hover 预览
+  //   - 点击：锁定打开，直到点击图标外或 3.5s 后自动关
+  //   - 移动：tap（touchend）= 点击切换锁定态
+  const [pinned, setPinned] = useState(false);
+  const togglePin = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    setPinned(p => !p);
+  };
+  useEffect(() => {
+    if (!pinned) return;
+    const onDocClick = (ev: MouseEvent | TouchEvent) => {
+      if (rootRef.current && !rootRef.current.contains(ev.target as Node)) {
+        setPinned(false);
+      }
+    };
+    const autoClose = setTimeout(() => setPinned(false), 3500);
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('touchstart', onDocClick);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('touchstart', onDocClick);
+      clearTimeout(autoClose);
+    };
+  }, [pinned]);
 
   const alignClasses = {
     left: 'left-0 translate-x-0',
@@ -26,14 +56,20 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center'
     center: 'left-1/2 -translate-x-1/2'
   };
 
+  const visible = showTooltip || pinned;
+
   return (
-    <div 
+    <div
+      ref={rootRef}
       className="relative group flex items-center gap-0.5 cursor-help"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
-      onClick={() => setShowTooltip(!showTooltip)}
-      onTouchStart={() => { timerRef.current = setTimeout(() => setShowTooltip(true), 250); }}
-      onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); setShowTooltip(false); }}
+      onClick={togglePin}
+      onTouchStart={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
+      onTouchEnd={(e) => {
+        e.preventDefault(); // 避免紧跟着合成 click 被 stopPropagation 吞掉
+        togglePin(e);
+      }}
     >
       {/* 像素风状态徽章 */}
       <div className={`p-1 bg-[var(--dungeon-bg)] border-2 border-[var(--dungeon-panel-border)] ${info.color} flex items-center justify-center`}
@@ -42,10 +78,10 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center'
         {info.icon}
       </div>
       <span className={`text-[10px] font-bold font-mono ${info.color} pixel-text-shadow`}>{status.value}</span>
-      
+
       <AnimatePresence>
-        {showTooltip && (
-          <motion.div 
+        {visible && (
+          <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
