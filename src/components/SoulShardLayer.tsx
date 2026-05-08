@@ -159,9 +159,15 @@ export const SoulShardLayer: React.FC = () => {
                 top:  s.startY - 5,
                 width: 10,
                 height: 10,
-                background: 'linear-gradient(135deg, #e0b0ff 0%, #9050e0 50%, #5020a0 100%)',
-                boxShadow: '0 0 8px rgba(200,140,255,0.95), 0 0 14px rgba(160,80,224,0.75)',
+                // [PIXEL-REDO 2026-05-08] 魂晶碎片：纯紫方块 + 硬边 + 菱形旋转，与升级卡片 resource 色一致
+                background: 'var(--pixel-abyss-light)',
+                border: '1px solid var(--pixel-purple-dark)',
+                boxShadow:
+                  'inset 0 1px 0 #d8a8ff, ' +
+                  'inset 0 -1px 0 var(--pixel-purple-dark), ' +
+                  '0 0 4px rgba(168,88,232,0.9)',
                 imageRendering: 'pixelated',
+                borderRadius: 0,
                 transform: 'rotate(45deg)',
               }}
             />

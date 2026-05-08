@@ -163,10 +163,15 @@ export const XpShardLayer: React.FC = () => {
                 top:  s.startY - 4,
                 width: 8,
                 height: 8,
-                // [COLOR 2026-05-08] 经验碎片：蓝色
-                background: 'linear-gradient(135deg, #80d0ff 0%, #2080e0 55%, #0040a0 100%)',
-                boxShadow: '0 0 6px rgba(80,180,255,0.95), 0 0 12px rgba(40,120,220,0.65)',
+                // [PIXEL-REDO 2026-05-08] 经验碎片：纯色蓝 + 硬边 1px + 双向 inset 高光阴影
+                background: 'var(--pixel-blue)',
+                border: '1px solid var(--pixel-blue-dark)',
+                boxShadow:
+                  'inset 0 1px 0 var(--pixel-blue-light), ' +
+                  'inset 0 -1px 0 var(--pixel-blue-dark), ' +
+                  '0 0 3px rgba(104,160,232,0.85)',
                 imageRendering: 'pixelated',
+                borderRadius: 0,
               }}
             />
           );

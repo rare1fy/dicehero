@@ -143,26 +143,44 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
             className="absolute left-0 pointer-events-none z-[102] flex items-center gap-1"
             style={{ bottom: 'calc(100% + 3px)', whiteSpace: 'nowrap' }}
           >
-            {/* 主体经验条：像素风单条 */}
+            {/* [PIXEL-REDO 2026-05-08] 经验条：硬边深槽 + 纯色填充 + 刻度，复刻 HUD HP 条风格 */}
             <div
               className="relative"
               style={{
-                width: 96,
-                height: 6,
-                background: 'rgba(8,4,18,0.88)',
-                boxShadow: '0 0 0 1px rgba(48,130,255,0.9), 0 0 6px rgba(40,100,220,0.5)', // [COLOR 2026-05-08] 经验条蓝色
+                width: 100,
+                height: 8,
+                background: 'var(--dungeon-bg)',
+                border: '1px solid var(--dungeon-panel-border)',
+                boxShadow:
+                  'inset 0 1px 0 rgba(0,0,0,0.7), ' +
+                  'inset 0 -1px 0 rgba(80,160,255,0.22), ' +
+                  '0 1px 0 rgba(60,140,255,0.25)',
+                imageRendering: 'pixelated',
+                borderRadius: 0,
               }}
             >
               <motion.div
                 className="h-full"
                 initial={{ width: pct + '%' }}
                 animate={{ width: pct + '%' }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
                 style={{
-                  background: levelUpFlash
-                    ? 'linear-gradient(90deg, #fff9c4 0%, #ffd24a 50%, #fff2a0 100%)'
-                    : 'linear-gradient(90deg, #1a60e0 0%, #4090ff 50%, #80c0ff 100%)',
-                  boxShadow: '0 0 4px rgba(80,160,255,0.9)',
+                  background: levelUpFlash ? 'var(--pixel-gold)' : 'var(--pixel-blue)',
+                  boxShadow: levelUpFlash
+                    ? 'inset 0 1px 0 var(--pixel-gold-light), inset 0 -1px 0 var(--pixel-gold-dark)'
+                    : 'inset 0 1px 0 var(--pixel-blue-light), inset 0 -1px 0 var(--pixel-blue-dark)',
+                  imageRendering: 'pixelated',
+                }}
+              />
+              {/* 像素刻度：4 段分隔线 */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    'repeating-linear-gradient(90deg, ' +
+                      'transparent 0, transparent 24px, ' +
+                      'rgba(0,0,0,0.55) 24px, rgba(0,0,0,0.55) 25px)',
+                  imageRendering: 'pixelated',
                 }}
               />
             </div>
