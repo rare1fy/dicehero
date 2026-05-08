@@ -15,7 +15,7 @@
 
 import type { Enemy, GameState, Die, Relic } from '../types/game';
 import * as ReactNS from 'react';
-import { PixelArcaneShield } from '../components/PixelIcons';
+import { PixelArcaneShield, PixelHeart } from '../components/PixelIcons';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
 import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
@@ -29,6 +29,8 @@ import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config'
 
 /** 奥术屏障吸收飘字用的 icon，独立一处避免重复 createElement */
 const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 1.5 });
+/** 玩家 HP 增减飘字用的像素爱心 icon */
+const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.3 });
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
 // === EnemyAI 回调接口 ===
@@ -129,7 +131,7 @@ export async function executeEnemyTurn(
     }
     if (absorb.hpDamage > 0) {
       cb.addLog(`你因中毒受到了 ${absorb.hpDamage} 点伤害。`);
-      cb.addFloatingText(`-${absorb.hpDamage}`, 'text-purple-400', undefined, 'player');
+      cb.addFloatingText(`-${absorb.hpDamage}`, 'text-purple-400', heartIcon(), 'player');
     }
     let newHp = Math.max(0, prev.hp - absorb.hpDamage);
     if (newHp <= 0 && prev.hp > 0) {
@@ -314,7 +316,7 @@ export async function executeEnemyTurn(
 
       if (absorb.absorbedByShield > 0) cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
       if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
-      if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', undefined, 'player');
+      if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', heartIcon(), 'player');
       if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
 
       cb.setPlayerEffect('flash');
@@ -373,7 +375,7 @@ export async function executeEnemyTurn(
 
         if (absorb2.absorbedByShield > 0) cb.addFloatingText(`-${absorb2.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
         if (absorb2.absorbedByArmor > 0) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
-        if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', undefined, 'player');
+        if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', heartIcon(), 'player');
 
         if (newHp <= 0 && prev.hp > 0) {
           if (cb.hasFatalProtection(prev.relics)) {
@@ -443,7 +445,7 @@ export async function executeEnemyTurn(
     }
     if (absorb.hpDamage > 0) {
       cb.addLog(`你因灼烧受到了 ${absorb.hpDamage} 点伤害。`);
-      cb.addFloatingText(`-${absorb.hpDamage}`, 'text-orange-500', undefined, 'player');
+      cb.addFloatingText(`-${absorb.hpDamage}`, 'text-orange-500', heartIcon(), 'player');
     }
     nextStatuses = tickStatuses(nextStatuses);
     let newHp = Math.max(0, prev.hp - absorb.hpDamage);

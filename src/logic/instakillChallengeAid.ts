@@ -27,7 +27,7 @@ import React from 'react';
 import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasLimitBreaker } from '../engine/relicQueries';
-import { PixelDice } from '../components/PixelIcons';
+import { PixelDice, PixelHeart } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
 
 /** 奖励类飘字统一金色 */
@@ -35,6 +35,7 @@ const REWARD_COLOR = 'text-amber-200';
 
 /** 浮字用的骰子 icon（"获得骰子"类飘字统一入口） */
 const diceIcon = () => React.createElement(PixelDice, { size: 1.5 });
+const heartIcon = () => React.createElement(PixelHeart, { size: 1.3 });
 
 /**
  * 检测洞察弱点挑战是否刚完成，若是则随机触发一种战斗援助效果。
@@ -94,7 +95,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         if (gameRef.current.phase !== 'battle') return;
         affected.forEach(({ uid, dmg }) => {
           setEnemyEffectForUid(uid, 'hit');
-          addFloatingText(`-${dmg}`, 'text-red-500', undefined, 'enemy');
+          addFloatingText(`-${dmg}`, 'text-red-500', heartIcon(), 'enemy');
         });
         setScreenShake(true);
         setTimeout(() => setScreenShake(false), 300);

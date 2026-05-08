@@ -177,7 +177,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
               chantShield: absorb.newShield,
             };
           });
-          addFloatingText(`-${totalTauntDmg}`, 'text-red-500', undefined, 'player');
+          addFloatingText(`-${totalTauntDmg}`, 'text-red-500', heartIcon(), 'player');
           addToast(`嘲讽反噬：全体敌人攻击造成${totalTauntDmg}伤害`, 'damage');
           playSound('enemy_skill');
         }, 400);

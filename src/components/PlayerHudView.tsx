@@ -60,7 +60,7 @@ export function PlayerHudView() {
               {renderFloatText(ft.text, ft.icon)}
             </motion.div>
           ) : (
-            <motion.div key={ft.id} initial={{ opacity: 0, y: 0 + ft.y, scale: 0.5 }} animate={{ opacity: [0, 1, 1, 0], y: -80 + ft.y, x: ft.x, scale: [0.5, 2.0, 1.8, 2.2] }} transition={{ duration: 1.8, times: [0, 0.1, 0.75, 1] }} className={`absolute z-50 font-bold text-xl pointer-events-none flex items-center gap-1 pixel-text-shadow ${ft.color}`} style={{ top: '-20px', left: '50%', marginLeft: '-20px' }}>
+            <motion.div key={ft.id} initial={{ opacity: 0, y: 0 + ft.y, scale: 0.5 }} animate={{ opacity: [0, 1, 1, 0], y: -80 + ft.y, x: ft.x, scale: [0.5, 1.4, 1.3, 1.5] }} transition={{ duration: 1.8, times: [0, 0.1, 0.75, 1] }} className={`absolute z-50 font-bold text-sm pointer-events-none flex items-center gap-1 pixel-text-shadow ${ft.color}`} style={{ top: '-20px', left: '50%', marginLeft: '-20px' }}>
               {renderFloatText(ft.text, ft.icon)}
             </motion.div>
           )

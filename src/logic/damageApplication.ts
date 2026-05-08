@@ -7,13 +7,14 @@
  * ARCH-F Round1 模块拆分
  */
 
-import type React from 'react';
+import React from 'react';
 import type { Die, GameState, Enemy, HandResult } from '../types/game';
 import type { ExpectedOutcomeResult } from './expectedOutcomeTypes';
 import type { EnemyQuotes } from '../config/enemies';
 import { getDiceDef } from '../data/dice';
 import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
+import { PixelHeart, PixelBloodDrop } from '../components/PixelIcons';
 
 // ============================================================
 // Context 接口
@@ -92,14 +93,14 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
           const absorbed = Math.min(e.armor, outcome.damage);
           const hpDamage = Math.max(0, outcome.damage - absorbed);
           if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', undefined, 'enemy');
-          if (hpDamage > 0) addFloatingText(`-${hpDamage}`, 'text-red-500', undefined, 'enemy');
+          if (hpDamage > 0) addFloatingText(`-${hpDamage}`, 'text-red-500', React.createElement(PixelHeart, { size: 1.3 }), 'enemy');
         }, idx * 150);
       });
     } else {
       const absorbed = Math.min(targetEnemy.armor, outcome.damage);
       const hpDamage = Math.max(0, outcome.damage - absorbed);
       if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', undefined, 'enemy');
-      if (hpDamage > 0) setTimeout(() => addFloatingText(`-${hpDamage}`, 'text-red-500', undefined, 'enemy'), absorbed > 0 ? 150 : 0);
+      if (hpDamage > 0) setTimeout(() => addFloatingText(`-${hpDamage}`, 'text-red-500', React.createElement(PixelHeart, { size: 1.3 }), 'enemy'), absorbed > 0 ? 150 : 0);
     }
   }
 
@@ -113,7 +114,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
   if (outcome.heal > 0) {
     setHpGained(true);
     playSound('heal');
-    addFloatingText(`+${outcome.heal}`, 'text-emerald-500', undefined, 'player');
+    addFloatingText(`+${outcome.heal}`, 'text-emerald-500', React.createElement(PixelHeart, { size: 1.3 }), 'player');
     setTimeout(() => setHpGained(false), 500);
   }
   
