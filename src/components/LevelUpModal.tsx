@@ -194,8 +194,9 @@ export const LevelUpModal: React.FC = () => {
                     <div className="flex flex-col gap-1 flex-1 min-w-0">
                       <div className="flex items-center">
                         <span
-                          className="font-mono font-black pixel-text-shadow inline-block"
+                          className="font-mono font-black inline-block"
                           style={{
+                            // [PIXEL-REDO v3 2026-05-08] 去掉 pixel-text-shadow，深色字+浅色底在 9px 字号下阴影会撕边产生重影
                             fontSize: 9,
                             color: '#0a0908',
                             background: meta.color,
@@ -205,6 +206,7 @@ export const LevelUpModal: React.FC = () => {
                             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
                             borderRadius: 0,
                             lineHeight: 1,
+                            textShadow: 'none',
                           }}
                         >
                           {meta.label}

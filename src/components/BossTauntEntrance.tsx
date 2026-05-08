@@ -219,7 +219,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
                   letterSpacing: '2px',
                 }}
               >
-                {phase === 'talk2' ? '点击关闭 ▶' : '点击继续 ▶'}
+                {phase === 'talk2' ? '▶ 点击关闭 ◀' : '▶ 点击继续 ◀'}
               </motion.div>
             )}
           </AnimatePresence>
