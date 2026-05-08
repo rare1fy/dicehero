@@ -59,6 +59,7 @@ export function buildBattleGameState(
     isEnemyTurn: false,
     instakillChallenge: battleChallenge,
     instakillCompleted: false,
+    instakillAidType: null,
     playsThisWave: 0,
     rerollsThisWave: 0,
     boomerangFreeReroll: 0,

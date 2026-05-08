@@ -9,7 +9,7 @@
 import React from 'react';
 import type { Enemy, GameState, StatusEffect } from '../types/game';
 import { PRIEST_CONFIG, CASTER_CONFIG } from '../config';
-import { PixelHeart } from '../components/PixelIcons';
+import { PixelHeart, PixelShield } from '../components/PixelIcons';
 
 // === 状态辅助 ===
 
@@ -142,7 +142,7 @@ export function executePriestSkill(
         armor: target.armor + armorVal,
       });
       result.logs.push(`${e.name} 为 ${target.name} 施加了护甲祝福（+${armorVal}护甲）！`);
-      result.floats.push({ text: `护甲+${armorVal}`, color: 'text-cyan-400', target: 'enemy' });
+      result.floats.push({ text: `护甲+${armorVal}`, color: 'text-cyan-400', target: 'enemy', icon: React.createElement(PixelShield, { size: 1.3 }) });
     }
   } else {
     const debuffRoll = Math.random();

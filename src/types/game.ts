@@ -131,6 +131,9 @@ export interface GameState {
   lifefurnaceCounter?: number;         // 生命熔炉：出牌计数器（每N次才触发）
   instakillChallenge?: InstakillChallenge | null; // 一击必杀挑战条件
   instakillCompleted?: boolean;        // 是否已达成一击必杀
+  /** 本次挑战触发的援助类型（用于完成后 UI 只显示这一条）。
+   *   1=百分比伤害 2=血量上限压制 3=DOT大礼包 4=永久+1手牌上限/+50%伤害 */
+  instakillAidType?: 1 | 2 | 3 | 4 | null;
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）
   rerollsThisWave?: number;            // 本波重投次数（挑战追踪用）
   tempDrawCountBonus?: number;         // 洞察弱点临时骰子上限加成（战斗结束清除）

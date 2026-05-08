@@ -15,7 +15,7 @@
 
 import type { Enemy, GameState, Die, Relic } from '../types/game';
 import * as ReactNS from 'react';
-import { PixelArcaneShield, PixelHeart } from '../components/PixelIcons';
+import { PixelArcaneShield, PixelHeart, PixelShield } from '../components/PixelIcons';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
 import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
@@ -31,6 +31,8 @@ import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config'
 const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 1.5 });
 /** 玩家 HP 增减飘字用的像素爱心 icon */
 const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.3 });
+/** 护甲吸收/获得飘字的盾牌 icon */
+const shieldIcon = () => ReactNS.createElement(PixelShield, { size: 1.3 });
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
 // === EnemyAI 回调接口 ===
@@ -315,7 +317,7 @@ export async function executeEnemyTurn(
       const hpLost = prev.hp - newHp;
 
       if (absorb.absorbedByShield > 0) cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
-      if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
+      if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', shieldIcon(), 'player');
       if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', heartIcon(), 'player');
       if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
 
@@ -374,7 +376,7 @@ export async function executeEnemyTurn(
         const hpLost = prev.hp - newHp;
 
         if (absorb2.absorbedByShield > 0) cb.addFloatingText(`-${absorb2.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
-        if (absorb2.absorbedByArmor > 0) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', undefined, 'player');
+        if (absorb2.absorbedByArmor > 0) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', shieldIcon(), 'player');
         if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', heartIcon(), 'player');
 
         if (newHp <= 0 && prev.hp > 0) {
@@ -402,7 +404,7 @@ export async function executeEnemyTurn(
     if (dr.triggered) {
       cb.setGame(prev => ({ ...prev, ...(dr.gameUpdates.ownedDice ? { ownedDice: dr.gameUpdates.ownedDice!, diceBag: dr.gameUpdates.diceBag! } : {}) }));
       for (const log of dr.logs) cb.addLog(log);
-      for (const ft of dr.floats) cb.addFloatingText(ft.text, ft.color, undefined, ft.target as 'player' | 'enemy');
+      for (const ft of dr.floats) cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
       if (dr.sound) cb.playSound(dr.sound);
       await new Promise(r => setTimeout(r, 400));
     }
@@ -415,7 +417,7 @@ export async function executeEnemyTurn(
     if (ar.triggered) {
       cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? { ...en, armor: en.armor + ar.armorVal } : en));
       cb.addLog(ar.log);
-      cb.addFloatingText(ar.float.text, ar.float.color, undefined, ar.float.target as 'player' | 'enemy');
+      cb.addFloatingText(ar.float.text, ar.float.color, ar.float.icon, ar.float.target as 'player' | 'enemy');
       cb.playSound(ar.sound);
       await new Promise(r => setTimeout(r, 300));
     }

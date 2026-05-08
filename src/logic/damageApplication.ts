@@ -14,7 +14,7 @@ import type { EnemyQuotes } from '../config/enemies';
 import { getDiceDef } from '../data/dice';
 import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
-import { PixelHeart, PixelBloodDrop } from '../components/PixelIcons';
+import { PixelHeart, PixelShield } from '../components/PixelIcons';
 
 // ============================================================
 // Context 接口
@@ -92,14 +92,14 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         setTimeout(() => {
           const absorbed = Math.min(e.armor, outcome.damage);
           const hpDamage = Math.max(0, outcome.damage - absorbed);
-          if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', undefined, 'enemy');
+          if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', React.createElement(PixelShield, { size: 1.3 }), 'enemy');
           if (hpDamage > 0) addFloatingText(`-${hpDamage}`, 'text-red-500', React.createElement(PixelHeart, { size: 1.3 }), 'enemy');
         }, idx * 150);
       });
     } else {
       const absorbed = Math.min(targetEnemy.armor, outcome.damage);
       const hpDamage = Math.max(0, outcome.damage - absorbed);
-      if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', undefined, 'enemy');
+      if (absorbed > 0) addFloatingText(`-${absorbed}`, 'text-blue-400', React.createElement(PixelShield, { size: 1.3 }), 'enemy');
       if (hpDamage > 0) setTimeout(() => addFloatingText(`-${hpDamage}`, 'text-red-500', React.createElement(PixelHeart, { size: 1.3 }), 'enemy'), absorbed > 0 ? 150 : 0);
     }
   }
@@ -108,7 +108,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
   if (outcome.armor > 0) {
     setArmorGained(true);
     playSound('armor');
-    addFloatingText(`+${outcome.armor}`, 'text-blue-400', undefined, 'player');
+    addFloatingText(`+${outcome.armor}`, 'text-blue-400', React.createElement(PixelShield, { size: 1.3 }), 'player');
     setTimeout(() => setArmorGained(false), 500);
   }
   if (outcome.heal > 0) {

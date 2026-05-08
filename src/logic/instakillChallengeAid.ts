@@ -24,9 +24,6 @@
 
 import type { PostPlayContext } from './postPlayEffects';
 import React from 'react';
-import { drawFromBag } from '../data/diceBag';
-import { applyDiceSpecialEffects } from './diceEffects';
-import { hasLimitBreaker } from '../engine/relicQueries';
 import { PixelDice, PixelHeart } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
 
@@ -44,7 +41,7 @@ const heartIcon = () => React.createElement(PixelHeart, { size: 1.3 });
 export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
   const {
     gameRef,
-    setGame, setEnemies, setDice,
+    setGame, setEnemies,
     addFloatingText, addToast, addLog,
     playSound, setScreenShake, setEnemyEffectForUid,
   } = ctx;
@@ -65,6 +62,9 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
   const isBoss = currentNode?.type === 'boss';
 
   const aidRoll = Math.random();
+  // 决定援助类型（1~4），用于 UI 详情弹窗只显示本次命中的那一条
+  const aidType: 1 | 2 | 3 | 4 = aidRoll < 0.25 ? 1 : aidRoll < 0.5 ? 2 : aidRoll < 0.75 ? 3 : 4;
+  setGame(prev => ({ ...prev, instakillAidType: aidType }));
 
   // [Bug-FIX] 统一延迟执行器：执行前校验 phase，避免在战斗结束/波次切换期间修改 enemies
   const scheduleAidEffect = (delay: number, fn: () => void) => {
@@ -159,26 +159,32 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
       }, 0);
     });
   } else {
-    // 效果4：立刻补抽1颗骰子
-    addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-    addToast(`◆ 洞察弱点！立刻补抽1颗骰子！`, 'buff');
-    addLog(`洞察弱点达成！立刻补抽1颗骰子`);
-    scheduleAidEffect(800, () => {
-      const latest = gameRef.current;
-      const { drawn, newBag, newDiscard } = drawFromBag(latest.diceBag, latest.discardPile, 1);
-      if (drawn.length > 0) {
-        setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
-        const newDie = {
-          ...drawn[0],
-          id: Date.now() + 9000,
-          selected: false, spent: false, rolling: false, justAdded: true, isBonusDraw: true,
-        };
-        const processed = applyDiceSpecialEffects([newDie], { hasLimitBreaker: hasLimitBreaker(latest.relics), lockedElement: latest.lockedElement });
-        setDice(prev => [...prev, ...processed.map(d => ({ ...d, justAdded: true }))]);
-        setTimeout(() => setDice(pd => pd.map(d => d.justAdded ? { ...d, justAdded: false } : d)), 600);
-        addFloatingText(`援助: +1`, REWARD_COLOR, diceIcon(), 'player');
+    // 效果4：本局永久 +1 手牌上限；已达上限（drawCount >= 6）则改为 +50% 全局伤害倍率
+    const gNow = gameRef.current;
+    const atCap = (gNow.drawCount || 0) >= 6;
+    if (atCap) {
+      addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+      addToast(`◆ 洞察弱点！本局永久获得 +50% 伤害倍率`, 'buff');
+      addLog(`洞察弱点达成！本局永久伤害倍率 +50%`);
+      scheduleAidEffect(800, () => {
+        setGame(prev => ({
+          ...prev,
+          levelDamageMultBonus: (prev.levelDamageMultBonus || 0) + 0.5,
+        }));
+        addFloatingText(`伤害 +50%`, REWARD_COLOR, undefined, 'player');
+      });
+    } else {
+      addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+      addToast(`◆ 洞察弱点！本局永久 +1 手牌上限`, 'buff');
+      addLog(`洞察弱点达成！本局永久 +1 手牌上限`);
+      scheduleAidEffect(800, () => {
+        setGame(prev => ({
+          ...prev,
+          drawCount: Math.min(6, (prev.drawCount || 3) + 1),
+        }));
+        addFloatingText(`手牌上限 +1`, REWARD_COLOR, diceIcon(), 'player');
         emitReward('dice', 1);
-      }
-    });
+      });
+    }
   }
 }
