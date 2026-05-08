@@ -30,7 +30,7 @@ export interface SettlementData {
 
 export type SettlementPhase = null | 'hand' | 'dice' | 'mult' | 'effects' | 'bounce' | 'damage';
 
-export type EnemyEffectType = 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | 'hit' | 'debuff' | null;
+export type EnemyEffectType = 'attack' | 'defend' | 'skill' | 'shake' | 'death' | 'speaking' | 'boss_entrance' | 'boss_low_hp' | 'boss_death' | 'hit' | 'debuff' | null;
 
 export type PlayerEffectType = 'attack' | 'defend' | 'flash' | 'death' | null;
 

@@ -157,7 +157,18 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         });
       }
       if (newHp <= 0) {
-        setEnemyEffectForUid(e.uid, 'death'); playSound('enemy_death');
+        // [BOSS-DEATH-RITUAL 2026-05-08] AOE 命中 Boss 同样走仪式演出（独立完整动画）
+        const isBossAoe = typeof e.configId === 'string' && e.configId.startsWith('boss_');
+        if (isBossAoe) {
+          setEnemyEffectForUid(e.uid, 'boss_death');
+          playSound('enemy_death');
+          playSound('boss_laugh');
+          const dqB = getEnemyQuotes(e.configId);
+          const dlB = pickQuote(dqB?.death);
+          if (dlB) showEnemyQuote(e.uid, dlB, ANIMATION_TIMING.bossDeathRitualDuration);
+        } else {
+          setEnemyEffectForUid(e.uid, 'death'); playSound('enemy_death');
+        }
       } else {
         setEnemyEffectForUid(e.uid, 'hit');
         setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
@@ -213,26 +224,41 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
     setScreenShake(true);
     setTimeout(() => setScreenShake(false), 200);
     if (finalEnemyHp <= 0) {
-      setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death');
+      // [BOSS-DEATH-RITUAL 2026-05-08] Boss 专属死亡仪式：先放大金光 1500ms，再进入普通消散
+      const isBoss = typeof targetEnemy.configId === 'string' && targetEnemy.configId.startsWith('boss_');
       const dq = getEnemyQuotes(targetEnemy.configId);
       const dl = pickQuote(dq?.death);
-      if (dl) showEnemyQuote(targetUid, dl, ANIMATION_TIMING.enemyDeathDuration + 200);
+      if (isBoss) {
+        // boss_death 自身是完整 2000ms 动画（怒吼→金光→消散），无需二次切 effect
+        setEnemyEffectForUid(targetUid, 'boss_death');
+        playSound('enemy_death');
+        playSound('boss_laugh');
+        if (dl) showEnemyQuote(targetUid, dl, ANIMATION_TIMING.bossDeathRitualDuration);
+      } else {
+        setEnemyEffectForUid(targetUid, 'death'); playSound('enemy_death');
+        if (dl) showEnemyQuote(targetUid, dl, ANIMATION_TIMING.enemyDeathDuration + 200);
+      }
     }
     // Enemy survived: hit flash effect first, then speaking if low HP
     if (finalEnemyHp > 0) {
       setEnemyEffectForUid(targetUid, 'hit');
-      // Check if will trigger low HP speaking
-      const willSpeakLowHp = finalEnemyHp / targetEnemy.maxHp < 0.3 && !enemyQuotedLowHp.has(targetUid);
+      // [BOSS-LOW-HP-ROAR 2026-05-08] Boss 专属低血怒吼：阈值 50%，普通敌人仍是 30%
+      const isBossTarget = typeof targetEnemy.configId === 'string' && targetEnemy.configId.startsWith('boss_');
+      const lowHpThreshold = isBossTarget ? 0.5 : 0.3;
+      const willSpeakLowHp = finalEnemyHp / targetEnemy.maxHp < lowHpThreshold && !enemyQuotedLowHp.has(targetUid);
       if (willSpeakLowHp) {
         const lqc = getEnemyQuotes(targetEnemy.configId);
         const ll = pickQuote(lqc?.lowHp);
         if (ll) {
           // Play hit for 400ms, then transition to speaking
           setTimeout(() => {
-            showEnemyQuote(targetUid, ll, 3000);
+            const speakDuration = isBossTarget ? ANIMATION_TIMING.bossLowHpDuration : 3000;
+            const effect: 'boss_low_hp' | 'speaking' = isBossTarget ? 'boss_low_hp' : 'speaking';
+            const clearDelay = isBossTarget ? ANIMATION_TIMING.bossLowHpDuration : ANIMATION_TIMING.speakingEffectDuration;
+            showEnemyQuote(targetUid, ll, speakDuration);
             playSound('enemy_speak');
-            setEnemyEffectForUid(targetUid, 'speaking');
-            setTimeout(() => setEnemyEffectForUid(targetUid, null), ANIMATION_TIMING.speakingEffectDuration);
+            setEnemyEffectForUid(targetUid, effect);
+            setTimeout(() => setEnemyEffectForUid(targetUid, null), clearDelay);
           }, 400);
           setEnemyQuotedLowHp(prev => new Set([...prev, targetUid]));
         } else {

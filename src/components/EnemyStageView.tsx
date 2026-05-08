@@ -270,8 +270,15 @@ export function EnemyStageView() {
             initial={{ scale: depthScale * 0.8, opacity: 0, y: depthY + 20 }}
             animate={effect === 'death'
               ? { scale: [1, 1.1, 0.95, 1.05, 1.2, 1.4, 0.5, 0], opacity: [1, 1, 1, 1, 0.9, 0.7, 0.3, 0], y: [0, -5, 0, -3, -10, -25, -35, 10], rotate: [0, -5, 5, -3, 8, -15, 30, 0], filter: ['brightness(1)', 'brightness(1)', 'brightness(1)', 'brightness(1.5)', 'brightness(2)', 'brightness(3)', 'brightness(5)', 'brightness(0)'] }
+              : effect === 'boss_death'
+              // [BOSS-DEATH-RITUAL] Boss 死亡完整仪式 2000ms：前半震颤金光（怒吼垂死），后半爆闪消散
+              //  keyframe 0-0.5: 放大+金光震颤（仪式感）；0.5-1: 缩小旋转+淡出（消散）
+              ? { scale: [1, 1.35, 1.3, 1.4, 1.45, 1.3, 0.7, 0], opacity: [1, 1, 1, 1, 1, 0.85, 0.4, 0], y: [0, -6, -4, -10, -8, -15, -30, 5], rotate: [0, -2, 3, -3, 2, -8, 25, 0], filter: ['brightness(1)', 'brightness(2.2)', 'brightness(2.5) hue-rotate(30deg)', 'brightness(3) hue-rotate(40deg)', 'brightness(3.5) hue-rotate(50deg)', 'brightness(4) hue-rotate(45deg)', 'brightness(5) hue-rotate(30deg)', 'brightness(0)'] }
               : effect === 'boss_entrance'
               ? { scale: [0.6, 1.4, 1.3, 1.35, 1.25, 1.3, 1.2, 1.25], y: [60, -15, -5, -12, 0, -8, 2, 0], opacity: [0, 1, 1, 1, 1, 1, 1, 1], rotate: [0, 0, -3, 3, -2, 2, -1, 0] }
+              : effect === 'boss_low_hp'
+              // [BOSS-LOW-HP-ROAR] Boss 怒吼：强烈抖动+放大 1.35 + 红光脉动 2000ms
+              ? { scale: [1, 1.3, 1.25, 1.35, 1.28, 1.33, 1.3, 1.32], x: [0, -4, 5, -5, 4, -3, 3, 0], rotate: [0, -2, 2, -3, 2, -1, 1, 0], filter: ['brightness(1)', 'brightness(1.8) hue-rotate(-20deg)', 'brightness(1.5) hue-rotate(-15deg)', 'brightness(2) hue-rotate(-25deg)', 'brightness(1.6) hue-rotate(-18deg)', 'brightness(1.9) hue-rotate(-22deg)', 'brightness(1.7) hue-rotate(-20deg)', 'brightness(1.8) hue-rotate(-20deg)'] }
               : effect === 'speaking'
               ? { x: [0, -2, 2, -1.5, 1.5, -1, 1, 0], scale: [1, 1.02, 0.98, 1.01, 0.99, 1] }
               : effect === 'attack'
@@ -286,7 +293,7 @@ export function EnemyStageView() {
               ? { x: [0, -4, 6, -3, 0], scale: [1, 0.97, 1.01, 0.99, 1] }
               : { scale: depthScale, y: depthY, opacity: depthOpacity }
             }
-            transition={{ duration: effect === 'death' ? ANIMATION_TIMING.enemyDeathDuration / 1000 : effect === 'boss_entrance' ? ANIMATION_TIMING.bossEntranceDuration / 1000 : effect === 'speaking' ? ANIMATION_TIMING.speakingEffectDuration / 1000 : 0.4, ease: effect === 'death' ? [0.25, 0.1, 0.25, 1] : 'easeOut' }}
+            transition={{ duration: effect === 'death' ? ANIMATION_TIMING.enemyDeathDuration / 1000 : effect === 'boss_death' ? ANIMATION_TIMING.bossDeathRitualDuration / 1000 : effect === 'boss_entrance' ? ANIMATION_TIMING.bossEntranceDuration / 1000 : effect === 'boss_low_hp' ? ANIMATION_TIMING.bossLowHpDuration / 1000 : effect === 'speaking' ? ANIMATION_TIMING.speakingEffectDuration / 1000 : 0.4, ease: effect === 'death' ? [0.25, 0.1, 0.25, 1] : 'easeOut' }}
             className={`relative cursor-pointer group flex flex-col items-center`}
             style={{ zIndex: isTarget ? 10 : depthZ, filter: `brightness(${depthBrightness})` }}
           >

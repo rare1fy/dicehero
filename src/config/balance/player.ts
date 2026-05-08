@@ -138,4 +138,8 @@ export const ANIMATION_TIMING = {
   speakingEffectDuration: 400,
   /** 战斗胜利后延迟清理敌人（确保死亡动画播完，≥ enemyDeathDuration） */
   victoryEnemyCleanupDelay: 2200,
+  /** Boss 低血怒吼演出持续（Boss 血量首次≤50% 触发） */
+  bossLowHpDuration: 2000,
+  /** Boss 死亡仪式完整时长（包含仪式+消散，独立完整动画，必须 ≤ enemyDeathCleanupDelay 2200） */
+  bossDeathRitualDuration: 2000,
 } as const;
