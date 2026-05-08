@@ -96,5 +96,6 @@ export function createInitialGameState(classId?: ClassId): GameState {
     levelSoulBonus: 0,
     levelXpBonus: 0,
     pendingLevelUps: [],
+    bossPreviewSeen: [],
   };
 }

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BossPreviewBanner } from './BossPreviewBanner';
 import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
 import { PixelHeart, PixelRefresh } from './PixelIcons';
@@ -29,7 +30,7 @@ const FOG_COLORS = [
 ];
 
 export const MapScreen: React.FC = () => {
-  const { game, startNode } = useGameContext();
+  const { game, setGame, startNode } = useGameContext();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const currentNode = game.map.find(n => n.id === game.currentNodeId);
   const reachableNodes = !game.currentNodeId
@@ -44,6 +45,29 @@ export const MapScreen: React.FC = () => {
     svgWidth, svgHeight, chapterIdx,
     mapBgClass, headerGradient, particleClass, fogColor, particlesFixed,
   } = useMapLayout(game.map, game.chapter || 1);
+
+  // [BOSS-PREVIEW 2026-05-08] 路上预告状态（需在 maxDepth/currentNode 声明后）
+  const [bossPreview, setBossPreview] = useState<{ visible: boolean; bossName: string; chapter: number }>({
+    visible: false, bossName: '', chapter: 1,
+  });
+
+  useEffect(() => {
+    if (!currentNode) return;
+    const chIdx = (game.chapter || 1) - 1;
+    const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
+    const atPenultimate = currentNode.depth === maxDepth - 1 && currentNode.completed;
+    const alreadySeen = (game.bossPreviewSeen || []).includes(game.chapter || 1);
+    if (atPenultimate && !alreadySeen) {
+      setGame(prev => ({
+        ...prev,
+        bossPreviewSeen: [...(prev.bossPreviewSeen || []), prev.chapter || 1],
+      }));
+      const t = window.setTimeout(() => {
+        setBossPreview({ visible: true, bossName: bossPair[1], chapter: game.chapter || 1 });
+      }, 600);
+      return () => window.clearTimeout(t);
+    }
+  }, [game.currentNodeId, game.chapter]);
 
   useEffect(() => {
     const scroll = () => {
@@ -128,6 +152,13 @@ export const MapScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* [BOSS-PREVIEW 2026-05-08] 路上预告 */}
+      <BossPreviewBanner
+        visible={bossPreview.visible}
+        bossName={bossPreview.bossName}
+        chapter={bossPreview.chapter}
+        onDone={() => setBossPreview(p => ({ ...p, visible: false }))}
+      />
     </div>
   );
 };

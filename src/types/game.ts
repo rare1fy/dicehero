@@ -155,6 +155,7 @@ export interface GameState {
   levelSoulBonus?: number;             // 升级累计魂晶倍率加成
   levelXpBonus?: number;               // 升级累计经验值加成
   pendingLevelUps?: number[];          // 待领奖的升级级数队列（FIFO）
+  bossPreviewSeen?: number[];          // 已触发过路上预告的章节列表（防重复）
 }
 
 // ============================================================
