@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SoulShardLayer.tsx — 魂晶碎片全屏飞行层
  *
  * 动画时序（2026-05-08 刘叔修订）：
@@ -82,22 +82,26 @@ export const SoulShardLayer: React.FC = () => {
         if (!start || !end) return;
 
         const n = countShardsForAmount(ev.amount);
-        const batch: FlyingSoulShard[] = [];
-        for (let i = 0; i < n; i++) {
-          seqRef.current += 1;
-          const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.6;
-          const r = 20 + Math.random() * 18;
-          batch.push({
-            id: 'soul-' + ev.at + '-' + seqRef.current,
-            startX: start.x,
-            startY: start.y,
-            scatterX: start.x + Math.cos(ang) * r,
-            scatterY: start.y + Math.sin(ang) * r + 8,  // 下坠感
-            endX: end.x,
-            endY: end.y,
-            delay: i * STAGGER_MS,
-          });
-        }
+          const batch: FlyingSoulShard[] = [];
+          for (let i = 0; i < n; i++) {
+            seqRef.current += 1;
+            // [SCATTER-FIX 2026-05-08] 水平扇形铺开，半径大幅拉开
+            const baseAng = Math.PI + (Math.PI * (i + 0.5)) / n;
+            const ang = baseAng + (Math.random() - 0.5) * 0.5;
+            const r = 50 + Math.random() * 34;
+            const dx = Math.cos(ang) * r * 1.9;
+            const dy = Math.sin(ang) * r * 0.65 + 12;
+            batch.push({
+              id: 'soul-' + ev.at + '-' + seqRef.current,
+              startX: start.x,
+              startY: start.y,
+              scatterX: start.x + dx,
+              scatterY: start.y + dy,
+              endX: end.x,
+              endY: end.y,
+              delay: i * STAGGER_MS,
+            });
+          }
         setShards(prev => [...prev, ...batch]);
 
         window.setTimeout(() => { playSoulShardSound(); }, DEATH_DELAY_MS + 30);

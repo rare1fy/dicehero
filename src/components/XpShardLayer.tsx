@@ -1,4 +1,4 @@
-/**
+﻿/**
  * XpShardLayer.tsx — 经验碎片全屏飞行层
  *
  * 动画时序（2026-05-08 刘叔修订）：
@@ -82,23 +82,26 @@ export const XpShardLayer: React.FC = () => {
         if (!start || !end) return;
 
         const n = countShardsForXp(ev.xp);
-        const batch: FlyingShard[] = [];
-        for (let i = 0; i < n; i++) {
-          seqRef.current += 1;
-          // 散落方向：均匀扇出 + 随机偏转
-          const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.6;
-          const r = 18 + Math.random() * 16; // 散落半径 18-34px
-          batch.push({
-            id: 'shard-' + ev.at + '-' + seqRef.current,
-            startX: start.x,
-            startY: start.y,
-            scatterX: start.x + Math.cos(ang) * r,
-            scatterY: start.y + Math.sin(ang) * r + 6,  // 微微下坠
-            endX: end.x,
-            endY: end.y,
-            delay: i * STAGGER_MS,
-          });
-        }
+          const batch: FlyingShard[] = [];
+          for (let i = 0; i < n; i++) {
+            seqRef.current += 1;
+            // [SCATTER-FIX 2026-05-08] 水平扇形铺开，半径大幅拉开，避免堆一起
+            const baseAng = Math.PI + (Math.PI * (i + 0.5)) / n; // 上半圆扇形
+            const ang = baseAng + (Math.random() - 0.5) * 0.5;
+            const r = 45 + Math.random() * 30; // 半径 45-75px
+            const dx = Math.cos(ang) * r * 1.8; // 水平再拉宽
+            const dy = Math.sin(ang) * r * 0.6 + 10;
+            batch.push({
+              id: 'shard-' + ev.at + '-' + seqRef.current,
+              startX: start.x,
+              startY: start.y,
+              scatterX: start.x + dx,
+              scatterY: start.y + dy,
+              endX: end.x,
+              endY: end.y,
+              delay: i * STAGGER_MS,
+            });
+          }
         setShards(prev => [...prev, ...batch]);
 
         // 散落开始时播放音效（整批一次，不用每颗都响）

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * relicsCore.ts - 遗物定义：基础打工 / 倍率起飞 / 经济续航
  *
  * 从 relics.ts 拆分而来，包含：
@@ -298,7 +298,7 @@ export const painAmplifierRelic: Relic = {
   rarity: 'rare',
   trigger: 'on_play',
   effect: (ctx) => ({
-    damage: Math.floor((ctx.hpLostThisBattle || 0) * 0.15),
+    damage: Math.ceil((ctx.hpLostThisBattle || 0) * 0.15),
   }),
 };
 

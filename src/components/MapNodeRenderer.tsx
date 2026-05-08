@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MapNodeRenderer.tsx — 地图节点渲染子组件
  * ARCH-H: 从 MapScreen.tsx 拆分出的独立子组件
  *
@@ -104,11 +104,19 @@ const BossNode: React.FC<NodeRendererProps> = ({
               : '0 0 6px rgba(160,80,224,0.2)',
         }}
       >
-        {isFinalBoss ? (
-          <div style={{ transform: 'scale(0.85)' }}><PixelSprite name={bossName} size={3} /></div>
-        ) : (
-          <PixelSkull size={3} />
-        )}
+        {/* [ICON-LOOP 2026-05-08] Boss 图标常驻循环动画：上下浮动 + 轻微缩放脉动 */}
+        <motion.div
+          animate={{ y: [0, -3, 0, 2, 0], scale: [1, 1.05, 1, 0.98, 1] }}
+          transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+          className="relative z-10"
+          style={{ filter: isFinalBoss ? 'drop-shadow(0 0 6px rgba(255,80,80,0.7))' : 'drop-shadow(0 0 6px rgba(200,120,255,0.6))' }}
+        >
+          {isFinalBoss ? (
+            <div style={{ transform: 'scale(0.85)' }}><PixelSprite name={bossName} size={3} /></div>
+          ) : (
+            <PixelSkull size={3} />
+          )}
+        </motion.div>
 
         {/* [BOSS-NODE-EMPHASIS 2026-05-08] 常驻脉动边框：不管是否可达，让 Boss 节点永远吸引目光 */}
         <motion.div
@@ -196,7 +204,19 @@ const NormalNode: React.FC<Omit<NodeRendererProps, 'maxDepth' | 'chapterIdx'>> =
             style={{ borderRadius: '2px', boxShadow: `inset 0 0 14px ${config.color}40` }}
           />
         )}
-        <span className="relative z-10">{config.icon}</span>
+        {/* [ICON-LOOP 2026-05-08] 精英节点图标摇晃动画；其他节点不变 */}
+        {node.type === 'elite' ? (
+          <motion.span
+            className="relative z-10"
+            animate={{ rotate: [-5, 5, -5, 3, -3, 0], scale: [1, 1.1, 1, 1.05, 1] }}
+            transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+            style={{ display: 'inline-block', filter: 'drop-shadow(0 0 4px rgba(220,60,60,0.75))' }}
+          >
+            {config.icon}
+          </motion.span>
+        ) : (
+          <span className="relative z-10">{config.icon}</span>
+        )}
       </div>
       <span className={`text-[8px] font-bold tracking-wider leading-none pixel-text-shadow whitespace-nowrap
         ${isCurrent ? 'text-[var(--pixel-gold)]' : isReachable ? 'opacity-90' : 'text-[var(--dungeon-text-dim)] opacity-75'}

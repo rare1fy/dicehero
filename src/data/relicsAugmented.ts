@@ -1,4 +1,4 @@
-/**
+﻿/**
  * relicsAugmented.ts - 遗物定义：增幅转化遗物
  *
  * 从 relics.ts 拆分而来，包含：
@@ -138,7 +138,7 @@ export const fullHouseBlastRelic: Relic = {
   trigger: 'on_play',
   effect: (ctx) => {
     if (ctx.handType === '葫芦') {
-      return { damage: Math.floor((ctx.pointSum || 0) * 2.5), armor: 10 };
+      return { damage: Math.ceil((ctx.pointSum || 0) * 2.5), armor: 10 };
     }
     return {};
   },
@@ -156,7 +156,7 @@ export const chainLightningRelic: Relic = {
     const ht = ctx.handType || '';
     if (ht.includes('顺')) {
       return {
-        damage: Math.floor((ctx.pointSum || 0) * 1.5),
+        damage: Math.ceil((ctx.pointSum || 0) * 1.5),
         statusEffects: [{ type: 'burn' as const, value: 2 }],
       };
     }
@@ -195,7 +195,7 @@ export const soulHarvestRelic: Relic = {
     const ht = ctx.handType || '';
     if (ht === '三条' || ht === '四条' || ht === '五条') {
       const sum = ctx.pointSum || 0;
-      return { damage: Math.floor(sum * 2), heal: Math.floor(sum * 0.5) };
+      return { damage: Math.ceil(sum * 2), heal: Math.floor(sum * 0.5) };
     }
     return {};
   },
@@ -230,7 +230,7 @@ export const basicInstinctRelic: Relic = {
   rarity: 'common',
   trigger: 'on_play',
   effect: (ctx) => ({
-    damage: ctx.handType === '普通攻击' ? Math.floor((ctx.pointSum || 0) * 1.5) : 0,
+    damage: ctx.handType === '普通攻击' ? Math.ceil((ctx.pointSum || 0) * 1.5) : 0,
   }),
 };
 

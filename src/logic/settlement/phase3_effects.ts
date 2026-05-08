@@ -1,4 +1,4 @@
-/**
+﻿/**
  * settlement/phase3_effects.ts — Phase 3 特殊效果触发 + 棱镜聚焦 + 盗贼连击终结
  *
  * ARCH-17 从 settlementAnimation.ts L267-L428 拆出
@@ -202,7 +202,7 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
 
   // === 盗贼连击终结倍率：同牌型+25% ===
   if (comboFinisherBonus > 0) {
-    outcome.damage = Math.floor(outcome.damage * (1 + comboFinisherBonus));
+    outcome.damage = Math.ceil(outcome.damage * (1 + comboFinisherBonus)); // [CEIL-FIX 2026-05-08] 统一向上取整
     addFloatingText(`连击终结! +${Math.round(comboFinisherBonus * 100)}%`, 'text-yellow-300', undefined, 'player');
   }
 }
