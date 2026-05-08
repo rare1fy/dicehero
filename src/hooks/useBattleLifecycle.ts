@@ -158,29 +158,17 @@ export function useBattleLifecycle(state: BattleState) {
 
     // 非 Boss 节点在这里 fadeOut（Boss 节点在演出前已经 fadeOut 过了）
     if (node.type !== 'boss') {
-      // [BOSS-ROAM 2026-05-08] Boss路过嘲讽演出：Boss前一层战斗开始时插入
-      // 触发层：中Boss(depth 7)前一层=depth 6，终Boss(depth 14)前一层=depth 13
-      const bossFrontDepths: number[] = [];
-      Object.entries(MAP_CONFIG.fixedLayers).forEach(([k, v]) => {
-        if ((v as { type?: string }).type === 'boss') bossFrontDepths.push(Number(k) - 1);
-      });
-      const isPreBossLayer = bossFrontDepths.includes(node.depth);
-      const roamKey = `${game.chapter}-${node.depth}`;
+      // [BOSS-ROAM 2026-05-08] Boss路过嘲讽演出：章节第一场战斗（depth 0）开始时插入
+      // 触发时机：每章第一场战斗，Boss亮个相说句垃圾话就退场
+      const roamKey = `${game.chapter}-intro`;
       const alreadyRoamed = (game.bossRoamSeen || []).includes(roamKey);
-      if (isPreBossLayer && !alreadyRoamed) {
+      if (node.depth === 0 && !alreadyRoamed) {
         // 标记已触发，防重复
         setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
-        // 找当前章节对应的Boss（中Boss/终Boss）
-        // depth 6 => 中Boss [0]，depth 13 => 终Boss [1]
+        // 章节开场亮相：取当前章节终Boss（最终大Boss更有压迫感）
         const chIdx = Math.max(0, (game.chapter || 1) - 1);
         const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
-        // 判断是中Boss层还是终Boss层
-        const bossDepths = Object.entries(MAP_CONFIG.fixedLayers)
-          .filter(([, v]) => (v as { type?: string }).type === 'boss')
-          .map(([k]) => Number(k))
-          .sort((a, b) => a - b);
-        const isMidBoss = bossDepths.length > 0 && node.depth === bossDepths[0] - 1;
-        const bossName = isMidBoss ? bossPair[0] : bossPair[1];
+        const bossName = bossPair[1] || bossPair[0];
         // 拿台词：从 BOSS_ENEMIES 取该Boss的enter台词
         const bossCfg = BOSS_ENEMIES.find(b => b.name === bossName && b.chapter === (game.chapter || 1));
         const enterLines = bossCfg?.quotes?.enter || ['……', '好好享受你最后的战斗吧。'];
