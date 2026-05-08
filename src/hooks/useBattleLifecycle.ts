@@ -32,6 +32,7 @@ export function useBattleLifecycle(state: BattleState) {
     targetEnemyUid, targetEnemy,
     battleTransition, setBattleTransition,
     bossEntrance, setBossEntrance,
+    setBossTaunt,
     gmPendingVictory, setGmPendingVictory,
     gmPendingNextWave, setGmPendingNextWave,
     setDiceDrawAnim, setShuffleAnimating,
@@ -75,8 +76,11 @@ export function useBattleLifecycle(state: BattleState) {
     setEnemyEffects({}); setDyingEnemies(new Set());
     setEnemyQuotes({});
     setEnemyQuotedLowHp(new Set());
+    // [BOSS-TAUNT 2026-05-08] Boss 战不走普通 enter 气泡（会被下面的 bossTaunt 短剧取代），避免重复
+    const isBossNode = node.type === 'boss';
     setTimeout(() => {
       firstWave.forEach((e, idx) => {
+        if (isBossNode && e.configId.startsWith('boss_')) return;
         const q = getEnemyQuotes(e.configId);
         const line = pickQuote(q?.enter);
         if (line) {
@@ -95,6 +99,18 @@ export function useBattleLifecycle(state: BattleState) {
       if (waves.length === 1) {
         const bossEnemy = firstWave[0];
         if (bossEnemy) {
+          // [BOSS-TAUNT 2026-05-08] ★ 第 1 步：Boss 挑衅短演出（不可跳过 ~2.4s）
+          //   本尊登场 + 两句挑衅台词 → 退场
+          //   然后再走原本的 BossEntrance 横幅 + 本尊效果
+          const bossQuotes = getEnemyQuotes(bossEnemy.configId);
+          const tauntLines = (bossQuotes?.enter || []).slice(0, 2);
+          setBossTaunt({ visible: true, name: bossEnemy.name, chapter: game.chapter, lines: tauntLines });
+          playSound('boss_laugh');
+          await new Promise(r => setTimeout(r, 2400));
+          setBossTaunt(prev => ({ ...prev, visible: false }));
+          await new Promise(r => setTimeout(r, 180));
+
+          // ★ 第 2 步：原本的 BossEntrance 横幅 + 本尊效果（保留原实现）
           setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter });
           await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
           setBossEntrance(prev => ({ ...prev, visible: false }));

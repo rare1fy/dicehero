@@ -96,6 +96,7 @@ export function buildBattleContext(
     showClassInfo, setShowClassInfo,
     battleTransition,
     bossEntrance,
+    bossTaunt,
     waveAnnouncement, setWaveAnnouncement,
     showWaveDetail, setShowWaveDetail,
     showChallengeDetail, setShowChallengeDetail,
@@ -172,6 +173,7 @@ export function buildBattleContext(
     // 转场/波次状态
     battleTransition,
     bossEntrance,
+    bossTaunt,
     waveAnnouncement,
     setWaveAnnouncement,
     showWaveDetail,

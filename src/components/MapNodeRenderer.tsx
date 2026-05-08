@@ -110,6 +110,20 @@ const BossNode: React.FC<NodeRendererProps> = ({
           <PixelSkull size={3} />
         )}
 
+        {/* [BOSS-NODE-EMPHASIS 2026-05-08] 常驻脉动边框：不管是否可达，让 Boss 节点永远吸引目光 */}
+        <motion.div
+          animate={{ opacity: [0.25, 0.7, 0.25], scale: [1.0, 1.05, 1.0] }}
+          transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+          className="absolute inset-[-4px] pointer-events-none"
+          style={{
+            borderRadius: '6px',
+            border: isFinalBoss ? '2px solid rgba(224,60,60,0.55)' : '2px solid rgba(160,80,224,0.5)',
+            boxShadow: isFinalBoss
+              ? '0 0 18px rgba(224,60,60,0.55), 0 0 32px rgba(224,60,60,0.2)'
+              : '0 0 14px rgba(160,80,224,0.5), 0 0 26px rgba(160,80,224,0.18)',
+          }}
+        />
+
         {isReachable && !isCurrent && !isCompleted && (
           <motion.div
             animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.08, 1] }}
@@ -160,6 +174,20 @@ const NormalNode: React.FC<Omit<NodeRendererProps, 'maxDepth' | 'chapterIdx'>> =
       `}
       style={{ color: config.color, borderColor: isCurrent ? undefined : isReachable ? config.color : undefined }}
       >
+        {/* [ELITE-NODE-EMPHASIS 2026-05-08] 精英节点常驻红色脉动边框，让玩家在地图上一眼辨识 */}
+        {node.type === 'elite' && (
+          <motion.div
+            animate={{ opacity: [0.3, 0.75, 0.3], scale: [1, 1.06, 1] }}
+            transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+            className="absolute inset-[-3px] pointer-events-none"
+            style={{
+              borderRadius: '4px',
+              border: '2px solid rgba(200,64,60,0.55)',
+              boxShadow: '0 0 12px rgba(200,64,60,0.55), 0 0 22px rgba(200,64,60,0.2)',
+            }}
+          />
+        )}
+
         {isReachable && !isCurrent && !isCompleted && (
           <motion.div
             animate={{ opacity: [0.2, 0.5, 0.2] }}

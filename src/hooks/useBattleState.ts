@@ -26,6 +26,8 @@ export function useBattleState() {
   const [showClassInfo, setShowClassInfo] = useState(false);
   const [battleTransition, setBattleTransition] = useState<'none' | 'fadeIn' | 'hold' | 'fadeOut'>('none');
   const [bossEntrance, setBossEntrance] = useState<{ visible: boolean; name: string; chapter: number }>({ visible: false, name: '', chapter: 1 });
+  // [BOSS-TAUNT 2026-05-08] 战斗开场挑衅短演出：Boss 本尊登场 + 两句挑衅台词，在 BossEntrance 横幅之前播放
+  const [bossTaunt, setBossTaunt] = useState<{ visible: boolean; name: string; chapter: number; lines: string[] }>({ visible: false, name: '', chapter: 1, lines: [] });
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());
 
   // ==================== GM 延迟触发状态 ====================
@@ -174,6 +176,7 @@ export function useBattleState() {
     showClassInfo, setShowClassInfo,
     battleTransition, setBattleTransition,
     bossEntrance, setBossEntrance,
+    bossTaunt, setBossTaunt,
     showTutorial, setShowTutorial,
 
     // GM 状态
