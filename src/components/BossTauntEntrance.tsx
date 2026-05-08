@@ -83,8 +83,6 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     phase === 'exit'     ? { duration: 0.36, ease: 'easeIn' as const } :
     { duration: 0.18 };
 
-  const bubbleOffsetY = 0; // [FIX 2026-05-08] 不再下移，Boss 不动气泡也不动
-
   const [tapHint, setTapHint] = useState(true);
   useEffect(() => {
     if (!showBubble) return;
@@ -97,133 +95,140 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   return (
     <AnimatePresence>
       {visible && phase !== 'idle' && (
-        <motion.div
-          key="boss-taunt-overlay"
-          style={{
-            // [FIX 2026-05-08] 改 fixed，让点击响应覆盖整个屏幕（包括玩家 UI 区），
-            // 避免点击落在骰盘/玩家面板上无法推进 talk2
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            pointerEvents: interactive ? 'all' : 'none',
-            // [FIX 2026-05-08] 锚定到屏幕上 1/3，避开玩家血条/骰盘/回合按钮等底部 UI
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            paddingTop: '22%',
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.15 } }}
-          onClick={handleTap}
-        >
-          <AnimatePresence mode="wait">
-            {showBubble && (
-              <motion.div
-                key={`bubble-${phase}`}
-                initial={{ opacity: 0, y: bubbleOffsetY - 8, scale: 0.85 }}
-                animate={{ opacity: 1, y: bubbleOffsetY, scale: 1 }}
-                exit={{ opacity: 0, y: bubbleOffsetY - 4, scale: 0.92 }}
-                transition={{ duration: 0.22 }}
-                style={{
-                  maxWidth: '240px',
-                  minWidth: '110px',
-                  padding: '10px 14px',
-                  marginBottom: '10px',
-                  background: 'rgba(30,18,0,0.96)',
-                  border: `2px solid ${glowColor}`,
-                  borderRadius: '3px',
-                  fontFamily: '"fusion-pixel", monospace',
-                  fontSize: '12px',
-                  lineHeight: 1.5,
-                  color: glowColor,
-                  textAlign: 'center' as const,
-                  wordBreak: 'break-word' as const,
-                  position: 'relative',
-                  pointerEvents: 'none',
-                }}
-              >
-                {currentLine}
-                <svg
-                  width="12" height="7" viewBox="0 0 12 7"
-                  style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)' }}
+        <>
+          {/* ── 场景层：Boss 精灵 + 气泡（贴地，和普通敌人同一高度）── */}
+          <motion.div
+            key="boss-taunt-scene"
+            style={{
+              // fixed 覆盖全屏，pointer-events 拦截点击推进台词
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              pointerEvents: interactive ? 'all' : 'none',
+              // [FIX v5] 靠底对齐，paddingBottom 约 38% 让 Boss 脚底落在战斗背景的"地面线"
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              paddingBottom: '38%',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            onClick={handleTap}
+          >
+            {/* 气泡：在 Boss 上方 */}
+            <AnimatePresence mode="wait">
+              {showBubble && (
+                <motion.div
+                  key={`bubble-${phase}`}
+                  initial={{ opacity: 0, y: 8, scale: 0.85 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.92 }}
+                  transition={{ duration: 0.22 }}
+                  style={{
+                    maxWidth: '240px',
+                    minWidth: '110px',
+                    padding: '10px 14px',
+                    marginBottom: '10px',
+                    background: 'rgba(30,18,0,0.96)',
+                    border: `2px solid ${glowColor}`,
+                    borderRadius: '3px',
+                    fontFamily: '"fusion-pixel", monospace',
+                    fontSize: '12px',
+                    lineHeight: 1.5,
+                    color: glowColor,
+                    textAlign: 'center' as const,
+                    wordBreak: 'break-word' as const,
+                    position: 'relative',
+                    pointerEvents: 'none',
+                  }}
                 >
-                  <polygon points="0,0 12,0 6,7" fill="rgba(30,18,0,0.96)" />
-                  <line x1="0" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
-                  <line x1="12" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
-                </svg>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  {currentLine}
+                  <svg
+                    width="12" height="7" viewBox="0 0 12 7"
+                    style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)' }}
+                  >
+                    <polygon points="0,0 12,0 6,7" fill="rgba(30,18,0,0.96)" />
+                    <line x1="0" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
+                    <line x1="12" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
+                  </svg>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          <motion.div
-            initial={{ y: -220, opacity: 0, scale: 0.35, x: 0, rotate: 0 }}
-            animate={spriteAnimate}
-            transition={spriteTransition}
-            style={{
-              filter:
-                phase === 'approach'
-                  ? `drop-shadow(0 0 22px ${glowColor}) drop-shadow(0 0 50px ${glowColor}b0)`
-                  : phase === 'enter' || phase === 'talk1' || phase === 'talk2'
-                    ? `drop-shadow(0 0 14px ${glowColor}a0) drop-shadow(0 0 30px ${glowColor}60)`
-                    : `drop-shadow(0 0 8px ${glowColor}80)`,
-              imageRendering: 'pixelated',
-              pointerEvents: 'none',
-            }}
-          >
-            <PixelSprite name={bossName} size={8} />
+            {/* Boss 精灵 */}
+            <motion.div
+              initial={{ y: -220, opacity: 0, scale: 0.35, x: 0, rotate: 0 }}
+              animate={spriteAnimate}
+              transition={spriteTransition}
+              style={{
+                filter:
+                  phase === 'approach'
+                    ? `drop-shadow(0 0 22px ${glowColor}) drop-shadow(0 0 50px ${glowColor}b0)`
+                    : phase === 'enter' || phase === 'talk1' || phase === 'talk2'
+                      ? `drop-shadow(0 0 14px ${glowColor}a0) drop-shadow(0 0 30px ${glowColor}60)`
+                      : `drop-shadow(0 0 8px ${glowColor}80)`,
+                imageRendering: 'pixelated',
+                pointerEvents: 'none',
+              }}
+            >
+              <PixelSprite name={bossName} size={8} />
+            </motion.div>
+
+            {/* 名牌 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: phase === 'exit' ? 0 : 1, y: 0 }}
+              transition={{ duration: 0.25, delay: phase === 'enter' ? 0.3 : 0 }}
+              style={{
+                marginTop: '6px',
+                padding: '2px 14px',
+                background: 'rgba(0,0,0,0.82)',
+                border: `1px solid ${glowColor}`,
+                borderRadius: '2px',
+                fontFamily: '"fusion-pixel", monospace',
+                fontSize: '11px',
+                color: glowColor,
+                letterSpacing: '2px',
+                textShadow: '1px 1px 0 #000',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+              }}
+            >
+              {bossName}
+            </motion.div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: -220 }}
-            animate={{
-              opacity: phase === 'exit' ? 0 : 1,
-              y: 0, // [FIX 2026-05-08] 名牌不跟随下压
-            }}
-            transition={{ duration: 0.25, delay: phase === 'enter' ? 0.3 : 0 }}
-            style={{
-              marginTop: '6px',
-              padding: '2px 14px',
-              background: 'rgba(0,0,0,0.82)',
-              border: `1px solid ${glowColor}`,
-              borderRadius: '2px',
-              fontFamily: '"fusion-pixel", monospace',
-              fontSize: '11px',
-              color: glowColor,
-              letterSpacing: '2px',
-              textShadow: '1px 1px 0 #000',
-              whiteSpace: 'nowrap',
-              pointerEvents: 'none',
-            }}
-          >
-            {bossName}
-          </motion.div>
-
+          {/* ── UI 层：点击继续提示（fixed，独立于场景层，不受场景布局影响）── */}
           <AnimatePresence>
             {showBubble && (
               <motion.div
-                key="tap-hint"
+                key="tap-hint-ui"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: tapHint ? 0.85 : 0.35 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  // [FIX 2026-05-08] 从 bottom:8% 绝对定位改为 flex 流内，紧跟 Boss 名牌下方，避免被底部 UI 遮挡
-                  marginTop: '16px',
+                  position: 'fixed',
+                  bottom: '14%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 1100,
                   fontFamily: '"fusion-pixel", monospace',
                   fontSize: '11px',
                   color: glowColor,
                   textShadow: '1px 1px 0 #000',
                   pointerEvents: 'none',
                   letterSpacing: '2px',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {phase === 'talk2' ? '▶ 点击关闭 ◀' : '▶ 点击继续 ◀'}
+                ▶ 点击继续 ◀
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
