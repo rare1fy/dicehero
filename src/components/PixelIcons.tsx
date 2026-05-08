@@ -235,6 +235,10 @@ export const PixelMute: React.FC<PixelIconProps> = ({ size = 2, className, style
 export const PixelMusic: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
   <IconBase pixels={D.MUSIC} ps={size} className={className} style={style} />;
 
+/** 碎裂心形 — 易伤（vulnerable）专用 */
+export const PixelCrackedHeart: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
+  <IconBase pixels={D.CRACKED_HEART} ps={size} className={className} style={style} />;
+
 // ===== 图标映射表 =====
 export const PIXEL_ICON_MAP = {
   sword: PixelSword,
@@ -413,4 +417,4 @@ export const PixelArcaneShield: React.FC<{ size?: number; className?: string }> 
       <rect x="3" y="3" width="2" height="1" fill="#ffffff" />
     </svg>
   );
-};
+};

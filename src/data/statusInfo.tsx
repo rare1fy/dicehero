@@ -1,5 +1,5 @@
 import React from 'react';
-import { PixelPoison, PixelFlame, PixelWind, PixelArrowUp, PixelArrowDown, PixelShield } from '../components/PixelIcons';
+import { PixelPoison, PixelFlame, PixelWind, PixelArrowUp, PixelArrowDown, PixelShield, PixelCrackedHeart } from '../components/PixelIcons';
 import { StatusType } from '../types/game';
 
 export const STATUS_INFO: Record<StatusType, { icon: React.ReactNode; color: string; label: string; description: string }> = {

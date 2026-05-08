@@ -15,7 +15,7 @@
 
 import type { Enemy, GameState, Die, Relic } from '../types/game';
 import * as ReactNS from 'react';
-import { PixelArcaneShield, PixelHeart, PixelShield } from '../components/PixelIcons';
+import { PixelArcaneShield, PixelHeart, PixelShield, PixelCrackedHeart } from '../components/PixelIcons';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
 import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
@@ -33,6 +33,8 @@ const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 
 const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.3 });
 /** 护甲吸收/获得飘字的盾牌 icon */
 const shieldIcon = () => ReactNS.createElement(PixelShield, { size: 1.3 });
+/** 吟唱受击罚专用：碎裂心形，表达\"施法导致身体脆弱\" */
+const crackedHeartIcon = () => ReactNS.createElement(PixelCrackedHeart, { size: 1.3 });
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
 // === EnemyAI 回调接口 ===
@@ -361,7 +363,7 @@ export async function executeEnemyTurn(
       }
       return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
     });
-    if (chantPenaltyMain > 0) cb.addFloatingText(`吟唱被扰: 易伤+${chantPenaltyMain}`, 'text-orange-400', undefined, 'player');
+    if (chantPenaltyMain > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyMain}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
 
     // on_damage_taken 遗物
     const latestGame = cb.gameRef.current;

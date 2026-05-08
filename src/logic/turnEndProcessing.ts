@@ -13,7 +13,7 @@ import type { Die, GameState, Enemy } from '../types/game';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
 import { absorbPlayerDamage, calcMageChantHitPenalty, applyChantHitVulnerable } from './battleHelpers';
-import { PixelArcaneShield, PixelShield, PixelHeart } from '../components/PixelIcons';
+import { PixelArcaneShield, PixelShield, PixelHeart, PixelCrackedHeart } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
 
 /** 奖励类飘字统一金色 */
@@ -25,6 +25,8 @@ const arcaneShieldIcon = () => ReactNS.createElement(PixelArcaneShield, { size: 
 const armorIcon = () => ReactNS.createElement(PixelShield, { size: 1.5 });
 /** 浮字用 生命 icon */
 const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.5 });
+/** 浮字用 吟唱受击罚 icon —— 碎裂心形，表达施法导致肉身脆弱 */
+const crackedHeartIcon = () => ReactNS.createElement(PixelCrackedHeart, { size: 1.3 });
 
 // ============================================================
 // Context 接口
@@ -190,7 +192,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
             };
           });
           addFloatingText(`-${totalTauntDmg}`, 'text-red-500', heartIcon(), 'player');
-          if (chantPenaltyTaunt > 0) addFloatingText(`吟唱被扰: 易伤+${chantPenaltyTaunt}`, 'text-orange-400', undefined, 'player');
+          if (chantPenaltyTaunt > 0) addFloatingText(`法脉紊乱: +${chantPenaltyTaunt}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
           addToast(`嘲讽反噬：全体敌人攻击造成${totalTauntDmg}伤害`, 'damage');
           playSound('enemy_skill');
         }, 400);
