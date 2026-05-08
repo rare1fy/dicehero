@@ -176,13 +176,14 @@ export function useBattleState() {
       floatDedupRef.current.forEach((t, k) => { if (now - t > 2000) floatDedupRef.current.delete(k); });
     }
 
-    // [LANE] 按 target 分队列错开，避免堆叠。横向在 ±80px 内轮转，纵向每条向下 22px 偏移。
+    // [LANE] 按 target 分队列错开，避免堆叠。横向在 ±80px 内轮转，纵向每条向下偏移 34px。
     const lane = floatLaneRef.current[target];
     floatLaneRef.current[target] = (lane + 1) % 6;
     // lane 0..5 对应 横向 -80/-48/-16/16/48/80，加 ±6px 随机抖动避免完全重合
     const xBase = (lane - 2.5) * 32;
     const x = xBase + (Math.random() * 12 - 6);
-    const y = (lane % 3) * 18 + (Math.random() * 6 - 3);
+    // 纵向间距 34px（之前 18px 偏紧，两条接连冒出会贴死）
+    const y = (lane % 3) * 34 + (Math.random() * 6 - 3);
 
     const id = `${now}-${Math.random()}`;
     setFloatingTexts(prev => [...prev, { id, text, x, y, color, icon, target, large }]);

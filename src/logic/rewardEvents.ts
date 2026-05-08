@@ -64,11 +64,15 @@ function dispatchFloat(f: QueuedFloat): void {
 }
 
 function flushAll(): void {
-  // 飘字先爆（视觉引导"获得"），再接飞行动画
+  // 飘字错峰派发：同帧连发会视觉贴死（lane 18px 上下偏移不够拉开），
+  // 每条间隔 220ms 依次冒出，和骰子点数的弹出节奏一致。
+  // 飞行奖励（emitReward）保持同帧：不同 target 终点不同，RewardBurstLayer 内部已有错峰。
   const floatsSnapshot = floatQueue.splice(0, floatQueue.length);
   const rewardsSnapshot = rewardQueue.splice(0, rewardQueue.length);
-  floatsSnapshot.forEach(f => dispatchFloat(f));
-  // 飞行动画同帧一起放，由 RewardBurstLayer 内部错峰（不同 target 终点不同，不会挤）
+  floatsSnapshot.forEach((f, i) => {
+    if (i === 0) dispatchFloat(f);
+    else setTimeout(() => dispatchFloat(f), i * 220);
+  });
   rewardsSnapshot.forEach(r => dispatchReward(r));
 }
 
