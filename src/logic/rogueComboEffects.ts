@@ -9,8 +9,9 @@
  * 总是获得1次额外免费重投，与"重掷骰子应算回合内"的设计意图一致。
  */
 
-import type React from 'react';
+import React from 'react';
 import type { GameState } from '../types/game';
+import { PixelRefresh } from '../components/PixelIcons';
 
 /** 连击效果回调集合 */
 export interface RogueComboCallbacks {
@@ -40,7 +41,7 @@ export function handleRogueComboPrep(
   if (playerClass === 'rogue' && currentCombo === 0) {
     cb.setGame(prev => ({ ...prev, comboFreeReroll: (prev.comboFreeReroll || 0) + 1 }));
     setTimeout(() => {
-      cb.addFloatingText('连击预备: +1免费重投', 'text-cyan-300', undefined, 'player');
+      cb.addFloatingText('+1', 'text-cyan-300', React.createElement(PixelRefresh, { size: 1.5 }), 'player');
     }, 200);
   }
 }

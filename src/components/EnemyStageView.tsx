@@ -206,8 +206,15 @@ export function EnemyStageView() {
               <div className="text-[8px] text-[var(--pixel-gold)] font-bold tracking-[0.15em] text-center mb-1">◆ 洞察弱点 ◆</div>
               <div className="text-[13px] font-bold text-[var(--dungeon-text-bright)] text-center mb-2 pixel-text-shadow">{game.instakillChallenge.label}</div>
               <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center mb-3">{formatDescription(game.instakillChallenge.description)}</div>
-              <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mb-3 leading-relaxed border-t border-[var(--dungeon-panel-border)] pt-2">
-                达成条件后将获得强力战斗援助效果，并获得额外宝箱奖励
+              <div className="border-t border-[var(--dungeon-panel-border)] pt-2 mb-3">
+                <div className="text-[9px] text-[var(--pixel-gold)] font-bold text-center mb-1.5 tracking-wider">达成后随机触发一种援助</div>
+                <ul className="text-[9px] text-[var(--dungeon-text)] leading-snug space-y-0.5 pl-1">
+                  <li>◆ 全场敌人受到 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '30%' : '50%'} 最大HP伤害</li>
+                  <li>◆ 全场敌人HP直接降至 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '50%' : '35%'}（保底1HP）</li>
+                  <li>◆ 全场敌人叠加大量灼烧+中毒</li>
+                  <li>◆ 立刻补抽1颗骰子</li>
+                </ul>
+                <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-1.5">并获得额外宝箱奖励</div>
               </div>
               <button onClick={() => setShowChallengeDetail(false)} className="w-full py-1.5 pixel-btn pixel-btn-ghost text-[10px]">关闭</button>
             </motion.div>

@@ -19,6 +19,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PixelSprite } from './PixelSprite';
+import { playSound } from '../utils/sound';
 
 interface BossTauntProps {
   visible: boolean;
@@ -102,6 +103,19 @@ export const BossTauntScene: React.FC = () => {
     ? [lines[0], lines[0]]
     : ['...', 'enjoy your last battle.'];
 
+  // 每句台词出现 / 屏震：用 phase 变化 effect 统一处理
+  const [shakeKey, setShakeKey] = useState(0);
+  useEffect(() => {
+    if (phase === 'talk1') {
+      // 第一句：低沉说话音
+      playSound('boss_laugh');
+    } else if (phase === 'talk2') {
+      // 第二句：低沉说话音 + 屏震（屏震通过重置 key 触发容器动画）
+      playSound('boss_laugh');
+      setShakeKey(k => k + 1);
+    }
+  }, [phase]);
+
   const handleTap = useCallback(() => {
     if (_phase === 'talk1') {
       _setPhase('approach');
@@ -154,6 +168,22 @@ export const BossTauntScene: React.FC = () => {
           exit={{ opacity: 0, transition: { duration: 0.15 } }}
           onClick={handleTap}
         >
+          {/* 屏震内层：用 shakeKey 重新挂载触发帧动画；只在 talk2 时抖 */}
+          <motion.div
+            key={`shake-${shakeKey}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            animate={
+              shakeKey > 0 && phase === 'talk2'
+                ? { x: [0, -8, 9, -7, 6, -4, 3, 0], y: [0, 4, -5, 3, -2, 2, 0, 0] }
+                : { x: 0, y: 0 }
+            }
+            transition={{ duration: 0.45 }}
+          >
           {/* 气泡：在 Boss 上方 */}
           <AnimatePresence mode="wait">
             {showBubble && (
@@ -234,6 +264,7 @@ export const BossTauntScene: React.FC = () => {
             }}
           >
             {bossName}
+          </motion.div>
           </motion.div>
         </motion.div>
       )}

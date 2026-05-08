@@ -114,7 +114,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                           initial={{ opacity: 0, scale: 0.5 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.015 }}
-                          className={`flex flex-col items-center gap-0.5 p-1.5 border bg-[rgba(0,0,0,0.3)] cursor-pointer transition-all ${isTooltipActive ? 'ring-1 ring-[var(--pixel-gold)]' : 'hover:brightness-125'}`}
+                          className={`flex flex-col items-center gap-0.5 p-1.5 border bg-[rgba(0,0,0,0.3)] cursor-pointer transition-all relative ${isTooltipActive ? 'ring-1 ring-[var(--pixel-gold)] z-30' : 'hover:brightness-125'}`}
                           style={{
                             borderColor: RARITY_COLORS[def.rarity] + '60',
                             borderRadius: '3px',
@@ -130,11 +130,35 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                             {RARITY_LABELS[def.rarity]}
                           </span>
                           {isTooltipActive && (
-                            <div className="w-full mt-1 p-1.5 rounded-sm text-[8px] leading-snug text-center"
-                              style={{ background: 'rgba(0,0,0,0.6)', border: `1px solid ${RARITY_COLORS[def.rarity]}40` }}>
-                              <div className="text-[var(--dungeon-text-dim)] mb-0.5">[{def.faces.join(',')}]</div>
+                            <motion.div
+                              initial={{ opacity: 0, y: 4, scale: 0.9 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute left-1/2 -translate-x-1/2 p-2 text-[9px] leading-snug text-center pointer-events-none"
+                              style={{
+                                bottom: 'calc(100% + 6px)',
+                                width: '160px',
+                                background: 'rgba(12,10,20,0.96)',
+                                border: `2px solid ${RARITY_COLORS[def.rarity]}`,
+                                borderRadius: '3px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.6)',
+                                zIndex: 50,
+                              }}
+                            >
+                              <div className="text-[var(--dungeon-text-dim)] mb-1 font-mono">[{def.faces.join(',')}]</div>
                               <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
-                            </div>
+                              {/* 下箭头 */}
+                              <div
+                                className="absolute left-1/2 -translate-x-1/2"
+                                style={{
+                                  bottom: '-6px',
+                                  width: 0, height: 0,
+                                  borderLeft: '6px solid transparent',
+                                  borderRight: '6px solid transparent',
+                                  borderTop: `6px solid ${RARITY_COLORS[def.rarity]}`,
+                                }}
+                              />
+                            </motion.div>
                           )}
                         </motion.div>
                       );

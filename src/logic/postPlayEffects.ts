@@ -5,7 +5,7 @@
 * ARCH-F Round2 模块拆分
 */
 
-import type React from 'react';
+import React from 'react';
 import type { Die, GameState, Enemy, HandResult, DiceElement } from '../types/game';
 import type { ExpectedOutcomeResult } from './expectedOutcomeTypes';
 import type { EnemyQuotes } from '../config/enemies';
@@ -21,6 +21,10 @@ import { STATUS_INFO } from '../data/statusInfo';
 import { rollKillXp, applyXpGain } from './xpSystem';
 import { emitXpKill } from './xpEvents';
 import { emitSoulGain } from './soulEvents';
+import { PixelRefresh } from '../components/PixelIcons';
+
+/** 浮字用的 refresh icon，统一由 PixelRefresh 渲染，避免冗长文字 */
+const rerollIcon = () => React.createElement(PixelRefresh, { size: 1.5 });
 
 // --- Context 接口 ---
 
@@ -200,7 +204,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
           }
           if (res.grantFreeReroll) {
             setRerollCount(prev => Math.max(0, prev - res.grantFreeReroll));
-            addToast(`${relic.name}: +${res.grantFreeReroll}免费重投`, 'buff');
+            addToast(`${relic.name}: +${res.grantFreeReroll} 重投`, 'buff');
           }
         });
       });
@@ -423,7 +427,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   const hasBoomerangJustBounced = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.boomerangPlay && !d.boomerangUsed);
   if (hasBoomerangJustBounced && hasAliveEnemies) {
     setGame(prev => ({ ...prev, boomerangFreeReroll: (prev.boomerangFreeReroll || 0) + 1 }));
-    addFloatingText('回旋: +1免费重投!', 'text-cyan-300', undefined, 'player');
+    addFloatingText('+1', 'text-cyan-300', rerollIcon(), 'player');
   }
 
   // doublePoisonOnCombo: 蚀骨毒液 — 连击时目标毒层翻倍
