@@ -190,8 +190,8 @@ export default function DiceHeroGame() {
         {/* 战前技能模块选择界面 */}
         {game.phase === 'skillSelect' && <SkillSelectScreen />}
 
-        {/* 战斗场景 */}
-        {game.phase === 'battle' && enemies.length > 0 && (
+        {/* 战斗场景 - 即便enemies为空也要渲染（Boss嘲讽演出期间需要空场景） */}
+        {game.phase === 'battle' && (
           <BattleSceneView />
         )}
 
