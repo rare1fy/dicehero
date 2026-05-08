@@ -49,7 +49,7 @@ export interface EnemyAICallbacks {
   addLog: (msg: string) => void;
   /** [Y1] icon 参数为 string 类型（非 React.ReactNode），逻辑层不依赖 React */
   addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: 'player' | 'enemy', large?: boolean) => void;
-  addToast: (msg: string, type: string) => void;
+  addToast: (msg: string, type: string, options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }) => void;
   playSound: (id: string) => void;
   setScreenShake: (v: boolean) => void;
   setPlayerEffect: React.Dispatch<React.SetStateAction<string | null>>;

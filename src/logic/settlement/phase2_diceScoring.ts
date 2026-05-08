@@ -95,7 +95,7 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
         await new Promise(r => setTimeout(r, 400));
         const targetDef = getDiceDef(target.diceDefId);
         addLog(`磁吸骰子同化！${targetDef.name}的点数 ${oldValue} → ${magnetValue}`);
-        addToast(`?? ${targetDef.name} ${oldValue}→${magnetValue}`, 'buff');
+        addToast(`磁吸: ${targetDef.name} ${oldValue}→${magnetValue}`, 'buff', { icon: 'star' });
       }
     }
   }
@@ -106,7 +106,7 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
     const newBestHand = newHandResult.bestHand;
     if (newBestHand !== outcome.bestHand) {
       addLog(`磁吸改变了牌型！${outcome.bestHand} → ${newBestHand}`);
-      addToast(` 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
+      addToast(`牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff', { icon: 'star' });
       playSound(newBestHand === '普通攻击' ? 'hit' : 'relic_activate');
     }
     const newX = settleDice.reduce((sum, d) => sum + d.value, 0);
@@ -147,7 +147,7 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
     const newBestHand = newHandResult.bestHand;
     if (newBestHand !== outcome.bestHand) {
       addLog(`分裂改变了牌型！${outcome.bestHand} → ${newBestHand}`);
-      addToast(` 牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff');
+      addToast(`牌型变化: ${outcome.bestHand} → ${newBestHand}`, newBestHand === '普通攻击' ? 'damage' : 'buff', { icon: 'star' });
       playSound(newBestHand === '普通攻击' ? 'hit' : 'relic_activate');
     }
     // 重新计算伤害（用新的骰子列表和牌型）

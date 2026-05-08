@@ -80,7 +80,7 @@ export function CampfirePurifyView({ onBack, onUsed }: Props) {
                     return { ...prev, ownedDice: newOwned };
                   });
                   addLog(`${def.name} 已被净化移除。`);
-                  addToast(`✖ ${def.name} 已永久移除`, 'damage');
+      addToast(`${def.name} 已永久移除`, 'damage', { icon: 'remove' });
                   onUsed();
                   setTimeout(() => setGame(prev => ({ ...prev, phase: 'map' })), 800);
                 }}

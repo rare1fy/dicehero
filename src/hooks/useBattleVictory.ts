@@ -172,7 +172,7 @@ export function useBattleVictory(
 
     setGame(result.state);
     result.logs.forEach(log => addLog(log));
-    result.toasts.forEach(toast => addToast(toast.message, toast.type));
+    result.toasts.forEach(toast => addToast(toast.message, toast.type, { icon: toast.icon, relicId: toast.relicId }));
   };
 
   // ==================== finishLoot ====================

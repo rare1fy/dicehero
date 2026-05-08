@@ -1,10 +1,19 @@
 ﻿import React from 'react';
 import type { Die, MapNode, Enemy, GameState, Relic } from '../types/game';
 
+export type ToastIcon = 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle';
+
+export interface ToastOptions {
+  icon?: ToastIcon;
+  relicId?: string;
+}
+
 interface Toast {
   id: number;
   message: string;
   type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff' | string;
+  icon?: ToastIcon;
+  relicId?: string;
 }
 
 export interface GameContextType {
@@ -34,7 +43,7 @@ export interface GameContextType {
   pickReward: (relic: Relic) => void;
   nextNode: () => void;
   toasts: Toast[];
-  addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff') => void;
+  addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff', options?: ToastOptions) => void;
   addLog: (msg: string) => void;
   handleSelectStartingRelic: (relic: Relic) => void;
   handleSkipStartingRelic: () => void;

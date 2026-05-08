@@ -42,7 +42,7 @@ export interface DrawPhaseContext {
   setShuffleAnimating: React.Dispatch<React.SetStateAction<boolean>>;
   setDiceDrawAnim: React.Dispatch<React.SetStateAction<boolean>>;
   addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: string, persistent?: boolean) => void;
-  addToast: (msg: string, type?: string) => void;
+  addToast: (msg: string, type?: string, options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }) => void;
   playSound: (id: string) => void;
 }
 
@@ -194,7 +194,7 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     // 原子更新骰子库状态
     setGame(prev => ({ ...prev, diceBag: finalBag, discardPile: finalDiscard }));
     
-    if (wasShuffled) { setShuffleAnimating(true); setTimeout(() => setShuffleAnimating(false), 800); addToast('\u2728 弃骰库已洗回骰子库!', 'buff'); }
+    if (wasShuffled) { setShuffleAnimating(true); setTimeout(() => setShuffleAnimating(false), 800); addToast('弃骰库已洗回骰子库!', 'buff', { icon: 'shuffle' }); }
     
     // Merge kept dice + fresh dice — 并处理法师"保留"类效果
     const keptDice: Die[] = remainingDice.map((d) => {

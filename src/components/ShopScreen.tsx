@@ -56,7 +56,7 @@ const MerchantScreen: React.FC = () => {
         souls: prev.souls - item.price,
         stats: { ...prev.stats, goldSpent: prev.stats.goldSpent + item.price },
       }));
-      addToast('✂ 选择要移除的骰子', 'gold');
+          addToast('选择要移除的骰子', 'gold', { icon: 'remove' });
       addLog('购买了骰子净化 (-' + item.price + 'g)');
       setRemoveDiceMode(true);
       return;
@@ -77,7 +77,7 @@ const MerchantScreen: React.FC = () => {
     if (item.type === 'relic' && item.relicData) {
       pickReward(item.relicData);
     }
-    addToast('\u2705 购买成功: ' + item.label, 'gold');
+      addToast('购买成功: ' + item.label, 'gold', { icon: 'check' });
     addLog('购买商品: ' + item.label + ' (-' + item.price + 'g)');
   }, [game.souls, setGame, pickReward, addToast, addLog]);
 

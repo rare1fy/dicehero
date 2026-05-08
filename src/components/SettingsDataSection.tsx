@@ -8,7 +8,7 @@ const SaveButton: React.FC<{ game: GameContextType['game']; addToast: GameContex
       try {
         const saveData = JSON.stringify(game);
         localStorage.setItem('dicehero_save', saveData);
-        addToast('✅ 存档成功！', 'buff');
+        addToast('存档成功！', 'buff', { icon: 'check' });
       } catch {
         addToast('存档失败', 'damage');
       }

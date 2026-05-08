@@ -117,7 +117,7 @@ export const EventScreen: React.FC = () => {
         if (picks.length > 0) {
           const relic = picks[0];
           setGame(prev => ({ ...prev, relics: [...prev.relics, relic] }));
-          addToast(`获得遗物「${relic.name}」!`, 'buff');
+          addToast(`遗物「${relic.name}」!`, 'buff', { icon: 'relic', relicId: relic.id });
           addLog(`获得了遗物「${relic.name}」`);
         }
         setGame(prev => ({ ...prev, phase: 'map' }));
@@ -240,7 +240,7 @@ export const EventScreen: React.FC = () => {
                   ...prev,
                   ownedDice: prev.ownedDice.filter((_, i) => i !== removeDiceIdx),
                 }));
-                addToast(`✖ ${def.name} 已被熔炼`, 'damage');
+    addToast(`${def.name} 已被熔炼`, 'damage', { icon: 'remove' });
                 addLog(`${def.name} 已被投入熔炉移除。`);
                 setRemoveDiceMode(false);
                 setRemoveDiceIdx(null);

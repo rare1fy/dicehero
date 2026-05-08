@@ -138,20 +138,25 @@ export function useBattleState() {
   const [settlementData, setSettlementData] = useState<SettlementData | null>(null);
 
   // ==================== Toast 系统 ====================
-  const [toasts, setToasts] = useState<{ id: number; message: string; type?: string }[]>([]);
+  const [toasts, setToasts] = useState<{ id: number; message: string; type?: string; icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }[]>([]);
   const toastIdRef = useRef(0);
   const toastCdMap = useRef<Map<string, number>>(new Map());
 
-  const addToast = (message: string, type: 'info' | 'damage' | 'heal' | 'gold' | 'buff' = 'info') => {
+  const addToast = (
+    message: string,
+    type: 'info' | 'damage' | 'heal' | 'gold' | 'buff' = 'info',
+    options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }
+  ) => {
     // [TOAST-FILTER 2026-05-08] 刘叔要求：屏蔽"获得类" toast（太频繁）。
-    if (/获得/.test(message)) return;
+    // [TOAST-ICON 2026-05-09] 带 icon 的 toast 属于业务明确通知，不受"获得"过滤影响。
+    if (!options?.icon && /获得/.test(message)) return;
     const now = Date.now();
     const lastTime = toastCdMap.current.get(message) || 0;
     if (now - lastTime < 3000) return;
     toastCdMap.current.set(message, now);
 
     const id = ++toastIdRef.current;
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, icon: options?.icon, relicId: options?.relicId }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 2500);

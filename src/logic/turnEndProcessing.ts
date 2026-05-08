@@ -44,7 +44,7 @@ export interface TurnEndContext {
   setGame: React.Dispatch<React.SetStateAction<GameState>>;
   setEnemies: React.Dispatch<React.SetStateAction<Enemy[]>>;
   addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: string, persistent?: boolean) => void;
-  addToast: (msg: string, type?: string) => void;
+  addToast: (msg: string, type?: string, options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }) => void;
   addLog: (msg: string) => void;
   playSound: (id: string) => void;
   setScreenShake: React.Dispatch<React.SetStateAction<boolean>>;

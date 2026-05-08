@@ -161,7 +161,7 @@ export function useReroll(state: BattleState) {
     if (shuffled) {
       setShuffleAnimating(true);
       setTimeout(() => setShuffleAnimating(false), 800);
-      addToast(' 弃骰库洗回骰子库', 'info');
+      addToast('弃骰库洗回骰子库', 'info', { icon: 'shuffle' });
     }
 
     // 同步设置游戏状态和骰子状态，避免 setTimeout(0) 导致的中间帧闪烁

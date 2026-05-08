@@ -26,7 +26,12 @@ export interface CollectLootResult {
   /** 需要记录的日志消息 */
   logs: string[];
   /** 需要显示的 toast 消息 */
-  toasts: { message: string; type?: 'gold' | 'buff' }[];
+  toasts: {
+    message: string;
+    type?: 'gold' | 'buff';
+    icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle';
+    relicId?: string;
+  }[];
 }
 
 // ============================================================
@@ -52,7 +57,7 @@ export function processCollectLoot(
   }
 
   const logs: string[] = [];
-  const toasts: { message: string; type?: 'gold' | 'buff' }[] = [];
+  const toasts: CollectLootResult['toasts'] = [];
   
   // 标记为已收集
   const nextLoot = state.lootItems.map(i => 
@@ -97,7 +102,7 @@ export function processCollectLoot(
         nextState.ownedDice = [...nextState.ownedDice, { defId: item.diceDefId, level: 1 }];
         const ddef = getDiceDef(item.diceDefId);
         logs.push(`获得了特殊骰子: ${ddef.name}。`);
-        toasts.push({ message: `获得了特殊骰子: ${ddef.name}` });
+        toasts.push({ message: `特殊骰子: ${ddef.name}`, type: 'buff', icon: 'dice' });
       }
       break;
     }
@@ -119,7 +124,7 @@ export function processCollectLoot(
       if (item.relicData) {
         nextState.relics = [...nextState.relics, { ...item.relicData }];
         logs.push(`获得遗物: ${item.relicData.name}`);
-        toasts.push({ message: ` 获得遗物: ${item.relicData.name}!`, type: 'buff' });
+        toasts.push({ message: `遗物: ${item.relicData.name}!`, type: 'buff', icon: 'relic', relicId: item.relicData.id });
       }
       break;
     }
@@ -135,9 +140,15 @@ export function processCollectLoot(
       nextState.ownedDice = chestResult.ownedDice;
       nextState.relics = chestResult.relics;
       logs.push(`开启挑战宝箱：获得 ${chestResult.result.name}`);
+      const chestIcon: 'gold' | 'dice' | 'relic' =
+        chestResult.result.type === 'gold' ? 'gold'
+        : chestResult.result.type === 'dice' ? 'dice'
+        : 'relic';
       toasts.push({
-        message: `🎁 挑战宝箱：${chestResult.result.name}`,
-        type: chestResult.result.type === 'gold' ? 'gold' : 'buff'
+        message: `挑战宝箱：${chestResult.result.name}`,
+        type: chestResult.result.type === 'gold' ? 'gold' : 'buff',
+        icon: chestIcon,
+        relicId: chestResult.result.relicId,
       });
       break;
     }

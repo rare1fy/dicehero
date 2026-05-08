@@ -58,7 +58,7 @@ export interface PostPlayContext {
   setDice: React.Dispatch<React.SetStateAction<Die[]>>;
   setRerollCount: React.Dispatch<React.SetStateAction<number>>;
   addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: string, persistent?: boolean) => void;
-  addToast: (msg: string, type?: string) => void;
+  addToast: (msg: string, type?: string, options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }) => void;
   addLog: (msg: string) => void;
   playSound: (id: string) => void;
   setScreenShake: React.Dispatch<React.SetStateAction<boolean>>;
@@ -336,7 +336,7 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     setTimeout(() => {
       const g = gameRef.current;
       const { drawn, newBag, newDiscard, shuffled } = drawFromBag(g.diceBag, g.discardPile, bagDrawCount);
-      if (shuffled) { addToast('弃骰库洗回骰子库', 'info'); }
+    if (shuffled) { addToast('弃骰库洗回骰子库', 'info', { icon: 'shuffle' }); }
       setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
       const newDice: Die[] = drawn.map(d => ({
         ...d,

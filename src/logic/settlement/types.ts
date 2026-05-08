@@ -36,7 +36,7 @@ export interface SettlementContext {
   setFlashingRelicIds: React.Dispatch<React.SetStateAction<string[]>>;
   setGame: React.Dispatch<React.SetStateAction<GameState>>;
   addLog: (msg: string) => void;
-  addToast: (msg: string, type?: string) => void;
+  addToast: (msg: string, type?: string, options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }) => void;
   addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: string, persistent?: boolean) => void;
   playSound: (id: string) => void;
   playSettlementTick: (idx: number) => void;

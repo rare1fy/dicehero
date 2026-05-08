@@ -197,7 +197,7 @@ export function useBattleLifecycle(state: BattleState) {
     }
     const freshCount = Math.min(6, game.drawCount + drawCountBonus + startWarriorBonus);
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
-    if (fShuffled) addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+    if (fShuffled) addToast('弃骰库已洗回骰子库!', 'buff', { icon: 'shuffle' });
     setGame(prev => ({ ...prev, diceBag: fBag, discardPile: fDiscard }));
     setDice(freshDrawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 })));
     await performDiceRollAnimation({
@@ -355,7 +355,7 @@ export function useBattleLifecycle(state: BattleState) {
     if (shuffled) {
             setShuffleAnimating(true);
             setTimeout(() => setShuffleAnimating(false), 800);
-      addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
+      addToast('弃骰库已洗回骰子库!', 'buff', { icon: 'shuffle' });
     }
     // Bug-4 fix: 法师保留骰累积加成（bonusOnKeep / bonusPerTurnKept / rerollOnKeep / bonusMultOnKeep，与 executeDrawPhase 一致）
     const keptDiceWithBonuses = keptDice.map(d => {
@@ -425,7 +425,7 @@ export function useBattleLifecycle(state: BattleState) {
       maxHp: prev.maxHp - (relic.rarity === 'common' ? 5 : relic.rarity === 'uncommon' ? 10 : 15),
     }));
 
-    addToast(`获得遗物「${relic.name}」!`, 'buff');
+    addToast(`遗物「${relic.name}」!`, 'buff', { icon: 'relic', relicId: relic.id });
     addLog(`战前选择了遗物「${relic.name}」`);
 
     setPendingBattleNode(null);

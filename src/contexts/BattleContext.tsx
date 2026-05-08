@@ -122,7 +122,7 @@ export interface BattleContextType {
   toggleSelect: (id: number) => void;
   playHand: () => Promise<void>;
   endTurn: () => Promise<void>;
-  addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff') => void;
+  addToast: (message: string, type?: 'info' | 'damage' | 'heal' | 'gold' | 'buff', options?: { icon?: 'gold' | 'dice' | 'relic' | 'remove' | 'check' | 'star' | 'shuffle'; relicId?: string }) => void;
   addFloatingText: (text: string, color?: string, icon?: React.ReactNode, target?: 'player' | 'enemy', large?: boolean) => void;
   addLog: (msg: string) => void;
 }

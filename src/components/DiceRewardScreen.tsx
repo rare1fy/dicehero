@@ -129,7 +129,7 @@ export const DiceRewardScreen: React.FC = () => {
         ownedDice: [...prev.ownedDice, { defId: selectedNewDice, level: 1 }],
       }));
       addLog(`获得新骰子: ${def.name}`);
-      addToast(`◆ 获得 ${def.name}!`, 'buff');
+    addToast(`获得 ${def.name}!`, 'buff', { icon: 'dice' });
     }
 
     // 延迟后跳转到 loot 阶段

@@ -79,7 +79,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     const pct = isBoss ? 0.3 : 0.5;
     const dmgText = `${Math.round(pct * 100)}%`;
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-    addToast(`◆ 洞察弱点！全场敌人受到${dmgText}最大生命值伤害`, 'buff');
+    addToast(`洞察弱点！全场敌人受到${dmgText}最大生命值伤害`, 'buff', { icon: 'star' });
     addLog(`洞察弱点达成！全场敌人受到${dmgText}最大HP伤害`);
     scheduleAidEffect(800, () => {
       const affected: { uid: string; dmg: number }[] = [];
@@ -106,7 +106,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     const targetPct = isBoss ? 0.5 : 0.35;
     const pctText = `${Math.round(targetPct * 100)}%`;
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-    addToast(`◆ 洞察弱点！全场敌人血量降至${pctText}`, 'buff');
+    addToast(`洞察弱点！全场敌人血量降至${pctText}`, 'buff', { icon: 'star' });
     addLog(`洞察弱点达成！全场敌人血量降至${pctText}`);
     scheduleAidEffect(800, () => {
       // [Bug-FIX v2 2026-05-08] 先计算 affectedUids，再 setEnemies。
@@ -137,7 +137,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     // 效果3：全场敌人施加大量灼烧+中毒
     const stacks = 3 + depth + (chapter - 1) * 2;
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-    addToast(`◆ 洞察弱点！全场敌人获得${stacks}层灼烧+${stacks}层中毒`, 'buff');
+    addToast(`洞察弱点！全场敌人获得${stacks}层灼烧+${stacks}层中毒`, 'buff', { icon: 'star' });
     addLog(`洞察弱点达成！全场敌人获得${stacks}层灼烧和中毒`);
     scheduleAidEffect(800, () => {
       const affectedUids: string[] = [];
@@ -164,7 +164,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     const atCap = (gNow.drawCount || 0) >= 6;
     if (atCap) {
       addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-      addToast(`◆ 洞察弱点！本局永久获得 +50% 伤害倍率`, 'buff');
+      addToast(`洞察弱点！本局永久获得 +50% 伤害倍率`, 'buff', { icon: 'star' });
       addLog(`洞察弱点达成！本局永久伤害倍率 +50%`);
       scheduleAidEffect(800, () => {
         setGame(prev => ({
@@ -175,7 +175,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
       });
     } else {
       addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-      addToast(`◆ 洞察弱点！本局永久 +1 手牌上限`, 'buff');
+      addToast(`洞察弱点！本局永久 +1 手牌上限`, 'buff', { icon: 'star' });
       addLog(`洞察弱点达成！本局永久 +1 手牌上限`);
       scheduleAidEffect(800, () => {
         setGame(prev => ({

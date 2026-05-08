@@ -133,7 +133,7 @@ export function openChallengeChest(state: {
   souls: number;
   ownedDice: { defId: string; level: number }[];
   relics: Relic[];
-}): { souls: number; ownedDice: { defId: string; level: number }[]; relics: Relic[]; result: { type: 'gold' | 'dice' | 'relic'; name: string; value: number } } {
+}): { souls: number; ownedDice: { defId: string; level: number }[]; relics: Relic[]; result: { type: 'gold' | 'dice' | 'relic'; name: string; value: number; relicId?: string } } {
   const roll = Math.random();
   
   if (roll < 0.4) {
@@ -172,7 +172,7 @@ export function openChallengeChest(state: {
         souls: state.souls, 
         ownedDice: state.ownedDice, 
         relics: [...state.relics, { ...pick }],
-        result: { type: 'relic', name: pick.name, value: 0 }
+        result: { type: 'relic', name: pick.name, value: 0, relicId: pick.id }
       };
     } else {
       return { 
