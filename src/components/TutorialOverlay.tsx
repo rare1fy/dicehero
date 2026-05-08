@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   PixelStar, PixelBook, PixelDice, PixelPair, PixelPlay, 
@@ -17,7 +17,7 @@ interface TutorialStep {
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
-    title: '◆ 欢迎来到六面决界 ◆',
+    title: '◆ 欢迎来到六面史诗 ◆',
     content: '在这片被永夜笼罩的大陆上，你将用骰子组合牌型，击败沿途的敌人，穿越5个大关，拯救世界。',
     icon: <PixelStar size={4} />,
     position: 'center',

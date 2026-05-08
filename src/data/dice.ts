@@ -162,7 +162,7 @@ const LEGACY_DICE: Record<string, DiceDef> = { heavy, elemental };
 
 // 盗贼临时骰子（连击/技能奖励，1回合后销毁）
 const temp_rogue: DiceDef = {
-  id: 'temp_rogue', name: '暗影残骰', element: 'normal', faces: [1, 1, 2, 2, 3, 3], rarity: 'common',
+  id: 'temp_rogue', name: '暗影残骰', element: 'normal', faces: [1, 2, 3, 4, 5, 6], rarity: 'common',
   description: '连击奖励的临时骰子，回合结束未使用则自动销毁',
 };
 

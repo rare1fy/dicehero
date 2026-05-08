@@ -1,4 +1,4 @@
-﻿/**
+/**
  * expectedOutcome 纯计算逻辑
  * 
  * 从 DiceHeroGame.tsx 的 useMemo 中提取的战斗预览计算。
@@ -231,7 +231,7 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   const totalDamage = Math.ceil(baseDamage * finalMultiplier) + extraDamage + lvlDmgAdd + pierceDamage + lvlPierceAdd;
 
   // [DEBUG-DMG 2026-05-08] 伤害计算追踪日志（F12 控制台可查）
-  if (typeof window !== 'undefined' && (window as any).__DMG_DEBUG__) {
+  if (typeof window !== 'undefined' && (window as any).__DMG_DEBUG__ !== false) {
     console.log('[DMG]', {
       X, handMultiplier, baseDamage,
       multiplier, lvlMultAdd, finalMultiplier,
@@ -258,8 +258,9 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   if (game.playerClass === 'warrior' && warriorRageMult > 0) {
     modifiedDamage = Math.ceil(modifiedDamage * (1 + warriorRageMult));
   }
-  // 盗贼【连击加成】
-  if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && bestHand !== '普通攻击') {
+  // 盗贼【连击加成】— [FIX 2026-05-08] 移除 bestHand !== '普通攻击' 过滤：
+  // 刘叔规则：盗贼连击 +20% 对所有牌型（含普攻）都生效，否则普攻连击毫无意义。
+  if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
     modifiedDamage = Math.ceil(modifiedDamage * 1.2);
   }
 

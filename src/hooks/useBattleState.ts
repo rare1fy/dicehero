@@ -121,6 +121,8 @@ export function useBattleState() {
   const toastCdMap = useRef<Map<string, number>>(new Map());
 
   const addToast = (message: string, type: 'info' | 'damage' | 'heal' | 'gold' | 'buff' = 'info') => {
+    // [TOAST-FILTER 2026-05-08] 刘叔要求：屏蔽"获得类" toast（太频繁）。
+    if (/获得/.test(message)) return;
     const now = Date.now();
     const lastTime = toastCdMap.current.get(message) || 0;
     if (now - lastTime < 3000) return;

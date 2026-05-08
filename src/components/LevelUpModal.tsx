@@ -1,4 +1,4 @@
-﻿/**
+/**
  * LevelUpModal.tsx — 升级三选一奖励弹窗
  *
  * 规则（刘叔 2026-05-08 拍板）：
@@ -190,33 +190,36 @@ export const LevelUpModal: React.FC = () => {
                       {renderIcon(reward.category, 2)}
                     </div>
 
-                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                    {/* [PIXEL-REDO v2 2026-05-08] chip 和标题分两行，彻底消除截图中观察到的行内重叠 */}
+                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                      <div className="flex items-center">
                         <span
-                          className="font-mono font-black pixel-text-shadow"
+                          className="font-mono font-black pixel-text-shadow inline-block"
                           style={{
                             fontSize: 9,
                             color: '#0a0908',
                             background: meta.color,
                             border: '1px solid ' + meta.colorDark,
-                            padding: '1px 4px',
+                            padding: '2px 5px',
                             letterSpacing: '0.1em',
                             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
                             borderRadius: 0,
+                            lineHeight: 1,
                           }}
                         >
                           {meta.label}
                         </span>
-                        <span
-                          className="font-black pixel-text-shadow"
-                          style={{
-                            fontSize: 13,
-                            color: meta.colorLight,
-                            textShadow: '0 1px 0 rgba(0,0,0,0.95)',
-                          }}
-                        >
-                          {reward.title}
-                        </span>
+                      </div>
+                      <div
+                        className="font-black pixel-text-shadow"
+                        style={{
+                          fontSize: 14,
+                          color: meta.colorLight,
+                          textShadow: '0 1px 0 rgba(0,0,0,0.95)',
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {reward.title}
                       </div>
                       <div
                         className="pixel-text-shadow"

@@ -120,7 +120,11 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
       }
     });
     const newBaseDamage = Math.ceil(newX * newHandMult);
-    const newTotalDamage = Math.ceil((newBaseDamage + (outcome.damage - Math.ceil(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+    let newTotalDamage = Math.ceil((newBaseDamage + (outcome.damage - Math.ceil(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+    // [FIX 2026-05-08] 盗贼连击 x1.2 兜底（magnet/split 重算会丢掉）
+    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
+      newTotalDamage = Math.ceil(newTotalDamage * 1.2);
+    }
     outcome.damage = Math.max(0, newTotalDamage);
     outcome.bestHand = newBestHand;
     outcome.X = newX;
@@ -158,7 +162,11 @@ export async function runPhase2DiceScoring(ctx: SettlementContext): Promise<{
       }
     });
     const newBaseDamage = Math.ceil(newX * newHandMult);
-    const newTotalDamage = Math.ceil((newBaseDamage + (outcome.damage - Math.ceil(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+    let newTotalDamage = Math.ceil((newBaseDamage + (outcome.damage - Math.ceil(outcome.X * outcome.handMultiplier))) * outcome.multiplier) + outcome.pierceDamage;
+    // [FIX 2026-05-08] 盗贼连击 x1.2 兜底（split 重算会丢掉）
+    if (game.playerClass === 'rogue' && (game.comboCount || 0) >= 1) {
+      newTotalDamage = Math.ceil(newTotalDamage * 1.2);
+    }
     // 更新 outcome 的伤害值（用闭包变量）
     outcome.damage = Math.max(0, newTotalDamage);
     outcome.bestHand = newBestHand;

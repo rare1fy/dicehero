@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { PixelDice, PixelBook, PixelSoulCrystal, PixelSword } from './PixelIcons';
@@ -129,7 +129,7 @@ export const StartScreen: React.FC = () => {
         {/* 标题 — 加强辉光 */}
         <h1 className="text-4xl font-black tracking-[0.15em] mb-2 pixel-text-shadow" style={{ textShadow: '3px 3px 0 rgba(0,0,0,0.9), 0 0 30px rgba(224,120,48,0.4), 0 0 60px rgba(224,120,48,0.15)' }}>
           <span className="text-[var(--dungeon-text-bright)]">六面</span>
-          <span className="text-[var(--pixel-green)]">决界</span>
+          <span className="text-[var(--pixel-green)]">史诗</span>
         </h1>
         <motion.p
           animate={{ opacity: [0.6, 1, 0.6] }}
