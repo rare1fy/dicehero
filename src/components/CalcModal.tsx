@@ -125,7 +125,7 @@ const CalcModal: React.FC<CalcModalProps> = ({ visible, onClose, expectedOutcome
                     <span className="text-[var(--dungeon-text-dim)] flex items-center gap-1">
                       <PixelArrowUp size={1} /> 易伤修正
                     </span>
-                    <span className="text-[var(--pixel-red)]">+50%</span>
+                    <span className="text-[var(--pixel-red)]">×2</span>
                   </div>
                 )}
                 {/* 战士血怒加成（5层封顶） */}

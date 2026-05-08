@@ -116,8 +116,8 @@ export const getSoulCrystalMult = (depth: number, currentMult: number): number =
 export const STATUS_EFFECT_MULT = {
   /** 虚弱(weak)：攻击力 ×0.75 */
   weak: 0.75,
-  /** 易伤(vulnerable)：受到伤害 ×1.5（固定值，不随层数变化） */
-  vulnerable: 1.5,
+  /** 易伤(vulnerable)：受到伤害 ×2（固定值，不随层数变化；每回合 -1 层自然衰减） */
+  vulnerable: 2.0,
 } as const;
 
 // ============================================================
