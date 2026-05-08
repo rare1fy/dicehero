@@ -1,0 +1,10 @@
+﻿content = open('F:/UGit/dicehero2/src/hooks/useBattleLifecycle.ts', encoding='utf-8').read()
+lines = content.split('\n')
+print('total lines:', len(lines))
+# 找最长的可拆函数块
+idx = content.find('const startBattle')
+print('startBattle at line:', content[:idx].count('\n') + 1)
+idx2 = content.find('const startNode')
+print('startNode at line:', content[:idx2].count('\n') + 1)
+idx3 = content.find('const rollAllDice')
+print('rollAllDice at line:', content[:idx3].count('\n') + 1)

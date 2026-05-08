@@ -75,8 +75,6 @@ export function useBattleLifecycle(state: BattleState) {
       return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult, game.chapter);
     })();
     const firstWave = waves[0]?.enemies || [];
-    // [BOSS-ROAM 2026-05-08] 路过嘲讽场景：演出期间不刷小怪（空场景），演出结束后才 setEnemies
-    // 非路过嘲讽场景（boss节点或非第一场）正常立刻 setEnemies
     const willShowRoamTaunt = node.type !== 'boss'
       && node.depth === 0
       && !(game.bossRoamSeen || []).includes(`${game.chapter}-intro`);
@@ -86,7 +84,6 @@ export function useBattleLifecycle(state: BattleState) {
     setEnemyEffects({}); setDyingEnemies(new Set());
     setEnemyQuotes({});
     setEnemyQuotedLowHp(new Set());
-    // [BOSS-TAUNT 2026-05-08] Boss 战不走普通 enter 气泡（会被下面的 bossTaunt 短剧取代），避免重复
     const isBossNode = node.type === 'boss';
     if (!willShowRoamTaunt) {
       setTimeout(() => {
@@ -167,30 +164,22 @@ export function useBattleLifecycle(state: BattleState) {
 
     // 非 Boss 节点在这里 fadeOut（Boss 节点在演出前已经 fadeOut 过了）
     if (node.type !== 'boss') {
-      // [BOSS-ROAM 2026-05-08] Boss路过嘲讽演出：章节第一场战斗（depth 0）开始时插入
-      // 触发时机：每章第一场战斗，Boss亮个相说句垃圾话就退场
       const roamKey = `${game.chapter}-intro`;
       const alreadyRoamed = (game.bossRoamSeen || []).includes(roamKey);
       if (node.depth === 0 && !alreadyRoamed) {
-        // 标记已触发，防重复
-        setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
-        // 章节开场亮相：取当前章节终Boss（最终大Boss更有压迫感）
+          setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
         const chIdx = Math.max(0, (game.chapter || 1) - 1);
         const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
         const bossName = bossPair[1] || bossPair[0];
-        // 拿台词：从 BOSS_ENEMIES 取该Boss的enter台词
         const bossCfg = BOSS_ENEMIES.find(b => b.name === bossName && b.chapter === (game.chapter || 1));
         const enterLines = bossCfg?.quotes?.enter || ['……', '好好享受你最后的战斗吧。'];
-        // 随机取2句（前2句 or 洗牌取2）
         const tauntLines = enterLines.length >= 2
           ? [enterLines[0], enterLines[enterLines.length - 1]]
           : [enterLines[0], enterLines[0]];
-        // Boss 路过嘲讽：先收黑屏，让场景可见（此时enemies为空，小怪区干净）
         setBattleTransition('fadeOut');
         await new Promise(r => setTimeout(r, 280));
         setBattleTransition('none');
         await new Promise(r => setTimeout(r, 60));
-        // 播Boss路过嘲讽 — 等玩家点击完两句台词后 resolve
         await new Promise<void>(resolve => {
           setBossTaunt({
             visible: true,
@@ -203,8 +192,7 @@ export function useBattleLifecycle(state: BattleState) {
         });
         setBossTaunt(prev => ({ ...prev, visible: false, onDismiss: undefined }));
         await new Promise(r => setTimeout(r, 200));
-        // 演出结束后才刷出小怪 + enter 台词
-        setEnemies(firstWave);
+          setEnemies(firstWave);
         setTimeout(() => {
           firstWave.forEach((e, ei) => {
             const q = getEnemyQuotes(e.configId);
