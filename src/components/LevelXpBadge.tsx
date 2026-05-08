@@ -95,7 +95,7 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
           style={{
             filter: levelUpFlash
               ? 'drop-shadow(0 0 5px #fff7b0) drop-shadow(0 0 10px #ffd24a)'
-              : 'drop-shadow(0 0 3px rgba(104,160,232,0.9)) drop-shadow(0 0 1px rgba(216,236,255,0.7))',
+              : 'none',
           }}
         />
         <span

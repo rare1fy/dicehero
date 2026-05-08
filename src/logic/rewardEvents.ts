@@ -34,16 +34,25 @@ type Listener = (ev: RewardEvent) => void;
 
 const listeners = new Set<Listener>();
 
+/**
+ * 奖励事件统一延迟：让"获得 X"的图标飞行在伤害/抽牌演出之后再出现，
+ * 避免和伤害数字、敌人死亡飘字挤在同一瞬间，观感混乱。
+ * 900ms 可覆盖常见的伤害弹窗(≈600ms) + AOE 多目标顺序飘字。
+ */
+const REWARD_DEFER_MS = 900;
+
 export function onReward(fn: Listener): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
 }
 
 export function emitReward(kind: RewardKind, amount: number, sourceSelector?: string): void {
-  const ev: RewardEvent = { kind, amount, at: Date.now(), sourceSelector };
-  listeners.forEach(fn => {
-    try { fn(ev); } catch (_e) { /* 吞掉 */ }
-  });
+  window.setTimeout(() => {
+    const ev: RewardEvent = { kind, amount, at: Date.now(), sourceSelector };
+    listeners.forEach(fn => {
+      try { fn(ev); } catch (_e) { /* 吞掉 */ }
+    });
+  }, REWARD_DEFER_MS);
 }
 
 /**

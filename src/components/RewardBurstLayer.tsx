@@ -43,17 +43,6 @@ const KIND_ICON: Record<RewardKind, React.FC<{ size?: number }>> = {
   fury: PixelBloodDrop,
 };
 
-const KIND_GLOW: Record<RewardKind, string> = {
-  dice:   'rgba(104,160,232,0.9)',
-  card:   'rgba(104,232,160,0.9)',
-  reroll: 'rgba(88,220,232,0.9)',
-  heart:  'rgba(232,104,104,0.9)',
-  armor:  'rgba(104,160,232,0.9)',
-  shield: 'rgba(125,211,252,0.95)',
-  gold:   'rgba(232,184,48,0.95)',
-  fury:   'rgba(220,60,60,0.9)',
-};
-
 function readCenter(el: Element | null): { x: number; y: number } | null {
   if (!el) return null;
   const r = el.getBoundingClientRect();
@@ -150,7 +139,6 @@ export const RewardBurstLayer: React.FC = () => {
           const midY = sy + (ey - sy) * FLY_HOLD_RATIO;
 
           const IconComp = KIND_ICON[it.kind];
-          const glow = KIND_GLOW[it.kind];
 
           return (
             <motion.div
@@ -177,20 +165,8 @@ export const RewardBurstLayer: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 imageRendering: 'pixelated',
-                filter: `drop-shadow(0 0 6px ${glow}) drop-shadow(0 0 2px rgba(255,255,255,0.7))`,
               }}
             >
-              <motion.div
-                animate={{ opacity: [0.4, 0.9, 0.4], scale: [1.1, 1.55, 1.1] }}
-                transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
-                style={{
-                  position: 'absolute',
-                  inset: -6,
-                  background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
-                  borderRadius: '50%',
-                  pointerEvents: 'none',
-                }}
-              />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <IconComp size={2} />
               </div>
