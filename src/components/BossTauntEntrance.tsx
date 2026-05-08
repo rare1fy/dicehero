@@ -1,6 +1,18 @@
 ﻿/**
- * BossTauntEntrance.tsx - Boss 路过嘲讽登场演出 v3 (2026-05-08)
- * 流程：全屏拦截 -> Boss从右走入居中 -> 弹跳落地 -> 台词气泡（点击推进） -> 退场 -> onDismiss
+ * BossTauntEntrance.tsx - Boss 路过嘲讽登场演出 v4 (2026-05-08)
+ *
+ * 演出时序：
+ *   idle  -> enter  : Boss从上方远处(y=-220, scale=0.35)飞入居中位置(y=0, scale=1.0)
+ *   enter -> talk1 : 停在中央说第一句台词（气泡在Boss上方）
+ *   talk1 -> approach : 玩家点击 -> Boss向前位移到玩家面前(y=+70, scale=1.18)并震动摇晃两下
+ *   approach -> talk2 : 震动结束后说第二句（更贴近屏幕底部）
+ *   talk2 -> exit  : 玩家点击 -> Boss原地淡出缩小 -> onDismiss
+ *
+ * 布局特点：
+ *   - 所有元素水平居中（flex column + items-center）
+ *   - 气泡紧贴Boss上方（marginBottom: 10px 保持视觉连接）
+ *   - "点击继续" 文字放屏幕底部居中
+ *   - 点击响应区覆盖整个 overlay（inset:0 + pointer-events:all）
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,7 +34,7 @@ const CHAPTER_GLOW: Record<number, string> = {
   5: '#e8c840',
 };
 
-type Phase = 'idle' | 'enter' | 'talk1' | 'talk2' | 'exit';
+type Phase = 'idle' | 'enter' | 'talk1' | 'approach' | 'talk2' | 'exit';
 
 export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   visible, bossName, chapter, lines, onDismiss,
@@ -39,15 +51,17 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   useEffect(() => {
     if (!visible) { setPhase('idle'); return; }
     setPhase('enter');
-    const t = window.setTimeout(() => setPhase('talk1'), 520);
+    const t = window.setTimeout(() => setPhase('talk1'), 720);
     return () => window.clearTimeout(t);
   }, [visible]);
 
   const handleTap = useCallback(() => {
-    if (phase === 'talk1') { setPhase('talk2'); }
-    else if (phase === 'talk2') {
+    if (phase === 'talk1') {
+      setPhase('approach');
+      window.setTimeout(() => setPhase('talk2'), 680);
+    } else if (phase === 'talk2') {
       setPhase('exit');
-      window.setTimeout(() => { onDismiss?.(); }, 420);
+      window.setTimeout(() => { onDismiss?.(); }, 380);
     }
   }, [phase, onDismiss]);
 
@@ -55,15 +69,20 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
   const currentLine = phase === 'talk2' ? safeLines[1] : safeLines[0];
 
   const spriteAnimate =
-    phase === 'enter' ? { x: 0, opacity: 1, scale: [0.6, 1.22, 0.92, 1.08, 1.0] as number[] } :
-    phase === 'exit'  ? { x: 180, opacity: 0, scale: 0.75 } :
-    phase === 'idle'  ? { x: 180, opacity: 0, scale: 0.6 } :
-    { x: 0, opacity: 1, scale: 1.0 };
+    phase === 'enter'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,               rotate: 0 } :
+    phase === 'talk1'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,               rotate: 0 } :
+    phase === 'approach' ? { y: 70,   opacity: 1, scale: 1.18, x: [0, -5, 5, -4, 4, -3, 3, 0], rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
+    phase === 'talk2'    ? { y: 70,   opacity: 1, scale: 1.18, x: 0,               rotate: 0 } :
+    phase === 'exit'     ? { y: 70,   opacity: 0, scale: 0.9,  x: 0,               rotate: 0 } :
+                           { y: -220, opacity: 0, scale: 0.35, x: 0,               rotate: 0 };
 
   const spriteTransition =
-    phase === 'enter' ? { duration: 0.52, ease: 'easeOut' as const } :
-    phase === 'exit'  ? { duration: 0.38, ease: 'easeIn' as const } :
-    { duration: 0.16 };
+    phase === 'enter'    ? { duration: 0.72, ease: 'easeOut' as const } :
+    phase === 'approach' ? { duration: 0.68, ease: 'easeInOut' as const } :
+    phase === 'exit'     ? { duration: 0.36, ease: 'easeIn' as const } :
+    { duration: 0.18 };
+
+  const bubbleOffsetY = phase === 'talk2' ? 70 : 0;
 
   const [tapHint, setTapHint] = useState(true);
   useEffect(() => {
@@ -71,6 +90,8 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     const t = window.setInterval(() => setTapHint(p => !p), 600);
     return () => window.clearInterval(t);
   }, [showBubble]);
+
+  const interactive = phase === 'talk1' || phase === 'talk2';
 
   return (
     <AnimatePresence>
@@ -81,57 +102,86 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
             position: 'absolute',
             inset: 0,
             zIndex: 50,
-            pointerEvents: (phase === 'talk1' || phase === 'talk2') ? 'all' : 'none',
+            pointerEvents: interactive ? 'all' : 'none',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            paddingBottom: '15%',
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.15 } }}
           onClick={handleTap}
         >
+          <AnimatePresence mode="wait">
+            {showBubble && (
+              <motion.div
+                key={`bubble-${phase}`}
+                initial={{ opacity: 0, y: bubbleOffsetY - 8, scale: 0.85 }}
+                animate={{ opacity: 1, y: bubbleOffsetY, scale: 1 }}
+                exit={{ opacity: 0, y: bubbleOffsetY - 4, scale: 0.92 }}
+                transition={{ duration: 0.22 }}
+                style={{
+                  maxWidth: '240px',
+                  minWidth: '110px',
+                  padding: '10px 14px',
+                  marginBottom: '10px',
+                  background: 'rgba(30,18,0,0.96)',
+                  border: `2px solid ${glowColor}`,
+                  borderRadius: '3px',
+                  fontFamily: '"fusion-pixel", monospace',
+                  fontSize: '12px',
+                  lineHeight: 1.5,
+                  color: glowColor,
+                  textAlign: 'center' as const,
+                  wordBreak: 'break-word' as const,
+                  position: 'relative',
+                  pointerEvents: 'none',
+                }}
+              >
+                {currentLine}
+                <svg
+                  width="12" height="7" viewBox="0 0 12 7"
+                  style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)' }}
+                >
+                  <polygon points="0,0 12,0 6,7" fill="rgba(30,18,0,0.96)" />
+                  <line x1="0" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
+                  <line x1="12" y1="0" x2="6" y2="7" stroke={glowColor} strokeWidth="2" />
+                </svg>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <motion.div
-            initial={{ opacity: 0, scaleX: 0.2 }}
-            animate={
-              phase === 'enter' || phase === 'talk1' || phase === 'talk2'
-                ? { opacity: [0, 0.7, 0.4], scaleX: [0.2, 1.3, 1.0], transition: { duration: 0.5 } }
-                : { opacity: 0, transition: { duration: 0.2 } }
-            }
-            style={{
-              position: 'absolute',
-              bottom: '36%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '110px',
-              height: '14px',
-              borderRadius: '50%',
-              background: `radial-gradient(ellipse, ${glowColor}a0 0%, transparent 70%)`,
-              pointerEvents: 'none',
-            }}
-          />
-          <motion.div
-            initial={{ x: 180, opacity: 0, scale: 0.6 }}
+            initial={{ y: -220, opacity: 0, scale: 0.35, x: 0, rotate: 0 }}
             animate={spriteAnimate}
             transition={spriteTransition}
             style={{
-              filter: phase === 'enter'
-                ? `drop-shadow(0 0 18px ${glowColor}) drop-shadow(0 0 40px ${glowColor}80)`
-                : `drop-shadow(0 0 8px ${glowColor}80)`,
+              filter:
+                phase === 'approach'
+                  ? `drop-shadow(0 0 22px ${glowColor}) drop-shadow(0 0 50px ${glowColor}b0)`
+                  : phase === 'enter' || phase === 'talk1' || phase === 'talk2'
+                    ? `drop-shadow(0 0 14px ${glowColor}a0) drop-shadow(0 0 30px ${glowColor}60)`
+                    : `drop-shadow(0 0 8px ${glowColor}80)`,
               imageRendering: 'pixelated',
+              pointerEvents: 'none',
             }}
           >
             <PixelSprite name={bossName} size={8} />
           </motion.div>
+
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={phase === 'enter' || phase === 'talk1' || phase === 'talk2' ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ duration: 0.2, delay: 0.28 }}
+            initial={{ opacity: 0, y: -220 }}
+            animate={{
+              opacity: phase === 'exit' ? 0 : 1,
+              y: phase === 'approach' || phase === 'talk2' ? 70 : 0,
+            }}
+            transition={{ duration: 0.25, delay: phase === 'enter' ? 0.3 : 0 }}
             style={{
               marginTop: '6px',
               padding: '2px 14px',
-              background: 'rgba(0,0,0,0.8)',
+              background: 'rgba(0,0,0,0.82)',
               border: `1px solid ${glowColor}`,
               borderRadius: '2px',
               fontFamily: '"fusion-pixel", monospace',
@@ -140,65 +190,31 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
               letterSpacing: '2px',
               textShadow: '1px 1px 0 #000',
               whiteSpace: 'nowrap',
+              pointerEvents: 'none',
             }}
           >
             {bossName}
           </motion.div>
-          <AnimatePresence mode="wait">
-            {showBubble && (
-              <motion.div
-                key={`bubble-${phase}`}
-                initial={{ opacity: 0, y: -8, scale: 0.85 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.92 }}
-                transition={{ duration: 0.18 }}
-                style={{
-                  position: 'absolute',
-                  top: '16%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  maxWidth: '200px',
-                  minWidth: '100px',
-                  padding: '8px 12px',
-                  background: 'rgba(30,18,0,0.96)',
-                  border: `2px solid ${glowColor}`,
-                  borderRadius: '3px',
-                  fontFamily: '"fusion-pixel", monospace',
-                  fontSize: '11px',
-                  lineHeight: 1.5,
-                  color: glowColor,
-                  textAlign: 'center' as const,
-                  wordBreak: 'break-all' as const,
-                  pointerEvents: 'none',
-                }}
-              >
-                {currentLine}
-                <svg width="10" height="6" viewBox="0 0 10 6" style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)' }}>
-                  <polygon points="0,0 10,0 5,6" fill="rgba(30,18,0,0.96)" />
-                  <line x1="0" y1="0" x2="5" y2="6" stroke={glowColor} strokeWidth="2" />
-                  <line x1="10" y1="0" x2="5" y2="6" stroke={glowColor} strokeWidth="2" />
-                </svg>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
           <AnimatePresence>
             {showBubble && (
               <motion.div
                 key="tap-hint"
                 initial={{ opacity: 0 }}
-                animate={{ opacity: tapHint ? 0.8 : 0.3 }}
+                animate={{ opacity: tapHint ? 0.85 : 0.35 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
+                transition={{ duration: 0.2 }}
                 style={{
                   position: 'absolute',
-                  bottom: '10%',
-                  right: '16px',
+                  bottom: '8%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
                   fontFamily: '"fusion-pixel", monospace',
-                  fontSize: '10px',
+                  fontSize: '11px',
                   color: glowColor,
                   textShadow: '1px 1px 0 #000',
                   pointerEvents: 'none',
-                  letterSpacing: '1px',
+                  letterSpacing: '2px',
                 }}
               >
                 {phase === 'talk2' ? '点击关闭 ▶' : '点击继续 ▶'}
