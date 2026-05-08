@@ -76,6 +76,9 @@ export interface GameState {
   bloodRerollCount?: number;   // 本回合卖血重投次数（战士特权伤害加成）
   chargeStacks?: number;       // 法师蓄力层数（连续不出牌回合数）
   mageOverchargeMult?: number; // 法师囤满后继续蓄力的额外伤害倍率加成
+  /** 法师吟唱期间已被攻击次数（包含 DOT 和屏障吸收）。
+   *  每次受击 → 累加 2^N 层 vulnerable，出牌后清零（吟唱重置）。 */
+  mageChantHitCount?: number;
   comboCount?: number;
   lockedElement?: string;  // 棱镜聚焦锁定的元素         // 盗贼本回合已出牌次数（连击计数）
   lastPlayHandType?: string;   // 盗贼上一次出牌的牌型（连击终结判定）

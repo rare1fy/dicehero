@@ -12,7 +12,7 @@ import * as ReactNS from 'react';
 import type { Die, GameState, Enemy } from '../types/game';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
-import { absorbPlayerDamage } from './battleHelpers';
+import { absorbPlayerDamage, calcMageChantHitPenalty, applyChantHitVulnerable } from './battleHelpers';
 import { PixelArcaneShield, PixelShield, PixelHeart } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
 
@@ -100,7 +100,8 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
     }
   } else if (game.playerClass === 'mage' && playedThisTurn) {
     // 出了牌就重置吟唱和过充倍率（chantShield 由回合开始清零统一处理）
-    setGame(prev => ({ ...prev, chargeStacks: 0, mageOverchargeMult: 0 }));
+    // [2026-05-08] 同时清零吟唱受击次数，下一轮吟唱从 0 次开始计 2^N
+    setGame(prev => ({ ...prev, chargeStacks: 0, mageOverchargeMult: 0, mageChantHitCount: 0 }));
   }
 
   // healOnSkip: 冥想骰子 — 未出牌时手牌中有冥想骰子则回复HP
@@ -168,16 +169,28 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
       });
       if (totalTauntDmg > 0) {
         setTimeout(() => {
+          let chantPenaltyTaunt = 0;
           setGame(prev => {
             const absorb = absorbPlayerDamage(totalTauntDmg, prev.chantShield || 0, prev.armor, false);
+            const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, totalTauntDmg);
+            let nextStatuses = prev.statuses;
+            let newHitCount = prev.mageChantHitCount;
+            if (penalty) {
+              nextStatuses = applyChantHitVulnerable(prev.statuses, penalty.addedStacks);
+              newHitCount = penalty.newHitCount;
+              chantPenaltyTaunt = penalty.addedStacks;
+            }
             return {
               ...prev,
               hp: Math.max(0, prev.hp - absorb.hpDamage),
               armor: absorb.newArmor,
               chantShield: absorb.newShield,
+              statuses: nextStatuses,
+              mageChantHitCount: newHitCount,
             };
           });
           addFloatingText(`-${totalTauntDmg}`, 'text-red-500', heartIcon(), 'player');
+          if (chantPenaltyTaunt > 0) addFloatingText(`吟唱被扰: 易伤+${chantPenaltyTaunt}`, 'text-orange-400', undefined, 'player');
           addToast(`嘲讽反噬：全体敌人攻击造成${totalTauntDmg}伤害`, 'damage');
           playSound('enemy_skill');
         }, 400);

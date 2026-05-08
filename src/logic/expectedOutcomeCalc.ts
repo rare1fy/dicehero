@@ -16,7 +16,7 @@ import type { PendingSideEffect, ExpectedOutcomeResult, CalculateExpectedOutcome
 import { HAND_TYPES } from '../data/handTypes';
 import { getDiceDef } from '../data/dice';
 import { buildRelicContext } from '../engine/buildRelicContext';
-import { FURY_CONFIG } from '../config/gameBalance';
+import { FURY_CONFIG, STATUS_EFFECT_MULT } from '../config/gameBalance';
 import { processDiceOnPlayEffects } from './diceOnPlay';
 
 // 重新导出类型和副作用执行，保持消费方 import 路径不变
@@ -247,7 +247,11 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   if (playerWeak) modifiedDamage = Math.ceil(modifiedDamage * 0.75);
 
   const enemyVulnerable = targetEnemy?.statuses.find(s => s.type === 'vulnerable');
-  if (enemyVulnerable) modifiedDamage = Math.ceil(modifiedDamage * 1.5);
+  if (enemyVulnerable) {
+    const stacks = Math.max(1, enemyVulnerable.value);
+    const mult = STATUS_EFFECT_MULT.vulnerable + (stacks - 1) * STATUS_EFFECT_MULT.vulnerablePerStack;
+    modifiedDamage = Math.ceil(modifiedDamage * mult);
+  }
 
   // 战士【血怒战意】（封顶走 FURY_CONFIG）
   const effectiveFuryStacks = game.playerClass === 'warrior' ? Math.min(bloodRerollCount, FURY_CONFIG.maxStack) : 0;

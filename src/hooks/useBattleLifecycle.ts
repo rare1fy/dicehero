@@ -521,6 +521,7 @@ export function useBattleLifecycle(state: BattleState) {
             armor: 0,
             chantShield: 0,
             chargeStacks: isMageChanting ? prev.chargeStacks : 0,
+            mageChantHitCount: isMageChanting ? prev.mageChantHitCount : 0,
             mageOverchargeMult: isMageChanting ? prev.mageOverchargeMult : 0,
             bloodRerollCount: 0,
             comboCount: 0,

@@ -58,9 +58,13 @@ export function getEffectiveAttackDmg(
   const weak = enemy.statuses.find(s => s.type === 'weak');
   if (weak) val = Math.max(1, Math.floor(val * STATUS_EFFECT_MULT.weak));
 
-  // 4. 玩家易伤修正
+  // 4. 玩家易伤修正（层数生效：1层×1.5 / 每多1层 +0.25）
   const playerVuln = playerStatuses.find(s => s.type === 'vulnerable');
-  if (playerVuln) val = Math.floor(val * STATUS_EFFECT_MULT.vulnerable);
+  if (playerVuln) {
+    const stacks = Math.max(1, playerVuln.value);
+    const mult = STATUS_EFFECT_MULT.vulnerable + (stacks - 1) * STATUS_EFFECT_MULT.vulnerablePerStack;
+    val = Math.floor(val * mult);
+  }
 
   return val;
 }

@@ -89,10 +89,11 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     hp: 100,
     maxHp: 100,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'mage_elemental', 'mage_reverse'],
-    passiveDesc: '【星界吟唱】未出牌骰子保留到下回合（3→4→5→6递增）；吟唱回合获得奥术屏障（减免一切伤害含DOT）；满6后继续吟唱每次+10%伤害；出牌后重置',
+    passiveDesc: '【星界吟唱】未出牌骰子保留到下回合（3→4→5→6递增）；吟唱回合获得奥术屏障（减免一切伤害含DOT），但吟唱期间每次受击会累加 2^N 层易伤（第N次受击）；满6后继续吟唱每次+10%伤害；出牌后重置',
     skills: [
       { name: '星界吟唱', desc: '未出牌的骰子保留到下回合，手牌上限逐层递增（3→4→5→6）' },
       { name: '奥术屏障', desc: '每次吟唱（不出牌）获得奥术屏障（4/6/8/10...递增），能减免一切伤害包括中毒灼烧等持续伤害，每回合清零' },
+      { name: '吟唱代价', desc: '吟唱期间被任何伤害打扰（含 DOT 和屏障吸收的），累加 2^N 层易伤（第1次+2 / 第2次+4 / 第3次+8 / 第4次+16 / 无上限）。出牌后清零计数' },
       { name: '过充释放', desc: '手牌满6颗后继续吟唱，每回合额外+10%伤害倍率；出牌后重置' },
     ],
     normalAttackMultiSelect: false,

@@ -42,6 +42,7 @@ export function buildBattleGameState(
     playsPerEnemy: {},
     chargeStacks: 0,
     mageOverchargeMult: 0,
+    mageChantHitCount: 0,
     bloodRerollCount: 0,
     comboCount: 0,
     lastPlayHandType: undefined,

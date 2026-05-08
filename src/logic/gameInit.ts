@@ -36,6 +36,7 @@ export function createInitialGameState(classId?: ClassId): GameState {
     playerClass: classId,
     bloodRerollCount: 0,
     chargeStacks: 0,
+    mageChantHitCount: 0,
     mageOverchargeMult: 0,
     comboCount: 0,
     lastPlayHandType: undefined,
