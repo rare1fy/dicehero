@@ -37,9 +37,10 @@ const listeners = new Set<Listener>();
 /**
  * 奖励事件统一延迟：让"获得 X"的图标飞行在伤害/抽牌演出之后再出现，
  * 避免和伤害数字、敌人死亡飘字挤在同一瞬间，观感混乱。
- * 900ms 可覆盖常见的伤害弹窗(≈600ms) + AOE 多目标顺序飘字。
+ * 400ms 恰好错开常见伤害弹窗的峰值，同时 state 也已应用完毕，
+ * 保证 data-reward-target DOM 节点已渲染。
  */
-const REWARD_DEFER_MS = 900;
+const REWARD_DEFER_MS = 400;
 
 export function onReward(fn: Listener): () => void {
   listeners.add(fn);

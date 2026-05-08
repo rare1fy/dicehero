@@ -40,6 +40,7 @@ import { DamagePreviewCard } from './DamagePreviewCard';
 import { useBattleContext } from '../contexts/BattleContext';
 import { BossTauntScene } from './BossTauntEntrance';
 import { formatDescription } from '../utils/richText';
+import { renderFloatText } from '../utils/renderFloatText';
 import { ANIMATION_TIMING } from '../config';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
 
@@ -236,8 +237,7 @@ export function EnemyStageView() {
             className={`absolute z-50 font-black text-3xl pointer-events-none flex items-center gap-1 drop-shadow-[0_3px_6px_rgba(0,0,0,0.7)] ${ft.color}`}
             style={{ top: '25%' }}
           >
-            {ft.icon}
-            {ft.text}
+            {renderFloatText(ft.text, ft.icon)}
           </motion.div>
         ))}
       </AnimatePresence>

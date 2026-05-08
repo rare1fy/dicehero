@@ -51,7 +51,15 @@ function readCenter(el: Element | null): { x: number; y: number } | null {
 
 function resolveTarget(kind: RewardKind): { x: number; y: number } | null {
   const el = document.querySelector(`[data-reward-target="${kind}"]`);
-  return readCenter(el);
+  const c = readCenter(el);
+  if (c) return c;
+  // 兜底 1：目标 UI 还没渲染（如 armor=0 时无 armor 节点），
+  // 用 player-hud-panel 顶部居中作为大致方向
+  const hud = document.querySelector('.player-hud-panel');
+  const hc = readCenter(hud);
+  if (hc) return { x: hc.x, y: hc.y - 40 };
+  // 兜底 2：屏幕下方 1/3
+  return { x: window.innerWidth / 2, y: window.innerHeight * 0.6 };
 }
 
 function resolveSource(ev: RewardEvent): { x: number; y: number } | null {

@@ -25,6 +25,7 @@ import BuffTooltip from './BuffTooltip';
 import { useBattleContext } from '../contexts/BattleContext';
 import { getDiceElementClass, getHpBarClass } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
+import { renderFloatText } from '../utils/renderFloatText';
 import { COMBAT_TYPE_DESC } from '../logic/battleHelpers';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
 import { FURY_CONFIG } from '../config/gameBalance';
@@ -56,11 +57,11 @@ export function PlayerHudView() {
         {floatingTexts.filter(ft => ft.target === 'player').map(ft => (
           ft.large ? (
             <motion.div key={ft.id} initial={{ opacity: 0, y: 20, scale: 0.5 }} animate={{ opacity: [0, 1, 1, 1, 0], y: [-30, -60, -70, -80, -100], scale: [0.5, 1.4, 1.3, 1.3, 1.5] }} transition={{ duration: 2.0, times: [0, 0.1, 0.3, 0.8, 1] }} className="fixed z-[200] font-black text-2xl pointer-events-none flex items-center gap-1.5 text-purple-300" style={{ top: '35%', left: '50%', transform: 'translateX(-50%)', textShadow: '0 0 16px rgba(168,85,247,0.9), 0 0 32px rgba(168,85,247,0.5), 0 2px 4px rgba(0,0,0,0.9)' }}>
-              {ft.icon}{ft.text}
+              {renderFloatText(ft.text, ft.icon)}
             </motion.div>
           ) : (
             <motion.div key={ft.id} initial={{ opacity: 0, y: 0 + ft.y, scale: 0.5 }} animate={{ opacity: [0, 1, 1, 0], y: -80 + ft.y, x: ft.x, scale: [0.5, 2.0, 1.8, 2.2] }} transition={{ duration: 1.8, times: [0, 0.1, 0.75, 1] }} className={`absolute z-50 font-bold text-xl pointer-events-none flex items-center gap-1 pixel-text-shadow ${ft.color}`} style={{ top: '-20px', left: '50%', marginLeft: '-20px' }}>
-              {ft.icon}{ft.text}
+              {renderFloatText(ft.text, ft.icon)}
             </motion.div>
           )
         ))}
