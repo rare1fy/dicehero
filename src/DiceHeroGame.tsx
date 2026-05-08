@@ -53,6 +53,9 @@ import { useGlobalClickCooldown } from './hooks/useGlobalClickCooldown';
 // --- Context Builders ---
 import { buildGameContext, buildBattleContext } from './contexts/contextBuilders';
 
+// --- Reward gate（伤害/结算演出期间堆积，演出结束后 flush） ---
+import { setRewardBusy } from './logic/rewardEvents';
+
 const META_KEY = 'dicehero_meta';
 const loadMeta = () => {
   try { const raw = localStorage.getItem(META_KEY); if (raw) return JSON.parse(raw); } catch {}
@@ -85,6 +88,16 @@ export default function DiceHeroGame() {
   } = state;
 
   const { expectedOutcome } = combat;
+
+  // === Reward Gate ===
+  // 伤害/结算演出期间（settlementPhase 非空 或 showDamageOverlay 显示中）
+  // 奖励入队堆积；演出结束的瞬间 flush，飞行动画和奖励飘字一并爆出。
+  // 这是"彻底去掉魔法数字延迟"的替代方案。
+  const { settlementPhase, showDamageOverlay } = state;
+  React.useEffect(() => {
+    const inShow = settlementPhase !== null || showDamageOverlay !== null;
+    setRewardBusy(inShow);
+  }, [settlementPhase, showDamageOverlay]);
 
   // === 早期返回：特殊 phase ===
   if (game.phase === 'start') {

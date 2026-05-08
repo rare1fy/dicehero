@@ -1,70 +1,128 @@
 /**
- * rewardEvents.ts — 奖励爆出事件总线
+ * rewardEvents.ts — 奖励爆出事件总线（队列版）
  *
- * 出牌后效 / 抽牌 / 重投 / 遗物触发等"玩家获得 X"的场景，统一 emitReward
- * RewardBurstLayer 订阅事件：
- *   1) 从 sourceSelector（默认手牌区）爆出对应 icon
- *   2) 飞向 targetSelector（由 kind 映射到 HUD 上的 data-reward-target）
- *   3) 目标 UI 元素接收到后自行刷一下光（通过 css class 触发）
+ * 核心机制：
+ *   1) emitReward 只入队，不立即执行
+ *   2) 外部通过 setRewardBusy(true/false) 标记"当前是否在战斗演出中"
+ *      busy = true  → 队列堆积
+ *      busy = false → 顺序 flush（80ms 错峰，避免同帧挤堆）
+ *   3) 闸门驱动源：settlementPhase !== null || showDamageOverlay !== null
+ *      ——由 BattleContext 监听状态变化调用 setRewardBusy
  *
- * 独立于 React 状态，避免污染 GameState 或 addFloatingText 签名。
- *
- * [2026-05-08] 新增，配合统一金黄色飘字和空间隔离飘字，解决"五颜六色看不懂"问题。
+ * [2026-05-08 架构迭代]
+ *   去掉 400ms 硬延迟魔法数字，改为状态机驱动。
+ *   解决"伤害演出时长变化 / 暴击 / AOE 多段"导致魔法数字失效的问题。
  */
 
 export type RewardKind =
-  | 'dice'       // +骰子（飞向 骰子库）
-  | 'card'       // +出牌机会（飞向 出牌按钮）
-  | 'reroll'     // +免费重投（飞向 重投按钮）
-  | 'heart'      // +生命（飞向 HP条）
-  | 'armor'      // +护甲（飞向 护甲icon）
-  | 'shield'     // +奥术屏障（飞向 屏障icon）
-  | 'gold'       // +金币（飞向 金币）
-  | 'fury';      // +血怒（飞向 狂暴icon）
+  | 'dice'
+  | 'card'
+  | 'reroll'
+  | 'heart'
+  | 'armor'
+  | 'shield'
+  | 'gold'
+  | 'fury';
 
 export interface RewardEvent {
   kind: RewardKind;
   amount: number;
   at: number;
-  /** 起源 DOM selector，未提供则用手牌锚点 */
   sourceSelector?: string;
 }
 
 type Listener = (ev: RewardEvent) => void;
 
+// 订阅 / 通知 —— 飞行动画
 const listeners = new Set<Listener>();
+// 订阅 / 通知 —— 奖励飘字（只影响金色+icon奖励类飘字，伤害飘字不走这条）
+type FloatListener = (text: string, color: string, icon: unknown, target: 'player' | 'enemy') => void;
+const floatListeners = new Set<FloatListener>();
 
-/**
- * 奖励事件统一延迟：让"获得 X"的图标飞行在伤害/抽牌演出之后再出现，
- * 避免和伤害数字、敌人死亡飘字挤在同一瞬间，观感混乱。
- * 400ms 恰好错开常见伤害弹窗的峰值，同时 state 也已应用完毕，
- * 保证 data-reward-target DOM 节点已渲染。
- */
-const REWARD_DEFER_MS = 400;
+// 闸门队列
+interface QueuedReward { kind: RewardKind; amount: number; sourceSelector?: string; }
+interface QueuedFloat { text: string; color: string; icon: unknown; target: 'player' | 'enemy'; }
+const rewardQueue: QueuedReward[] = [];
+const floatQueue: QueuedFloat[] = [];
+let busy = false;
+
+const FLUSH_STEP_MS = 80;  // 同批次错峰间隔，防同帧堆叠
 
 export function onReward(fn: Listener): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
 }
 
-export function emitReward(kind: RewardKind, amount: number, sourceSelector?: string): void {
-  window.setTimeout(() => {
-    const ev: RewardEvent = { kind, amount, at: Date.now(), sourceSelector };
-    listeners.forEach(fn => {
-      try { fn(ev); } catch (_e) { /* 吞掉 */ }
-    });
-  }, REWARD_DEFER_MS);
+export function onRewardFloat(fn: FloatListener): () => void {
+  floatListeners.add(fn);
+  return () => { floatListeners.delete(fn); };
+}
+
+function dispatchReward(r: QueuedReward): void {
+  const ev: RewardEvent = { kind: r.kind, amount: r.amount, at: Date.now(), sourceSelector: r.sourceSelector };
+  listeners.forEach(fn => { try { fn(ev); } catch { /* 吞掉 */ } });
+}
+
+function dispatchFloat(f: QueuedFloat): void {
+  floatListeners.forEach(fn => { try { fn(f.text, f.color, f.icon, f.target); } catch { /* 吞掉 */ } });
+}
+
+function flushAll(): void {
+  // 飘字先爆（视觉引导"获得"），再接飞行动画，错峰展开
+  const combined: Array<() => void> = [];
+  for (const f of floatQueue) combined.push(() => dispatchFloat(f));
+  for (const r of rewardQueue) combined.push(() => dispatchReward(r));
+  floatQueue.length = 0;
+  rewardQueue.length = 0;
+
+  combined.forEach((fn, i) => {
+    window.setTimeout(fn, i * FLUSH_STEP_MS);
+  });
 }
 
 /**
- * 触发目标 UI 元素的"接收闪光"动画。
- * 通过 toggle class `reward-recv-flash` 实现，CSS 里定义 0.4s 闪光 keyframe。
+ * 闸门开关。由 BattleContext 监听 settlementPhase / showDamageOverlay 变化调用。
+ * true  = 正在演出，奖励入队
+ * false = 演出完毕，flush 所有堆积的奖励
  */
+export function setRewardBusy(next: boolean): void {
+  if (busy === next) return;
+  busy = next;
+  if (!busy && (rewardQueue.length > 0 || floatQueue.length > 0)) {
+    flushAll();
+  }
+}
+
+export function emitReward(kind: RewardKind, amount: number, sourceSelector?: string): void {
+  if (busy) {
+    rewardQueue.push({ kind, amount, sourceSelector });
+    return;
+  }
+  // 非演出期，直接派发
+  dispatchReward({ kind, amount, sourceSelector });
+}
+
+/**
+ * 奖励类飘字专用入口。与 emitReward 共享闸门，保证"先演出→后爆飘字→后飞动画"的顺序。
+ * 业务调用点原先用 addFloatingText 的奖励场景，都改走这里。
+ */
+export function emitRewardFloat(
+  text: string,
+  color: string,
+  icon: unknown,
+  target: 'player' | 'enemy' = 'player'
+): void {
+  if (busy) {
+    floatQueue.push({ text, color, icon, target });
+    return;
+  }
+  dispatchFloat({ text, color, icon, target });
+}
+
 export function flashRewardTarget(kind: RewardKind): void {
   const el = document.querySelector<HTMLElement>(`[data-reward-target="${kind}"]`);
   if (!el) return;
   el.classList.remove('reward-recv-flash');
-  // 强制回流，保证每次都能重新触发动画
   void el.offsetWidth;
   el.classList.add('reward-recv-flash');
   window.setTimeout(() => { el.classList.remove('reward-recv-flash'); }, 450);
