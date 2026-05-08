@@ -271,10 +271,34 @@ export const BossTauntHint: React.FC = () => {
   const showBubble = phase === 'talk1' || phase === 'talk2';
 
   const [tapHint, setTapHint] = useState(true);
+  // [2026-05-08] 实测玩家 HUD 面板顶部到视口底部的像素距离，保证不同屏高下
+  // "点击继续"永远飘在面板正上方 16px，不再与面板重叠。
+  const [hintBottomPx, setHintBottomPx] = useState<number>(0);
+
   useEffect(() => {
     if (!showBubble) return;
     const t = window.setInterval(() => setTapHint(p => !p), 600);
     return () => window.clearInterval(t);
+  }, [showBubble]);
+
+  useEffect(() => {
+    if (!showBubble) return;
+    const measure = () => {
+      const hud = document.querySelector('.player-hud-panel') as HTMLElement | null;
+      if (!hud) { setHintBottomPx(0); return; }
+      const rect = hud.getBoundingClientRect();
+      // bottom:（视口高度 - 面板顶部 y） + 16 像素缓冲
+      const bottom = Math.max(0, window.innerHeight - rect.top) + 16;
+      setHintBottomPx(bottom);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // HUD 内容可能在 showBubble 生效瞬间还没 mount，再测一次兜底
+    const retry = window.setTimeout(measure, 120);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.clearTimeout(retry);
+    };
   }, [showBubble]);
 
   return (
@@ -288,7 +312,7 @@ export const BossTauntHint: React.FC = () => {
           transition={{ duration: 0.2 }}
           style={{
             position: 'fixed',
-            bottom: '36%',      // 战斗场景中央下方，玩家UI上方缝隙，避开 Boss 精灵本体
+            bottom: hintBottomPx ? `${hintBottomPx}px` : '36%',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1100,

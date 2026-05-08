@@ -279,7 +279,8 @@ export function useBattleLifecycle(state: BattleState) {
   const rollAllDice = async (forceResetHand = false) => {
     playSound('roll');
     const g = gameRef.current;
-
+    // [DIAG-WAVE 2026-05-08] 波次切换诊断，刘叔按 F12 看 WAVE-SWITCH
+    console.log('[WAVE-SWITCH] rollAllDice enter:', { forceResetHand, playerClass: g.playerClass, playsLeft: g.playsLeft, maxPlays: g.maxPlays, chargeStacks: g.chargeStacks, diceBagLen: g.diceBag.length, discardLen: g.discardPile.length, diceBag: [...g.diceBag], discardPile: [...g.discardPile], diceHand: dice.map(d => `${d.diceDefId}(${d.spent ? 'spent' : 'kept'})`) });
     let keptDice: Die[] = [];
     if (g.playerClass === 'mage' && !forceResetHand) {
       keptDice = dice.filter(d => !d.spent);
@@ -392,6 +393,8 @@ export function useBattleLifecycle(state: BattleState) {
     }
 
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
+    // [DIAG-WAVE] 出口
+    console.log('[WAVE-SWITCH] rollAllDice after drawFromBag:', { forceResetHand, newBagLen: newBag.length, newDiscardLen: newDiscard.length, drawnLen: drawn.length, count, shuffled, newBag: [...newBag], drawnIds: drawn.map(d => d.diceDefId) });
     setDice([...keptDiceWithBonuses, ...drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 }))]);
 
     await performDiceRollAnimation({

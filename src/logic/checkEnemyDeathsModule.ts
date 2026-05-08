@@ -111,6 +111,20 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
         //   - 法师吟唱：维持"本回合未出牌则保留"的既有含义（此处用 prev.playsLeft >= maxPlays 判定）
         setGame(prev => {
           const isMageChanting = prev.playerClass === 'mage' && prev.playsLeft >= prev.maxPlays;
+          // [DIAG-WAVE 2026-05-08] 诊断：波次切换 setGame 触发前后 diceBag 变化
+          //   刘叔重现时按 F12 打开控制台看【WAVE-SWITCH】条目，留意 bag 长度是否突然增长。
+          console.log('[WAVE-SWITCH] setGame prev snapshot:', {
+            waveIdx: nextWaveIdx,
+            playerClass: prev.playerClass,
+            playsLeft: prev.playsLeft,
+            maxPlays: prev.maxPlays,
+            isMageChanting,
+            diceBagLen: prev.diceBag.length,
+            discardLen: prev.discardPile.length,
+            ownedDiceLen: prev.ownedDice.length,
+            diceBag: [...prev.diceBag],
+            discardPile: [...prev.discardPile],
+          });
           return {
             ...prev,
             currentWaveIndex: nextWaveIdx,
