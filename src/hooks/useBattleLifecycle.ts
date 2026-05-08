@@ -94,37 +94,43 @@ export function useBattleLifecycle(state: BattleState) {
       });
     }, 300);
     setPlayerEffect(null);
-    if (node.type === 'boss') {
-      playSound('boss_appear');
-      if (waves.length >= 1) { // [FIX 2026-05-08] 不限单波，Boss 挑衅演出始终触发
-        const bossEnemy = firstWave[0];
-        if (bossEnemy) {
-          // [BOSS-TAUNT 2026-05-08] ★ 第 1 步：Boss 挑衅短演出（不可跳过 ~2.4s）
-          //   本尊登场 + 两句挑衅台词 → 退场
-          //   然后再走原本的 BossEntrance 横幅 + 本尊效果
-          const bossQuotes = getEnemyQuotes(bossEnemy.configId);
-          const tauntLines = (bossQuotes?.enter || []).slice(0, 2);
-          setBossTaunt({ visible: true, name: bossEnemy.name, chapter: game.chapter, lines: tauntLines });
-          playSound('boss_laugh');
-          await new Promise(r => setTimeout(r, 2400));
-          setBossTaunt(prev => ({ ...prev, visible: false }));
-          await new Promise(r => setTimeout(r, 180));
 
-          // ★ 第 2 步：原本的 BossEntrance 横幅 + 本尊效果（保留原实现）
-          setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter });
-          await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
-          setBossEntrance(prev => ({ ...prev, visible: false }));
-          await new Promise(r => setTimeout(r, 200));
-          setEnemyEffectForUid(bossEnemy.uid, 'boss_entrance');
-          playSound('boss_laugh');
-          await new Promise(r => setTimeout(r, ANIMATION_TIMING.bossEntranceDuration));
-          setEnemyEffectForUid(bossEnemy.uid, null);
-        }
-      }
-    }
+    // ★ 先写入 battleGameState（phase=battle），让战斗场景在黑屏下完成渲染
     playsPerEnemyRef.current = {};
     const battleChallenge = generateChallenge(node.depth, game.chapter, game.drawCount, node.type);
     setGame(prev => buildBattleGameState({ prev, node, waves, firstWave, battleChallenge }));
+
+    if (node.type === 'boss') {
+      // Boss 节点：先把黑屏 fadeOut 收起，让玩家看到战斗场景，再播演出
+      await new Promise(r => setTimeout(r, 80)); // 等 React 渲染一帧
+      setBattleTransition('fadeOut');
+      await new Promise(r => setTimeout(r, 320)); // fadeOut 动画时长
+      setBattleTransition('none');
+
+      playSound('boss_appear');
+      const bossEnemy = firstWave[0];
+      if (bossEnemy) {
+        // ★ 第 1 步：Boss 挑衅短演出（不可跳过 ~2.4s）
+        //   本尊登场 + 两句挑衅台词 → 退场
+        const bossQuotes = getEnemyQuotes(bossEnemy.configId);
+        const tauntLines = (bossQuotes?.enter || []).slice(0, 2);
+        setBossTaunt({ visible: true, name: bossEnemy.name, chapter: game.chapter, lines: tauntLines });
+        playSound('boss_laugh');
+        await new Promise(r => setTimeout(r, 2400));
+        setBossTaunt(prev => ({ ...prev, visible: false }));
+        await new Promise(r => setTimeout(r, 180));
+
+        // ★ 第 2 步：原本的 BossEntrance 横幅 + 本尊效果
+        setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter });
+        await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
+        setBossEntrance(prev => ({ ...prev, visible: false }));
+        await new Promise(r => setTimeout(r, 200));
+        setEnemyEffectForUid(bossEnemy.uid, 'boss_entrance');
+        playSound('boss_laugh');
+        await new Promise(r => setTimeout(r, ANIMATION_TIMING.bossEntranceDuration));
+        setEnemyEffectForUid(bossEnemy.uid, null);
+      }
+    }
     const freshBag = initDiceBag(game.ownedDice);
     const drawCountBonus = 0;
     const startWarriorBonus = (game.playerClass === 'warrior' && game.hp <= game.maxHp * 0.5) ? 1 : 0;
@@ -147,8 +153,11 @@ export function useBattleLifecycle(state: BattleState) {
     setRerollCount(0);
     addLog(`遇到 ${firstWave.map(e => e.name).join('、')}！`);
 
-    setBattleTransition('fadeOut');
-    setTimeout(() => setBattleTransition('none'), 300);
+    // 非 Boss 节点在这里 fadeOut（Boss 节点在演出前已经 fadeOut 过了）
+    if (node.type !== 'boss') {
+      setBattleTransition('fadeOut');
+      setTimeout(() => setBattleTransition('none'), 300);
+    }
   };
 
   // ==================== startNode ====================

@@ -64,7 +64,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({ visible, bossName,
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          style={{ zIndex: 150, background: colors.bg }}
+          style={{ zIndex: 1000, background: colors.bg }}
         >
           {/* Boss 本尊：从右侧滑入 */}
           <motion.div
