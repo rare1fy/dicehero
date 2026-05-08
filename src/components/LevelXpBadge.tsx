@@ -177,7 +177,7 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
                 lineHeight: 1,
               }}
             >
-              {xp}/{xpToNext}
+              {xpToNext > 0 ? `${xp}/${xpToNext}` : 'MAX'}
             </span>
           </motion.div>
         )}

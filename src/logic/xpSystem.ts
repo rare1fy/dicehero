@@ -50,17 +50,26 @@ export interface XpApplyResult {
   levelsGained: number[];  // 如 [5,6] 表示这一次跳了 2 级
 }
 
+/** 等级上限（硬天花板，防无限堆叠）。单局正常节奏打不到；到上限后经验不再累积。 */
+export const MAX_LEVEL = 20;
+
 export function applyXpGain(game: GameState, gain: number): XpApplyResult {
   let level = game.level || 1;
   let xp = (game.xp || 0) + gain;
   let xpToNext = game.xpToNext || nextLevelThreshold(level + 1);
   const levelsGained: number[] = [];
 
-  while (xp >= xpToNext) {
+  while (xp >= xpToNext && level < MAX_LEVEL) {
     xp -= xpToNext;
     level += 1;
     levelsGained.push(level);
     xpToNext = nextLevelThreshold(level + 1);
+  }
+
+  // 封顶后经验归零，不再累积
+  if (level >= MAX_LEVEL) {
+    xp = 0;
+    xpToNext = 0;
   }
 
   return { level, xp, xpToNext, levelsGained };

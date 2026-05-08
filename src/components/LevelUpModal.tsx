@@ -49,6 +49,13 @@ export const LevelUpModal: React.FC = () => {
   // 必须在早 return 之前调用，满足 React Hooks 规则
   const choices = useMemo(() => getLevelUpChoices(), [currentLevel]);
 
+  // [LEVEL-UP-SFX 2026-05-08] 每次新弹窗出现播放升级音效；同次跨多级时每级都响一次
+  React.useEffect(() => {
+    if (currentLevel !== undefined) {
+      playSound('levelup');
+    }
+  }, [currentLevel]);
+
   if (!currentLevel) return null;
 
   return (
