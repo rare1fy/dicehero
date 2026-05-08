@@ -203,6 +203,11 @@ export default function DiceHeroGame() {
         chapter={bossTaunt.chapter}
         lines={bossTaunt.lines}
         onDismiss={bossTaunt.onDismiss}
+        onShake={() => {
+          // Boss 说第二句时，整个战斗镜头抖动 0.6s
+          state.setScreenShake(true);
+          window.setTimeout(() => state.setScreenShake(false), 600);
+        }}
       />
       {/* Boss嘲讽点击提示 — UI层，fixed定位，独立于战斗场景 */}
       <BossTauntHint />

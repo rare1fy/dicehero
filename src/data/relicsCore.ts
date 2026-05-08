@@ -235,6 +235,7 @@ export const blackMarketContract: Relic = {
   icon: 'contract',
   rarity: 'uncommon',
   trigger: 'on_reroll',
+  classRestriction: 'warrior',
   effect: (ctx) => ({
     goldBonus: ctx.isBloodReroll ? (ctx.diceValues?.[0] || 0) : 0,
     oncePerTurn: true,

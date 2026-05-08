@@ -136,6 +136,10 @@ export const PixelSquare: React.FC<PixelIconProps> = ({ size = 2, className, sty
 export const PixelStar: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
   <IconBase pixels={D.STAR} ps={size} className={className} style={style} />;
 
+/** 等级箭头 — 黄色向上箭头（代替星星用于等级徽章） */
+export const PixelLevelArrow: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
+  <IconBase pixels={D.LEVEL_ARROW} ps={size} className={className} style={style} />;
+
 /** 奖杯 — 六条 */
 export const PixelTrophy: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
   <IconBase pixels={D.TROPHY} ps={size} className={className} style={style} />;

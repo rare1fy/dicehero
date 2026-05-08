@@ -238,6 +238,7 @@ export const extraFreeReroll: Relic = {
   icon: 'bag',
   rarity: 'legendary',
   trigger: 'passive',
+  classBan: ['warrior'], // 战士天生就能嗜血，该遗物对战士无意义
   effect: () => ({ unlockBloodReroll: true }),
 };
 

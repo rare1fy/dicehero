@@ -257,6 +257,17 @@ export const STAR: readonly (readonly string[])[] = [
   ['#8b7414', '', '', '', '', '', '#8b7414'],
 ] as const;
 
+/** 等级箭头 — 黄色向上箭头（7x7），用于等级徽章 */
+export const LEVEL_ARROW: readonly (readonly string[])[] = [
+  ['', '', '', '#e8d068', '', '', ''],
+  ['', '', '#e8d068', '#fff2a0', '#e8d068', '', ''],
+  ['', '#e8d068', '#fff2a0', '#fff2a0', '#fff2a0', '#e8d068', ''],
+  ['#e8d068', '#fff2a0', '#c8a83c', '#fff2a0', '#c8a83c', '#fff2a0', '#e8d068'],
+  ['#c8a83c', '#8b7414', '', '#e8d068', '', '#8b7414', '#c8a83c'],
+  ['', '', '', '#e8d068', '', '', ''],
+  ['', '', '', '#c8a83c', '', '', ''],
+] as const;
+
 /** 奖杯 — 六条（7x7） */
 export const TROPHY: readonly (readonly string[])[] = [
   ['', '#c8a83c', '#e8d068', '#e8d068', '#e8d068', '#c8a83c', ''],

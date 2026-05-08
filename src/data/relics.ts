@@ -202,10 +202,16 @@ export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush, universalPair, doubleStrike, extraFreeReroll],
 };
 
-/** 过滤遗物池：通用遗物 + 匹配当前职业的职业遗物 */
+/** 过滤遗物池：通用遗物 + 匹配当前职业的职业遗物；同时剔除 classBan 列表包含当前职业的遗物 */
 export const filterRelicsByClass = (relics: Relic[], playerClass?: string): Relic[] => {
   if (!playerClass) return relics;
-  return relics.filter(r => !r.classRestriction || r.classRestriction === playerClass);
+  return relics.filter(r => {
+    // classRestriction 白名单：未设置 = 全职业；设置了必须匹配
+    if (r.classRestriction && r.classRestriction !== playerClass) return false;
+    // classBan 黑名单：命中当前职业 = 过滤掉
+    if (r.classBan && r.classBan.includes(playerClass as ClassId)) return false;
+    return true;
+  });
 };
 
 /** 获取遗物奖励池 */

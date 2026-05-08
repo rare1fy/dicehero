@@ -130,6 +130,8 @@ export interface Relic {
   effect: (context: RelicContext) => RelicEffect;
   // 职业限制：undefined=通用遗物，'warrior'/'mage'/'rogue'=仅该职业在常规商店可见
   classRestriction?: ClassId;
+  // 职业黑名单：该职业不应 roll 到这个遗物（通常是因为该职业已有同等能力，遗物对其无用）
+  classBan?: ClassId[];
   // 计数型遗物
   counter?: number;        // 当前计数值
   maxCounter?: number;      // 最大计数（用于显示进度）

@@ -12,7 +12,7 @@
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PixelStar } from './PixelIcons';
+import { PixelLevelArrow } from './PixelIcons';
 
 interface LevelXpBadgeProps {
   level: number;
@@ -76,7 +76,7 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
 
   return (
     <div
-      className="relative shrink-0 flex items-center gap-0.5"
+      className="relative shrink-0 flex items-center gap-1"
       data-xp-badge="1"
       style={{ fontFamily: '"fusion-pixel", monospace' }}
     >
@@ -85,26 +85,26 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
         onClick={handleClick}
         animate={levelUpFlash ? { scale: [1, 1.4, 1], rotate: [0, -6, 6, 0] } : { scale: 1, rotate: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0 leading-none"
+        className="flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 leading-none"
         style={{ height: 14 }}
         title="点击查看经验"
       >
-        <PixelStar
+        <PixelLevelArrow
           size={1}
           style={{
             filter: levelUpFlash
               ? 'drop-shadow(0 0 4px #fff7b0) drop-shadow(0 0 8px #ffd24a)'
-              : 'drop-shadow(0 0 2px rgba(80,160,255,0.55))',
+              : 'drop-shadow(0 0 2px rgba(232,208,104,0.55))',
           }}
         />
         <span
           className="text-[10px] font-black tracking-wider pixel-text-shadow"
           style={{
-            color: levelUpFlash ? '#fff2a0' : '#a0d0ff',
-            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(60,140,255,0.55)',
+            color: levelUpFlash ? '#fff2a0' : '#e8d068',
+            textShadow: '0 1px 0 rgba(0,0,0,0.9), 0 0 3px rgba(200,168,60,0.55)',
           }}
         >
-          Lv{level}
+          Lv {level}
         </span>
       </motion.button>
 

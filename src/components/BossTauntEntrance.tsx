@@ -27,6 +27,8 @@ interface BossTauntProps {
   chapter: number;
   lines: string[];
   onDismiss?: () => void;
+  /** 触发全局屏震（整个战斗镜头抖动），talk2 时调用 */
+  onShake?: () => void;
 }
 
 const CHAPTER_GLOW: Record<number, string> = {
@@ -48,6 +50,7 @@ let _bossName = '';
 let _chapter = 1;
 let _lines: string[] = [];
 let _onDismiss: (() => void) | undefined;
+let _onShake: (() => void) | undefined;
 const _listeners = new Set<() => void>();
 
 function _setPhase(p: Phase) {
@@ -69,13 +72,14 @@ function useTauntState() {
 // 主入口：驱动 phase 推进，同时挂两个子层（场景层外面用，UI层用 Hint）
 // ============================================================
 export const BossTauntEntrance: React.FC<BossTauntProps> = ({
-  visible, bossName, chapter, lines, onDismiss,
+  visible, bossName, chapter, lines, onDismiss, onShake,
 }) => {
   useEffect(() => {
     _bossName = bossName;
     _chapter = chapter;
     _lines = lines;
     _onDismiss = onDismiss;
+    _onShake = onShake;
     if (!visible) {
       _setPhase('idle');
       return;
@@ -83,7 +87,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
     _setPhase('enter');
     const t = window.setTimeout(() => _setPhase('talk1'), 720);
     return () => window.clearTimeout(t);
-  }, [visible, bossName, chapter, lines, onDismiss]);
+  }, [visible, bossName, chapter, lines, onDismiss, onShake]);
 
   // 这个组件自身不渲染任何 DOM —— 场景层和UI层是独立组件挂在不同位置
   return null;
@@ -104,15 +108,14 @@ export const BossTauntScene: React.FC = () => {
     : ['...', 'enjoy your last battle.'];
 
   // 每句台词出现 / 屏震：用 phase 变化 effect 统一处理
-  const [shakeKey, setShakeKey] = useState(0);
   useEffect(() => {
     if (phase === 'talk1') {
       // 第一句：低沉说话音
       playSound('boss_laugh');
     } else if (phase === 'talk2') {
-      // 第二句：低沉说话音 + 屏震（屏震通过重置 key 触发容器动画）
+      // 第二句：低沉说话音 + 整个战斗镜头震动（通过全局 setScreenShake 驱动 BattleSceneView 抖）
       playSound('boss_laugh');
-      setShakeKey(k => k + 1);
+      _onShake?.();
     }
   }, [phase]);
 
@@ -134,9 +137,9 @@ export const BossTauntScene: React.FC = () => {
   const spriteAnimate =
     phase === 'enter'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,                                rotate: 0 } :
     phase === 'talk1'    ? { y: 0,    opacity: 1, scale: 1.0,  x: 0,                                rotate: 0 } :
-    phase === 'approach' ? { y: 0,    opacity: 1, scale: 1.18, x: [0, -5, 5, -4, 4, -3, 3, 0],      rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
-    phase === 'talk2'    ? { y: 0,    opacity: 1, scale: 1.18, x: 0,                                rotate: 0 } :
-    phase === 'exit'     ? { y: 0,    opacity: 0, scale: 0.9,  x: 0,                                rotate: 0 } :
+    phase === 'approach' ? { y: 0,    opacity: 1, scale: 1.45, x: [0, -6, 6, -5, 5, -4, 3, 0],      rotate: [0, -3, 3, -3, 3, -2, 2, 0] } :
+    phase === 'talk2'    ? { y: 0,    opacity: 1, scale: 1.45, x: 0,                                rotate: 0 } :
+    phase === 'exit'     ? { y: 0,    opacity: 0, scale: 1.2,  x: 0,                                rotate: 0 } :
                            { y: -220, opacity: 0, scale: 0.35, x: 0,                                rotate: 0 };
 
   const spriteTransition =
@@ -168,23 +171,7 @@ export const BossTauntScene: React.FC = () => {
           exit={{ opacity: 0, transition: { duration: 0.15 } }}
           onClick={handleTap}
         >
-          {/* 屏震内层：用 shakeKey 重新挂载触发帧动画；只在 talk2 时抖 */}
-          <motion.div
-            key={`shake-${shakeKey}`}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            animate={
-              shakeKey > 0 && phase === 'talk2'
-                ? { x: [0, -8, 9, -7, 6, -4, 3, 0], y: [0, 4, -5, 3, -2, 2, 0, 0] }
-                : { x: 0, y: 0 }
-            }
-            transition={{ duration: 0.45 }}
-          >
-          {/* 气泡：在 Boss 上方 */}
+          {/* 气泡：在 Boss 上方（marginBottom 拉大让气泡远离Boss头顶） */}
           <AnimatePresence mode="wait">
             {showBubble && (
               <motion.div
@@ -197,7 +184,7 @@ export const BossTauntScene: React.FC = () => {
                   maxWidth: '240px',
                   minWidth: '110px',
                   padding: '10px 14px',
-                  marginBottom: '10px',
+                  marginBottom: '40px',
                   background: 'rgba(30,18,0,0.96)',
                   border: `2px solid ${glowColor}`,
                   borderRadius: '3px',
@@ -264,7 +251,6 @@ export const BossTauntScene: React.FC = () => {
             }}
           >
             {bossName}
-          </motion.div>
           </motion.div>
         </motion.div>
       )}

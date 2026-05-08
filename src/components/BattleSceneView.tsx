@@ -20,7 +20,8 @@ export function BattleSceneView() {
 
   return (
     <motion.div
-      animate={screenShake ? { x: [-10, 10, -10, 10, 0] } : {}}
+      animate={screenShake ? { x: [-14, 14, -12, 12, -8, 8, -4, 4, 0], y: [0, -6, 4, -3, 2, -2, 0, 0, 0] } : {}}
+      transition={screenShake ? { duration: 0.55, ease: 'easeOut' } : {}}
       className="flex flex-col h-full relative"
       onClick={() => lastTappedDieId && setLastTappedDieId(null)}
     >
