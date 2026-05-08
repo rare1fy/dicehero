@@ -72,11 +72,11 @@ export function processDiceOnPlayEffects(
 
   // ─── 基础效果（跨职业通用字段：bonusDamage / bonusMult / heal / pierce / statusToEnemy）───
   if (op.bonusDamage && !op.firstPlayOnly && !op.requiresTriple) {
-    out.extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
+    out.extraDamage += Math.ceil(op.bonusDamage * elementBonus * depthDmgBonus);
   }
   if (op.bonusMult && !op.requiresCharge) out.multiplier *= (1 + (op.bonusMult - 1 + depthMultBonus) * elementBonus);
   if (op.heal) out.extraHeal += Math.floor(op.heal * elementBonus);
-  if (op.pierce) out.pierceDamage += Math.floor(op.pierce * elementBonus);
+  if (op.pierce) out.pierceDamage += Math.ceil(op.pierce * elementBonus);
   if (op.statusToEnemy) {
     const boostedValue = Math.floor(op.statusToEnemy.value * elementBonus);
     const existing = out.statusEffects.find(es => es.type === op.statusToEnemy!.type);

@@ -60,7 +60,7 @@ export function applyMageCalc(
       out.multiplier *= (op.bonusMult + extraMult);
     }
   }
-  if (op.chainBolt) out.extraDamage += Math.floor(d.value * elementBonus);
+  if (op.chainBolt) out.extraDamage += Math.ceil(d.value * elementBonus);
   if (op.removeBurn) out.holyPurify += 1;
   if (op.healPerCleanse) {
     const negCount = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type)).length;

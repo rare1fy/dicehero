@@ -99,9 +99,11 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
         <motion.div
           key="boss-taunt-overlay"
           style={{
-            position: 'absolute',
+            // [FIX 2026-05-08] 改 fixed，让点击响应覆盖整个屏幕（包括玩家 UI 区），
+            // 避免点击落在骰盘/玩家面板上无法推进 talk2
+            position: 'fixed',
             inset: 0,
-            zIndex: 50,
+            zIndex: 1000,
             pointerEvents: interactive ? 'all' : 'none',
             display: 'flex',
             flexDirection: 'column',

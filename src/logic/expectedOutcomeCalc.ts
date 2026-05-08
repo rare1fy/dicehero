@@ -1,4 +1,4 @@
-/**
+﻿/**
  * expectedOutcome 纯计算逻辑
  * 
  * 从 DiceHeroGame.tsx 的 useMemo 中提取的战斗预览计算。
@@ -229,6 +229,18 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   const lvlPierceAdd = game.levelPierceBonus     || 0;
   const finalMultiplier = multiplier * (1 + lvlMultAdd);
   const totalDamage = Math.ceil(baseDamage * finalMultiplier) + extraDamage + lvlDmgAdd + pierceDamage + lvlPierceAdd;
+
+  // [DEBUG-DMG 2026-05-08] 伤害计算追踪日志（F12 控制台可查）
+  if (typeof window !== 'undefined' && (window as any).__DMG_DEBUG__) {
+    console.log('[DMG]', {
+      X, handMultiplier, baseDamage,
+      multiplier, lvlMultAdd, finalMultiplier,
+      extraDamage, lvlDmgAdd, pierceDamage, lvlPierceAdd,
+      'baseDamage*finalMultiplier': baseDamage * finalMultiplier,
+      'ceil(base*mult)': Math.ceil(baseDamage * finalMultiplier),
+      totalDamage,
+    });
+  }
 
   let modifiedDamage = totalDamage;
   const playerWeak = game.statuses.find(s => s.type === 'weak');

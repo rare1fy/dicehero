@@ -21,7 +21,7 @@ export function applyElementEffect(
 ): void {
   switch (activeElement) {
     case 'fire':
-      out.pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
+      out.pierceDamage += Math.ceil(diceValue * 2 * totalElementBonus);
       out.armorBreak = true;
       out.statusEffects.push({ type: 'burn', value: diceValue });
       break;
@@ -31,7 +31,7 @@ export function applyElementEffect(
       }
       break;
     case 'thunder':
-      out.pierceDamage += Math.floor(diceValue * 2 * totalElementBonus);
+      out.pierceDamage += Math.ceil(diceValue * 2 * totalElementBonus);
       break;
     case 'poison': {
       const poisonStacks = Math.floor((diceValue + 2) * totalElementBonus);
@@ -60,7 +60,7 @@ export function applySecondElementEffect(
 ): void {
   switch (secondElement) {
     case 'fire':
-      out.pierceDamage += Math.floor(diceValue * totalElementBonus);
+      out.pierceDamage += Math.ceil(diceValue * totalElementBonus);
       out.statusEffects.push({ type: 'burn', value: Math.max(1, Math.floor(diceValue / 2)) });
       break;
     case 'ice':
@@ -69,7 +69,7 @@ export function applySecondElementEffect(
       }
       break;
     case 'thunder':
-      out.pierceDamage += Math.floor(diceValue * totalElementBonus);
+      out.pierceDamage += Math.ceil(diceValue * totalElementBonus);
       break;
     case 'poison': {
       const pStacks = Math.floor((diceValue + 1) * totalElementBonus);
@@ -106,9 +106,9 @@ export function applyMultiElementBlast(
     const randElem = elements[idx % elements.length];
     const dv = sd.value;
     switch (randElem) {
-      case 'fire': out.pierceDamage += Math.floor(dv * totalElementBonus); out.statusEffects.push({ type: 'burn', value: Math.max(1, Math.floor(dv / 2)) }); break;
+      case 'fire': out.pierceDamage += Math.ceil(dv * totalElementBonus); out.statusEffects.push({ type: 'burn', value: Math.max(1, Math.floor(dv / 2)) }); break;
       case 'ice': out.statusEffects.push({ type: 'freeze', value: 1, duration: 1 }); break;
-      case 'thunder': out.pierceDamage += Math.floor(dv * totalElementBonus); break;
+      case 'thunder': out.pierceDamage += Math.ceil(dv * totalElementBonus); break;
       case 'poison': {
         const ps = Math.floor((dv + 1) * totalElementBonus);
         const ep = out.statusEffects.find(es => es.type === 'poison');

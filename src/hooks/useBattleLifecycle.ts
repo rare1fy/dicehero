@@ -16,6 +16,7 @@ import { generateShopItems } from '../logic/shopGenerator';
 import type { ClassId } from '../data/classes';
 import { generateStartingRelicChoices } from '../data/skillModules';
 import { ALL_RELICS } from '../data/relics';
+import { BOSS_DISPATCH_LINES, MINION_FORCED_LINES } from '../data/bossTauntDispatch';
 import { resetCompassCounter, incrementFloorsCleared, updateRelicCounter, tickHourglass } from '../engine/relicUpdates';
 import { buildRelicContext } from '../engine/buildRelicContext';
 import { CHAPTER_CONFIG, ANIMATION_TIMING } from '../config';
@@ -120,16 +121,20 @@ export function useBattleLifecycle(state: BattleState) {
     setBattleTransition('none');
 
     if (needRoamTaunt) {
-      // 路过嘲讽（场景空）：播完再 setEnemies 刷小怪
+      // [ROAM-TAUNT-v2 2026-05-08] 路过嘲讽（场景空）：
+      //   - 第一句用 Boss.enter[0]（登场垃圾话）
+      //   - 第二句固定为"派小弟"语式，与小弟登场联动
+      //   - 演出结束后小弟逐一出场，每人强制说一句
       setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
       const chIdx = Math.max(0, (game.chapter || 1) - 1);
       const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
       const bossName = bossPair[1] || bossPair[0];
       const bossCfg = BOSS_ENEMIES.find(b => b.name === bossName && b.chapter === (game.chapter || 1));
-      const enterLines = bossCfg?.quotes?.enter || ['……', '好好享受你最后的战斗吧。'];
-      const tauntLines = enterLines.length >= 2
-        ? [enterLines[0], enterLines[enterLines.length - 1]]
-        : [enterLines[0], enterLines[0]];
+      const enterLines = bossCfg?.quotes?.enter || ['……'];
+      const firstLine = enterLines[0] || '……';
+      // 第二句：派小弟上场的挑衅/指令台词（随机一条）
+      const dispatchLine = BOSS_DISPATCH_LINES[Math.floor(Math.random() * BOSS_DISPATCH_LINES.length)];
+      const tauntLines = [firstLine, dispatchLine];
       await new Promise<void>(resolve => {
         setBossTaunt({
           visible: true, name: bossName, chapter: game.chapter || 1,
@@ -139,20 +144,19 @@ export function useBattleLifecycle(state: BattleState) {
       });
       setBossTaunt(prev => ({ ...prev, visible: false, onDismiss: undefined }));
       await new Promise(r => setTimeout(r, 200));
-      // 演出结束后刷小怪 + enter 台词
+      // 演出结束后刷小怪，每人被"派出"时必说一句
       setEnemies(firstWave);
       setTimeout(() => {
         firstWave.forEach((e, ei) => {
           const q = getEnemyQuotes(e.configId);
-          const line = pickQuote(q?.enter);
-          if (line) {
-            setTimeout(() => {
-              showEnemyQuote(e.uid, line, 3000);
-              playSound('enemy_speak');
-              setEnemyEffectForUid(e.uid, 'speaking');
-              setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
-            }, ei * 400);
-          }
+          // [FORCE-SPEAK 2026-05-08] 小弟登场必说话：优先自己的 enter 池，空则用通用
+          const line = pickQuote(q?.enter) || MINION_FORCED_LINES[ei % MINION_FORCED_LINES.length];
+          setTimeout(() => {
+            showEnemyQuote(e.uid, line, 2800);
+            playSound('enemy_speak');
+            setEnemyEffectForUid(e.uid, 'speaking');
+            setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
+          }, ei * 450);
         });
       }, 200);
     }

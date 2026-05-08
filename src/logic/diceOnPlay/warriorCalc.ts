@@ -42,11 +42,11 @@ export function applyWarriorCalc(
   if (op.scaleWithHits) out.extraDamage += furyBonusDamage;
   if (op.firstPlayOnly && op.bonusDamage) {
     const isFirstPlay = (game.comboCount || 0) === 0 && game.battleTurn <= 1;
-    if (isFirstPlay) out.extraDamage += Math.floor(op.bonusDamage * elementBonus * depthDmgBonus);
+    if (isFirstPlay) out.extraDamage += Math.ceil(op.bonusDamage * elementBonus * depthDmgBonus);
   }
   if (op.scaleWithLostHp) {
     const lostHp = game.maxHp - game.hp;
-    out.extraDamage += Math.floor(lostHp * op.scaleWithLostHp);
+    out.extraDamage += Math.ceil(lostHp * op.scaleWithLostHp);
   }
   if (op.executeThreshold && op.executeMult && targetEnemy) {
     if (targetEnemy.hp / targetEnemy.maxHp < op.executeThreshold) {
@@ -69,7 +69,7 @@ export function applyWarriorCalc(
     const tripleHands = ['三条', '四条', '五条', '六条', '葫芦'];
     if (activeHands.some((h: string) => tripleHands.includes(h))) {
       const totalPoints = selected.reduce((sum, sd) => sum + sd.value, 0);
-      out.extraDamage += Math.floor(totalPoints * op.bonusDamageFromPoints);
+      out.extraDamage += Math.ceil(totalPoints * op.bonusDamageFromPoints);
     }
   }
   if (op.scaleWithBloodRerolls && game.bloodRerollCount) {
@@ -90,7 +90,7 @@ export function applyWarriorCalc(
     out.multiplier *= (1 + selfDmgThisTurn * 0.20);
   }
   if (op.damageFromArmor) {
-    out.extraDamage += Math.floor((game.armor + out.extraArmor) * op.damageFromArmor);
+    out.extraDamage += Math.ceil((game.armor + out.extraArmor) * op.damageFromArmor);
   }
   if (op.purifyAll) out.holyPurify += 99;
   if (op.tauntAll) { /* 在出牌后实际应用时处理 */ }

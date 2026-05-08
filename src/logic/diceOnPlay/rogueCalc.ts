@@ -42,7 +42,7 @@ export function applyRogueCalc(
   }
   if (op.comboDetonatePoison && (game.comboCount || 0) >= 1 && targetEnemy) {
     const targetPoison = targetEnemy.statuses.find(s => s.type === 'poison')?.value || 0;
-    out.extraDamage += Math.floor(targetPoison * op.comboDetonatePoison);
+    out.extraDamage += Math.ceil(targetPoison * op.comboDetonatePoison);
   }
   if (op.multOnThirdPlay && (game.comboCount || 0) >= 2) out.multiplier *= op.multOnThirdPlay;
   if (op.bonusDamageOnSecondPlay && (game.comboCount || 0) >= 1) out.extraDamage += op.bonusDamageOnSecondPlay;
@@ -65,7 +65,7 @@ export function applyRogueCalc(
     const currentPoison = targetEnemy.statuses.find(s => s.type === 'poison')?.value || 0;
     const extraPlays = Math.max(0, (game.comboCount || 0) - 1);
     const detonateRate = Math.min(1, op.detonatePoisonPercent + (op.detonateExtraPerPlay || 0) * extraPlays);
-    out.extraDamage += Math.floor(currentPoison * detonateRate);
+    out.extraDamage += Math.ceil(currentPoison * detonateRate);
   }
   if (op.escalateDamage) out.multiplier *= (1 + (game.comboCount || 0) * op.escalateDamage);
   if (op.phantomFromShadowDice) {
