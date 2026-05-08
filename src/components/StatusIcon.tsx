@@ -1,4 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+/**
+ * StatusIcon — 状态徽章
+ *
+ * [2026-05-08 重构]
+ *   - 视觉与 BuffTooltip 完全统一（彩色小徽章，不再深灰底框）
+ *   - tooltip 通过 Portal 渲染到 body，避免被 PlayerHudView 的 overflow-y-hidden 裁切
+ *   - 点击/悬停/触摸均可显示；点击外部或 3.5s 后自动关
+ */
+import React from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDescription } from '../utils/richText';
 import { StatusEffect } from '../types/game';
@@ -6,31 +15,30 @@ import { STATUS_INFO } from '../data/statusInfo';
 
 interface StatusIconProps {
   status: StatusEffect;
+  /** 保留参数以兼容旧调用点；当前 tooltip 位置由 Portal 根据 trigger bounds 自适应 */
   align?: 'left' | 'right' | 'center';
 }
 
-export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center' }) => {
+export const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
   const info = STATUS_INFO[status.type];
-  const [showTooltip, setShowTooltip] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [hover, setHover] = React.useState(false);
+  const [pinned, setPinned] = React.useState(false);
+  const triggerRef = React.useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
 
-  // [2026-05-08 BUG-FIX] Tooltip 原来同时绑 hover + click + touch，导致：
-  //   - 桌面：click 打开后 mouseleave 立刻关
-  //   - 移动：onTouchEnd 立刻把刚打开的 tooltip 关掉，完全点不开
-  // 改为：
-  //   - 桌面：mouseenter/leave 负责 hover 预览
-  //   - 点击：锁定打开，直到点击图标外或 3.5s 后自动关
-  //   - 移动：tap（touchend）= 点击切换锁定态
-  const [pinned, setPinned] = useState(false);
-  const togglePin = (e: React.MouseEvent | React.TouchEvent) => {
-    e.stopPropagation();
-    setPinned(p => !p);
-  };
-  useEffect(() => {
+  const visible = hover || pinned;
+
+  React.useEffect(() => {
+    if (visible && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({ top: rect.top - 4, left: rect.left });
+    }
+  }, [visible]);
+
+  React.useEffect(() => {
     if (!pinned) return;
     const onDocClick = (ev: MouseEvent | TouchEvent) => {
-      if (rootRef.current && !rootRef.current.contains(ev.target as Node)) {
+      if (triggerRef.current && !triggerRef.current.contains(ev.target as Node)) {
         setPinned(false);
       }
     };
@@ -44,59 +52,62 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, align = 'center'
     };
   }, [pinned]);
 
-  const alignClasses = {
-    left: 'left-0 translate-x-0',
-    right: 'right-0 left-auto translate-x-0',
-    center: 'left-1/2 -translate-x-1/2'
+  const toggle = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    setPinned(p => !p);
   };
-
-  const arrowClasses = {
-    left: 'left-4 translate-x-0',
-    right: 'right-4 left-auto translate-x-0',
-    center: 'left-1/2 -translate-x-1/2'
-  };
-
-  const visible = showTooltip || pinned;
 
   return (
     <div
-      ref={rootRef}
-      className="relative group flex items-center gap-0.5 cursor-help"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onClick={togglePin}
-      onTouchStart={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
-      onTouchEnd={(e) => {
-        e.preventDefault(); // 避免紧跟着合成 click 被 stopPropagation 吞掉
-        togglePin(e);
-      }}
+      ref={triggerRef}
+      className="relative flex items-center gap-0.5 cursor-help"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={toggle}
+      onTouchEnd={(e) => { e.preventDefault(); toggle(e); }}
     >
-      {/* 像素风状态徽章 */}
-      <div className={`p-1 bg-[var(--dungeon-bg)] border-2 border-[var(--dungeon-panel-border)] ${info.color} flex items-center justify-center`}
-        style={{ borderRadius: '2px' }}
+      {/* 彩色小徽章 —— 和 BuffTooltip 完全同款 */}
+      <div
+        className="flex items-center gap-0.5 px-1 py-0.5"
+        style={{ background: info.bgColor, border: `1px solid ${info.borderColor}`, borderRadius: '2px' }}
       >
         {info.icon}
+        <span
+          className="text-[9px] font-bold font-mono pixel-text-shadow"
+          style={{ color: info.colorRgb }}
+        >
+          {status.value}
+        </span>
       </div>
-      <span className={`text-[10px] font-bold font-mono ${info.color} pixel-text-shadow`}>{status.value}</span>
 
-      <AnimatePresence>
-        {visible && (
+      {visible && pos && ReactDOM.createPortal(
+        <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className={`absolute bottom-full mb-2 w-40 p-2.5 pixel-panel z-[100] pointer-events-none max-w-[80vw] ${alignClasses[align]}`}
+            className="fixed w-44 p-2 pixel-panel z-[9999]"
+            style={{
+              top: pos.top,
+              left: Math.max(4, Math.min(pos.left, window.innerWidth - 180)),
+              transform: 'translateY(-100%)',
+            }}
+            onClick={() => setPinned(false)}
           >
-            <div className={`text-[10px] font-bold mb-1.5 ${info.color} flex items-center gap-1.5 pixel-text-shadow`}>
+            <div
+              className="text-[10px] font-bold mb-1 flex items-center gap-1 pixel-text-shadow"
+              style={{ color: info.colorRgb }}
+            >
               {info.icon} {info.label} {status.value}
             </div>
-            <div className="text-[10px] text-[var(--dungeon-text-dim)] leading-relaxed">
+            <div className="text-[9px] text-[var(--dungeon-text-dim)] leading-relaxed">
               {formatDescription(info.description)}
             </div>
-            <div className={`absolute top-full ${arrowClasses[align]} border-[5px] border-transparent border-t-[var(--dungeon-panel-border)]`} />
+            <div className="absolute top-full left-4 border-[5px] border-transparent border-t-[var(--dungeon-panel-border)]" />
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };

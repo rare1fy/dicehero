@@ -161,7 +161,7 @@ export async function executeEnemyTurn(
     }
     return { ...prev, hp: newHp, chantShield: absorb.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount };
   });
-  if (chantPenaltyStacks > 0) cb.addFloatingText(`吟唱被扰: 易伤+${chantPenaltyStacks}`, 'text-orange-400', undefined, 'player');
+  if (chantPenaltyStacks > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyStacks}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
 
   await new Promise(r => setTimeout(r, 600));
   if (cb.gameRef.current.hp <= 0) { cb.playSound('player_death'); return { hp: 0, waveTransitioned: false }; }
@@ -423,7 +423,7 @@ export async function executeEnemyTurn(
         }
         return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, statuses: penalizedStatuses, mageChantHitCount: newHitCount, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
       });
-      if (chantPenaltyR > 0) cb.addFloatingText(`吟唱被扰: 易伤+${chantPenaltyR}`, 'text-orange-400', undefined, 'player');
+      if (chantPenaltyR > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyR}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
       cb.addLog(`${e.name} 追击造成 ${secondHit} 伤害！`);
       cb.playSound('enemy');
     }
@@ -513,7 +513,7 @@ export async function executeEnemyTurn(
     returnHp = newHp;
     return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, isEnemyTurn: false };
   });
-  if (chantPenaltyBurn > 0) cb.addFloatingText(`吟唱被扰: 易伤+${chantPenaltyBurn}`, 'text-orange-400', undefined, 'player');
+  if (chantPenaltyBurn > 0) cb.addFloatingText(`法脉紊乱: +${chantPenaltyBurn}易伤`, 'text-orange-400', crackedHeartIcon(), 'player');
 
   return { hp: returnHp, waveTransitioned: false };
 }
