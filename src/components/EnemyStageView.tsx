@@ -230,12 +230,25 @@ export function EnemyStageView() {
                   </>
                 ) : (
                   <>
-                    <div className="text-[9px] text-[var(--pixel-gold)] font-bold text-center mb-1.5 tracking-wider">达成后随机触发一种援助</div>
-                    <ul className="text-[9px] text-[var(--dungeon-text)] leading-snug space-y-0.5 pl-1">
-                      <li>◆ 全场敌人受到 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '30%' : '50%'} 最大HP伤害</li>
-                      <li>◆ 全场敌人HP直接降至 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '50%' : '35%'}（保底1HP）</li>
-                      <li>◆ 全场敌人叠加大量灼烧+中毒</li>
-                      <li>◆ 本局永久 +1 手牌上限（已满6 则 +50% 伤害倍率）</li>
+                    <div className="text-[9px] text-[var(--pixel-gold)] font-bold text-center mb-1.5 tracking-wider">达成后将触发</div>
+                    <ul className="text-[10px] text-[var(--dungeon-text-bright)] leading-snug space-y-0.5 pl-1">
+                      {game.instakillChallenge.aidType === 1 && (
+                        <li>◆ 全场敌人受到 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '30%' : '50%'} 最大HP伤害</li>
+                      )}
+                      {game.instakillChallenge.aidType === 2 && (
+                        <li>◆ 全场敌人HP直接降至 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '50%' : '35%'}（保底1HP）</li>
+                      )}
+                      {game.instakillChallenge.aidType === 3 && (
+                        <li>◆ 全场敌人叠加大量灼烧+中毒</li>
+                      )}
+                      {game.instakillChallenge.aidType === 4 && (
+                        ((game.drawCount || 0) >= 6)
+                          ? <li>◆ 本局永久 +50% 伤害倍率</li>
+                          : <li>◆ 本局永久 +1 手牌上限</li>
+                      )}
+                      {!game.instakillChallenge.aidType && (
+                        <li className="text-[var(--dungeon-text)]">◆ 触发一种随机援助效果</li>
+                      )}
                     </ul>
                     <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-1.5">并获得额外宝箱奖励</div>
                   </>

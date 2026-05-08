@@ -61,9 +61,13 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
   const chapter = g.chapter;
   const isBoss = currentNode?.type === 'boss';
 
-  const aidRoll = Math.random();
-  // 决定援助类型（1~4），用于 UI 详情弹窗只显示本次命中的那一条
-  const aidType: 1 | 2 | 3 | 4 = aidRoll < 0.25 ? 1 : aidRoll < 0.5 ? 2 : aidRoll < 0.75 ? 3 : 4;
+  // [AID-LOCK 2026-05-09] 优先使用挑战生成时就确定的 aidType；兼容旧存档走 fallback roll
+  const aidType: 1 | 2 | 3 | 4 =
+    currentChallenge.aidType
+    ?? (() => {
+      const r = Math.random();
+      return r < 0.25 ? 1 : r < 0.5 ? 2 : r < 0.75 ? 3 : 4;
+    })();
   setGame(prev => ({ ...prev, instakillAidType: aidType }));
 
   // [Bug-FIX] 统一延迟执行器：执行前校验 phase，避免在战斗结束/波次切换期间修改 enemies
@@ -74,7 +78,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
     }, delay);
   };
 
-  if (aidRoll < 0.25) {
+  if (aidType === 1) {
     // 效果1：对全场敌人造成大量伤害（基于敌人最大HP的百分比）
     const pct = isBoss ? 0.3 : 0.5;
     const dmgText = `${Math.round(pct * 100)}%`;
@@ -101,7 +105,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         setTimeout(() => setScreenShake(false), 300);
       }, 0);
     });
-  } else if (aidRoll < 0.5) {
+  } else if (aidType === 2) {
     // 效果2：全场敌人HP降至N%（保底1HP，不杀死）
     const targetPct = isBoss ? 0.5 : 0.35;
     const pctText = `${Math.round(targetPct * 100)}%`;
@@ -133,7 +137,7 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         setTimeout(() => setScreenShake(false), 300);
       }, 16);
     });
-  } else if (aidRoll < 0.75) {
+  } else if (aidType === 3) {
     // 效果3：全场敌人施加大量灼烧+中毒
     const stacks = 3 + depth + (chapter - 1) * 2;
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);

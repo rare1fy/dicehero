@@ -28,6 +28,8 @@ export interface InstakillChallenge {
   progress?: number;
   trackSet?: string[];
   completed: boolean;
+  /** 进入战斗时就确定好的奖励效果类型（1-4），完成挑战后按此触发 */
+  aidType?: 1 | 2 | 3 | 4;
 }
 
 interface ChallengeTemplate {
@@ -178,17 +180,25 @@ export function generateChallenge(
   const pool = isBoss ? BOSS_POOL : NORMAL_POOL;
 
   const available = pool.filter(c => depth >= c.minDepth && dc >= (c.minDice || 0));
+  let challenge: InstakillChallenge;
   if (available.length === 0) {
     // 兜底：递减打击
-    return NORMAL_POOL[0].generate(depth, chapter, dc);
+    challenge = NORMAL_POOL[0].generate(depth, chapter, dc);
+  } else {
+    const totalWeight = available.reduce((s, c) => s + c.weight, 0);
+    let roll = Math.random() * totalWeight;
+    let picked: ChallengeTemplate = available[0];
+    for (const tmpl of available) {
+      roll -= tmpl.weight;
+      if (roll <= 0) { picked = tmpl; break; }
+    }
+    challenge = picked.generate(depth, chapter, dc);
   }
-  const totalWeight = available.reduce((s, c) => s + c.weight, 0);
-  let roll = Math.random() * totalWeight;
-  for (const tmpl of available) {
-    roll -= tmpl.weight;
-    if (roll <= 0) return tmpl.generate(depth, chapter, dc);
-  }
-  return available[0].generate(depth, chapter, dc);
+
+  // [AID-LOCK 2026-05-09] 进入战斗时就确定奖励类型，避免弹窗展示"可能奖励"模糊体验
+  const aidRoll = Math.random();
+  challenge.aidType = aidRoll < 0.25 ? 1 : aidRoll < 0.5 ? 2 : aidRoll < 0.75 ? 3 : 4;
+  return challenge;
 }
 
 // ============================================================
