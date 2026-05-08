@@ -33,6 +33,7 @@ import { ClassSelectScreen } from './components/ClassSelectScreen';
 import { SkillSelectScreen } from './components/SkillSelectScreen';
 import { ChapterTransition } from './components/ChapterTransition';
 import { BossEntrance } from './components/BossEntrance';
+import { BossTauntEntrance } from './components/BossTauntEntrance';
 import { ClassInfoModal } from './components/ClassInfoModal';
 import CalcModal from './components/CalcModal';
 import { HandGuideModal } from './components/HandGuideModal';
@@ -176,6 +177,15 @@ export default function DiceHeroGame() {
         visible={bossEntrance.visible}
         bossName={bossEntrance.name}
         chapter={bossEntrance.chapter}
+      />
+
+      {/* Boss路过嘲讽演出 — 挂在根层，避免被战斗场景的 filter/overflow 干扰 */}
+      <BossTauntEntrance
+        visible={bossTaunt.visible}
+        bossName={bossTaunt.name}
+        chapter={bossTaunt.chapter}
+        lines={bossTaunt.lines}
+        onDismiss={bossTaunt.onDismiss}
       />
 
       <div className="flex-1 overflow-hidden relative">

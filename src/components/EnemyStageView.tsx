@@ -38,7 +38,8 @@ import { PixelSprite, hasSpriteData } from './PixelSprite';
 import { SettlementOverlay } from './SettlementOverlay';
 import { DamagePreviewCard } from './DamagePreviewCard';
 import { useBattleContext } from '../contexts/BattleContext';
-import { BossTauntEntrance } from './BossTauntEntrance';
+
+
 import { formatDescription } from '../utils/richText';
 import { ANIMATION_TIMING } from '../config';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
@@ -72,7 +73,7 @@ export function EnemyStageView() {
     targetEnemyUid,
     addToast,
     toggleSelect,
-    bossTaunt,
+
   } = useBattleContext();
 
   const targetEnemyUid_ = targetEnemyUid || game.targetEnemyUid;
@@ -464,15 +465,6 @@ export function EnemyStageView() {
       {/* 结算演出覆盖层 + 出牌预期结算卡片（2026-04-21 铁律 B.1 拆分） */}
       <SettlementOverlay />
       <DamagePreviewCard />
-
-      {/* Boss 路过嘲讽登场演出 — 嵌入战斗场景，非全屏弹窗 */}
-      <BossTauntEntrance
-        visible={bossTaunt.visible}
-        bossName={bossTaunt.name}
-        chapter={bossTaunt.chapter}
-        lines={bossTaunt.lines}
-        onDismiss={bossTaunt.onDismiss}
-      />
     </div>
   );
 }

@@ -100,12 +100,13 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
           <motion.div
             key="boss-taunt-scene"
             style={{
-              // fixed 覆盖全屏，pointer-events 拦截点击推进台词
-              position: 'fixed',
+              // [FIX v6] 改用 absolute，相对根容器定位，避免被战斗场景的 filter/overflow 截断
+              // 根容器是 relative h-[100dvh]，无 transform/filter，绝对定位安全
+              position: 'absolute',
               inset: 0,
               zIndex: 200,
               pointerEvents: interactive ? 'all' : 'none',
-              // [FIX v5] 靠底对齐，paddingBottom 约 38% 让 Boss 脚底落在战斗背景的"地面线"
+              // 靠底对齐，paddingBottom 让 Boss 脚底落在战斗背景"地面线"位置
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -210,7 +211,7 @@ export const BossTauntEntrance: React.FC<BossTauntProps> = ({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  position: 'fixed',
+                  position: 'absolute',
                   bottom: '14%',
                   left: '50%',
                   transform: 'translateX(-50%)',
