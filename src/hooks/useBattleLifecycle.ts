@@ -1,4 +1,4 @@
-﻿/**
+/**
  * useBattleLifecycle.ts — 战斗生命周期 Hook
  * 提取自 DiceHeroGame.tsx Phase H (Round3)
  * 包含 startBattle / startNode / rollAllDice / resetGame / handleSelectStartingRelic / handleSkipStartingRelic
@@ -279,8 +279,6 @@ export function useBattleLifecycle(state: BattleState) {
   const rollAllDice = async (forceResetHand = false) => {
     playSound('roll');
     const g = gameRef.current;
-    // [DIAG-WAVE 2026-05-08] 波次切换诊断，刘叔按 F12 看 WAVE-SWITCH
-    console.log('[WAVE-SWITCH] rollAllDice enter:', { forceResetHand, playerClass: g.playerClass, playsLeft: g.playsLeft, maxPlays: g.maxPlays, chargeStacks: g.chargeStacks, diceBagLen: g.diceBag.length, discardLen: g.discardPile.length, diceBag: [...g.diceBag], discardPile: [...g.discardPile], diceHand: dice.map(d => `${d.diceDefId}(${d.spent ? 'spent' : 'kept'})`) });
     let keptDice: Die[] = [];
     if (g.playerClass === 'mage' && !forceResetHand) {
       keptDice = dice.filter(d => !d.spent);
@@ -292,15 +290,26 @@ export function useBattleLifecycle(state: BattleState) {
         setGame(prev => ({ ...prev, discardPile: [...prev.discardPile, ...excess.filter(d => !d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.diceDefId)] }));
       }
     } else if (g.playerClass === 'rogue') {
-      // Bug-21: 波次转换时保留持久暗影残骰（垮波次≠回合结束，影锋刺客跨波次继续连击）
-      // 与 executeDrawPhase 保持一致：保留但清除 persistent 标记（下回合结束时销毁）
+      // Bug-21: 波次转换保留持久暗影残骰（与 executeDrawPhase 一致，清除 persistent 标记）
       const persistentShadow = dice.filter(d => d.isShadowRemnant && d.shadowRemnantPersistent && !d.spent);
       if (persistentShadow.length > 0) {
         keptDice = persistentShadow.map(d => ({ ...d, shadowRemnantPersistent: false, isTemp: true }));
       }
     }
 
-    const handDefIds = (g.playerClass === 'mage' && !forceResetHand ? [] : dice.filter(d => !d.spent && !d.isTemp && d.diceDefId !== 'temp_rogue')).map(d => d.diceDefId);
+    // [BUG-FIX 2026-05-09] 跨波次复制骰子：旧逻辑闭包 dice 让杀敌骰子 ID 被重复推进 discard，
+    // 洗牌时每颗 ×2。账本法：inHand = ownedDice - diceBag - discardPile。
+    let handDefIds: string[];
+    if (g.playerClass === 'mage' && !forceResetHand) {
+      handDefIds = [];
+    } else if (forceResetHand) {
+      const counts: Record<string, number> = {};
+      g.ownedDice.forEach(o => { counts[o.defId] = (counts[o.defId] || 0) + 1; });
+      [...g.diceBag, ...g.discardPile].forEach(id => { counts[id] = (counts[id] || 0) - 1; });
+      handDefIds = Object.entries(counts).flatMap(([id, n]) => Array(Math.max(0, n)).fill(id));
+    } else {
+      handDefIds = dice.filter(d => !d.spent && !d.isTemp && d.diceDefId !== 'temp_rogue').map(d => d.diceDefId);
+    }
     const currentDiscard = [...g.discardPile, ...handDefIds];
     // Bug-4 fix: 处理 tempDrawCountBonus（薛定谔的袋子）和 relicTempDrawBonus（魔法手套）
     const schrodingerBonus = g.tempDrawCountBonus || 0;
@@ -348,20 +357,14 @@ export function useBattleLifecycle(state: BattleState) {
             setTimeout(() => setShuffleAnimating(false), 800);
       addToast('\u2728 弃骰库已洗回骰子库!', 'buff');
     }
-    // Bug-4 fix: 处理法师保留骰子的累积加成（与 executeDrawPhase 一致）
-    // bonusOnKeep: 蓄能水晶保留时+2点
-    // bonusPerTurnKept: 星辰骰子每保留1回合+1点（有上限）
-    // rerollOnKeep: 时光骰子保留时自动重投
-    // bonusMultOnKeep: 法力涌动保留时给伤害倍率
+    // Bug-4 fix: 法师保留骰累积加成（bonusOnKeep / bonusPerTurnKept / rerollOnKeep / bonusMultOnKeep，与 executeDrawPhase 一致）
     const keptDiceWithBonuses = keptDice.map(d => {
       const def = getDiceDef(d.diceDefId);
       let newValue = d.value;
-      // bonusOnKeep: 保留到下回合时点数+N
       if (def.onPlay?.bonusOnKeep) {
         newValue = Math.min(6, newValue + def.onPlay.bonusOnKeep);
         addFloatingText(`${def.name}+${def.onPlay.bonusOnKeep}点`, 'text-cyan-400', undefined, 'player');
       }
-      // bonusPerTurnKept: 每保留1回合+N点（累积有上限）
       if (def.onPlay?.bonusPerTurnKept) {
         const cap = def.onPlay.keepBonusCap || 99;
         const accumulated = d.keptBonusAccum || 0;
@@ -374,7 +377,6 @@ export function useBattleLifecycle(state: BattleState) {
       }
       return { ...d, value: newValue, selected: false, kept: true, bounceGrowCount: 0, boomerangUsed: false };
     });
-    // rerollOnKeep: 时光骰子保留时自动重投
     keptDiceWithBonuses.forEach((d, idx) => {
       const def = getDiceDef(d.diceDefId);
       if (def.onPlay?.rerollOnKeep) {
@@ -382,7 +384,6 @@ export function useBattleLifecycle(state: BattleState) {
         addFloatingText(`${def.name}自动重投`, 'text-blue-400', undefined, 'player');
       }
     });
-    // bonusMultOnKeep: 法力涌动保留时给伤害倍率
     const keepMultBonus = keptDiceWithBonuses.reduce((sum, d) => {
       const def = getDiceDef(d.diceDefId);
       return sum + (def.onPlay?.bonusMultOnKeep || 0);
@@ -394,7 +395,6 @@ export function useBattleLifecycle(state: BattleState) {
 
     setGame(prev => ({ ...prev, diceBag: newBag, discardPile: newDiscard }));
     // [DIAG-WAVE] 出口
-    console.log('[WAVE-SWITCH] rollAllDice after drawFromBag:', { forceResetHand, newBagLen: newBag.length, newDiscardLen: newDiscard.length, drawnLen: drawn.length, count, shuffled, newBag: [...newBag], drawnIds: drawn.map(d => d.diceDefId) });
     setDice([...keptDiceWithBonuses, ...drawn.map(d => ({ ...d, rolling: true, value: Math.floor(Math.random() * 6) + 1 }))]);
 
     await performDiceRollAnimation({
