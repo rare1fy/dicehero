@@ -129,7 +129,11 @@ export function useBattleCombat(
       warriorRageMult: gameRef.current.warriorRageMult || 0,
       mageOverchargeMult: gameRef.current.mageOverchargeMult || 0,
     });
-  }, [dice, currentHands]);
+  // [DEPS-FIX 2026-05-08] 追加升级加成字段到 useMemo 依赖：
+  //   levelDamageBonus / levelDamageMultBonus / levelPierceBonus 变化时必须重算 outcome。
+  //   不依赖整个 game 对象，只提取三个有效字段，避免不必要的重算。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dice, currentHands, game.levelDamageBonus, game.levelDamageMultBonus, game.levelPierceBonus]);
 
   // [Bug-FIX 2026-05-07] 删除预览阶段自动应用 pendingSideEffects 的 useEffect。
   // 原实现每当 expectedOutcome 重算（选/取消选骰子）就执行 setRelicCounter / grantExtraPlay 等
