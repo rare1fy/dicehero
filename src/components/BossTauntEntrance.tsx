@@ -137,8 +137,9 @@ export const BossTauntScene: React.FC = () => {
         <motion.div
           key="boss-taunt-scene"
           style={{
-            // 相对 EnemyStageView 根容器（flex-1 战斗场景）定位
-            // justifyContent:flex-end + paddingBottom 让 Boss 脚与小怪站位并排
+            // 相对 EnemyStageView 根容器定位
+            // EnemyStageView 是 flex-col justify-center，敌人 grid 垂直居中
+            // → BossTaunt 也用 center 对齐，Boss 位置天然与小怪一致
             position: 'absolute',
             inset: 0,
             zIndex: 60,
@@ -146,9 +147,7 @@ export const BossTauntScene: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'flex-end',
-            // 小怪区域高度约 180px，底部留 20px 让 Boss 脚和小怪脚对齐
-            paddingBottom: '20px',
+            justifyContent: 'center',
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -268,7 +267,7 @@ export const BossTauntHint: React.FC = () => {
           transition={{ duration: 0.2 }}
           style={{
             position: 'fixed',
-            bottom: '42%',      // 贴近战斗场景底部外侧，不挡玩家UI
+            bottom: '36%',      // 战斗场景中央下方，玩家UI上方缝隙，避开 Boss 精灵本体
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1100,
