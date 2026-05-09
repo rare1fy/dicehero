@@ -456,6 +456,50 @@ export function useBattleCombat(
     }
   }, [game.phase, game.isEnemyTurn, enemies, game.hp, dice, game.playsLeft, game.pendingLevelUps]);
 
+  // [WATCHDOG 2026-05-10] 战斗死锁兜底：场上所有敌人 hp<=0 但 phase 仍是 battle 持续 3s，
+  //   说明 checkEnemyDeaths/handleVictory 的异步链中途断裂。
+  //   兜底：直接推进波次切换或 handleVictory，避免 UI 永久卡在“回合结束中”。
+  useEffect(() => {
+    if (game.phase !== 'battle' || game.isEnemyTurn) return;
+    if (enemies.length === 0) return;
+    const allDead = enemies.every(e => e.hp <= 0);
+    if (!allDead) return;
+    const timer = setTimeout(() => {
+      if (gameRef.current.phase !== 'battle' || gameRef.current.isEnemyTurn) return;
+      const stillAllDead = enemiesRef.current.length > 0 && enemiesRef.current.every(e => e.hp <= 0);
+      if (!stillAllDead) return;
+      const nextWaveIdx = gameRef.current.currentWaveIndex + 1;
+      const hasNextWave = nextWaveIdx < gameRef.current.battleWaves.length;
+      if (hasNextWave) {
+        addLog(`[兜底] 检测到波次切换卡死，强制推进到第 ${nextWaveIdx + 1} 波`);
+        const nextWave = gameRef.current.battleWaves[nextWaveIdx].enemies;
+        setEnemies(nextWave);
+        setGame(prev => ({
+          ...prev,
+          currentWaveIndex: nextWaveIdx,
+          isEnemyTurn: false,
+          playsLeft: prev.maxPlays,
+          freeRerollsLeft: prev.freeRerollsPerTurn,
+          armor: 0,
+          chantShield: 0,
+          bloodRerollCount: 0,
+          comboCount: 0,
+          lastPlayHandType: undefined,
+          playsThisWave: 0,
+          rerollsThisWave: 0,
+          battleTurn: 1,
+          targetEnemyUid: (nextWave.find(e => e.combatType === 'guardian') || nextWave[0])?.uid || null,
+        }));
+        setDice([]);
+        rollAllDice(true);
+      } else {
+        addLog('[兜底] 检测到胜利结算卡死，强制进入战利品阶段');
+        victory.handleVictory();
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [game.phase, game.isEnemyTurn, enemies, game.currentWaveIndex]);
+
   // 将 handleVictory 注入到 lifecycle 的 ref
   handleVictoryRef.current = victory.handleVictory;
 

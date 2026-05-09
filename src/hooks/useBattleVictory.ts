@@ -44,12 +44,15 @@ export function useBattleVictory(
     const allWaveEnemies = game.battleWaves.flatMap(w => w.enemies);
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
     const nodeType = currentNode?.type || 'enemy';
-    const killedCount = enemies.filter(e => e.hp <= 0).length;
+    // [BUG-FIX 2026-05-10] 用 liveEnemies 取最新值；空场兜底
+    const killedCount = liveEnemies.length > 0
+      ? liveEnemies.filter(e => e.hp <= 0).length
+      : (game.battleWaves[game.currentWaveIndex]?.enemies.length || 1);
 
     // Bug-3: 音效和日志异步化，减少战斗结束瞬间的同步负载
     setTimeout(() => {
       playSound('victory');
-      addLog(`击败了 ${enemies[0]?.name || ""}！`);
+      addLog(`击败了 ${liveEnemies[0]?.name || enemies[0]?.name || allWaveEnemies[allWaveEnemies.length-1]?.name || ""}！`);
     }, 0);
 
     // 战斗结束：先计算阶段判断（轻量纯函数，无需延迟）
