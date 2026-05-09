@@ -144,19 +144,19 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
             className="absolute left-0 pointer-events-none z-[102] flex items-center gap-1.5"
             style={{ bottom: 'calc(100% + 4px)', whiteSpace: 'nowrap' }}
           >
-            {/* 深槽外框 —— 硬边 + inset 高光，加大 */}
+            {/* [2026-05-10 像素风] 深槽 + 3 阶 stepped 填充 + 1px 顶部硬高光 + 6 段对齐刻度 */}
             <div
               className="relative"
               style={{
                 width: 144,
                 height: 11,
-                background: 'var(--dungeon-bg)',
-                border: '1px solid var(--dungeon-panel-border)',
+                background: '#0a0e14',
+                border: '1px solid #1c2632',
+                /* 去掉所有 blur 阴影；只用 1px 硬偏移做立体感 */
                 boxShadow:
-                  'inset 0 1px 0 rgba(0,0,0,0.75), ' +
-                  'inset 0 -1px 0 rgba(104,160,232,0.28), ' +
-                  '0 1px 0 rgba(104,160,232,0.35), ' +
-                  '0 0 6px rgba(104,160,232,0.35)',
+                  'inset 0 1px 0 rgba(0,0,0,0.9), ' +
+                  'inset 1px 0 0 rgba(0,0,0,0.7), ' +
+                  '0 1px 0 rgba(40,72,120,0.55)',
                 imageRendering: 'pixelated',
                 borderRadius: 0,
               }}
@@ -167,32 +167,42 @@ export const LevelXpBadge: React.FC<LevelXpBadgeProps> = ({ level, xp, xpToNext,
                 animate={{ width: pct + '%' }}
                 transition={{ duration: 0.38, ease: 'easeOut' }}
                 style={{
+                  /* 3 阶 stepped：暗→中→亮，硬切色块（无平滑渐变） */
                   background: levelUpFlash
-                    ? 'linear-gradient(90deg, var(--pixel-gold) 0%, #ffe9a0 100%)'
-                    : 'linear-gradient(90deg, var(--pixel-blue) 0%, #a8d0ff 100%)',
+                    ? 'linear-gradient(180deg, #fff7c8 0%, #fff7c8 27%, #ffd24a 27%, #ffd24a 73%, #b07a14 73%, #b07a14 100%)'
+                    : 'linear-gradient(180deg, #d8ecff 0%, #d8ecff 27%, #5a8cc8 27%, #5a8cc8 73%, #2c4878 73%, #2c4878 100%)',
+                  /* 右沿 1px 硬亮边，模拟"前进光"；无 blur */
                   boxShadow: levelUpFlash
-                    ? 'inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(140,100,20,0.7), 0 0 8px rgba(232,184,48,0.6)'
-                    : 'inset 0 1px 0 rgba(216,236,255,0.75), inset 0 -1px 0 rgba(40,72,160,0.7), 0 0 6px rgba(104,160,232,0.55)',
+                    ? 'inset -1px 0 0 #fff7c8, inset 0 1px 0 #fff7c8'
+                    : 'inset -1px 0 0 #d8ecff, inset 0 1px 0 #d8ecff',
                   imageRendering: 'pixelated',
                 }}
               />
-              {/* 像素刻度：4 段分隔线 */}
+              {/* 6 段对齐刻度：每 24px 一道 1px 黑色硬线（144/6 整除） */}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
                     'repeating-linear-gradient(90deg, ' +
-                      'transparent 0, transparent 35px, ' +
-                      'rgba(0,0,0,0.55) 35px, rgba(0,0,0,0.55) 36px)',
+                      'transparent 0, transparent 23px, ' +
+                      'rgba(0,0,0,0.7) 23px, rgba(0,0,0,0.7) 24px)',
                   imageRendering: 'pixelated',
                 }}
               />
-              {/* 浅顶高光条 */}
+              {/* 顶部 1px 硬高光（不渐变） */}
               <div
                 className="absolute inset-x-0 top-0 pointer-events-none"
                 style={{
-                  height: 2,
-                  background: 'linear-gradient(180deg, rgba(216,236,255,0.35) 0%, transparent 100%)',
+                  height: 1,
+                  background: levelUpFlash ? 'rgba(255,247,200,0.5)' : 'rgba(216,236,255,0.45)',
+                }}
+              />
+              {/* 底部 1px 硬阴影 */}
+              <div
+                className="absolute inset-x-0 bottom-0 pointer-events-none"
+                style={{
+                  height: 1,
+                  background: 'rgba(0,0,0,0.55)',
                 }}
               />
             </div>

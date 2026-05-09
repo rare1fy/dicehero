@@ -45,6 +45,8 @@ const BOSS_RANK_MAP: Record<string, 'mid' | 'final'> = (() => {
 import { PixelSprite, hasSpriteData } from './PixelSprite';
 import { SettlementOverlay } from './SettlementOverlay';
 import { DamagePreviewCard } from './DamagePreviewCard';
+import { EnemySelectionFx } from './EnemySelectionFx';
+import { EnemyRangeBadge } from './EnemyRangeBadge';
 import { useBattleContext } from '../contexts/BattleContext';
 import { BossTauntScene } from './BossTauntEntrance';
 import { BossAura } from './BossAura';
@@ -369,15 +371,7 @@ export function EnemyStageView() {
             className={`relative cursor-pointer group flex flex-col items-center`}
             style={{ zIndex: isTarget ? 10 : depthZ, filter: `brightness(${depthBrightness})` }}
           >
-            {isTarget && (
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20">
-                <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: 1, repeat: Infinity }}>
-                  <svg width="10" height="8" viewBox="0 0 10 8" style={{imageRendering:'pixelated'}}>
-                    <polygon points="5,8 0,0 10,0" fill="var(--pixel-orange)" />
-                  </svg>
-                </motion.div>
-              </div>
-            )}
+            {/* [2026-05-10] 选中箭头已迁移至 .enemy-target-arrow（像素方块阵），此处 SVG 三角移除 */}
             {/* [HUD-COUNTER-SCALE 2026-05-10] 反向缩放抵消 depthScale，让远处敌人 HUD 字保持可读 */}
             <div className="flex flex-col items-center" style={{ transform: `scale(${1/depthScale})`, transformOrigin: 'bottom center' }}>
             <div className="flex items-center justify-center mb-1 px-1.5 py-0.5 cursor-pointer hover:brightness-125 transition-all"
@@ -407,11 +401,9 @@ export function EnemyStageView() {
               <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{getDisplayAttackDmg(enemy)}</span>
             </div>
             <div className="text-center mb-0.5">
-              <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '近' : '远'}</span>
-              {/* [2026-05-09] 仅近战敌人显示"距 N"距离指示，远程敌人不再显示 */}
-              {(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') && (enemy.distance || 0) > 0 && (
-                <span className="ml-1 text-[9px] font-mono px-1 py-0" style={{ borderRadius: '2px', border: '1px solid var(--pixel-orange-dark)', color: 'var(--pixel-orange-light)', background: 'rgba(224,120,48,0.10)' }}>距 {enemy.distance}</span>
-              )}
+              <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span>
+              {/* [2026-05-10 像素风差异化] 类别 tag + 距离 tag，由 EnemyRangeBadge 统一渲染 */}
+              <EnemyRangeBadge enemy={enemy} />
             </div>
             <div className="pixel-hp-bar h-2.5 w-20 relative mb-1">
               <motion.div
@@ -461,7 +453,8 @@ export function EnemyStageView() {
               )}
               {enemy.statuses.some(s => s.type === 'weak') && <div className="absolute inset-[-4px] pointer-events-none enemy-debuff-weak" style={{borderRadius:'50%'}} />}
               {enemy.statuses.some(s => s.type === 'vulnerable') && <div className="absolute inset-[-4px] pointer-events-none enemy-debuff-vulnerable" style={{borderRadius:'50%'}} />}
-              {isTarget && <div className="absolute inset-[-6px] pointer-events-none enemy-target-glow" />}
+              {/* [2026-05-10 像素风选中三层] 替代旧 enemy-target-glow 矩形外框 */}
+              {isTarget && <EnemySelectionFx />}
             </div>
             <div className="mt-1 animate-enemy-shadow" style={{width: '150%', height: '18px', background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 45%, transparent 70%)', borderRadius: '50%', marginLeft: '-25%', filter: 'blur(3px)'}} />
             {/* [2026-05-09] 移除脚下距离指示点（distance-indicator） */}
