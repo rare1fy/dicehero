@@ -307,9 +307,11 @@ export async function executeEnemyTurn(
       // 配置里 caster/priest 的"攻击 14 亡灵大军" → 视为技能（用 description 走字典 / 否则回退 enemySkills）
       dispatchedType = '技能';
     }
-    // [GUARDIAN/PALADIN 2026-05-09] 当 pattern 未要求防御但当前是 guardian/paladin 的"防御回合"时，仍然防御
-    //   这保留了配置以外的攻防交替节奏；如果 pattern 明确写了攻击/技能则按 pattern 走
-    if (dispatchedType === '攻击') {
+    // [GUARDIAN/PALADIN 2026-05-09 v2] fallback：仅当 pattern 没返回任何 action 时才用攻防周期兜底。
+    //   旧实现会把 pattern 给的"攻击"也覆盖成"防御"，导致根须巨像之类配了完整 actions 的 BOSS
+    //   在偶数回合永远只防御不攻击。
+    //   配置已经写好 actions 时（action != null），完全按配置走，不再硬编码覆盖。
+    if (!action && dispatchedType === '攻击') {
       const isGuardianDefendTurn = e.combatType === 'guardian' && turnT % GUARDIAN_CONFIG.defenseCycle === 0;
       const isPaladinDefendTurn = paladinShouldDefendThisTurn(e, turnT);
       if (isGuardianDefendTurn || isPaladinDefendTurn) {
@@ -352,7 +354,26 @@ export async function executeEnemyTurn(
       // priest 的"护甲祝福" / 任意 description 进字典 → 直接派发；否则回退 enemySkills
       const handledByDispatch = !!(dotType || ctlType || isArmorBlessDescription(desc));
 
-      if (handledByDispatch) {
+      // [2026-05-09 v3] 分工修正：warrior/ranger/guardian 不再有"专门施法"，
+      //   把它们的"技能"action 改造为"攻击 + 弱化 rider"——一次普攻顺带挂半量 DOT/控制，
+      //   而不是原地纯施法。caster/priest 仍走原"技能"派发拿到完整数值。
+      const isMartial = e.combatType === 'warrior' || e.combatType === 'ranger' || e.combatType === 'guardian';
+      if (isMartial && handledByDispatch && (dotType || ctlType)) {
+        // 转化为"攻击 + rider"——把 rider 信息暂存到本作用域，让下方攻击分支末尾消费
+        const riderDot = dotType;
+        const riderCtl = ctlType;
+        // 数值减半（向下取整，至少 1），duration 保留 caster/priest 同款
+        const riderVal = Math.max(1, Math.floor(((action?.value ?? 1) as number) / 2));
+        // 派发为攻击；但攻击伤害用 enemy.attackDmg（保留原"技能"无配置 baseValue 时的兜底）
+        dispatchedType = '攻击';
+        // 用闭包变量传给下方攻击分支
+        (e as Enemy & { __rider?: { dot?: 'burn' | 'poison' | null; ctl?: 'weak' | 'vulnerable' | 'freeze' | null; val: number; desc?: string } }).__rider = {
+          dot: riderDot,
+          ctl: riderCtl,
+          val: riderVal,
+          desc,
+        };
+      } else if (handledByDispatch) {
         await cb.enemyPreAction(e, 'skill');
         cb.setEnemyEffectForUid(e.uid, 'skill');
         cb.playSound('enemy_skill');
@@ -476,6 +497,11 @@ export async function executeEnemyTurn(
 
     let chantPenaltyMain = 0;
     let blockGained = 0;  // 本次攻击单元（主攻+追击）累计的完美防御次数
+    // [BUGFIX 2026-05-09] React.StrictMode dev 下 setGame updater 会被执行两次。
+    //   blockGained / chantPenaltyMain 不能直接在 updater 内 += —— 否则会被翻倍。
+    //   用 mainCounted/rangerCounted flag 守护，updater 只第一次执行时累计计数。
+    let mainCounted = false;
+    let rangerCounted = false;
     cb.setGame((prev: GameState) => {
       // 用 action.value 临时覆盖 attackDmg（trait/archetype 修正在 getEffectiveAttackDmg 内）
       const enemyForCalc = overrideAttackDmg !== undefined ? { ...e, attackDmg: overrideAttackDmg } : e;
@@ -489,19 +515,22 @@ export async function executeEnemyTurn(
       const newHp = Math.max(0, prev.hp - absorb.hpDamage);
       const hpLost = prev.hp - newHp;
 
-      if (absorb.absorbedByShield > 0) cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
-      if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', shieldIcon(), 'player');
-      if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', heartIcon(), 'player');
-      if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
+      // [BUGFIX 2026-05-09] 副作用（飘字/音效/log/特效/台词）只在第一次执行——StrictMode 双触发守护
+      if (!mainCounted) {
+        if (absorb.absorbedByShield > 0) cb.addFloatingText(`-${absorb.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
+        if (absorb.absorbedByArmor > 0) cb.addFloatingText(`-${absorb.absorbedByArmor}`, 'text-blue-400', shieldIcon(), 'player');
+        if (absorb.hpDamage > 0) cb.addFloatingText(`-${absorb.hpDamage}`, 'text-red-500', heartIcon(), 'player');
+        if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
 
-      cb.setPlayerEffect('flash');
-      const flavorTag = flavorDesc ? `【${flavorDesc}】` : '';
-      cb.addLog(`${e.name} ${flavorTag}攻击造成 ${damage} 伤害！`);
-      cb.playSound('enemy');
+        cb.setPlayerEffect('flash');
+        const flavorTag = flavorDesc ? `【${flavorDesc}】` : '';
+        cb.addLog(`${e.name} ${flavorTag}攻击造成 ${damage} 伤害！`);
+        cb.playSound('enemy');
 
-      const delayedQuotes = tryAttackTaunt(e, damage, cb);
-      for (const dq of delayedQuotes) {
-        cb.scheduleDelayedQuote(dq);
+        const delayedQuotes = tryAttackTaunt(e, damage, cb);
+        for (const dq of delayedQuotes) {
+          cb.scheduleDelayedQuote(dq);
+        }
       }
 
       // 吟唱受击罚
@@ -511,7 +540,7 @@ export async function executeEnemyTurn(
       if (penalty) {
         newBackfire += penalty.addedStacks;
         newHitCount = penalty.newHitCount;
-        chantPenaltyMain = penalty.addedStacks;
+        if (!mainCounted) chantPenaltyMain = penalty.addedStacks;
       }
 
       if (newHp <= 0 && prev.hp > 0) {
@@ -526,9 +555,10 @@ export async function executeEnemyTurn(
         const r = tryGainBlockSlot(prev);
         if (r.changed) {
           blockUpd = r.gameUpdate;
-          blockGained += 1;
+          if (!mainCounted) blockGained += 1;
         }
       }
+      mainCounted = true;
       return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd };
     });
     if (chantPenaltyMain > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyMain}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
@@ -573,9 +603,9 @@ export async function executeEnemyTurn(
         const newHp = Math.max(0, prev.hp - absorb2.hpDamage);
         const hpLost = prev.hp - newHp;
 
-        if (absorb2.absorbedByShield > 0) cb.addFloatingText(`-${absorb2.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
-        if (absorb2.absorbedByArmor > 0) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', shieldIcon(), 'player');
-        if (absorb2.hpDamage > 0) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', heartIcon(), 'player');
+        if (absorb2.absorbedByShield > 0 && !rangerCounted) cb.addFloatingText(`-${absorb2.absorbedByShield}`, 'text-cyan-300', arcaneShieldIcon(), 'player');
+        if (absorb2.absorbedByArmor > 0 && !rangerCounted) cb.addFloatingText(`-${absorb2.absorbedByArmor}`, 'text-blue-400', shieldIcon(), 'player');
+        if (absorb2.hpDamage > 0 && !rangerCounted) cb.addFloatingText(`-${absorb2.hpDamage}`, 'text-orange-400', heartIcon(), 'player');
 
         const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, secondHit);
         let newHitCount = prev.mageChantHitCount;
@@ -583,7 +613,7 @@ export async function executeEnemyTurn(
         if (penalty) {
           newBackfire += penalty.addedStacks;
           newHitCount = penalty.newHitCount;
-          chantPenaltyR = penalty.addedStacks;
+          if (!rangerCounted) chantPenaltyR = penalty.addedStacks;
         }
 
         if (newHp <= 0 && prev.hp > 0) {
@@ -597,9 +627,10 @@ export async function executeEnemyTurn(
           const r = tryGainBlockSlot(prev);
           if (r.changed) {
             blockUpd2 = r.gameUpdate;
-            blockGained += 1;
+            if (!rangerCounted) blockGained += 1;
           }
         }
+        rangerCounted = true;
         return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd2 };
       });
       if (chantPenaltyR > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyR}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
@@ -622,6 +653,39 @@ export async function executeEnemyTurn(
         return { ...prev, statuses: next };
       });
       cb.addFloatingText('毒素+1', 'text-emerald-400', undefined, 'player');
+    }
+
+    // [MARTIAL_RIDER 2026-05-09] warrior/ranger/guardian 的"技能"行动转化为"攻击 + 弱化 rider"。
+    //   rider 由上方技能分支前置写入 e.__rider，这里在攻击命中后追加挂状态。
+    {
+      const riderHolder = e as Enemy & { __rider?: { dot?: 'burn' | 'poison' | null; ctl?: 'weak' | 'vulnerable' | 'freeze' | null; val: number; desc?: string } };
+      const rider = riderHolder.__rider;
+      if (rider) {
+        if (rider.dot) {
+          cb.setGame(prev => ({
+            ...prev,
+            statuses: applyPlayerStatus(prev, rider.dot!, rider.val, rider.dot === 'burn' ? 3 : undefined),
+          }));
+          const label = rider.dot === 'burn' ? '灼烧' : '毒素';
+          const color = rider.dot === 'burn' ? 'text-orange-400' : 'text-emerald-400';
+          cb.addFloatingText(`${label}+${rider.val}`, color, undefined, 'player');
+          if (rider.desc) cb.addLog(`${e.name} 顺势附加【${rider.desc}】，对你施加 ${rider.val} 层${label}。`);
+        } else if (rider.ctl) {
+          // 武力系附带控制：duration 减半（最少 1 回合）
+          const baseDur = rider.ctl === 'freeze' ? 1 : 2;
+          const dur = Math.max(1, Math.floor(baseDur));
+          cb.setGame(prev => ({
+            ...prev,
+            statuses: applyPlayerStatus(prev, rider.ctl!, 1, dur),
+          }));
+          const label = rider.ctl === 'freeze' ? '冻结' : rider.ctl === 'weak' ? '虚弱' : '易伤';
+          const color = rider.ctl === 'freeze' ? 'text-cyan-400' : rider.ctl === 'weak' ? 'text-purple-400' : 'text-orange-400';
+          cb.addFloatingText(`${label}!`, color, undefined, 'player');
+          if (rider.desc) cb.addLog(`${e.name} 顺势附加【${rider.desc}】，让你陷入${label}（${dur}回合）。`);
+        }
+        // 单次消费，避免下回合再触发
+        delete riderHolder.__rider;
+      }
     }
 
     // 完美防御本次攻击合并飘字（含主攻+追击的累计）

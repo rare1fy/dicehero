@@ -54,7 +54,7 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
     }
     // 以下是之前缺失的效果展示
     if (op.armor) allEffects.push({ name: def.name, detail: `护甲+${op.armor}`, type: 'armor' });
-    if (op.armorFromValue) allEffects.push({ name: def.name, detail: `护甲+${d.value}(点数)`, type: 'armor' });
+    if (op.armorFromValue) allEffects.push({ name: def.name, detail: `护甲+${d.value}×倍率(基础)`, type: 'armor' });
     if (op.armorFromTotalPoints) {
       const totalPts = selected.reduce((s, dd) => s + dd.value, 0);
       allEffects.push({ name: def.name, detail: `护甲+${totalPts}(总点数)`, type: 'armor' });
@@ -160,6 +160,11 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
   const lvlMult = game.levelDamageMultBonus || 0;
   if (lvlMult > 0 && outcome.damage > 0) {
     allEffects.push({ name: '战意共鸣', rawMult: 1 + lvlMult, detail: `倍率+${Math.round(lvlMult * 100)}%`, type: 'mult', icon: 'flame' });
+  }
+  // [2026-05-09] 洞察弱点·本场战斗伤害倍率（战斗胜利时清零）
+  const challengeMult = game.challengeDamageMultBonus || 0;
+  if (challengeMult > 0 && outcome.damage > 0) {
+    allEffects.push({ name: '洞察弱点', rawMult: 1 + challengeMult, detail: `倍率+${Math.round(challengeMult * 100)}%`, type: 'mult', icon: 'flame' });
   }
   const lvlPierce = game.levelPierceBonus || 0;
   if (lvlPierce > 0 && outcome.damage > 0) {

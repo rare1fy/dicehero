@@ -182,6 +182,19 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   const isRoyalElement = activeHands.some((h) => h === '皇家元素顺');
   const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0);
 
+  // [BUGFIX 2026-05-09] 即使 skipOnPlay（战士铁拳连打多选普攻），破甲类效果也应生效——
+  //   破甲是"目标状态"层面而非数值放大，与"多选普攻只取基础伤害"的设计不冲突。
+  //   覆盖：碎甲(w_armorbreak)、泰坦之拳(w_titanfist)、火元素、逆流(mage_reverse)
+  //   仅在 skipOnPlay=true 时生效，正常路径走下方 processDiceOnPlayEffects 流程。
+  if (skipOnPlay) {
+    selected.forEach(d => {
+      const def = getDiceDef(d.diceDefId);
+      if (def.onPlay?.armorBreak) armorBreak = true;
+      // 元素骰子的火元素也破甲
+      if (def.isElemental && d.collapsedElement === 'fire') armorBreak = true;
+    });
+  }
+
   const hasUnify = selected.some(d => getDiceDef(d.diceDefId).onPlay?.unifyElement);
   // 确定性选择：统一为第一个被选骰子的元素（预览需要确定性，避免 Math.random 导致 UI 闪烁）
   const unifiedElement = hasUnify && !skipOnPlay ? (selected.find(d => d.element && d.element !== 'normal')?.element || 'fire') : null;
@@ -224,11 +237,34 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   //   · levelDamageBonus (利刃精通)  → 与 extraDamage 同级相加
   //   · levelDamageMultBonus (战意共鸣) → 与 multiplier 同级相乘
   //   · levelPierceBonus (破甲之怒)   → 与 pierceDamage 同级相加（穿透）
+  // [2026-05-09] 洞察弱点：challengeDamageMultBonus 本场战斗生效（胜利时清零），和 levelDamageMultBonus 同级相加
   const lvlDmgAdd    = game.levelDamageBonus     || 0;
-  const lvlMultAdd   = game.levelDamageMultBonus || 0;
+  const lvlMultAdd   = (game.levelDamageMultBonus || 0) + (game.challengeDamageMultBonus || 0);
   const lvlPierceAdd = game.levelPierceBonus     || 0;
   const finalMultiplier = multiplier * (1 + lvlMultAdd);
   const totalDamage = Math.ceil(baseDamage * finalMultiplier) + extraDamage + lvlDmgAdd + pierceDamage + lvlPierceAdd;
+
+  // [IRONWALL-V2 2026-05-09] 铁壁骰子：常规 armorFromValue 已在 warriorCalc 加 +d.value 基础护甲；
+  //   现增强：再追加"骰子点数 × 最终伤害倍率(handMultiplier × finalMultiplier)"作为缩放护甲，
+  //   多颗铁壁可叠加。这样高牌型/带 multiplier 加成时铁壁的护甲价值能跟上伤害走。
+  if (!skipOnPlay) {
+    const ironwallScaleMult = handMultiplier * finalMultiplier;
+    selected.forEach(d => {
+      const def = getDiceDef(d.diceDefId);
+      if (def.onPlay?.armorFromValue) {
+        const scaledArmor = Math.ceil(d.value * ironwallScaleMult);
+        // 减去基础那部分（warriorCalc 已加），追加 scaled - base
+        const bonus = Math.max(0, scaledArmor - d.value);
+        if (bonus > 0) {
+          extraArmor += bonus;
+          triggeredAugments.push({
+            name: def.name,
+            details: `护甲 ${d.value}→${scaledArmor}（×${ironwallScaleMult.toFixed(2)}）`,
+          });
+        }
+      }
+    });
+  }
 
   // [DEBUG-DMG 2026-05-08] 伤害计算追踪日志（F12 控制台可查）
   if (typeof window !== 'undefined' && (window as any).__DMG_DEBUG__ !== false) {

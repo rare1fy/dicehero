@@ -191,7 +191,7 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
             comboCount: 0,
             lastPlayHandType: undefined,
             lockedElement: isMageChanting ? prev.lockedElement : undefined,
-            instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
+            instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount + (prev.challengeDrawBonus || 0), prev.map.find(n => n.id === prev.currentNodeId)?.type),
             instakillCompleted: false,
             instakillAidType: null,
             playsThisWave: 0,

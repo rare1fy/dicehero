@@ -157,7 +157,11 @@ export interface GameState {
   instakillAidType?: 1 | 2 | 3 | 4 | null;
   playsThisWave?: number;              // 本波已出牌次数（挑战追踪用）
   rerollsThisWave?: number;            // 本波重投次数（挑战追踪用）
-  tempDrawCountBonus?: number;         // 洞察弱点临时骰子上限加成（战斗结束清除）
+  tempDrawCountBonus?: number;         // 薛定谔的袋子：临时骰子上限加成（每回合清除）
+  /** [2026-05-09] 洞察弱点：本场战斗 +1 手牌上限（战斗胜利时清零，不跨战斗） */
+  challengeDrawBonus?: number;
+  /** [2026-05-09] 洞察弱点：手牌满 6 时改奖励 +50% 伤害倍率——本场战斗生效，战斗胜利时清零 */
+  challengeDamageMultBonus?: number;
   boomerangFreeReroll?: number;        // 回旋骰子弹回后获得的免费重投次数（每回合重置）
   comboFreeReroll?: number;            // 盗贼连击预备给予的免费重投次数（每回合重置）
   gmKillWave?: number;                 // GM 调试：杀死当前波次敌人（timestamp，让 useEffect 通过值变化触发）

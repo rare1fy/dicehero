@@ -163,28 +163,31 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
       }, 0);
     });
   } else {
-    // 效果4：本局永久 +1 手牌上限；已达上限（drawCount >= 6）则改为 +50% 全局伤害倍率
+    // 效果4：本场战斗 +1 手牌上限；已达上限（drawCount+挑战已加≥6）则改为本场战斗 +50% 伤害倍率
+    // [2026-05-09] 从 drawCount/levelDamageMultBonus（整局永久）改为 challengeDrawBonus/challengeDamageMultBonus（本场战斗永久，胜利时清零）
     const gNow = gameRef.current;
-    const atCap = (gNow.drawCount || 0) >= 6;
+    const effectiveDraw = (gNow.drawCount || 0) + (gNow.challengeDrawBonus || 0);
+    const atCap = effectiveDraw >= 6;
     if (atCap) {
       addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-      addToast(`洞察弱点！本局永久获得 +50% 伤害倍率`, 'buff', { icon: 'star' });
-      addLog(`洞察弱点达成！本局永久伤害倍率 +50%`);
+      addToast(`洞察弱点！本场战斗 +50% 伤害倍率`, 'buff', { icon: 'star' });
+      addLog(`洞察弱点达成！本场战斗伤害倍率 +50%`);
       scheduleAidEffect(800, () => {
         setGame(prev => ({
           ...prev,
-          levelDamageMultBonus: (prev.levelDamageMultBonus || 0) + 0.5,
+          challengeDamageMultBonus: (prev.challengeDamageMultBonus || 0) + 0.5,
         }));
         addFloatingText(`伤害 +50%`, REWARD_COLOR, undefined, 'player');
       });
     } else {
       addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-      addToast(`洞察弱点！本局永久 +1 手牌上限`, 'buff', { icon: 'star' });
-      addLog(`洞察弱点达成！本局永久 +1 手牌上限`);
+      addToast(`洞察弱点！本场战斗 +1 手牌上限`, 'buff', { icon: 'star' });
+      addLog(`洞察弱点达成！本场战斗 +1 手牌上限`);
       scheduleAidEffect(800, () => {
         setGame(prev => ({
           ...prev,
-          drawCount: Math.min(6, (prev.drawCount || 3) + 1),
+          // 不直接改 drawCount；改走 challengeDrawBonus，确保战斗结束清零
+          challengeDrawBonus: Math.min(6 - (prev.drawCount || 3), (prev.challengeDrawBonus || 0) + 1),
         }));
         addFloatingText(`手牌上限 +1`, REWARD_COLOR, diceIcon(), 'player');
         emitReward('dice', 1);

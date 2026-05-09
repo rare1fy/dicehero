@@ -21,7 +21,7 @@ interface DiceBagPanelProps {
 export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDice, diceBag, discardPile, position = 'left' }) => {
   const [expanded, setExpanded] = useState(false);
   const [tooltipDef, setTooltipDef] = useState<string | null>(null);
-  const [tooltipDir, setTooltipDir] = useState<'up' | 'down'>('up');
+  const [tooltipPos, setTooltipPos] = useState<{ left: number; top: number; dir: 'up' | 'down' }>({ left: 0, top: 0, dir: 'up' });
   const isLeft = position === 'left';
 
   const targetList = isLeft ? diceBag : discardPile;
@@ -123,14 +123,18 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
+                            const tooltipKey = `${defId}-${idx}`;
                             if (isTooltipActive) { setTooltipDef(null); return; }
                             const card = e.currentTarget as HTMLElement;
-                            const scroller = card.closest('.dicebag-scroll') as HTMLElement | null;
                             const cardRect = card.getBoundingClientRect();
-                            const scrollerRect = scroller?.getBoundingClientRect();
-                            const spaceAbove = scrollerRect ? cardRect.top - scrollerRect.top : cardRect.top;
-                            setTooltipDir(spaceAbove < 100 ? 'down' : 'up');
-                            setTooltipDef(`${defId}-${idx}`);
+                            const TOOLTIP_H_EST = 80;
+                            const spaceAbove = cardRect.top;
+                            const spaceBelow = window.innerHeight - cardRect.bottom;
+                            const dir: 'up' | 'down' = spaceAbove >= TOOLTIP_H_EST || spaceAbove >= spaceBelow ? 'up' : 'down';
+                            const left = cardRect.left + cardRect.width / 2;
+                            const top = dir === 'up' ? cardRect.top - 6 : cardRect.bottom + 6;
+                            setTooltipPos({ left, top, dir });
+                            setTooltipDef(tooltipKey);
                           }}
                         >
                           <MiniDice defId={defId} size={28} highlight />
@@ -140,37 +144,6 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                           <span className="text-[7px] font-bold" style={{ color: RARITY_TEXT_COLORS[def.rarity] }}>
                             {RARITY_LABELS[def.rarity]}
                           </span>
-                          {isTooltipActive && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 4, scale: 0.9 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute left-1/2 -translate-x-1/2 p-2 text-[9px] leading-snug text-center pointer-events-none"
-                              style={{
-                                [tooltipDir === 'up' ? 'bottom' : 'top']: 'calc(100% + 6px)',
-                                width: '160px',
-                                background: 'rgba(12,10,20,0.96)',
-                                border: `2px solid ${RARITY_COLORS[def.rarity]}`,
-                                borderRadius: '3px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.6)',
-                                zIndex: 50,
-                              }}
-                            >
-                              <div className="text-[var(--dungeon-text-dim)] mb-1 font-mono">[{def.faces.join(',')}]</div>
-                              <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
-                              {/* 下箭头 */}
-                              <div
-                                className="absolute left-1/2 -translate-x-1/2"
-                                style={{
-                                  [tooltipDir === 'up' ? 'bottom' : 'top']: '-6px',
-                                  width: 0, height: 0,
-                                  borderLeft: '6px solid transparent',
-                                  borderRight: '6px solid transparent',
-                                  [tooltipDir === 'up' ? 'borderTop' : 'borderBottom']: `6px solid ${RARITY_COLORS[def.rarity]}`,
-                                }}
-                              />
-                            </motion.div>
-                          )}
                         </motion.div>
                       );
                     })}
@@ -178,6 +151,45 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                 )}
               </div>
             </motion.div>
+            {/* tooltip 渲染在面板外层、用 fixed 定位避免被滚动容器/面板裁切 */}
+            {tooltipDef && (() => {
+              const activeId = tooltipDef.split('-').slice(0, -1).join('-');
+              const def = getDiceDef(activeId);
+              if (!def) return null;
+              const isUp = tooltipPos.dir === 'up';
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: isUp ? 4 : -4, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed p-2 text-[9px] leading-snug text-center pointer-events-none"
+                  style={{
+                    left: tooltipPos.left,
+                    top: tooltipPos.top,
+                    transform: `translate(-50%, ${isUp ? '-100%' : '0'})`,
+                    width: '160px',
+                    background: 'rgba(12,10,20,0.96)',
+                    border: `2px solid ${RARITY_COLORS[def.rarity]}`,
+                    borderRadius: '3px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.6)',
+                    zIndex: 100,
+                  }}
+                >
+                  <div className="text-[var(--dungeon-text-dim)] mb-1 font-mono">[{def.faces.join(',')}]</div>
+                  <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2"
+                    style={{
+                      [isUp ? 'bottom' : 'top']: '-6px',
+                      width: 0, height: 0,
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      [isUp ? 'borderTop' : 'borderBottom']: `6px solid ${RARITY_COLORS[def.rarity]}`,
+                    }}
+                  />
+                </motion.div>
+              );
+            })()}
           </motion.div>
         )}
       </AnimatePresence>

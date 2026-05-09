@@ -27,6 +27,8 @@ import { getDiceElementClass, getHpBarClass } from '../utils/uiHelpers';
 import { formatDescription } from '../utils/richText';
 import { renderFloatText } from '../utils/renderFloatText';
 import { COMBAT_TYPE_DESC } from '../logic/battleHelpers';
+import { describeEnemy, COMBAT_LABELS as BESTIARY_LABELS } from './EnemyBestiary';
+import { getEnemyConfig } from '../logic/enemySummonRevive';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
 import { FURY_CONFIG } from '../config/gameBalance';
 import { getHandTypeDisplayName } from '../data/handTypes';
@@ -116,7 +118,7 @@ export function PlayerHudView() {
             })()}
             {game.playerClass === 'warrior' && (game.warriorRageMult || 0) > 0 && <BuffTooltip label={`狂暴+${Math.round((game.warriorRageMult || 0) * 100)}%`} icon={<PixelFlame size={1.5} />} color="rgb(255,80,40)" bgColor="rgba(255,60,20,0.15)" borderColor="rgba(255,60,20,0.4)" title={`狂暴本能 +${Math.round((game.warriorRageMult || 0) * 100)}%`} desc={`手牌达到6颗上限时，按受伤百分比(${Math.round((1 - game.hp / game.maxHp) * 100)}%)获得等比例伤害加成。`} />}
             {game.playerClass === 'mage' && (game.mageOverchargeMult || 0) > 0 && <BuffTooltip label={`+${Math.round((game.mageOverchargeMult || 0) * 100)}%`} icon={<PixelMagic size={1.5} />} color="rgb(192,132,252)" bgColor="rgba(160,80,255,0.15)" borderColor="rgba(160,80,255,0.4)" title={`过充吟唱 +${Math.round((game.mageOverchargeMult || 0) * 100)}%`} desc="手牌满6颗后继续吟唱，每回合+10%伤害倍率。出牌后重置。" />}
-            {game.playerClass === 'mage' && (game.chargeStacks || 0) > 0 && <BuffTooltip label={`蓄${game.chargeStacks}层`} icon={<PixelMagic size={1.5} />} color="rgb(168,148,232)" bgColor="rgba(120,80,200,0.15)" borderColor="rgba(120,80,200,0.4)" title={`星界吟唱 Lv.${game.chargeStacks}`} desc={`手牌上限${Math.min(6, game.drawCount + (game.chargeStacks || 0))}/6，吟唱时获得奥术屏障+${4 + (game.chargeStacks || 0) * 2}（减免一切伤害含DOT）。出牌后重置所有吟唱。`} />}
+            {game.playerClass === 'mage' && (game.chargeStacks || 0) > 0 && <BuffTooltip label={`蓄${game.chargeStacks}层`} icon={<PixelMagic size={1.5} />} color="rgb(168,148,232)" bgColor="rgba(120,80,200,0.15)" borderColor="rgba(120,80,200,0.4)" title={`星界吟唱 Lv.${game.chargeStacks}`} desc={`手牌上限${Math.min(6, game.drawCount + (game.chargeStacks || 0) + (game.challengeDrawBonus || 0))}/6，吟唱时获得奥术屏障+${4 + (game.chargeStacks || 0) * 2}（减免一切伤害含DOT）。出牌后重置所有吟唱。`} />}
             {game.playerClass === 'mage' && (game.arcaneBackfire || 0) > 0 && <BuffTooltip label={`+${Math.round((game.arcaneBackfire || 0) * 10)}%`} icon={<PixelArcaneSkull size={1.5} />} color="rgb(217,130,250)" bgColor="rgba(176,84,216,0.18)" borderColor="rgba(176,84,216,0.55)" title={`法术反噬 ${game.arcaneBackfire}层`} desc={`吟唱被打扰累加（+2/+4/+8/+16...）。每层使你受到的伤害额外+10%。【出牌立即清零】【无法被任何净化效果移除】`} />}
             {game.playerClass === 'rogue' && (game.comboCount || 0) > 0 && <BuffTooltip label={`连击${game.comboCount}`} icon={<PixelZap size={1.5} />} color="rgb(96,208,128)" bgColor="rgba(48,160,80,0.15)" borderColor="rgba(48,160,80,0.4)" title={`连击 ×${game.comboCount}`} desc={`第2次出牌伤害+20%。两次相同牌型（非普攻）额外+25%。剩余${game.playsLeft}次出牌。回合结束重置。`} />}
           </div>
@@ -130,28 +132,71 @@ export function PlayerHudView() {
         </div>
       </div>
 
-      {/* 敌人信息弹窗 */}
+      {/* 敌人信息弹窗 — [2026-05-09] 与图鉴同源，显示 describeEnemy 生成的详细 sections */}
       <AnimatePresence>
         {enemyInfoTarget && (() => {
           const infoEnemy = enemies.find(e => e.uid === enemyInfoTarget);
           if (!infoEnemy) return null;
-          const typeInfo = COMBAT_TYPE_DESC[infoEnemy.combatType] || COMBAT_TYPE_DESC.warrior;
+          const rawTypeInfo = BESTIARY_LABELS[infoEnemy.combatType] || COMBAT_TYPE_DESC[infoEnemy.combatType] || COMBAT_TYPE_DESC.warrior;
+          // [TYPE-NORMALIZE 2026-05-09] BESTIARY_LABELS 与 COMBAT_TYPE_DESC 字段不同（label/full vs name/desc），
+          //   union 直接取字段会触发 TS2339。这里归一化为统一渲染对象。
+          const typeInfo: { label: string; color: string; title: string } = 'label' in rawTypeInfo
+            ? { label: rawTypeInfo.label, color: rawTypeInfo.color, title: rawTypeInfo.full?.split('·')[0]?.trim() || '' }
+            : { label: rawTypeInfo.icon || '?', color: rawTypeInfo.color, title: rawTypeInfo.name };
           const isMelee = infoEnemy.combatType === 'warrior' || infoEnemy.combatType === 'guardian';
+          const cfg = getEnemyConfig(infoEnemy.configId);
+          const detail = cfg ? describeEnemy(cfg) : null;
           return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70" onClick={() => setEnemyInfoTarget(null)}>
-              <motion.div initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.85, y: 20 }} onClick={e => e.stopPropagation()} className="w-[85vw] max-w-sm pixel-panel p-3 bg-[var(--dungeon-bg)]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2"><span className="text-xl">{infoEnemy.emoji}</span><div><div className="text-sm font-black text-[var(--dungeon-text-bright)] pixel-text-shadow">{infoEnemy.name}</div><div className="flex items-center gap-1 mt-0.5"><span className="text-xs" style={{ color: typeInfo.color }}>{typeInfo.icon} {typeInfo.name}</span><span className="text-[10px] text-[var(--dungeon-text-dim)]">|</span><span className="text-[11px] font-mono text-[var(--pixel-red-light)]">{getDisplayAttackDmg(infoEnemy)} ATK</span></div></div></div>
-                  <button onClick={() => setEnemyInfoTarget(null)} className="text-[var(--dungeon-text-dim)] hover:text-white text-sm font-bold"></button>
+              <motion.div initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.85, y: 20 }} onClick={e => e.stopPropagation()} className="w-[85vw] max-w-sm pixel-panel p-3 bg-[var(--dungeon-bg)]" style={{ maxHeight: '80dvh', display: 'flex', flexDirection: 'column' }}>
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xl shrink-0">{infoEnemy.emoji}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-black text-[var(--dungeon-text-bright)] pixel-text-shadow truncate">{infoEnemy.name}</div>
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                        <span className="text-[10px] font-bold px-1 py-0 border" style={{borderRadius:'2px', color: typeInfo.color, borderColor: typeInfo.color}}>{typeInfo.label}</span>
+                        <span className="text-[10px]" style={{ color: typeInfo.color }}>{typeInfo.title}</span>
+                        <span className="text-[10px] text-[var(--dungeon-text-dim)]">|</span>
+                        <span className="text-[11px] font-mono text-[var(--pixel-red-light)]">{getDisplayAttackDmg(infoEnemy)} ATK</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => setEnemyInfoTarget(null)} className="text-[var(--dungeon-text-dim)] hover:text-white text-sm font-bold shrink-0 px-2"></button>
                 </div>
-                <div className="text-[11px] text-[var(--dungeon-text)] leading-relaxed mb-2 px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>{formatDescription(typeInfo.desc)}</div>
-                <div className="grid grid-cols-2 gap-1.5 mb-2">
+                {/* 当前实时状态 */}
+                <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">
                   <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}><div className="text-[9px] text-[var(--dungeon-text-dim)]">生命</div><div className="text-[12px] font-mono font-bold text-[var(--pixel-red-light)]">{infoEnemy.hp}/{infoEnemy.maxHp}</div></div>
                   <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}><div className="text-[9px] text-[var(--dungeon-text-dim)]">护甲</div><div className="text-[12px] font-mono font-bold text-[var(--pixel-blue-light)]">{infoEnemy.armor}</div></div>
                   <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}><div className="text-[9px] text-[var(--dungeon-text-dim)]">距离</div><div className="text-[12px] font-mono font-bold" style={{ color: isMelee && infoEnemy.distance > 0 ? 'var(--pixel-orange)' : 'var(--pixel-green-light)' }}>{infoEnemy.distance === 0 ? '近身' : `距离 ${infoEnemy.distance}`}</div></div>
                   <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}><div className="text-[9px] text-[var(--dungeon-text-dim)]">行动</div><div className="text-[12px] font-mono font-bold text-[var(--dungeon-text)]">{isMelee && infoEnemy.distance > 0 ? '逼近中' : '攻击'}</div></div>
                 </div>
-                {infoEnemy.statuses.length > 0 && <div className="flex flex-wrap gap-1 mb-1">{infoEnemy.statuses.map((s, idx) => <span key={idx} className="text-[10px] px-1 py-0.5 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)]" style={{borderRadius:'2px'}}>{s.type} {s.value}</span>)}</div>}
+                {/* 实时 buff/debuff/怒气 */}
+                {(infoEnemy.statuses.length > 0 || (infoEnemy.bloodFury || 0) > 0 || (infoEnemy.guardRage || 0) > 0 || (infoEnemy.dotAmplifier || 0) > 0 || (infoEnemy.holyWrath || 0) > 0) && (
+                  <div className="flex flex-wrap gap-1 mb-2 shrink-0">
+                    {(infoEnemy.bloodFury || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(120,20,20,0.5)] border border-[var(--pixel-red)] text-[var(--pixel-red-light)]" style={{borderRadius:'2px'}}>血怒 ×{infoEnemy.bloodFury}</span>}
+                    {(infoEnemy.guardRage || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(40,60,120,0.5)] border border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]" style={{borderRadius:'2px'}}>守护怒气 ×{infoEnemy.guardRage}</span>}
+                    {(infoEnemy.dotAmplifier || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(80,20,100,0.5)] border border-[var(--pixel-purple)] text-[#d0a0ff]" style={{borderRadius:'2px'}}>持续伤害放大 ×{infoEnemy.dotAmplifier}</span>}
+                    {(infoEnemy.holyWrath || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(120,100,20,0.5)] border border-[var(--pixel-gold)] text-[var(--pixel-gold-light)]" style={{borderRadius:'2px'}}>圣怒 ×{infoEnemy.holyWrath}</span>}
+                    {infoEnemy.statuses.map((s, idx) => <span key={idx} className="text-[10px] px-1 py-0.5 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)]" style={{borderRadius:'2px'}}>{s.type} {s.value}</span>)}
+                  </div>
+                )}
+                {/* 详细信息（与图鉴一致） */}
+                {detail && (
+                  <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    {detail.sections.map((sec, si) => (
+                      <div key={si}>
+                        <div className="text-[10px] font-bold text-[var(--pixel-gold-light)] tracking-wider mb-1">— {sec.title} —</div>
+                        <div className="space-y-0.5 text-[10px] text-[var(--dungeon-text)] leading-relaxed">
+                          {sec.lines.map((ln, li) => <div key={li}>{ln}</div>)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!detail && (
+                  <div className="text-[11px] text-[var(--dungeon-text)] leading-relaxed px-1" style={{ borderLeft: '2px solid ' + typeInfo.color, paddingLeft: '6px' }}>{formatDescription((typeInfo as { desc?: string }).desc || '')}</div>
+                )}
               </motion.div>
             </motion.div>
           );
@@ -172,7 +217,7 @@ export function PlayerHudView() {
             <DiceBagPanel ownedDice={game.ownedDice.map(d => d.defId)} diceBag={game.diceBag} discardPile={game.discardPile} position="left" />
             <div className="flex-1 flex gap-px overflow-hidden items-center justify-center relative h-5">
               <div className="flex gap-px items-center justify-end flex-1 overflow-hidden">
-                <AnimatePresence mode="popLayout">{(() => { const bagDice = game.diceBag.map((defId, i) => ({ defId, idx: i })); const drawCount = game.drawCount || 4; const handSize = dice.filter(d => !d.spent).length; const nextDrawCount = Math.max(0, drawCount - handSize); return bagDice.map(({ defId, idx }) => { const isNextDraw = idx < nextDrawCount; return <motion.div key={defId + "-bag-" + idx} layout initial={shuffleAnimating ? { opacity: 0, x: 60, scale: 0.3 } : { opacity: 0, y: 10, scale: 0.5 }} animate={{ opacity: isNextDraw ? 1 : 0.6, y: isNextDraw ? -1 : 0, x: 0, scale: isNextDraw ? 1.15 : 1 }} exit={{ opacity: 0, scale: 0.3, y: -8 }} transition={shuffleAnimating ? { type: "spring", stiffness: 200, damping: 20, delay: idx * 0.04 } : { type: "spring", stiffness: 300, damping: 25 }}><MiniDice defId={defId} size={14} highlight={isNextDraw} /></motion.div>; }); })()}</AnimatePresence>
+                <AnimatePresence mode="popLayout">{(() => { const bagDice = game.diceBag.map((defId, i) => ({ defId, idx: i })); const drawCount = (game.drawCount || 4) + (game.challengeDrawBonus || 0); const handSize = dice.filter(d => !d.spent).length; const nextDrawCount = Math.max(0, drawCount - handSize); return bagDice.map(({ defId, idx }) => { const isNextDraw = idx < nextDrawCount; return <motion.div key={defId + "-bag-" + idx} layout initial={shuffleAnimating ? { opacity: 0, x: 60, scale: 0.3 } : { opacity: 0, y: 10, scale: 0.5 }} animate={{ opacity: isNextDraw ? 1 : 0.6, y: isNextDraw ? -1 : 0, x: 0, scale: isNextDraw ? 1.15 : 1 }} exit={{ opacity: 0, scale: 0.3, y: -8 }} transition={shuffleAnimating ? { type: "spring", stiffness: 200, damping: 20, delay: idx * 0.04 } : { type: "spring", stiffness: 300, damping: 25 }}><MiniDice defId={defId} size={14} highlight={isNextDraw} /></motion.div>; }); })()}</AnimatePresence>
                 {game.diceBag.length === 0 && !shuffleAnimating && <span className="text-[7px] text-[var(--dungeon-text-dim)] font-mono italic">empty</span>}
               </div>
               <div className="w-px h-4 bg-[var(--dungeon-text-dim)] opacity-40 mx-1 shrink-0" />
@@ -246,13 +291,13 @@ export function PlayerHudView() {
 
             <AnimatePresence mode="wait">
               {game.isEnemyTurn ? (
-                <motion.div key="enemy-turn" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex-1 py-2.5 bg-[#a02820] text-[#ffc8c0] border-3 border-[#2a0808] flex items-center justify-center font-bold text-[12px] tracking-[0.1em] battle-action-btn" style={{boxShadow: 'inset 0 2px 0 #d04838, inset 0 -2px 0 #601008, 0 4px 0 #1a0404'}}><motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}>敌人行动中...</motion.div></motion.div>
+                <motion.div key="enemy-turn" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10, pointerEvents: 'none' }} className="flex-1 py-2.5 bg-[#a02820] text-[#ffc8c0] border-3 border-[#2a0808] flex items-center justify-center font-bold text-[12px] tracking-[0.1em] battle-action-btn" style={{boxShadow: 'inset 0 2px 0 #d04838, inset 0 -2px 0 #601008, 0 4px 0 #1a0404'}}><motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}>敌人行动中...</motion.div></motion.div>
               ) : dice.some(d => d.selected && !d.spent) ? (
-                <motion.button key="play" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} onClick={isNonWarriorMultiNormal ? () => addToast('不成牌型时只能出1颗骰子', 'info') : playHand} disabled={dice.some(d => d.playing) || dice.some(d => d.rolling) || game.playsLeft <= 0 || isNonWarriorMultiNormal} className={`flex-1 py-2.5 ${isNonWarriorMultiNormal ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`} style={{boxShadow: isNonWarriorMultiNormal ? 'none' : 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}><PixelPlay size={2} /> {isNonWarriorMultiNormal ? '不成牌型（仅限选1颗）' : game.playsLeft > 0 ? (game.playerClass === 'rogue' && game.playsLeft > 1 ? `出牌: ${getHandTypeDisplayName(currentHands.bestHand)} (${game.playsLeft}次)` : `出牌: ${getHandTypeDisplayName(currentHands.bestHand)}`) : '出牌次数耗尽'}</motion.button>
+                <motion.button key="play" initial={{ opacity: 0, x: 10, pointerEvents: 'none' }} animate={{ opacity: 1, x: 0, pointerEvents: 'auto' }} exit={{ opacity: 0, x: 10, pointerEvents: 'none' }} transition={{ opacity: { duration: 0.18 }, x: { duration: 0.18 }, pointerEvents: { delay: 0.12 } }} onClick={isNonWarriorMultiNormal ? () => addToast('不成牌型时只能出1颗骰子', 'info') : playHand} disabled={dice.some(d => d.playing) || dice.some(d => d.rolling) || game.playsLeft <= 0 || isNonWarriorMultiNormal} className={`flex-1 py-2.5 ${isNonWarriorMultiNormal ? 'bg-[var(--dungeon-panel)] border-[var(--dungeon-panel-border)] text-[var(--dungeon-text-dim)]' : 'bg-[#18803a] border-[#0a3014] text-[#c8ffd0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn`} style={{boxShadow: isNonWarriorMultiNormal ? 'none' : 'inset 0 2px 0 #3ccc60, inset 0 -2px 0 #0c4418, inset 2px 0 0 #28a848, inset -2px 0 0 #105820, 0 4px 0 #042a0c', textShadow: '1px 1px 0 #042a0c'}}><PixelPlay size={2} /> {isNonWarriorMultiNormal ? '不成牌型（仅限选1颗）' : game.playsLeft > 0 ? (game.playerClass === 'rogue' && game.playsLeft > 1 ? `出牌: ${getHandTypeDisplayName(currentHands.bestHand)} (${game.playsLeft}次)` : `出牌: ${getHandTypeDisplayName(currentHands.bestHand)}`) : '出牌次数耗尽'}</motion.button>
               ) : (dice.every(d => d.spent) || game.playsLeft <= 0) ? (
-                <motion.button key="end" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} disabled={true} className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]">回合结束中...</motion.button>
+                <motion.button key="end" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10, pointerEvents: 'none' }} disabled={true} className="flex-1 py-2.5 bg-[var(--dungeon-panel)] text-[var(--dungeon-text-dim)] border-3 border-[var(--dungeon-panel-border)] font-bold text-[12px] tracking-[0.05em]">回合结束中...</motion.button>
               ) : (
-                <motion.button key="endTurn" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} onClick={() => { if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; } if (dice.some(d => d.rolling)) { addToast('骰子还在翻滚中...'); return; } endTurn(); }} disabled={game.isEnemyTurn || dice.some(d => d.playing) || dice.some(d => d.rolling)} className={`flex-1 py-2.5 ${game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? 'bg-[#503080] border-[#201040] text-[#d0b0ff]' : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? 'bg-[#184038] border-[#0a2018] text-[#40f0e0]' : 'bg-[#907020] border-[#2a2008] text-[#fff0c0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn relative overflow-hidden`} style={{boxShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? 'inset 0 2px 0 #7850b0, inset 0 -2px 0 #281060, inset 2px 0 0 #6040a0, inset -2px 0 0 #381870, 0 4px 0 #100828' : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? 'inset 0 2px 0 #306858, inset 0 -2px 0 #082818, inset 2px 0 0 #285848, inset -2px 0 0 #103828, 0 4px 0 #041810' : 'inset 0 2px 0 #c8a040, inset 0 -2px 0 #604008, inset 2px 0 0 #b09030, inset -2px 0 0 #705010, 0 4px 0 #1a1404', textShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? '1px 1px 0 #201040, 0 0 8px rgba(160,100,255,0.6)' : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? '1px 1px 0 #082018, 0 0 8px rgba(64,240,224,0.5)' : '1px 1px 0 #2a2008'}}>
+                <motion.button key="endTurn" initial={{ opacity: 0, x: 10, pointerEvents: 'none' }} animate={{ opacity: 1, x: 0, pointerEvents: 'auto' }} exit={{ opacity: 0, x: 10, pointerEvents: 'none' }} transition={{ opacity: { duration: 0.18 }, x: { duration: 0.18 }, pointerEvents: { delay: 0.12 } }} onClick={() => { if (dice.some(d => d.playing)) { addToast('正在出牌中...'); return; } if (dice.some(d => d.rolling)) { addToast('骰子还在翻滚中...'); return; } endTurn(); }} disabled={game.isEnemyTurn || dice.some(d => d.playing) || dice.some(d => d.rolling)} className={`flex-1 py-2.5 ${game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? 'bg-[#503080] border-[#201040] text-[#d0b0ff]' : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? 'bg-[#184038] border-[#0a2018] text-[#40f0e0]' : 'bg-[#907020] border-[#2a2008] text-[#fff0c0]'} disabled:opacity-50 border-3 flex items-center justify-center gap-2 font-bold text-[12px] tracking-[0.05em] battle-action-btn relative overflow-hidden`} style={{boxShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? 'inset 0 2px 0 #7850b0, inset 0 -2px 0 #281060, inset 2px 0 0 #6040a0, inset -2px 0 0 #381870, 0 4px 0 #100828' : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? 'inset 0 2px 0 #306858, inset 0 -2px 0 #082818, inset 2px 0 0 #285848, inset -2px 0 0 #103828, 0 4px 0 #041810' : 'inset 0 2px 0 #c8a040, inset 0 -2px 0 #604008, inset 2px 0 0 #b09030, inset -2px 0 0 #705010, 0 4px 0 #1a1404', textShadow: game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? '1px 1px 0 #201040, 0 0 8px rgba(160,100,255,0.6)' : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? '1px 1px 0 #082018, 0 0 8px rgba(64,240,224,0.5)' : '1px 1px 0 #2a2008'}}>
                   {game.playerClass === 'mage' && game.playsLeft === game.maxPlays ? (<><PixelMagic size={2} /><span>吟唱</span>{[...Array(6)].map((_, i) => (<motion.div key={i} className="absolute w-1 h-1 rounded-full bg-purple-400" initial={{ x: Math.random() * 100 - 50, y: 20, opacity: 0 }} animate={{ y: -20, opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.25, ease: 'easeOut' }} />))}</>) : game.playerClass === 'rogue' && (game.comboCount || 0) >= 1 && game.playsLeft > 0 ? (<><PixelArrowUp size={2} /><span>选骰连击 ({game.playsLeft}次)</span>{[...Array(6)].map((_, i) => (<motion.div key={i} className="absolute" style={{ width: 3, height: 3, background: '#40f0f0', imageRendering: 'pixelated' }} initial={{ x: Math.random() * 120 - 60, y: 16, opacity: 0 }} animate={{ y: -16, opacity: [0, 1, 0], scale: [1, 1, 0.5] }} transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: 'linear' }} />))}</>) : (<><PixelArrowRight size={2} /> 结束回合</>)}
                 </motion.button>
               )}

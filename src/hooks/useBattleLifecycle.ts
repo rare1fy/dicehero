@@ -82,6 +82,7 @@ export function useBattleLifecycle(state: BattleState) {
     const firstWave = waves[0]?.enemies || [];
     const isBossNode = node.type === 'boss';
     const isMidBossNode = isBossNode && node.depth < 12;
+    const isFinalBossNode = isBossNode && node.depth >= 12;
     const roamKey = `${game.chapter}-intro`;
     const needRoamTaunt = node.type !== 'boss' && node.depth === 0 && !(game.bossRoamSeen || []).includes(roamKey);
     const needMidBossTaunt = isMidBossNode;
@@ -110,7 +111,7 @@ export function useBattleLifecycle(state: BattleState) {
 
     // ★ 先写入 battleGameState（phase=battle），让战斗场景在黑屏下完成渲染
     playsPerEnemyRef.current = {};
-    const battleChallenge = generateChallenge(node.depth, game.chapter, game.drawCount, node.type);
+    const battleChallenge = generateChallenge(node.depth, game.chapter, game.drawCount + (game.challengeDrawBonus || 0), node.type);
     setGame(prev => buildBattleGameState({ prev, node, waves, firstWave, battleChallenge }));
 
     await new Promise(r => setTimeout(r, 80));
@@ -125,10 +126,17 @@ export function useBattleLifecycle(state: BattleState) {
       const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
       const finalBossName = bossPair[1] || bossPair[0];
       const bq = BOSS_ENEMIES.find(b => b.name === finalBossName && b.chapter === (game.chapter || 1))?.quotes;
-      const tauntLines = [
-        pickQuote(bq?.greet) || pickQuote(bq?.enter) || '……',
-        pickQuote(bq?.dispatch) || pickQuote(BOSS_DISPATCH_LINES) || '上！',
-      ];
+      // [2026-05-09] 中层 BOSS 节点 → 终 BOSS 用 midBossWarning（"已经看到你打到这"语式）
+      //   开局首战 → 用 greet+dispatch（"我是谁，给我上"语式）。两者台词池区分，避免重复。
+      const tauntLines = needMidBossTaunt
+        ? [
+            pickQuote(bq?.midBossWarning) || pickQuote(bq?.phase2_taunt) || pickQuote(bq?.lowHp) || '哼……你比我想的有点本事。',
+            pickQuote(bq?.dispatch) || pickQuote(BOSS_DISPATCH_LINES) || '别得意，下一个就是我！',
+          ]
+        : [
+            pickQuote(bq?.greet) || pickQuote(bq?.enter) || '……',
+            pickQuote(bq?.dispatch) || pickQuote(BOSS_DISPATCH_LINES) || '上！',
+          ];
       await new Promise<void>(resolve => {
         setBossTaunt({ visible: true, name: finalBossName, chapter: game.chapter || 1, lines: tauntLines, onDismiss: resolve });
         playSound('boss_laugh');
@@ -156,10 +164,12 @@ export function useBattleLifecycle(state: BattleState) {
     if (isBossNode) {
       const bossEnemy = firstWave[0];
       if (bossEnemy) {
-        // 第 1 步：Banner 横幅（中BOSS 走完前置 Taunt 后才到这；终BOSS 直接到这）
+        // 第 1 步：Banner 横幅（中BOSS 走完前置 Taunt 后才到这；终BOSS 直接到这；终 BOSS 用加强版动画）
         playSound('boss_appear');
-        setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter });
-        await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
+        setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter, isFinalBoss: isFinalBossNode });
+        // [2026-05-09 v2] 终 BOSS 横幅展示 3000ms（v1 4000ms 太长），中 BOSS 仍用 enemyDeathCleanupDelay
+        const bannerHold = isFinalBossNode ? 3000 : ANIMATION_TIMING.enemyDeathCleanupDelay;
+        await new Promise(r => setTimeout(r, bannerHold));
         setBossEntrance(prev => ({ ...prev, visible: false }));
         await new Promise(r => setTimeout(r, 200));
 
@@ -169,11 +179,12 @@ export function useBattleLifecycle(state: BattleState) {
         const bq = getEnemyQuotes(bossEnemy.configId);
         const enterLine = pickQuote(bq?.enter) || pickQuote(bq?.greet) || '';
         if (enterLine) {
-          showEnemyQuote(bossEnemy.uid, enterLine, 2200);
+          // [2026-05-09 v2] 登场台词时长从 2.2s → 3.8s，await 从 1.2s → 2.8s，给玩家充分阅读时间
+          showEnemyQuote(bossEnemy.uid, enterLine, 3800);
           playSound('enemy_speak');
           setEnemyEffectForUid(bossEnemy.uid, 'speaking');
           setTimeout(() => setEnemyEffectForUid(bossEnemy.uid, null), 400);
-          await new Promise(r => setTimeout(r, 1200));
+          await new Promise(r => setTimeout(r, 2800));
         }
 
         // 第 3 步：boss_entrance 压迫感动画
@@ -187,7 +198,8 @@ export function useBattleLifecycle(state: BattleState) {
     const drawCountBonus = 0;
     // [WARRIOR-REAP 2026-05-09] 战斗开始时战场收割槽位本来就是 0；旧"半血+1"规则已移除
     const startWarriorBonus = 0;
-    const freshCount = Math.min(6, game.drawCount + drawCountBonus + startWarriorBonus);
+    // [2026-05-09] 新战斗开始 challengeDrawBonus 已经被 useBattleVictory 清零，这里天然是 0；保留加法以防跨波次
+    const freshCount = Math.min(6, game.drawCount + drawCountBonus + startWarriorBonus + (game.challengeDrawBonus || 0));
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
     if (fShuffled) addToast('弃骰库已洗回骰子库!', 'buff', { icon: 'shuffle' });
     setGame(prev => ({ ...prev, diceBag: fBag, discardPile: fDiscard }));
@@ -275,7 +287,7 @@ export function useBattleLifecycle(state: BattleState) {
     if (g.playerClass === 'mage' && !forceResetHand) {
       keptDice = dice.filter(d => !d.spent);
       const chargeStacks = g.chargeStacks || 0;
-      const handLimit = Math.min(6, g.drawCount + chargeStacks);
+      const handLimit = Math.min(6, g.drawCount + chargeStacks + (g.challengeDrawBonus || 0));
       if (keptDice.length > handLimit) {
         const excess = keptDice.slice(0, keptDice.length - handLimit);
         keptDice = keptDice.slice(keptDice.length - handLimit);
@@ -335,7 +347,7 @@ export function useBattleLifecycle(state: BattleState) {
         }));
       }
     }
-    const rawHandLimit = g.playerClass === 'mage' ? (g.drawCount + chargeStacks) : (g.drawCount + warriorBonus);
+    const rawHandLimit = g.playerClass === 'mage' ? (g.drawCount + chargeStacks + (g.challengeDrawBonus || 0)) : (g.drawCount + warriorBonus + (g.challengeDrawBonus || 0));
     const handLimit = Math.min(6, rawHandLimit);
     if (g.playerClass === 'warrior' && rawHandLimit > 6) {
       const overflowCount = rawHandLimit - 6;
@@ -536,7 +548,7 @@ export function useBattleLifecycle(state: BattleState) {
             comboCount: 0,
             lockedElement: isMageChanting ? prev.lockedElement : undefined,
             lastPlayHandType: undefined,
-            instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount, prev.map.find(n => n.id === prev.currentNodeId)?.type),
+            instakillChallenge: generateChallenge(prev.map.find(n => n.id === prev.currentNodeId)?.depth || 0, prev.chapter, prev.drawCount + (prev.challengeDrawBonus || 0), prev.map.find(n => n.id === prev.currentNodeId)?.type),
             instakillCompleted: false,
             playsThisWave: 0,
             rerollsThisWave: 0,

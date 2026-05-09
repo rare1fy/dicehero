@@ -34,6 +34,10 @@ export interface EnemyQuotes {
   /** [BOSS 专用 2026-05-09] 血量跨越 70% 阈值（从第一阶段进入狂暴前奏）时触发一次，
    *  复用 showEnemyQuote 气泡 + boss_low_hp 特效。终 BOSS 专属"3 阶段演出"的中段。 */
   phase2_taunt?: string[];
+  /** [BOSS 专用 2026-05-09] 当玩家**击败本章中层 BOSS 后**进入下一战斗节点时，由该章终 BOSS
+   *  作为预告嘲讽（"恭喜过了第一关，下一个是我"语式）。与开局 greet 不同，这里是"已知玩家强度"
+   *  的居高临下式威胁。如不配置则回退到 greet/enter。 */
+  midBossWarning?: string[];
   defend?: string[];
   skill?: string[];
   heal?: string[];

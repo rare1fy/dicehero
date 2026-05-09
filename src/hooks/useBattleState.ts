@@ -26,7 +26,7 @@ export function useBattleState() {
   const [showCalcModal, setShowCalcModal] = useState(false);
   const [showClassInfo, setShowClassInfo] = useState(false);
   const [battleTransition, setBattleTransition] = useState<'none' | 'fadeIn' | 'hold' | 'fadeOut'>('none');
-  const [bossEntrance, setBossEntrance] = useState<{ visible: boolean; name: string; chapter: number }>({ visible: false, name: '', chapter: 1 });
+  const [bossEntrance, setBossEntrance] = useState<{ visible: boolean; name: string; chapter: number; isFinalBoss?: boolean }>({ visible: false, name: '', chapter: 1 });
   // [BOSS-TAUNT 2026-05-08] 战斗开场挑衅短演出：Boss 本尊登场 + 两句挑衅台词，在 BossEntrance 横幅之前播放
   const [bossTaunt, setBossTaunt] = useState<{ visible: boolean; name: string; chapter: number; lines: string[]; onDismiss?: () => void }>({ visible: false, name: '', chapter: 1, lines: [] });
   const [showTutorial, setShowTutorial] = useState(!isTutorialCompleted());

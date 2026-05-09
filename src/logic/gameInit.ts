@@ -84,6 +84,8 @@ export function createInitialGameState(classId?: ClassId): GameState {
     instakillAidType: null,
     playsThisWave: 0,
     rerollsThisWave: 0,
+    challengeDrawBonus: 0,
+    challengeDamageMultBonus: 0,
     boomerangFreeReroll: 0,
     comboFreeReroll: 0,
     level: 1,

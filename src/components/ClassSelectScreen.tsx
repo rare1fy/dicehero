@@ -152,21 +152,22 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
                   <ClassBigIcon classId={cid} size={5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-black pixel-text-shadow" style={{ color: cls.colorLight }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base font-black pixel-text-shadow" style={{ color: cls.colorLight }}>
                       {cls.name}
                     </span>
-                    <span className="text-[8px] font-bold" style={{ color: cls.color }}>
+                    <span className="text-[9px] font-bold" style={{ color: cls.color }}>
                       {cls.title}
                     </span>
                   </div>
-                  <p className="text-[9px] text-[var(--dungeon-text-dim)] leading-tight mb-1">
+                  <p className="text-[11px] text-[var(--dungeon-text)] leading-snug mb-1.5">
                     {cls.description}
                   </p>
-                  <div className="flex gap-2 text-[8px] font-mono">
-                    <span className="text-[var(--dungeon-text-dim)]">抽骰:{cls.drawCount}</span>
-                    <span className="text-[var(--dungeon-text-dim)]">出牌:{cls.maxPlays}</span>
-                    <span className="text-[var(--dungeon-text-dim)]">重投:{cls.freeRerolls}</span>
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] font-mono">
+                    <span className="text-[var(--dungeon-text-dim)]">抽骰<span className="text-[var(--dungeon-text-bright)]">{cls.drawCount}</span></span>
+                    <span className="text-[var(--dungeon-text-dim)]">出牌<span className="text-[var(--dungeon-text-bright)]">{cls.maxPlays}</span></span>
+                    <span className="text-[var(--dungeon-text-dim)]">重投<span className="text-[var(--dungeon-text-bright)]">{cls.freeRerolls}</span></span>
+                    <span className="text-[var(--dungeon-text-dim)]">HP<span className="text-[var(--dungeon-text-bright)]">{cls.hp}</span></span>
                     {cls.canBloodReroll && <span style={{ color: cls.colorLight }}>卖血</span>}
                     {cls.keepUnplayed && <span style={{ color: cls.colorLight }}>留牌</span>}
                     {cid === 'rogue' && <span style={{ color: cls.colorLight }}>连击</span>}
@@ -188,24 +189,24 @@ export const ClassSelectScreen: React.FC<ClassSelectScreenProps> = ({ onSelect }
               className="pixel-panel p-3 mb-4"
               style={{ borderColor: CLASS_DEFS[selected].color + '60' }}
             >
-              <div className="text-[8px] font-bold tracking-[0.15em] mb-2" style={{ color: CLASS_DEFS[selected].color }}>
+              <div className="text-[10px] font-bold tracking-[0.15em] mb-2" style={{ color: CLASS_DEFS[selected].color }}>
                 ◆ 职业技能 ◆
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 {CLASS_DEFS[selected].skills.map((skill, i) => (
-                  <div key={i} className="flex gap-1.5 items-start">
+                  <div key={i} className="flex gap-2 items-start">
                     <span
-                      className="shrink-0 text-[8px] font-black px-1 py-0.5 leading-tight"
+                      className="shrink-0 text-[10px] font-black px-1.5 py-0.5 leading-tight min-w-[56px] text-center"
                       style={{
                         color: CLASS_DEFS[selected].colorLight,
-                        background: CLASS_DEFS[selected].color + '20',
-                        border: `1px solid ${CLASS_DEFS[selected].color}40`,
+                        background: CLASS_DEFS[selected].color + '25',
+                        border: `1px solid ${CLASS_DEFS[selected].color}50`,
                         borderRadius: '2px',
                       }}
                     >
                       {skill.name}
                     </span>
-                    <span className="text-[9px] text-[var(--dungeon-text)] leading-relaxed">
+                    <span className="text-[11px] text-[var(--dungeon-text)] leading-snug flex-1">
                       {formatDescription(skill.desc)}
                     </span>
                   </div>

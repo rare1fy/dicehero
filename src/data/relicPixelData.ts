@@ -822,6 +822,16 @@ export const RELIC_PIXEL_DATA: Record<string, string[][]> = {
     [_,_,Gr,W,Gr,_,_],
     [_,_,_,Gr,_,_,_],
   ],
+  // 战神纹章 - 金底红剑+双翼（战士战场收割强化）
+  warlord_emblem: [
+    [Y,_,_,R,_,_,Y],
+    [Y,Yd,_,R,_,Yd,Y],
+    [Yd,Y,Yd,R,Yd,Y,Yd],
+    [_,Yd,R,W,R,Yd,_],
+    [_,_,R,Rd,R,_,_],
+    [_,_,Yd,R,Yd,_,_],
+    [_,_,_,Rd,_,_,_],
+  ],
 };
 
 // 默认图标（问号）

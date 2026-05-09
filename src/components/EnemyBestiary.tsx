@@ -13,12 +13,12 @@ import { PixelClose } from './PixelIcons';
 import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES, type EnemyConfig } from '../config/enemies';
 import { CHAPTER_CONFIG } from '../config';
 
-const COMBAT_LABELS: Record<string, { label: string; color: string; full: string }> = {
-  warrior:  { label: '战', color: 'var(--pixel-red)',    full: '战士（直接攻击 + 受伤累怒）' },
-  guardian: { label: '盾', color: 'var(--pixel-blue)',   full: '守护者（攻防交替 + 防御积怒）' },
-  ranger:   { label: '弓', color: 'var(--pixel-green)',  full: '弓手（远程 + 多段命中）' },
-  caster:   { label: '术', color: 'var(--pixel-purple)', full: '法师（DOT 输出 + 持续放大）' },
-  priest:   { label: '牧', color: 'var(--pixel-gold)',   full: '牧师（治疗 / 强化盟友 / 减益玩家）' },
+export const COMBAT_LABELS: Record<string, { label: string; color: string; full: string }> = {
+  warrior:  { label: '战', color: 'var(--pixel-red)',    full: '近战战士 · 直接扑上来近身砍你；攻击可顺带挂少量负面效果' },
+  guardian: { label: '盾', color: 'var(--pixel-blue)',   full: '守护者 · 攻防交替，堆护甲后放大招；攻击可顺带挂少量负面效果' },
+  ranger:   { label: '弓', color: 'var(--pixel-green)',  full: '弓箭手 · 远程射击，每次攻击伤害叠加；可顺带挂少量负面效果' },
+  caster:   { label: '术', color: 'var(--pixel-purple)', full: '法师 · 不直接打你，专精强力 DOT 与控制（毒/灼烧/易伤/虚弱/冻结）' },
+  priest:   { label: '牧', color: 'var(--pixel-gold)',   full: '牧师 · 治疗友军 / 给你上强力虚弱、易伤；护甲祝福加固队友' },
 };
 
 const CAT_COLORS: Record<string, string> = {
@@ -27,21 +27,21 @@ const CAT_COLORS: Record<string, string> = {
   boss:   'var(--pixel-purple)',
 };
 
-// archetype → 一行说明
+// archetype → 玩家语言说明（第一行是短标签，第二行是实际效果）
 const ARCHETYPE_DESC: Record<string, string> = {
-  berserker:    '【狂战】受到伤害后攻击力倍增（最高 ×2.0），越打越凶',
-  striker:      '【突袭】HP < 70% 时进入爆发，普攻 ×1.5',
-  paladin:      '【圣骑】偶数回合自动防御 + 攻击 ×1.2，不积血怒',
-  marksman:     '【神射】每次攻击命中 +2，主攻 ×1.3',
+  berserker:    '【狂战】你每打他一次，他攻击力 +40%（最多累 4 次，变成原来的 2.6 倍），越打越凶',
+  striker:      '【突袭】血量掉到 70% 以下时进入爆发，攻击伤害 +50%',
+  paladin:      '【圣骑】每次攻击伤害 +20%，但不会被激怒（不叠血怒）',
+  marksman:     '【神射】远程追击伤害随命中次数翻倍叠加，单发多 +30%',
   trapper:      '【陷阱】每次攻击附带 1 层剧毒',
-  hunter:       '【猎手】基础弓手，无特殊修正',
-  bulwark:      '【铁壁】防御获双倍护甲，不积怒（纯肉盾）',
-  enforcer:     '【执法】防御后下次攻击 +60% 伤害（最高 +180%）',
-  pyromancer:   '【焚化】80% 概率灼烧；DOT 放大 ×1.5/层',
-  toxicologist: '【毒师】80% 概率毒雾；DOT 放大 ×1.4/层',
-  cursemaster:  '【咒师】100% 释放诅咒（毒+虚弱），不放纯 DOT',
-  healer:       '【治疗】优先治疗友军 → 自疗 → 护甲祝福 → 减益玩家',
-  inquisitor:   '【审判】不治疗，50% 概率对玩家施加 虚弱+易伤 双 debuff',
+  hunter:       '【猎手】标准弓手，无特殊修正',
+  bulwark:      '【铁壁】每次防御获得双倍护甲，但防御不会激怒（不叠守护怒气）',
+  enforcer:     '【执法】每防御 1 回合，下次攻击伤害 +60%（最多累 3 次，变成原来的 2.8 倍）',
+  pyromancer:   '【焚化】80% 概率给你灼烧；每叠一层灼烧放大系数 +50%（最多 ×2.5）',
+  toxicologist: '【毒师】80% 概率给你剧毒；每叠一层毒放大系数 +40%（最多 ×2.5）',
+  cursemaster:  '【咒师】100% 给你"毒 + 虚弱"双诅咒，不单独放持续伤害',
+  healer:       '【治疗】优先顺序：治疗友军 → 自疗 → 给友军套护甲 → 给你上减益',
+  inquisitor:   '【审判】不治疗，50% 概率直接给你上"虚弱 + 易伤"双减益',
 };
 
 interface Props {
@@ -51,6 +51,100 @@ interface Props {
 
 /* ===== 行为描述生成 ===== */
 
+/** description 文本 → DOT 状态（与 enemyActionDispatch 同步） */
+const DOT_DESC_MAP: Record<string, string> = {
+  '灼烧': '灼烧',
+  '剧毒': '剧毒',
+  '火球': '灼烧',
+  '诅咒': '剧毒',
+  '诅咒爆发': '剧毒',
+};
+const CONTROL_DESC_MAP: Record<string, string> = {
+  '冻结': '冻结',
+  '虚弱': '虚弱',
+  '易伤': '易伤',
+  '碎裂诅咒': '易伤',
+  '诅咒注入': '虚弱',
+  '诅咒锻造': '虚弱',
+};
+
+/**
+ * 把单个 PatternAction 翻译成玩家可读的一行（按 combatType 解读真实效果）
+ *
+ * 关键映射（与 enemyAI / enemyActionDispatch 完全同步）：
+ *   warrior / guardian / ranger 的"攻击"  → 真实直伤（带 description 风味词）
+ *   caster / priest 的"攻击"               → 在 enemyAI 派发为技能，不直伤
+ *   "防御"（任何敌人）                       → 自加护甲
+ *   "技能"+description → 查 DOT/控制字典 / 护甲祝福 / 治疗 / 召唤
+ */
+function describeAction(e: EnemyConfig, a: { type: string; baseValue: number; description?: string }): string {
+  const isPriestOrCaster = e.combatType === 'priest' || e.combatType === 'caster';
+  const desc = a.description?.trim();
+
+  // 防御
+  if (a.type === '防御') {
+    const flavor = desc ? `（${desc}）` : '';
+    return `自身 +${a.baseValue} 护甲${flavor}`;
+  }
+
+  // 攻击：caster/priest 实际不直伤，按技能/风味词处理
+  if (a.type === '攻击') {
+    if (isPriestOrCaster) {
+      // 风味攻击词（亡灵大军/亡灵风暴/骸骨之矛/诅咒/诅咒爆发）：实际只播动画+台词，不直伤
+      if (desc) {
+        if (DOT_DESC_MAP[desc]) return `施放【${desc}】 → 给你上 ${DOT_DESC_MAP[desc]} ×${a.baseValue}`;
+        if (CONTROL_DESC_MAP[desc]) return `施放【${desc}】 → 给你上 ${CONTROL_DESC_MAP[desc]} ×${a.baseValue}`;
+        return `施放【${desc}】（仅演出，不直接造成伤害）`;
+      }
+      return `蓄力（不直接造成伤害）`;
+    }
+    // 战士 / 守护 / 弓手：真实直伤
+    const flavor = desc ? `（${desc}）` : '';
+    if (e.combatType === 'ranger') {
+      return `远程射击 ${a.baseValue} 伤害 + 一次追击${flavor}`;
+    }
+    if (e.combatType === 'guardian') {
+      return `挥击 ${a.baseValue} 伤害${flavor}（攻击后清空守护怒气）`;
+    }
+    return `挥击 ${a.baseValue} 伤害${flavor}`;
+  }
+
+  // 技能：按 description 字典翻译
+  if (a.type === '技能') {
+    if (!desc) return `施放技能 ×${a.baseValue}`;
+    // [MARTIAL_RIDER 2026-05-09] warrior/ranger/guardian 不再"专门施法"——
+    //   "技能"action 在实战中转化为"普攻 + 弱化 rider"（数值减半），图鉴同步显示。
+    const isMartial = e.combatType === 'warrior' || e.combatType === 'ranger' || e.combatType === 'guardian';
+    if (isMartial) {
+      const halfVal = Math.max(1, Math.floor(a.baseValue / 2));
+      if (DOT_DESC_MAP[desc]) {
+        const label = DOT_DESC_MAP[desc] === 'burn' ? '灼烧' : '毒素';
+        return `挥击造成普攻伤害，并顺势附加【${desc}】 → ${label} +${halfVal} 层（弱化）`;
+      }
+      if (CONTROL_DESC_MAP[desc]) {
+        const label = CONTROL_DESC_MAP[desc] === 'freeze' ? '冻结' : CONTROL_DESC_MAP[desc] === 'weak' ? '虚弱' : '易伤';
+        const turnHint = CONTROL_DESC_MAP[desc] === 'freeze' ? '（1 回合）' : '（2 回合）';
+        return `挥击造成普攻伤害，并顺势附加【${desc}】 → ${label} 1 层${turnHint}`;
+      }
+    }
+    if (DOT_DESC_MAP[desc]) return `给你上 ${DOT_DESC_MAP[desc]} ×${a.baseValue} 层（持续伤害）`;
+    if (CONTROL_DESC_MAP[desc]) {
+      const stacksStr = a.baseValue > 1 ? `${a.baseValue} 层` : `1 层`;
+      const turnHint = desc === '冻结' ? '（被冻结当回合无法出牌）' : '';
+      return `给你上 ${CONTROL_DESC_MAP[desc]} ${stacksStr}${turnHint}`;
+    }
+    if (desc === '护甲祝福') return `给友军/自己加 ${a.baseValue} 护甲`;
+    if (desc.includes('治疗')) return `治疗友军 ${a.baseValue} HP`;
+    if (desc.includes('召唤')) return `召唤增援 ×${a.baseValue}`;
+    if (desc.includes('诅咒') && (desc.includes('骰子') || desc.includes('cracked') || desc.includes('cursed'))) {
+      return `往你的骰子库塞入 ${a.baseValue} 颗诅咒骰子`;
+    }
+    return `施放【${desc}】×${a.baseValue}`;
+  }
+
+  return `${a.type} ${a.baseValue}${desc ? `·${desc}` : ''}`;
+}
+
 /**
  * 列出 phases.actions 配置（路线 B 后真实生效，每回合按 battleTurn 轮播）。
  * 多阶段（hpThreshold）的怪会显示"阶段 1 / 阶段 2"分组。
@@ -58,22 +152,24 @@ interface Props {
 function describePhases(e: EnemyConfig): string[] {
   const lines: string[] = [];
   e.phases.forEach((p, idx) => {
+    // [DOC 2026-05-09 v2] 阈值语义已与 bossPhaseSwitch 对齐：phases[i] 带 hpThreshold 表示
+    //   "血量 ≥ 阈值"时启用该 phase；不带阈值的 phase 是低血量阶段（兜底）。
     const tag = p.hpThreshold != null
-      ? `阶段 ${idx + 1}（HP ≤ ${Math.round(p.hpThreshold * 100)}%）`
-      : e.phases.length > 1 ? `阶段 ${idx + 1}（其余）` : '行为序列（按回合轮播）';
+      ? `阶段 ${idx + 1}（血量 ≥ ${Math.round(p.hpThreshold * 100)}% 时）`
+      : e.phases.length > 1 ? `阶段 ${idx + 1}（血量低于上述阈值时启用）` : '每回合循环';
     lines.push(tag);
-    for (const a of p.actions) {
-      const desc = a.description ? `·${a.description}` : '';
-      if (a.type === '攻击') lines.push(`  · 攻击 ${a.baseValue}${desc}`);
-      else if (a.type === '防御') lines.push(`  · 防御 ${a.baseValue}${desc}`);
-      else lines.push(`  · 技能 ${a.baseValue}${desc}`);
+    p.actions.forEach((a, ai) => {
+      lines.push(`  第 ${ai + 1} 回合：${describeAction(e, a)}`);
+    });
+    if (p.actions.length > 0) {
+      lines.push(`  （以上 ${p.actions.length} 步循环执行）`);
     }
   });
   return lines;
 }
 
 /**
- * 列出实战机制（trait + archetype 等"phases.actions 之外的修正"）
+ * 列出实战机制（玩家语言，避免 archetype 专业词）
  */
 function describeTraits(e: EnemyConfig): string[] {
   const lines: string[] = [];
@@ -81,43 +177,43 @@ function describeTraits(e: EnemyConfig): string[] {
 
   if (e.combatType === 'warrior') {
     if (a === 'paladin') {
-      lines.push('· paladin：偶数回合自动改为防御');
-      lines.push('· 攻击伤害 ×1.2（不积血怒）');
+      lines.push('· 攻击伤害稳定 +20%，但无法被激怒');
     } else if (a === 'striker') {
-      lines.push('· striker：HP < 70% 后攻击 ×1.5');
+      lines.push('· 血量掉到 70% 以下后进入爆发，攻击伤害 +50%');
     } else if (a === 'berserker') {
-      lines.push('· berserker：受到伤害后【血怒】+1 层（每层 +40% 攻击，最高 ×2.0）');
+      lines.push('· 你每打他一次，他攻击力 +40%（最多累 4 次，变成原 2.6 倍）');
     } else {
-      lines.push('· 受到伤害后【血怒】+1 层（每层 +25% 攻击，最高 ×2.0）');
+      lines.push('· 你每打他一次，他攻击力 +25%（最多累 4 次，变成原 2 倍）');
     }
   } else if (e.combatType === 'guardian') {
     if (a === 'bulwark') {
-      lines.push('· bulwark：防御获得双倍护甲，但不积怒气');
+      lines.push('· 每次防御获得双倍护甲，但永远不激怒');
     } else {
-      lines.push('· 防御后【守护怒气】+1 层（每层让下次攻击 +60%，最高 ×2.8 单击）');
-      lines.push('· 攻击后怒气清零');
+      lines.push('· 他每防御 1 回合，下次攻击伤害 +60%（最多累 3 次，变成原 2.8 倍）');
+      lines.push('· 攻击后该怒气清零，重新开始累积');
     }
   } else if (e.combatType === 'ranger') {
-    lines.push('· 每回合主攻 + 一次追击；每攻击 attackCount +2 让后续伤害递增');
-    if (a === 'marksman') lines.push('· marksman：attackCount 翻倍 + 单发 ×1.3');
-    if (a === 'trapper') lines.push('· trapper：每次攻击附带 1 层剧毒');
+    lines.push('· 远程攻击，每回合一次主攻 + 一次追击');
+    lines.push('· 攻击次数越多，后续伤害越高');
+    if (a === 'marksman') lines.push('· 命中次数翻倍叠加 + 单发 +30%');
+    if (a === 'trapper') lines.push('· 每次攻击附带 1 层剧毒');
   } else if (e.combatType === 'caster') {
-    lines.push('· 不直接造成攻击伤害');
-    if (a === 'pyromancer') lines.push('· pyromancer：DOT 放大 ×1.5/层（封顶 ×2.5）');
-    else if (a === 'toxicologist') lines.push('· toxicologist：DOT 放大 ×1.4/层（封顶 ×2.5）');
-    else if (a === 'cursemaster') lines.push('· cursemaster：始终释放诅咒（毒+虚弱）');
-    else lines.push('· DOT 放大 ×1.4/层（封顶 ×2.5）');
+    lines.push('· 不直接造成攻击伤害，但会给你上持续伤害（毒/灼烧）');
+    if (a === 'pyromancer') lines.push('· 每叠 1 层灼烧，持续伤害放大 +50%（最多 2.5 倍）');
+    else if (a === 'toxicologist') lines.push('· 每叠 1 层毒，持续伤害放大 +40%（最多 2.5 倍）');
+    else if (a === 'cursemaster') lines.push('· 不放持续伤害，而是给你上"毒 + 虚弱"双诅咒');
+    else lines.push('· 每叠 1 层持续伤害，整体放大 +40%（最多 2.5 倍）');
   } else if (e.combatType === 'priest') {
-    lines.push('· 不直接造成攻击伤害');
-    if (a === 'inquisitor') lines.push('· inquisitor：跳过治疗/祝福，50% 概率双 debuff（虚弱 + 易伤）');
-    else lines.push('· 优先级：治疗友军 → 自疗 → 护甲祝福 → debuff');
-    lines.push('· 每 2 回合【圣怒】+1 层（提升 debuff 持续 / 护甲祝福 / 治疗量）');
+    lines.push('· 不直接造成伤害，只治疗友军/给你上减益');
+    if (a === 'inquisitor') lines.push('· 不治疗，50% 概率直接给你上"虚弱 + 易伤"');
+    else lines.push('· 优先治疗友军 → 自疗 → 给友军套护甲 → 给你上减益');
+    lines.push('· 每 2 回合累 1 层圣怒，让减益持续更久 + 治疗/护甲更强');
   }
 
   return lines;
 }
 
-function describeEnemy(e: EnemyConfig): { sections: { title: string; lines: string[] }[] } {
+export function describeEnemy(e: EnemyConfig): { sections: { title: string; lines: string[] }[] } {
   const sections: { title: string; lines: string[] }[] = [];
 
   // 基础信息
@@ -125,9 +221,9 @@ function describeEnemy(e: EnemyConfig): { sections: { title: string; lines: stri
   sections.push({
     title: '基础信息',
     lines: [
-      `职业：${ct?.full || e.combatType}`,
-      `等级：${e.category === 'boss' ? (e.bossRank === 'final' ? '终极 BOSS' : '中层 BOSS') : e.category === 'elite' ? '精英' : '普通'}`,
-      `HP：${e.baseHp}　基础攻击：${e.baseDmg}`,
+      `种类：${ct?.full || e.combatType}`,
+      `类别：${e.category === 'boss' ? (e.bossRank === 'final' ? '终极 BOSS' : '中层 BOSS') : e.category === 'elite' ? '精英' : '普通'}`,
+      `生命：${e.baseHp}　基础攻击：${e.baseDmg}`,
     ],
   });
 

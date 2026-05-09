@@ -323,7 +323,8 @@ export function useBattleCombat(
       playSound('player_death');
       setScreenShake(true);
       setPlayerEffect('death');
-      await new Promise(r => setTimeout(r, 800));
+      // [2026-05-09] 800 → 400ms：DeathTransition 自身只 500ms，前置震屏不需要这么长
+      await new Promise(r => setTimeout(r, 400));
       setScreenShake(false);
       setPlayerEffect(null);
       setGame(prev => ({ ...prev, phase: 'gameover' }));
@@ -383,7 +384,7 @@ export function useBattleCombat(
       playSound('player_death');
       setScreenShake(true);
       setPlayerEffect('death');
-      const timerId = setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 800);
+      const timerId = setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 400);
       setGame(prev => ({ ...prev, hp: 0, phase: 'gameover' }));
       return () => clearTimeout(timerId);
     }

@@ -74,7 +74,7 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     } else {
       // 吟唱（未出牌）→ 保留手牌，按吟唱层上限裁剪
       const chargeStacks = g2.chargeStacks || 0;
-      const handLimit = Math.min(6, g2.drawCount + chargeStacks);
+      const handLimit = Math.min(6, g2.drawCount + chargeStacks + (g2.challengeDrawBonus || 0));
       remainingDice = dice.filter(d => !d.spent);
       if (remainingDice.length > handLimit) {
         const excess = remainingDice.slice(0, remainingDice.length - handLimit);
@@ -152,7 +152,7 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
       // 立刻清零槽位 + 写入 burst 标记（让 PlayerHudView 触发血怒粒子特效）
       setGame(prev => ({ ...prev, ...reap.gameUpdate }));
     }
-    const rawTargetHandSize = g.drawCount + chargeBonus + warriorBonus;
+    const rawTargetHandSize = g.drawCount + chargeBonus + warriorBonus + (g.challengeDrawBonus || 0);
     const targetHandSize = Math.min(6, rawTargetHandSize);
     // 战士：手牌已达6上限时，按受伤百分比给伤害倍率补偿（保留旧机制，过充溢出转为 +10%/颗）
     if (g.playerClass === 'warrior' && rawTargetHandSize > 6) {

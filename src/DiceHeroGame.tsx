@@ -212,6 +212,7 @@ export default function DiceHeroGame() {
         visible={bossEntrance.visible}
         bossName={bossEntrance.name}
         chapter={bossEntrance.chapter}
+        isFinalBoss={bossEntrance.isFinalBoss}
       />
 
       <div className="flex-1 overflow-hidden relative">
@@ -307,4 +308,4 @@ export default function DiceHeroGame() {
 </GameContext.Provider>
   );
 }
-
+

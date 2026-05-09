@@ -1,13 +1,13 @@
 /**
- * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v4)
+ * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v5)
  *
- * v4 调整（用户反馈：v3 1.4s 太长）：
- *   总时长压到 700ms，手部抖动节奏整体加速（保留视觉锚点：抖→坠→消失）。
+ * v5 调整（用户反馈：v4 700ms 还是太长）：
+ *   总时长压到 500ms：手部 220ms + 黑幕 180ms + 缓冲 100ms。
  *
- * 时序（总时长 700ms）：
- *   1. (0.00s - 0.30s) 双手急促抖动 → 失重坠落出屏
- *   2. (0.30s - 0.55s) 黑幕在 0.25s 内 fade 满
- *   3. (0.55s - 0.70s) 黑幕保持，外层切换到 GameOverScreen
+ * 时序（总时长 500ms）：
+ *   1. (0.00s - 0.22s) 双手急促抖动 → 失重坠落出屏
+ *   2. (0.22s - 0.40s) 黑幕在 0.18s 内 fade 满
+ *   3. (0.40s - 0.50s) 黑幕保持，外层切换到 GameOverScreen
  */
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
@@ -19,9 +19,9 @@ interface DeathTransitionProps {
   onComplete?: () => void;
 }
 
-const HANDS_DURATION_MS = 300;
-const FADE_BLACK_MS = 250;
-const HOLD_MS = 150;
+const HANDS_DURATION_MS = 220;
+const FADE_BLACK_MS = 180;
+const HOLD_MS = 100;
 const TOTAL_DURATION_MS = HANDS_DURATION_MS + FADE_BLACK_MS + HOLD_MS;
 
 /**

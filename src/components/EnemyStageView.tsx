@@ -233,9 +233,9 @@ export function EnemyStageView() {
                         <li>◆ 全场敌人叠加大量灼烧+中毒</li>
                       )}
                       {game.instakillAidType === 4 && (
-                        ((game.drawCount || 0) >= 6)
-                          ? <li>◆ 本局永久 +50% 伤害倍率</li>
-                          : <li>◆ 本局永久 +1 手牌上限</li>
+                        (((game.drawCount || 0) + (game.challengeDrawBonus || 0)) >= 6)
+                          ? <li>◆ 本场战斗 +50% 伤害倍率</li>
+                          : <li>◆ 本场战斗 +1 手牌上限</li>
                       )}
                     </ul>
                   </>
@@ -253,9 +253,9 @@ export function EnemyStageView() {
                         <li>◆ 全场敌人叠加大量灼烧+中毒</li>
                       )}
                       {game.instakillChallenge.aidType === 4 && (
-                        ((game.drawCount || 0) >= 6)
-                          ? <li>◆ 本局永久 +50% 伤害倍率</li>
-                          : <li>◆ 本局永久 +1 手牌上限</li>
+                        (((game.drawCount || 0) + (game.challengeDrawBonus || 0)) >= 6)
+                          ? <li>◆ 本场战斗 +50% 伤害倍率</li>
+                          : <li>◆ 本场战斗 +1 手牌上限</li>
                       )}
                       {!game.instakillChallenge.aidType && (
                         <li className="text-[var(--dungeon-text)]">◆ 触发一种随机援助效果</li>
@@ -408,6 +408,19 @@ export function EnemyStageView() {
             </div>
             <div className="flex flex-wrap gap-0.5 justify-center mb-1 min-h-[12px]">
               {enemy.armor > 0 && <StatusIcon status={{ type: 'armor', value: enemy.armor }} align="center" />}
+              {/* [TRAIT-BADGE 2026-05-09] 让玩家看到"血怒/守护怒气/持续伤害放大/圣怒"层数，机制可视化 */}
+              {(enemy.bloodFury || 0) > 0 && (
+                <span className="text-[8px] font-bold px-1 py-0 border border-[var(--pixel-red)] text-[var(--pixel-red-light)] bg-[rgba(120,20,20,0.5)]" style={{borderRadius:'2px'}} title="血怒：每受一次伤害攻击力+25%（狂战+40%）">血怒×{enemy.bloodFury}</span>
+              )}
+              {(enemy.guardRage || 0) > 0 && (
+                <span className="text-[8px] font-bold px-1 py-0 border border-[var(--pixel-blue)] text-[var(--pixel-blue-light)] bg-[rgba(40,60,120,0.5)]" style={{borderRadius:'2px'}} title="守护怒气：每防御一次下次攻击+60%">怒气×{enemy.guardRage}</span>
+              )}
+              {(enemy.dotAmplifier || 0) > 0 && (
+                <span className="text-[8px] font-bold px-1 py-0 border border-[var(--pixel-purple)] text-[#d0a0ff] bg-[rgba(80,20,100,0.5)]" style={{borderRadius:'2px'}} title="持续伤害放大：每叠1层DOT放大系数+40%">DOT×{enemy.dotAmplifier}</span>
+              )}
+              {(enemy.holyWrath || 0) > 0 && (
+                <span className="text-[8px] font-bold px-1 py-0 border border-[var(--pixel-gold)] text-[var(--pixel-gold-light)] bg-[rgba(120,100,20,0.5)]" style={{borderRadius:'2px'}} title="圣怒：治疗/护甲祝福/减益持续更强">圣怒×{enemy.holyWrath}</span>
+              )}
               {enemy.statuses.map((s, i) => <StatusIcon key={i} status={s} align="center" />)}
             </div>
             <EnemyQuoteBubble text={enemyQuotes[enemy.uid] || null} category={ENEMY_CATEGORY_MAP[enemy.configId] ?? 'normal'} />
@@ -466,28 +479,52 @@ export function EnemyStageView() {
         )}
       </AnimatePresence>
 
-      {/* [PHASE-ANN 2026-05-09] BOSS 阶段切换全屏横幅 — 红紫主色 + 嘲讽台词 */}
+      {/* [PHASE-ANN 2026-05-09 v2] BOSS 阶段切换全屏横幅 — fixed 覆盖 + 暗幕 + 红色震撼脉冲 */}
       <AnimatePresence>
         {phaseAnnouncement !== null && (
           <motion.div
             key={`phase-${phaseAnnouncement.bossName}-${phaseAnnouncement.stage}`}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: [0, 1, 1, 1, 0], scale: [0.5, 1.25, 1, 1, 0.85], y: [0, 0, 0, 0, -36] }}
-            transition={{ duration: 2.8, times: [0, 0.15, 0.3, 0.78, 1] }}
-            onAnimationComplete={() => setPhaseAnnouncement(null)}
-            className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onAnimationComplete={() => { /* 用内层动画完成决定移除 */ }}
+            className="fixed inset-0 z-[900] flex items-center justify-center pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at center, rgba(120,10,10,0.55) 0%, rgba(10,2,2,0.75) 70%)' }}
           >
-            <div className="text-center" style={{ filter: 'drop-shadow(0 0 12px rgba(220,40,40,0.7))' }}>
-              <div className="text-2xl font-black pixel-text-shadow" style={{ color: '#ff7878', letterSpacing: '6px' }}>
-                ◆ 阶段 {phaseAnnouncement.stage} ◆
+            {/* 顶/底部红色锯齿警告带 */}
+            <div style={{ position: 'absolute', top: '22%', left: 0, right: 0, height: '6px', background: 'repeating-linear-gradient(90deg, #c04040 0px, #c04040 6px, transparent 6px, transparent 12px)' }} />
+            <div style={{ position: 'absolute', bottom: '22%', left: 0, right: 0, height: '6px', background: 'repeating-linear-gradient(90deg, #c04040 0px, #c04040 6px, transparent 6px, transparent 12px)' }} />
+            <motion.div
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{
+                scale: [0.3, 1.35, 1, 1, 1, 0.92],
+                opacity: [0, 1, 1, 1, 1, 0],
+                x: [0, -4, 4, -3, 3, 0],
+              }}
+              transition={{ duration: 3.6, times: [0, 0.1, 0.22, 0.4, 0.85, 1] }}
+              onAnimationComplete={() => setPhaseAnnouncement(null)}
+              className="text-center"
+              style={{ filter: 'drop-shadow(0 0 16px rgba(220,40,40,0.9)) drop-shadow(0 0 40px rgba(220,40,40,0.5))' }}
+            >
+              <motion.div
+                animate={{ opacity: [1, 0.4, 1, 0.4, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+                className="text-[11px] font-black pixel-text-shadow"
+                style={{ color: '#ffa0a0', letterSpacing: '0.5em' }}
+              >
+                ▲ PHASE CHANGE ▲
+              </motion.div>
+              <div className="text-[32px] font-black pixel-text-shadow mt-1" style={{ color: '#ff5050', letterSpacing: '8px', textShadow: '0 0 10px rgba(220,40,40,0.9), 2px 2px 0 #400' }}>
+                阶段 {phaseAnnouncement.stage}
               </div>
-              <div className="text-base font-black mt-1 pixel-text-shadow" style={{ color: 'var(--pixel-red-light)', letterSpacing: '3px' }}>
-                {phaseAnnouncement.bossName}·变身
+              <div className="text-base font-black mt-2 pixel-text-shadow" style={{ color: 'var(--pixel-red-light)', letterSpacing: '3px' }}>
+                {phaseAnnouncement.bossName} · 变身
               </div>
-              <div className="text-xs font-bold mt-2 pixel-text-shadow max-w-[280px] mx-auto" style={{ color: '#ffd0d0' }}>
+              <div className="text-xs font-bold mt-3 pixel-text-shadow max-w-[300px] mx-auto px-4" style={{ color: '#ffd0d0', lineHeight: 1.5 }}>
                 「{phaseAnnouncement.taunt}」
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

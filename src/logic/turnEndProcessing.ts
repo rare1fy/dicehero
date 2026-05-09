@@ -74,7 +74,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
   const playedThisTurn = game.playsLeft < game.maxPlays; // 本回合是否出过牌
   if (game.playerClass === 'mage' && !playedThisTurn) {
     const currentCharge = game.chargeStacks || 0;
-    const maxChargeForHand = 6 - game.drawCount; // drawCount=3 → 最多蓄力3层到达上限6
+    const maxChargeForHand = 6 - (game.drawCount + (game.challengeDrawBonus || 0)); // drawCount=3 → 最多蓄力3层到达上限6；challenge +1 → 最多2层
     const shieldGain = 4 + currentCharge * 2;
 
     if (currentCharge >= maxChargeForHand) {
@@ -92,7 +92,7 @@ export async function processTurnEnd(ctx: TurnEndContext): Promise<void> {
     } else {
       // 正常吟唱：手牌上限+1
       const newChargeStacks = currentCharge + 1;
-      const newHandLimit = Math.min(6, game.drawCount + newChargeStacks);
+      const newHandLimit = Math.min(6, game.drawCount + newChargeStacks + (game.challengeDrawBonus || 0));
       setGame(prev => ({
         ...prev,
         chargeStacks: newChargeStacks,

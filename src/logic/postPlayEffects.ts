@@ -68,7 +68,7 @@ export interface PostPlayContext {
   showEnemyQuote: (uid: string, text: string, duration: number) => void;
   getEnemyQuotes: (configId: string) => EnemyQuotes | undefined;
   pickQuote: (quotes?: string[]) => string | undefined;
-  setBossEntrance: React.Dispatch<React.SetStateAction<{ visible: boolean; name: string; chapter: number }>>;
+  setBossEntrance: React.Dispatch<React.SetStateAction<{ visible: boolean; name: string; chapter: number; isFinalBoss?: boolean }>>;
   setEnemyEffects: React.Dispatch<React.SetStateAction<Record<string, string | null>>>;
   setDyingEnemies: React.Dispatch<React.SetStateAction<Set<string>>>;
   setEnemyQuotes: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -108,26 +108,41 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   // [WARRIOR-REAP 2026-05-09] 战场收割·斩首槽：直伤击杀任意敌人 → 累 1 次（含遗物破限上限）
   //   选中骰子带 splinterDamage（w_cleave 顺劈斩）→ 本次出牌斩首槽 cap 提到 2
   //   选中骰子带 damageFromArmor（w_overlord 霸体铠甲）→ 本次出牌完防槽 cap 提到 2
+  // [BUGFIX 2026-05-09] 副作用（飘字/emit）必须放在 setGame 外，否则 React.StrictMode
+  //   下 updater 会被执行两次，导致"斩首+1"飘字出现两次。
   if (isWarrior(game)) {
     const hasCleave = selected.some(d => getDiceDef(d.diceDefId).onPlay?.splinterDamage);
     const hasOverlord = selected.some(d => getDiceDef(d.diceDefId).onPlay?.damageFromArmor);
+    // 在 setGame 外预算 gained：用当前 game + 假设的新 cap，模拟一次 tryGainKillSlot 循环
+    let preview: GameState = { ...game };
+    if (hasCleave) preview.warriorReapKillSlotCap = Math.max(game.warriorReapKillSlotCap || 1, 2);
+    if (hasOverlord) preview.warriorReapBlockSlotCap = Math.max(game.warriorReapBlockSlotCap || 1, 2);
+    let previewedGained = 0;
+    if (realKilledCount > 0) {
+      let cur = preview;
+      for (let i = 0; i < realKilledCount; i++) {
+        const r = tryGainKillSlot(cur);
+        if (!r.changed) break;
+        cur = { ...cur, ...r.gameUpdate } as GameState;
+        previewedGained++;
+      }
+    }
+    // 副作用只发一次
+    if (previewedGained > 0) {
+      addFloatingText(`斩首: +${previewedGained}`, REWARD_COLOR, cardsIcon(), 'player');
+      emitReward('card', previewedGained);
+    }
+    // 纯状态更新（updater 幂等：执行 N 次结果一致）
     setGame(prev => {
       let next: GameState = { ...prev };
       if (hasCleave) next.warriorReapKillSlotCap = Math.max(prev.warriorReapKillSlotCap || 1, 2);
       if (hasOverlord) next.warriorReapBlockSlotCap = Math.max(prev.warriorReapBlockSlotCap || 1, 2);
-      // 在新的 cap 基础上尝试斩首
       if (realKilledCount > 0) {
         let cur = next;
-        let gained = 0;
         for (let i = 0; i < realKilledCount; i++) {
           const r = tryGainKillSlot(cur);
           if (!r.changed) break;
           cur = { ...cur, ...r.gameUpdate } as GameState;
-          gained++;
-        }
-        if (gained > 0) {
-          addFloatingText(`斩首: +${gained}`, REWARD_COLOR, cardsIcon(), 'player');
-          emitReward('card', gained);
         }
         next = cur;
       }
@@ -514,16 +529,21 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   }
   
   // maxHpBonus / maxHpBonusEvery: 生命熔炉永久+maxHP
+  // [BUGFIX 2026-05-09] 副作用（飘字/emit/toast）必须挪出 setGame updater，
+  //   否则 React.StrictMode 下会触发两次。
   selectedDiceForSpent.forEach(d => {
     const def = getDiceDef(d.diceDefId);
     if (def.onPlay?.maxHpBonusEvery) {
       // 每N次出牌才触发
       const every = def.onPlay.maxHpBonusEvery;
+      const willTrigger = ((game.lifefurnaceCounter || 0) + 1) >= every;
+      if (willTrigger) {
+        addFloatingText(`${def.name}: +5`, REWARD_COLOR, heartIcon(), 'player');
+        emitReward('heart', 5);
+      }
       setGame(prev => {
         const cnt = (prev.lifefurnaceCounter || 0) + 1;
         if (cnt >= every) {
-          addFloatingText(`${def.name}: +5`, REWARD_COLOR, heartIcon(), 'player');
-          emitReward('heart', 5);
           return { ...prev, maxHp: prev.maxHp + 5, lifefurnaceCounter: 0 };
         }
         return { ...prev, lifefurnaceCounter: cnt };
@@ -533,10 +553,13 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     }
     // 生命熔炉v3：满血时永久+3最大HP（无上限）
     if (def.onPlay?.healOrMaxHp) {
+      const willGrant = game.hp >= game.maxHp;
+      if (willGrant) {
+        addFloatingText(`${def.name}: +3`, REWARD_COLOR, heartIcon(), 'player');
+        emitReward('heart', 3);
+      }
       setGame(prev => {
         if (prev.hp >= prev.maxHp) {
-          addFloatingText(`${def.name}: +3`, REWARD_COLOR, heartIcon(), 'player');
-          emitReward('heart', 3);
           return { ...prev, maxHp: prev.maxHp + 3 };
         }
         return prev;
@@ -545,17 +568,20 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   });
 
   // transferDebuff: 净化之刃 — 清除自身1个负面
+  // [BUGFIX 2026-05-09] toast 移出 updater，避免 StrictMode 双触发
   const hasTransferDebuff = selectedDiceForSpent.some(d => getDiceDef(d.diceDefId).onPlay?.transferDebuff);
   if (hasTransferDebuff) {
-    setGame(prev => {
-      const negatives = prev.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
-      if (negatives.length > 0) {
-        const toRemove = negatives[0];
-        addToast(`净化之刃: 移除${toRemove.type}并转移给敌人!`, 'buff');
-        return { ...prev, statuses: prev.statuses.filter(s => s !== toRemove) };
-      }
-      return prev;
-    });
+    const negatives = game.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
+    if (negatives.length > 0) {
+      const toRemove = negatives[0];
+      addToast(`净化之刃: 移除${toRemove.type}并转移给敌人!`, 'buff');
+      setGame(prev => {
+        const negs = prev.statuses.filter(s => ['poison', 'burn', 'vulnerable', 'weak'].includes(s.type));
+        if (negs.length === 0) return prev;
+        const target = negs[0];
+        return { ...prev, statuses: prev.statuses.filter(s => s !== target) };
+      });
+    }
   }
   
   // 补充临时骰子（延迟显示，只补1颗）

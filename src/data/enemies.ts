@@ -6,25 +6,48 @@ import {
 
 /**
  * 根据配置表生成运行时 pattern 函数
+ * [BUGFIX 2026-05-09] idx 改为 (t-1) % len：battleTurn 从 1 开始，
+ *   旧实现 t % len 让 actions[0] 在 turn 1 时跳过，导致 BOSS 第一回合做的是 actions[1]。
+ *   表现：根须巨像 actions=[攻击,防御,...]，玩家进战斗看到的第一动作不是"攻击"而是"防御"。
+ *
+ * [BUGFIX-V2 2026-05-09] phase.hpThreshold 语义修正：
+ *   旧逻辑 `if (hp >= maxHp * threshold) continue` 会在满血时跳过 phases[0]（带阈值的那个），
+ *   走 phases[1]（默认/高血量），但配置作者的语义是反过来的：
+ *     phases[0] 带 hpThreshold:0.5 → 高血量阶段（满血 → 50%）
+ *     phases[1] 不带阈值 → 低血量阶段（< 50%）
+ *   与 bossPhaseSwitch.ts 注释保持一致：「hp >= 50% 用 phases[0]，否则 phases[1]」。
+ *   修正：取第一个"阈值满足"的 phase；都不满足时取最后一个（低血量兜底）。
  */
 const buildPattern = (config: EnemyConfig, dmgScale: number) => {
   return (t: number, self: Enemy, _player: GameState) => {
+    // 从前到后找：第一个"血量 >= 阈值"的 phase 即为当前阶段；都没有阈值时直接用第一个；
+    //   都有阈值但血量都低于时（理论上不会，因为最后一段通常无阈值），用最后一个 phase 兜底。
+    let chosenPhase = config.phases[config.phases.length - 1];
     for (const phase of config.phases) {
-      if (phase.hpThreshold && self.hp >= self.maxHp * phase.hpThreshold) {
+      if (phase.hpThreshold == null) {
+        // 无阈值的 phase = 兜底/低血量段，仅当前面带阈值的 phase 都未被选中时使用
+        chosenPhase = phase;
+        // 若放在最后一个，循环自然结束；若不是最后一个，仍可被后续无阈值 phase 覆盖
         continue;
       }
-      const actions = phase.actions;
-      const idx = t % actions.length;
-      const action = actions[idx];
-      return {
-        type: action.type,
-        value: action.scalable === false 
-          ? action.baseValue 
-          : Math.floor(action.baseValue * dmgScale),
-        description: action.description,
-      };
+      if (self.hp >= self.maxHp * phase.hpThreshold) {
+        chosenPhase = phase;
+        break;
+      }
     }
-    return { type: '攻击' as const, value: Math.floor(config.baseDmg * dmgScale) };
+    const actions = chosenPhase.actions;
+    if (actions.length === 0) {
+      return { type: '攻击' as const, value: Math.floor(config.baseDmg * dmgScale) };
+    }
+    const idx = ((t - 1) % actions.length + actions.length) % actions.length;
+    const action = actions[idx];
+    return {
+      type: action.type,
+      value: action.scalable === false 
+        ? action.baseValue 
+        : Math.floor(action.baseValue * dmgScale),
+      description: action.description,
+    };
   };
 };
 
