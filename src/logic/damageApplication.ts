@@ -212,12 +212,18 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       });
       if (deadCount === 0) return curr;
       const withVengeance = applyVengeanceToBerserkers(curr, deadCount);
+      let anyTriggered = false;
       curr.forEach(before => {
         const after = withVengeance.find(x => x.uid === before.uid);
         if (after && (after.vengeance || 0) > (before.vengeance || 0)) {
-          addFloatingText(`复仇: ×${after.vengeance}`, 'text-red-500', undefined, 'enemy');
+          addFloatingText(`⚡ 复仇 ×${after.vengeance}`, 'text-red-400 font-bold', undefined, 'enemy', true);
+          anyTriggered = true;
         }
       });
+      // [VENGEANCE-FX 2026-05-10] 触发屏抖（短促），强化"队友死了，活下来的更狠"反馈
+      if (anyTriggered && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dh-vengeance-triggered'));
+      }
       return withVengeance;
     });
     // shadowClonePlay: 影分身 — AOE路径下对原目标追加50%伤害
@@ -379,12 +385,17 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
     if (finalEnemyHp <= 0 && targetEnemy.hp > 0) {
       setEnemies(curr => {
         const withVengeance = applyVengeanceToBerserkers(curr, 1);
+        let anyTriggered = false;
         curr.forEach(before => {
           const after = withVengeance.find(x => x.uid === before.uid);
           if (after && (after.vengeance || 0) > (before.vengeance || 0)) {
-            addFloatingText(`复仇: ×${after.vengeance}`, 'text-red-500', undefined, 'enemy');
+            addFloatingText(`⚡ 复仇 ×${after.vengeance}`, 'text-red-400 font-bold', undefined, 'enemy', true);
+            anyTriggered = true;
           }
         });
+        if (anyTriggered && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('dh-vengeance-triggered'));
+        }
         return withVengeance;
       });
     }

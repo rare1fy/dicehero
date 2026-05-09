@@ -378,6 +378,8 @@ export function EnemyStageView() {
                 </motion.div>
               </div>
             )}
+            {/* [HUD-COUNTER-SCALE 2026-05-10] 反向缩放抵消 depthScale，让远处敌人 HUD 字保持可读 */}
+            <div className="flex flex-col items-center" style={{ transform: `scale(${1/depthScale})`, transformOrigin: 'bottom center' }}>
             <div className="flex items-center justify-center mb-1 px-1.5 py-0.5 cursor-pointer hover:brightness-125 transition-all"
               onClick={(e) => { e.stopPropagation(); setEnemyInfoTarget(enemy.uid); }}
               style={{
@@ -438,6 +440,7 @@ export function EnemyStageView() {
               )}
               {enemy.statuses.map((s, i) => <StatusIcon key={i} status={s} align="center" />)}
             </div>
+            </div>
             <EnemyQuoteBubble text={enemyQuotes[enemy.uid] || null} category={ENEMY_CATEGORY_MAP[enemy.configId] ?? 'normal'} />
             <div className={`relative ${
               enemy.combatType === 'warrior' ? 'animate-enemy-breathe-warrior' :
@@ -447,11 +450,8 @@ export function EnemyStageView() {
               enemy.combatType === 'priest' ? 'animate-enemy-breathe-priest' :
               'animate-enemy-breathe'
             }`}>
-              {/* [BOSS-AURA 2026-05-09] 中BOSS / 终BOSS sprite 独特光效 + 粒子，按章节配色 */}
-              {(() => {
-                const rank = BOSS_RANK_MAP[enemy.configId];
-                return rank ? <BossAura rank={rank} chapter={game.chapter} /> : null;
-              })()}
+              {/* [BOSS-AURA 2026-05-09] 中/终 BOSS sprite 光效+粒子（章节配色） */}
+              {(() => { const rank = BOSS_RANK_MAP[enemy.configId]; return rank ? <BossAura rank={rank} chapter={game.chapter} /> : null; })()}
               {hasSpriteData(enemy.name) ? <PixelSprite name={enemy.name} size={spriteSize} /> : <PixelSkull size={spriteSize} />}
               {enemy.statuses.some(s => s.type === 'burn') && (
                 <><div className="absolute inset-[-6px] pointer-events-none enemy-debuff-burn" style={{borderRadius:'50%'}} /><div className="absolute inset-[-8px] pointer-events-none enemy-burn-particles">{Array.from({length: 4}).map((_, pi) => (<div key={pi} className="enemy-burn-spark" style={{left: `${20 + Math.random() * 60}%`, animationDelay: `${Math.random() * 1.5}s`}} />))}</div></>
