@@ -376,22 +376,11 @@ export function EnemyStageView() {
               {enemy.combatType === 'ranger' && <><PixelAttackIntent size={2} /><span className="ml-0.5">弓</span></>}
               {enemy.combatType === 'caster' && <><PixelMagic size={2} /><span className="ml-0.5">术</span></>}
               {enemy.combatType === 'priest' && <><PixelHeart size={2} /><span className="ml-0.5">牧</span></>}
-              <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{getDisplayAttackDmg(enemy)}</span>
+              <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{getDisplayAttackDmg(enemy, game.battleTurn)}</span>
             </div>
             <div className="text-center mb-0.5">
               <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '近' : '远'}</span>
-              {enemy.distance > 0 && (
-                <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <div key={idx} className="w-1.5 h-1.5" style={{
-                      background: idx < enemy.distance ? 'var(--pixel-orange)' : 'rgba(255,255,255,0.15)',
-                      borderRadius: '1px',
-                      boxShadow: idx < enemy.distance ? '0 0 3px rgba(224,120,48,0.5)' : 'none'
-                    }} />
-                  ))}
-                  <span className="text-[9px] text-[var(--pixel-orange-light)] font-mono ml-0.5">{'距'}{enemy.distance}</span>
-                </div>
-              )}
+              {/* [2026-05-09] 移除远程敌人头顶 \"距 N\" 距离指示器（玩家不需要看到） */}
             </div>
             <div className="pixel-hp-bar h-2.5 w-20 relative mb-1">
               <motion.div
@@ -428,11 +417,7 @@ export function EnemyStageView() {
               {isTarget && <div className="absolute inset-[-6px] pointer-events-none enemy-target-glow" />}
             </div>
             <div className="mt-1 animate-enemy-shadow" style={{width: '150%', height: '18px', background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 45%, transparent 70%)', borderRadius: '50%', marginLeft: '-25%', filter: 'blur(3px)'}} />
-            {dist > 0 && (
-              <div className="distance-indicator mt-0.5">
-                {Array.from({ length: 3 }, (_, i) => (<div key={i} className={i < dist ? 'distance-dot' : 'distance-dot-empty'} />))}
-              </div>
-            )}
+            {/* [2026-05-09] 移除脚下距离指示点（distance-indicator） */}
             <AnimatePresence>
               {effect === 'attack' && (<motion.div initial={{ opacity: 0, scale: 0.5, y: 0 }} animate={{ opacity: 1, scale: 2, y: 80 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"><PixelSword size={5} /></motion.div>)}
             {effect === 'hit' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0] }} transition={{ duration: 0.4 }} className="absolute inset-0 pointer-events-none z-20 rounded-lg" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,100,50,0.3) 50%, transparent 80%)' }} />)}

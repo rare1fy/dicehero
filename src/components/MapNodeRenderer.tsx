@@ -104,12 +104,33 @@ const BossNode: React.FC<NodeRendererProps> = ({
               : '0 0 6px rgba(160,80,224,0.2)',
         }}
       >
-        {/* [ICON-LOOP 2026-05-08] Boss 图标常驻循环动画：上下浮动 + 轻微缩放脉动 */}
+        {/* [ICON-LOOP 2026-05-08 / RAGE-2026-05-09] Boss 图标循环动画：
+         *   - 普通：上下浮动 + 轻微缩放脉动
+         *   - 终BOSS reachable 时切换到\"狂暴\"模式：高频抖动 + 大幅缩放 + 红光闪烁 */}
         <motion.div
-          animate={{ y: [0, -3, 0, 2, 0], scale: [1, 1.05, 1, 0.98, 1] }}
-          transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+          animate={
+            isFinalBoss && isReachable
+              ? {
+                  x: [0, -2, 2, -2, 2, -1, 1, 0, -2, 2, 0],
+                  y: [0, -2, -1, -3, -1, -2, 0, -2, 1, -2, 0],
+                  scale: [1, 1.12, 0.96, 1.14, 0.97, 1.10, 1.0, 1.14, 0.94, 1.10, 1],
+                  rotate: [0, -2, 2, -1, 1, -2, 1, 0, -2, 1, 0],
+                }
+              : { y: [0, -3, 0, 2, 0], scale: [1, 1.05, 1, 0.98, 1] }
+          }
+          transition={{
+            repeat: Infinity,
+            duration: isFinalBoss && isReachable ? 1.1 : 2.4,
+            ease: 'easeInOut',
+          }}
           className="relative z-10"
-          style={{ filter: isFinalBoss ? 'drop-shadow(0 0 6px rgba(255,80,80,0.7))' : 'drop-shadow(0 0 6px rgba(200,120,255,0.6))' }}
+          style={{
+            filter: isFinalBoss && isReachable
+              ? 'drop-shadow(0 0 10px rgba(255,40,40,0.95)) drop-shadow(0 0 20px rgba(255,80,80,0.55))'
+              : isFinalBoss
+                ? 'drop-shadow(0 0 6px rgba(255,80,80,0.7))'
+                : 'drop-shadow(0 0 6px rgba(200,120,255,0.6))',
+          }}
         >
           {isFinalBoss ? (
             <div style={{ transform: 'scale(0.85)' }}><PixelSprite name={bossName} size={3} /></div>
@@ -118,29 +139,57 @@ const BossNode: React.FC<NodeRendererProps> = ({
           )}
         </motion.div>
 
-        {/* [BOSS-NODE-EMPHASIS 2026-05-08] 常驻脉动边框：不管是否可达，让 Boss 节点永远吸引目光 */}
+        {/* [RAGE-AURA 2026-05-09] 终 BOSS reachable 时的狂暴红光：径向波纹脉冲，模拟杀气外溢 */}
+        {isFinalBoss && isReachable && (
+          <motion.div
+            className="absolute inset-[-12px] pointer-events-none"
+            initial={{ opacity: 0.5, scale: 0.85 }}
+            animate={{ opacity: [0.7, 0.2, 0.7], scale: [0.9, 1.45, 0.9] }}
+            transition={{ repeat: Infinity, duration: 1.4, ease: 'easeOut' }}
+            style={{
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255,40,40,0.5) 0%, rgba(255,40,40,0.2) 40%, transparent 75%)',
+            }}
+          />
+        )}
+
+        {/* [BOSS-NODE-EMPHASIS 2026-05-08] 常驻脉动边框：终BOSS reachable 时切红色高频闪烁 */}
         <motion.div
-          animate={{ opacity: [0.25, 0.7, 0.25], scale: [1.0, 1.05, 1.0] }}
-          transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+          animate={
+            isFinalBoss && isReachable
+              ? { opacity: [0.4, 1, 0.4], scale: [1.02, 1.18, 1.02] }
+              : { opacity: [0.25, 0.7, 0.25], scale: [1.0, 1.05, 1.0] }
+          }
+          transition={{
+            repeat: Infinity,
+            duration: isFinalBoss && isReachable ? 0.7 : 1.8,
+            ease: 'easeInOut',
+          }}
           className="absolute inset-[-4px] pointer-events-none"
           style={{
             borderRadius: '6px',
-            border: isFinalBoss ? '2px solid rgba(224,60,60,0.55)' : '2px solid rgba(160,80,224,0.5)',
-            boxShadow: isFinalBoss
-              ? '0 0 18px rgba(224,60,60,0.55), 0 0 32px rgba(224,60,60,0.2)'
-              : '0 0 14px rgba(160,80,224,0.5), 0 0 26px rgba(160,80,224,0.18)',
+            border: isFinalBoss && isReachable
+              ? '2px solid rgba(255,60,60,0.95)'
+              : isFinalBoss
+                ? '2px solid rgba(224,60,60,0.55)'
+                : '2px solid rgba(160,80,224,0.5)',
+            boxShadow: isFinalBoss && isReachable
+              ? '0 0 22px rgba(255,40,40,0.85), 0 0 44px rgba(255,40,40,0.4), inset 0 0 12px rgba(255,40,40,0.4)'
+              : isFinalBoss
+                ? '0 0 18px rgba(224,60,60,0.55), 0 0 32px rgba(224,60,60,0.2)'
+                : '0 0 14px rgba(160,80,224,0.5), 0 0 26px rgba(160,80,224,0.18)',
           }}
         />
 
-        {isReachable && !isCurrent && !isCompleted && (
+        {isReachable && !isCurrent && !isCompleted && !isFinalBoss && (
           <motion.div
             animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.08, 1] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
             className="absolute inset-[-3px] pointer-events-none"
             style={{
               borderRadius: '6px',
-              border: isFinalBoss ? '2px solid rgba(224,60,60,0.5)' : '2px solid rgba(160,80,224,0.4)',
-              boxShadow: isFinalBoss ? '0 0 20px rgba(224,60,60,0.4)' : '0 0 16px rgba(160,80,224,0.3)',
+              border: '2px solid rgba(160,80,224,0.4)',
+              boxShadow: '0 0 16px rgba(160,80,224,0.3)',
             }}
           />
         )}

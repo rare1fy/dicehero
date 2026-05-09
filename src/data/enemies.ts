@@ -32,13 +32,17 @@ let uidCounter = 0;
 
 /** [2026-05-09] 导出供 GM 训练场单独构造敌人使用 */
 export const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Enemy => {
+  // [2026-05-09 BOSS-BUFF] BOSS 全局再加强：HP×1.20 让玩家感受"耐打"
+  // 攻击加成走 attackCalc 的 calcBossDmgBuff（动态乘子，方便后续调整）
+  const isBoss = config.category === 'boss';
+  const bossHpMul = isBoss ? 1.20 : 1.0;
   return {
     uid: `enemy_${++uidCounter}_${Date.now()}`,
     configId: config.id,
     name: config.name,
     emoji: config.emoji,
-    hp: Math.floor(config.baseHp * hpScale),
-    maxHp: Math.floor(config.baseHp * hpScale),
+    hp: Math.floor(config.baseHp * hpScale * bossHpMul),
+    maxHp: Math.floor(config.baseHp * hpScale * bossHpMul),
     armor: 0,
     attackDmg: Math.floor(config.baseDmg * dmgScale),
     combatType: config.combatType || 'warrior',

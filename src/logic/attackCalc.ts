@@ -22,6 +22,30 @@ export interface AttackCalcExtras {
   isSlowed?: boolean;
   /** 法师【法术反噬】层数（不可净化的独立 debuff） */
   arcaneBackfire?: number;
+  /** [2026-05-09 RAGE] 当前战斗回合数（≥5 后敌人进入"狂暴"，攻击递增） */
+  battleTurn?: number;
+}
+
+/**
+ * [2026-05-09] 战斗节奏控制：从第 5 回合起，所有敌人进入"狂暴"——
+ *   攻击力 ×(1 + 0.06 × (turn - 4))，每回合 +6%
+ *   - 第 5 回合 +6% / 第 8 回合 +24% / 第 12 回合 +48% / 第 20 回合 +96%
+ *   防止玩家"龟缩拖延"策略。BOSS 关同样适用。
+ */
+function calcRageMult(battleTurn?: number): number {
+  const t = battleTurn || 0;
+  if (t < 5) return 1;
+  return 1 + 0.06 * (t - 4);
+}
+
+/**
+ * [2026-05-09 BOSS-BUFF] BOSS 全局攻击加成 ×1.15。
+ * 原 baseDmg 偏温和，玩家普遍反馈"BOSS 不够厉害"。改在战斗时挂乘子，
+ * 而不是改每个 boss 的 baseDmg 数据，方便后续按章节单独微调。
+ */
+function calcBossDmgBuff(enemy: Enemy): number {
+  const isBoss = typeof enemy.configId === 'string' && enemy.configId.startsWith('boss_');
+  return isBoss ? 1.15 : 1;
 }
 
 /**
@@ -34,6 +58,8 @@ export interface AttackCalcExtras {
  * 4. 玩家易伤(vulnerable): 攻击力 ×1.5（固定）
  * 5. 法术反噬(arcaneBackfire): 攻击力 ×(1 + 0.1×层数)  —— 法师专属、不可净化
  * 6. 减速(slow): 仅 ranger 受影响，攻击力 ×ENEMY_ATTACK_MULT.slow
+ * 7. [2026-05-09] 狂暴(turn≥5): 攻击力 ×(1 + 0.06 × (turn - 4))
+ * 8. [2026-05-09] BOSS 全局加成 ×1.15
  */
 export function getEffectiveAttackDmg(
   enemy: Enemy,
@@ -70,6 +96,14 @@ export function getEffectiveAttackDmg(
   const backfireMult = calcArcaneBackfireMult(extras.arcaneBackfire);
   if (backfireMult !== 1) val = Math.floor(val * backfireMult);
 
+  // 6. 狂暴：拖久越凶
+  const rageMult = calcRageMult(extras.battleTurn);
+  if (rageMult !== 1) val = Math.floor(val * rageMult);
+
+  // 7. BOSS 全局加成
+  const bossBuff = calcBossDmgBuff(enemy);
+  if (bossBuff !== 1) val = Math.floor(val * bossBuff);
+
   return val;
 }
 
@@ -81,10 +115,16 @@ export function getRangerFollowUpDmg(
   enemy: Enemy,
   attackCount: number,
   arcaneBackfire?: number,
+  battleTurn?: number,
 ): number {
   let val = Math.max(1, Math.floor(enemy.attackDmg * ENEMY_ATTACK_MULT.rangerHit) + attackCount + 1);
   const backfireMult = calcArcaneBackfireMult(arcaneBackfire);
   if (backfireMult !== 1) val = Math.floor(val * backfireMult);
+  // [2026-05-09] 狂暴 + BOSS 加成同步生效
+  const rageMult = calcRageMult(battleTurn);
+  if (rageMult !== 1) val = Math.floor(val * rageMult);
+  const bossBuff = calcBossDmgBuff(enemy);
+  if (bossBuff !== 1) val = Math.floor(val * bossBuff);
   return val;
 }
 
@@ -98,7 +138,7 @@ export function getRangerFollowUpDmg(
  * 不考虑玩家状态（虚弱/易伤）和减速，因为这些是战斗瞬时修正，
  * 面板只展示"敌人自身当前的攻击能力"。
  */
-export function getDisplayAttackDmg(enemy: Enemy): number {
+export function getDisplayAttackDmg(enemy: Enemy, battleTurn?: number): number {
   let val = enemy.attackDmg;
   if (enemy.combatType === 'warrior') {
     val = Math.floor(val * ENEMY_ATTACK_MULT.warrior);
@@ -110,5 +150,10 @@ export function getDisplayAttackDmg(enemy: Enemy): number {
   if (strength) val += strength.value;
   const weak = enemy.statuses.find(s => s.type === 'weak');
   if (weak) val = Math.max(1, Math.floor(val * STATUS_EFFECT_MULT.weak));
+  // [2026-05-09] 显示值同步含狂暴 + BOSS 加成
+  const rageMult = calcRageMult(battleTurn);
+  if (rageMult !== 1) val = Math.floor(val * rageMult);
+  const bossBuff = calcBossDmgBuff(enemy);
+  if (bossBuff !== 1) val = Math.floor(val * bossBuff);
   return val;
 }

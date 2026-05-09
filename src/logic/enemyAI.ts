@@ -326,6 +326,7 @@ export async function executeEnemyTurn(
         attackCount: currentAttackCount,
         isSlowed,
         arcaneBackfire: prev.arcaneBackfire,
+        battleTurn: prev.battleTurn,
       });
 
       const absorb = absorbPlayerDamage(damage, prev.chantShield || 0, prev.armor, false);
@@ -399,7 +400,7 @@ export async function executeEnemyTurn(
       let chantPenaltyR = 0;
       let loggedSecondHit = 0;
       cb.setGame((prev: GameState) => {
-        const secondHit = getRangerFollowUpDmg(e, hitCount, prev.arcaneBackfire);
+        const secondHit = getRangerFollowUpDmg(e, hitCount, prev.arcaneBackfire, prev.battleTurn);
         loggedSecondHit = secondHit;
         const absorb2 = absorbPlayerDamage(secondHit, prev.chantShield || 0, prev.armor, false);
         const newHp = Math.max(0, prev.hp - absorb2.hpDamage);

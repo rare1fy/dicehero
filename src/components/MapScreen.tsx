@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BossPreviewBanner } from './BossPreviewBanner';
+// [2026-05-09] 移除 BossPreviewBanner 全屏预告，改用地图上终BOSS 节点 icon 的狂暴循环动效（见 MapNodeRenderer）
 import { useGameContext } from '../contexts/GameContext';
 import type { MapNode } from '../types/game';
 import { PixelHeart, PixelRefresh } from './PixelIcons';
@@ -46,28 +46,7 @@ export const MapScreen: React.FC = () => {
     mapBgClass, headerGradient, particleClass, fogColor, particlesFixed,
   } = useMapLayout(game.map, game.chapter || 1);
 
-  // [BOSS-PREVIEW 2026-05-08] 路上预告状态（需在 maxDepth/currentNode 声明后）
-  const [bossPreview, setBossPreview] = useState<{ visible: boolean; bossName: string; chapter: number }>({
-    visible: false, bossName: '', chapter: 1,
-  });
-
-  useEffect(() => {
-    if (!currentNode) return;
-    const chIdx = (game.chapter || 1) - 1;
-    const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
-    const atPenultimate = currentNode.depth === maxDepth - 1 && currentNode.completed;
-    const alreadySeen = (game.bossPreviewSeen || []).includes(game.chapter || 1);
-    if (atPenultimate && !alreadySeen) {
-      setGame(prev => ({
-        ...prev,
-        bossPreviewSeen: [...(prev.bossPreviewSeen || []), prev.chapter || 1],
-      }));
-      const t = window.setTimeout(() => {
-        setBossPreview({ visible: true, bossName: bossPair[1], chapter: game.chapter || 1 });
-      }, 600);
-      return () => window.clearTimeout(t);
-    }
-  }, [game.currentNodeId, game.chapter]);
+  // [2026-05-09] BossPreviewBanner 已移除，改用 MapNodeRenderer 中终BOSS 节点 icon 的狂暴循环动效
 
   useEffect(() => {
     const scroll = () => {
@@ -152,13 +131,7 @@ export const MapScreen: React.FC = () => {
           </div>
         </div>
       </div>
-      {/* [BOSS-PREVIEW 2026-05-08] 路上预告 */}
-      <BossPreviewBanner
-        visible={bossPreview.visible}
-        bossName={bossPreview.bossName}
-        chapter={bossPreview.chapter}
-        onDone={() => setBossPreview(p => ({ ...p, visible: false }))}
-      />
+      {/* [2026-05-09] BossPreviewBanner 已移除（改用地图终BOSS 节点 icon 狂暴循环动效） */}
     </div>
   );
 };

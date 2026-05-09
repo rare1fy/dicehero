@@ -79,22 +79,21 @@ export function useBattleLifecycle(state: BattleState) {
       return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult, game.chapter);
     })();
     const firstWave = waves[0]?.enemies || [];
-    const willShowRoamTaunt = node.type !== 'boss'
-      && node.depth === 0
-      && !(game.bossRoamSeen || []).includes(`${game.chapter}-intro`);
-    if (!willShowRoamTaunt) {
-      setEnemies(firstWave);
-    }
+    const isBossNode = node.type === 'boss';
+    const isMidBossNode = isBossNode && node.depth < 12;
+    const roamKey = `${game.chapter}-intro`;
+    const needRoamTaunt = node.type !== 'boss' && node.depth === 0 && !(game.bossRoamSeen || []).includes(roamKey);
+    const needMidBossTaunt = isMidBossNode;
+    // [BOSS-FLOW-v4] BOSS 节点演出期间延迟 setEnemies，避免 sprite 与全屏 Taunt 重叠
+    const deferEnemyMount = isBossNode || needRoamTaunt;
+    if (!deferEnemyMount) setEnemies(firstWave);
     setEnemyEffects({}); setDyingEnemies(new Set());
     setEnemyQuotes({});
     setEnemyQuotedLowHp(new Set());
-    const isBossNode = node.type === 'boss';
-    if (!willShowRoamTaunt) {
+    if (!deferEnemyMount) {
       setTimeout(() => {
         firstWave.forEach((e, idx) => {
-          if (isBossNode && e.configId.startsWith('boss_')) return;
-          const q = getEnemyQuotes(e.configId);
-          const line = pickQuote(q?.enter);
+          const line = pickQuote(getEnemyQuotes(e.configId)?.enter);
           if (line) {
             setTimeout(() => {
               showEnemyQuote(e.uid, line, 3000);
@@ -113,74 +112,70 @@ export function useBattleLifecycle(state: BattleState) {
     const battleChallenge = generateChallenge(node.depth, game.chapter, game.drawCount, node.type);
     setGame(prev => buildBattleGameState({ prev, node, waves, firstWave, battleChallenge }));
 
-    // [CRIT-FIX 2026-05-08] 进入战斗后必须先收起黑屏，否则骰子动画在黑屏下跑用户看起来像卡死
-    const roamKey = `${game.chapter}-intro`;
-    const alreadyRoamed = (game.bossRoamSeen || []).includes(roamKey);
-    const needRoamTaunt = node.type !== 'boss' && node.depth === 0 && !alreadyRoamed;
-
-    await new Promise(r => setTimeout(r, 80)); // 等 React 渲染一帧
+    await new Promise(r => setTimeout(r, 80));
     setBattleTransition('fadeOut');
     await new Promise(r => setTimeout(r, 320));
     setBattleTransition('none');
 
-    if (needRoamTaunt) {
-      // [ROAM-TAUNT-v3 2026-05-08] 章节首战：greet→第1句（亮身份）/dispatch→第2句（派小弟）；
-      // 缺省时回退到 enter[0] / 全局 BOSS_DISPATCH_LINES 池。pickQuote 自带 16 条短期不重复。
-      setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
+    // ===== 演出 1: 章节路过 / 中 BOSS 节点 → 该章终 BOSS 全屏 Taunt（点击继续）=====
+    if (needRoamTaunt || needMidBossTaunt) {
+      if (needRoamTaunt) setGame(prev => ({ ...prev, bossRoamSeen: [...(prev.bossRoamSeen || []), roamKey] }));
       const chIdx = Math.max(0, (game.chapter || 1) - 1);
       const bossPair = CHAPTER_BOSSES[chIdx] || CHAPTER_BOSSES[0];
-      const bossName = bossPair[1] || bossPair[0];
-      const bossCfg = BOSS_ENEMIES.find(b => b.name === bossName && b.chapter === (game.chapter || 1));
-      const bq = bossCfg?.quotes;
-      const firstLine = pickQuote(bq?.greet) || pickQuote(bq?.enter) || '……';
-      const secondLine = pickQuote(bq?.dispatch) || pickQuote(BOSS_DISPATCH_LINES) || '上！';
-      const tauntLines = [firstLine, secondLine];
+      const finalBossName = bossPair[1] || bossPair[0];
+      const bq = BOSS_ENEMIES.find(b => b.name === finalBossName && b.chapter === (game.chapter || 1))?.quotes;
+      const tauntLines = [
+        pickQuote(bq?.greet) || pickQuote(bq?.enter) || '……',
+        pickQuote(bq?.dispatch) || pickQuote(BOSS_DISPATCH_LINES) || '上！',
+      ];
       await new Promise<void>(resolve => {
-        setBossTaunt({
-          visible: true, name: bossName, chapter: game.chapter || 1,
-          lines: tauntLines, onDismiss: resolve,
-        });
+        setBossTaunt({ visible: true, name: finalBossName, chapter: game.chapter || 1, lines: tauntLines, onDismiss: resolve });
         playSound('boss_laugh');
       });
       setBossTaunt(prev => ({ ...prev, visible: false, onDismiss: undefined }));
       await new Promise(r => setTimeout(r, 200));
-      // 演出结束后刷小怪，每人被"派出"时必说一句
-      setEnemies(firstWave);
-      setTimeout(() => {
-        firstWave.forEach((e, ei) => {
-          const q = getEnemyQuotes(e.configId);
-          // [FORCE-SPEAK 2026-05-08] 小弟登场必说话：优先自己的 enter 池，空则用通用
-          const line = pickQuote(q?.enter) || MINION_FORCED_LINES[ei % MINION_FORCED_LINES.length];
-          setTimeout(() => {
-            showEnemyQuote(e.uid, line, 2800);
-            playSound('enemy_speak');
-            setEnemyEffectForUid(e.uid, 'speaking');
-            setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
-          }, ei * 450);
-        });
-      }, 200);
+      // 章节路过：演出结束后让小怪入场说话
+      if (needRoamTaunt) {
+        setEnemies(firstWave);
+        setTimeout(() => {
+          firstWave.forEach((e, ei) => {
+            const line = pickQuote(getEnemyQuotes(e.configId)?.enter) || MINION_FORCED_LINES[ei % MINION_FORCED_LINES.length];
+            setTimeout(() => {
+              showEnemyQuote(e.uid, line, 2800);
+              playSound('enemy_speak');
+              setEnemyEffectForUid(e.uid, 'speaking');
+              setTimeout(() => setEnemyEffectForUid(e.uid, null), 400);
+            }, ei * 450);
+          });
+        }, 200);
+      }
     }
 
-    if (node.type === 'boss') {
-      playSound('boss_appear');
+    // ===== 演出 2: BOSS 节点（中/终）→ Banner → Sprite 刷新 + enter 气泡 → boss_entrance =====
+    if (isBossNode) {
       const bossEnemy = firstWave[0];
       if (bossEnemy) {
-        // [BOSS-INTRO-v3] greet+dispatch 各抽一条；缺省回退到 enter[0..1]
-        const bossQuotes = getEnemyQuotes(bossEnemy.configId);
-        const line1 = pickQuote(bossQuotes?.greet) || (bossQuotes?.enter?.[0]) || '';
-        const line2 = pickQuote(bossQuotes?.dispatch) || (bossQuotes?.enter?.[1]) || '';
-        const tauntLines = [line1, line2].filter(Boolean);
-        setBossTaunt({ visible: true, name: bossEnemy.name, chapter: game.chapter, lines: tauntLines });
-        playSound('boss_laugh');
-        await new Promise(r => setTimeout(r, 2400));
-        setBossTaunt(prev => ({ ...prev, visible: false }));
-        await new Promise(r => setTimeout(r, 180));
-
-        // ★ 第 2 步：原本的 BossEntrance 横幅 + 本尊效果
+        // 第 1 步：Banner 横幅（中BOSS 走完前置 Taunt 后才到这；终BOSS 直接到这）
+        playSound('boss_appear');
         setBossEntrance({ visible: true, name: bossEnemy.name, chapter: game.chapter });
         await new Promise(r => setTimeout(r, ANIMATION_TIMING.enemyDeathCleanupDelay));
         setBossEntrance(prev => ({ ...prev, visible: false }));
         await new Promise(r => setTimeout(r, 200));
+
+        // 第 2 步：刷新 BOSS sprite 到场景 + 自身 enter 气泡
+        setEnemies(firstWave);
+        await new Promise(r => setTimeout(r, 200));
+        const bq = getEnemyQuotes(bossEnemy.configId);
+        const enterLine = pickQuote(bq?.enter) || pickQuote(bq?.greet) || '';
+        if (enterLine) {
+          showEnemyQuote(bossEnemy.uid, enterLine, 2200);
+          playSound('enemy_speak');
+          setEnemyEffectForUid(bossEnemy.uid, 'speaking');
+          setTimeout(() => setEnemyEffectForUid(bossEnemy.uid, null), 400);
+          await new Promise(r => setTimeout(r, 1200));
+        }
+
+        // 第 3 步：boss_entrance 压迫感动画
         setEnemyEffectForUid(bossEnemy.uid, 'boss_entrance');
         playSound('boss_laugh');
         await new Promise(r => setTimeout(r, ANIMATION_TIMING.bossEntranceDuration));
