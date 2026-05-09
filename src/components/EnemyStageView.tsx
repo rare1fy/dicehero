@@ -325,8 +325,8 @@ export function EnemyStageView() {
         const isFinalBoss = isBossNode && isFinalBossId(enemy.configId);
         const baseSpriteSize = isBossNode ? 12 : currentNode?.type === 'elite' ? 10 : 7;
         const dist = enemy.distance || 0;
-        // [2026-05-10 FINAL-BOSS-DEPTH-CAP v4] 三层级缩放：普通 1.25 / 章中 BOSS 1.05 / 终极 BOSS 0.85（避免撑满屏挡 HUD，气场靠粒子补偿）
-        const depthScale = isFinalBoss ? (dist === 0 ? 0.85 : dist === 1 ? 0.78 : dist === 2 ? 0.70 : 0.58) : isBossNode ? (dist === 0 ? 1.05 : dist === 1 ? 0.92 : dist === 2 ? 0.75 : 0.6) : (dist === 0 ? 1.25 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6);
+        // [2026-05-10 FINAL-BOSS-DEPTH-CAP v4] 三层级缩放：普通 1.25 / 章中 BOSS 1.05 / 终极 BOSS 0.78（v3=0.85 仍偏大，v4 进一步降到 9.36 像素，明显小于 elite 12.5；气场靠粒子/光环/震屏补偿）
+        const depthScale = isFinalBoss ? (dist === 0 ? 0.78 : dist === 1 ? 0.72 : dist === 2 ? 0.65 : 0.55) : isBossNode ? (dist === 0 ? 1.05 : dist === 1 ? 0.92 : dist === 2 ? 0.75 : 0.6) : (dist === 0 ? 1.25 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6);
         const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 30;
         const depthOpacity = 1.0;
         const depthBrightness = dist >= 3 ? 0.82 : dist === 2 ? 0.9 : dist === 1 ? 0.95 : 1.0;
