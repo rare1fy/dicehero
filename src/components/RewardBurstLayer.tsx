@@ -41,6 +41,12 @@ const KIND_ICON: Record<RewardKind, React.FC<{ size?: number }>> = {
   shield: PixelArcaneShield,
   gold: PixelCoin,
   fury: PixelBloodDrop,
+  reapDice: PixelDice,  // 噬血：骰子 icon
+};
+
+/** reapDice 的 target 实际指向手牌区（data-reward-target="card"） */
+const KIND_TARGET_ALIAS: Partial<Record<RewardKind, RewardKind>> = {
+  reapDice: 'card',
 };
 
 function readCenter(el: Element | null): { x: number; y: number } | null {
@@ -50,7 +56,8 @@ function readCenter(el: Element | null): { x: number; y: number } | null {
 }
 
 function resolveTarget(kind: RewardKind): { x: number; y: number } | null {
-  const el = document.querySelector(`[data-reward-target="${kind}"]`);
+  const realKind = KIND_TARGET_ALIAS[kind] || kind;
+  const el = document.querySelector(`[data-reward-target="${realKind}"]`);
   const c = readCenter(el);
   if (c) return c;
   // 兜底 1：目标 UI 还没渲染（如 armor=0 时无 armor 节点），
@@ -108,7 +115,8 @@ export const RewardBurstLayer: React.FC = () => {
         setItems(prev => [...prev, item]);
 
         // 飞行到目标时刷一下光
-        window.setTimeout(() => { flashRewardTarget(ev.kind); }, BURST_DUR_MS + LINGER_MS + FLIGHT_DUR_MS - 60);
+        const realKind = (KIND_TARGET_ALIAS[ev.kind] || ev.kind) as RewardKind;
+        window.setTimeout(() => { flashRewardTarget(realKind); }, BURST_DUR_MS + LINGER_MS + FLIGHT_DUR_MS - 60);
 
         // 清理
         const total = BURST_DUR_MS + LINGER_MS + FLIGHT_DUR_MS + 120;

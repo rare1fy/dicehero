@@ -7,6 +7,7 @@ import { DICE_BY_RARITY } from '../data/dice';
 import { RELICS_BY_RARITY } from '../data/relics';
 import { ChestReward } from '../types/game';
 import { MiniDice } from './MiniDice';
+import { RelicPixelIcon } from './PixelRelicIcons';
 import { formatDescription } from '../utils/richText';
 
 // ============================================================
@@ -264,7 +265,7 @@ export const TreasureScreen: React.FC = () => {
                       <div className="text-[8px] font-bold tracking-widest" style={{ color: RARITY_COLORS[reward.rarity] }}>{RARITY_LABELS[reward.rarity]}</div>
                       <div className="w-12 h-12 flex items-center justify-center">
                         {reward.type === 'dice' && reward.diceDefId ? <MiniDice defId={reward.diceDefId} size={36} /> : reward.type === 'dice' && <PixelDice size={5} />}
-                        {reward.type === 'relic' && <PixelStar size={5} />}
+                        {reward.type === 'relic' && (reward.relicData ? <RelicPixelIcon relicId={reward.relicData.id} size={5} /> : <PixelStar size={5} />)}
                       </div>
                       <div className="text-sm font-bold text-[var(--dungeon-text-bright)] pixel-text-shadow">{reward.label}</div>
                       <div className="text-[9px] text-[var(--dungeon-text-dim)]">{formatDescription(reward.desc)}</div>

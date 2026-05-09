@@ -22,7 +22,8 @@ export type RewardKind =
   | 'armor'
   | 'shield'
   | 'gold'
-  | 'fury';
+  | 'fury'
+  | 'reapDice';  // 2026-05-09: 战士噬血专用——骰子 icon 飞向手牌区
 
 export interface RewardEvent {
   kind: RewardKind;

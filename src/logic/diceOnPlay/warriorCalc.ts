@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 骰子 onPlay 战士效果 — ARCH-19 从 diceOnPlayCalc.ts 拆出
  *
  * 职责：处理战士职业骰子的 onPlay 效果（armor / armorBreak / berserk / execute / firstPlay / scaleWithLostHp / 等）。
@@ -35,8 +35,11 @@ export function applyWarriorCalc(
     }
   }
   if (op.armor) out.extraArmor += op.armor;
-  if (op.armorFromValue) out.extraArmor += d.value;
   if (op.armorFromTotalPoints) out.extraArmor += selected.reduce((sum, sd) => sum + sd.value, 0);
+  if (op.armorMultFromTotalPoints) {
+    const total = selected.reduce((sum, sd) => sum + sd.value, 0);
+    out.extraArmor += Math.ceil(total * op.armorMultFromTotalPoints);
+  }
   if (op.armorBreak) out.armorBreak = true;
   if (op.armorToDamage && targetEnemy) out.extraDamage += (targetEnemy.armor || 0);
   if (op.scaleWithHits) out.extraDamage += furyBonusDamage;

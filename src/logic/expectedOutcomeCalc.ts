@@ -244,28 +244,6 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   const finalMultiplier = multiplier * (1 + lvlMultAdd);
   const totalDamage = Math.ceil(baseDamage * finalMultiplier) + extraDamage + lvlDmgAdd + pierceDamage + lvlPierceAdd;
 
-  // [IRONWALL-V2 2026-05-09] 铁壁骰子：常规 armorFromValue 已在 warriorCalc 加 +d.value 基础护甲；
-  //   现增强：再追加"骰子点数 × 最终伤害倍率(handMultiplier × finalMultiplier)"作为缩放护甲，
-  //   多颗铁壁可叠加。这样高牌型/带 multiplier 加成时铁壁的护甲价值能跟上伤害走。
-  if (!skipOnPlay) {
-    const ironwallScaleMult = handMultiplier * finalMultiplier;
-    selected.forEach(d => {
-      const def = getDiceDef(d.diceDefId);
-      if (def.onPlay?.armorFromValue) {
-        const scaledArmor = Math.ceil(d.value * ironwallScaleMult);
-        // 减去基础那部分（warriorCalc 已加），追加 scaled - base
-        const bonus = Math.max(0, scaledArmor - d.value);
-        if (bonus > 0) {
-          extraArmor += bonus;
-          triggeredAugments.push({
-            name: def.name,
-            details: `护甲 ${d.value}→${scaledArmor}（×${ironwallScaleMult.toFixed(2)}）`,
-          });
-        }
-      }
-    });
-  }
-
   // [DEBUG-DMG 2026-05-08] 伤害计算追踪日志（F12 控制台可查）
   if (typeof window !== 'undefined' && (window as any).__DMG_DEBUG__ !== false) {
     console.log('[DMG]', {

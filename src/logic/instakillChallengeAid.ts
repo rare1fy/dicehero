@@ -106,33 +106,32 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
       }, 0);
     });
   } else if (aidType === 2) {
-    // 效果2：全场敌人HP降至N%（保底1HP，不杀死）
-    const targetPct = isBoss ? 0.5 : 0.35;
-    const pctText = `${Math.round(targetPct * 100)}%`;
+    // 效果2：全场敌人HP直接砍至当前血量的一半（保底1HP，不杀死）
+    // [2026-05-09] 旧版按 maxHp*N% 截断对低血敌人无意义；
+    //              改为按 currentHp/2 砍半，即时削弱所有活敌人。
     addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-    addToast(`洞察弱点！全场敌人血量降至${pctText}`, 'buff', { icon: 'star' });
-    addLog(`洞察弱点达成！全场敌人血量降至${pctText}`);
+    addToast(`洞察弱点！全场敌人血量减半`, 'buff', { icon: 'star' });
+    addLog(`洞察弱点达成！全场敌人当前生命值减半`);
     scheduleAidEffect(800, () => {
-      // [Bug-FIX v2 2026-05-08] 先计算 affectedUids，再 setEnemies。
-      // 原来 setEnemies callback 里 push affectedUids，setTimeout(0) 时 callback 还没执行，导致 affectedUids 为空。
       if (gameRef.current.phase !== 'battle') return;
-      const currentEnemies = gameRef.current; // 仅用于类型推导，实际读 setEnemies prev
-      const preCalcAffected: string[] = [];
+      const preCalcAffected: { uid: string; cut: number }[] = [];
       setEnemies(prev => {
-        // 重置（闭包不污染）
         preCalcAffected.length = 0;
         return prev.map(e => {
-          if (e.hp <= 0) return e;
-          const cap = Math.max(1, Math.floor(e.maxHp * targetPct));
-          if (e.hp <= cap) return e;
-          preCalcAffected.push(e.uid);
-          return { ...e, hp: cap };
+          if (e.hp <= 1) return e;
+          const newHp = Math.max(1, Math.floor(e.hp / 2));
+          const cut = e.hp - newHp;
+          if (cut <= 0) return e;
+          preCalcAffected.push({ uid: e.uid, cut });
+          return { ...e, hp: newHp };
         });
       });
-      // 16ms 等 React flush，然后用 preCalcAffected 触发特效
       setTimeout(() => {
         if (gameRef.current.phase !== 'battle') return;
-        preCalcAffected.forEach(uid => setEnemyEffectForUid(uid, 'hit'));
+        preCalcAffected.forEach(({ uid, cut }) => {
+          setEnemyEffectForUid(uid, 'hit');
+          addFloatingText(`-${cut}`, 'text-red-500', heartIcon(), 'enemy');
+        });
         setScreenShake(true);
         setTimeout(() => setScreenShake(false), 300);
       }, 16);

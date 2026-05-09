@@ -9,7 +9,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { getDiceDef } from '../data/dice';
 import { RARITY_LABELS, RARITY_TEXT_COLORS, ElementBadge } from './PixelDiceShapes';
-import { getDiceElementClass } from '../utils/uiHelpers';
+import { MiniDice } from './MiniDice';
 
 interface DiceSelectCardProps {
   defId: string;
@@ -38,12 +38,7 @@ export function DiceSelectCard({ defId, index, isSelected, onSelect }: DiceSelec
         {RARITY_LABELS[def.rarity] || def.rarity}
       </div>
       <div className="relative mb-1.5">
-        <div
-          className={`${getDiceElementClass(def.element, isSelected, false, false, def.id)} relative flex items-center justify-center`}
-          style={{ width: '36px', height: '36px', fontSize: '16px', lineHeight: '36px' }}
-        >
-          {'?'}
-        </div>
+          <MiniDice defId={def.id} size={36} hideDigit />
         {def.element !== 'normal' && (
           <div className="absolute -top-1 -right-1 z-10">
             <ElementBadge element={def.element} size={12} />

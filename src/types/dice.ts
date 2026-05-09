@@ -31,8 +31,8 @@ export interface DiceDef {
     aoe?: boolean;
     armor?: number;          // 获得固定护甲
     // 战士特殊
-    armorFromValue?: boolean;    // 护甲=骰子点数
     armorFromTotalPoints?: boolean; // 护甲=选中骰子总点数
+    armorMultFromTotalPoints?: number; // 护甲=选中骰子总点数×N（向上取整）
     armorBreak?: boolean;        // 摧毁敌人全部护甲
     scaleWithHits?: boolean;     // 每受伤一次伤害+2
     firstPlayOnly?: boolean;     // 仅首次出牌生效

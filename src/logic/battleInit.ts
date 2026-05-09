@@ -66,6 +66,14 @@ export function buildBattleGameState(
     rerollsThisWave: 0,
     boomerangFreeReroll: 0,
     comboFreeReroll: 0,
+    // [WARRIOR-REAP 2026-05-09] 战场收割槽位严格限定在单场战斗内，进入新节点战斗时强制重置
+    warriorReapKillSlot: 0,
+    warriorReapBlockSlot: 0,
+    warriorReapKillSlotCap: 1,
+    warriorReapBlockSlotCap: 1,
+    warriorReapNextDraw: 0,
+    warriorReapBurstActive: false,
+    warriorRageMult: 0,
   };
 }
 

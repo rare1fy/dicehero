@@ -1,4 +1,4 @@
-﻿/**
+/**
  * settlement/phase3_effects.ts — Phase 3 特殊效果触发 + 棱镜聚焦 + 盗贼连击终结
  *
  * ARCH-17 从 settlementAnimation.ts L267-L428 拆出
@@ -54,10 +54,14 @@ export async function runPhase3Effects(ctx: SettlementContext): Promise<void> {
     }
     // 以下是之前缺失的效果展示
     if (op.armor) allEffects.push({ name: def.name, detail: `护甲+${op.armor}`, type: 'armor' });
-    if (op.armorFromValue) allEffects.push({ name: def.name, detail: `护甲+${d.value}×倍率(基础)`, type: 'armor' });
     if (op.armorFromTotalPoints) {
       const totalPts = selected.reduce((s, dd) => s + dd.value, 0);
       allEffects.push({ name: def.name, detail: `护甲+${totalPts}(总点数)`, type: 'armor' });
+    }
+    if (op.armorMultFromTotalPoints) {
+      const totalPts = selected.reduce((s, dd) => s + dd.value, 0);
+      const armorVal = Math.ceil(totalPts * op.armorMultFromTotalPoints);
+      allEffects.push({ name: def.name, detail: `护甲+${armorVal}(总点数×${op.armorMultFromTotalPoints})`, type: 'armor' });
     }
     if (op.armorFromHandSize) {
       const handSize = dice.filter(dd => !dd.spent).length;

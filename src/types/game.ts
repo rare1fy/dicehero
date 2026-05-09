@@ -177,7 +177,8 @@ export interface GameState {
   levelDamageBonus?: number;           // 升级累计出牌基础伤害加成（加法）
   levelDamageMultBonus?: number;       // 升级累计伤害倍率加成（0.08 = +8%，叠加）
   levelPierceBonus?: number;           // 升级累计穿透伤害加成
-  levelStartArmor?: number;            // 升级累计战斗开局初始护甲
+  levelStartArmor?: number;            // 升级累计战斗开局初始护甲（旧版壁垒之心，留作历史遗留兼容）
+  levelTurnStartArmor?: number;        // [BULWARK-HEART 2026-05-09] 每回合开始时获得的护甲（壁垒之心升级版）
   levelMapHeal?: number;               // 升级累计每层地图结束回血
   levelGoldBonus?: number;             // 升级累计金币收益百分比（0.15 = +15%）
   levelSoulBonus?: number;             // 升级累计魂晶倍率加成

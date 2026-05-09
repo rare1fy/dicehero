@@ -106,22 +106,45 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
     }
 
     // 单体攻击：检查目标是否死亡，若存活则无需波次检测
+    // [BUGFIX 2026-05-09 chainBolt] 附带伤害（奥术飞弹/溅射）可能击杀其他敌人，
+    //   此时主目标 finalEnemyHp>0 但场上可能已全灭。必须先扫最新 enemies 数组而非仅看主目标。
+    let latestEnemiesSnapshot: import('../types/game').Enemy[] = enemies;
+    setEnemies(prev => {
+      latestEnemiesSnapshot = prev;
+      return prev; // 不改数据，仅读取最新快照
+    });
+    const latestAlive = latestEnemiesSnapshot.filter(e => e.hp > 0);
+
     if (!hasAoe) {
       const targetDied = finalEnemyHp <= 0;
-      if (targetDied) {
-        const remainingAlive = enemies.filter(e => e.hp > 0 && e.uid !== targetUid);
-        if (remainingAlive.length > 0) {
-          setGame(prev => ({ ...prev, targetEnemyUid: (remainingAlive.find(e => e.combatType === 'guardian') || remainingAlive[0]).uid }));
-          addLog(`当前目标被击败！还有 ${remainingAlive.length} 个敌人存活。`);
-          return;
+      const fieldCleared = latestAlive.length === 0;
+      if (targetDied || fieldCleared) {
+        // 目标已死或被附带伤害全灭
+        if (!fieldCleared) {
+          const remainingAlive = latestAlive.filter(e => e.uid !== targetUid);
+          if (remainingAlive.length > 0) {
+            setGame(prev => ({ ...prev, targetEnemyUid: (remainingAlive.find(e => e.combatType === 'guardian') || remainingAlive[0]).uid }));
+            addLog(`当前目标被击败！还有 ${remainingAlive.length} 个敌人存活。`);
+            return;
+          }
+        } else {
+          // 附带伤害全灭场上敌人——为没播死亡动画的敌人补 death 特效
+          latestEnemiesSnapshot.forEach(e => {
+            if (e.hp <= 0) {
+              setEnemyEffectForUid(e.uid, 'death');
+              setDyingEnemies(prevSet => new Set([...prevSet, e.uid]));
+            }
+          });
+          playSound('enemy_death');
+          // 全灭直接落到下方波次切换
         }
       } else {
-        return; // 目标存活，无需波次检测
+        return; // 目标存活、场上也还有活的敌人，无需波次检测
       }
     }
     
-    // 全灭检测：AOE 用伤害快照判定，单体已确认目标死亡
-    const anyAlive = hasAoe ? enemies.some(e => e.hp - outcome.damage > 0) : false;
+    // 全灭检测：AOE 用伤害快照判定，单体已确认目标死亡，或 chainBolt 清场
+    const anyAlive = hasAoe ? enemies.some(e => e.hp - outcome.damage > 0) : latestAlive.length > 0;
     
     if (!anyAlive) {
       const nextWaveIdx = game.currentWaveIndex + 1;
@@ -129,7 +152,7 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
         const nextWave = game.battleWaves[nextWaveIdx].enemies;
         // Boss出场演出：如果当前是boss节点且下一波只有1个敌人(boss单独出场)
         const currentNode = game.map.find(n => n.id === game.currentNodeId);
-        const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 200;
+        const isBossWave = currentNode?.type === 'boss' && nextWave.length === 1 && nextWave[0].maxHp > 100;
         if (isBossWave) {
           playSound('boss_appear');
           setBossEntrance({ visible: true, name: nextWave[0].name, chapter: game.chapter });

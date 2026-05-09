@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import * as D from '../data/pixelIconData';
 
 /**
@@ -242,6 +242,10 @@ export const PixelCrackedHeart: React.FC<PixelIconProps> = ({ size = 2, classNam
 /** 紫色骷髅 — 法师【法术反噬】不可净化 debuff 专用 */
 export const PixelArcaneSkull: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
   <IconBase pixels={D.ARCANE_SKULL} ps={size} className={className} style={style} />;
+
+/** 噬血 — 战士【战场收割】斩首+完防统一 buff（獠牙咬血滴） */
+export const PixelBloodthirst: React.FC<PixelIconProps> = ({ size = 2, className, style }) =>
+  <IconBase pixels={D.BLOODTHIRST} ps={size} className={className} style={style} />;
 
 // ===== 图标映射表 =====
 export const PIXEL_ICON_MAP = {

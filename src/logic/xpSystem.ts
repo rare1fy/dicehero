@@ -109,12 +109,14 @@ export const LEVEL_REWARD_POOL: LevelRewardDef[] = [
     }),
   },
   {
+    // [BULWARK-HEART 2026-05-09] 从"战斗开局+3护甲"升级为"每回合开始+2护甲"。
+    // 旧版只在第一回合有用，对长战斗无收益；新版每回合稳定提供护甲，与战士护甲构筑高度协同。
     id: 'survival_armor_start',
     category: 'survival',
     title: '壁垒之心',
-    description: '每场战斗开始时获得 +3 初始护甲（永久叠加）',
+    description: '每回合开始时获得 +2 护甲（永久叠加）',
     apply: (g) => ({
-      levelStartArmor: (g.levelStartArmor || 0) + 3,
+      levelTurnStartArmor: (g.levelTurnStartArmor || 0) + 2,
     }),
   },
   {

@@ -290,16 +290,18 @@ export function EnemyStageView() {
         ))}
       </AnimatePresence>
 
-      {/* Multi-enemy fixed-slot display */}
+      {/* Multi-enemy fixed-slot display
+          [2026-05-09] 位置稳定化：grid 列数始终 = enemies 数组长度（含已死者），
+          死亡敌人保留空位占位，不让幸存敌人挤位。 */}
       <div className="relative" style={{ minHeight: '180px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(enemies.length, 1)}, 1fr)`, alignItems: 'end', justifyItems: 'center', gap: '12px' }}>
       {[...enemies]
         .map((enemy) => {
           const effect = enemyEffects[enemy.uid] || null;
           const isDying = enemy.hp <= 0;
-          // Bug-3: 死亡动画播放中(effect==='death')的敌人保持可见
-          // 动画结束后(effect被清除或变更)不再渲染，避免空白占位符撑开grid
+          // [2026-05-09] 死亡动画结束后的敌人渲染"占位空槽"（保持 grid 列位），
+          //   避免旁边的活敌人挤到死者的位置。
           if (isDying && effect !== 'death') {
-            return null;
+            return <div key={enemy.uid} aria-hidden style={{ visibility: 'hidden', minWidth: 1 }} />;
           }
         const isTarget = isAoeActive ? (enemy.hp > 0) : (enemy.uid === (targetEnemyUid_ || enemies.find(e => e.hp > 0)?.uid));
         const currentNode = game.map.find(n => n.id === game.currentNodeId);

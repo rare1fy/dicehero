@@ -43,7 +43,7 @@ const getDefColor = (defId: string) => {
  * MiniDice - 骰子队列中的迷你骰子缩略图
  * 保持颜色和特点与手牌一致
  */
-export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: boolean }> = ({ defId, size = 16, highlight = false }) => {
+export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: boolean; hideDigit?: boolean }> = ({ defId, size = 16, highlight = false, hideDigit = false }) => {
   const def = getDiceDef(defId);
   const colors = getDefColor(defId);
   const hasElement = def.element !== 'normal';
@@ -51,7 +51,8 @@ export const MiniDice: React.FC<{ defId: string; size?: number; highlight?: bool
   const inner = Math.max(6, s - 4);
 
   if (hasPixelRenderer(defId)) {
-    return <PixelDiceRenderer diceDefId={defId} value="?" size={s} />;
+    // [2026-05-09] hideDigit=true → 仅显示骰盒+图案（净化/列表场景）；false → 显示 ? 数字（默认队列态）
+    return <PixelDiceRenderer diceDefId={defId} value="?" size={s} hideDigit={hideDigit} />;
   }
 
   return (

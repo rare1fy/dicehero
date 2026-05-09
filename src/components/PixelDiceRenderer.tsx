@@ -209,9 +209,11 @@ const DICE_COLORS: Record<string, DiceColorScheme> = {
 const PixelDiceBody: React.FC<{
   colors: DiceColorScheme; value: number | string;
   pattern?: React.ReactNode; size: number; selected?: boolean;
-}> = ({ colors, value, pattern, size, selected }) => {
+  /** [2026-05-09] true 时不渲染中央数字，仅显示骰盒+图案。用于净化/列表场景纯展示骰子定义。 */
+  hideDigit?: boolean;
+}> = ({ colors, value, pattern, size, selected, hideDigit }) => {
   const digitStr = String(value);
-  const digitData = PIXEL_DIGITS[digitStr] || PIXEL_DIGITS['?'];
+  const digitData = hideDigit ? null : (PIXEL_DIGITS[digitStr] || PIXEL_DIGITS['?']);
   return (
     <svg width={size} height={size} viewBox="0 0 26 30" style={{ imageRendering: 'pixelated', display: 'block' }}>
       {/* 底部厚度 */}
@@ -238,15 +240,15 @@ const PixelDiceBody: React.FC<{
       <rect x="20" y="18" width="2" height="2" fill={colors.shadow} opacity="0.3" />
       {/* 图案 */}
       {pattern && <g opacity="0.85">{pattern}</g>}
-      {/* 数字 */}
-      <g>{digitData.map((row, ry) => row.map((px, rx) => {
+      {/* 数字（hideDigit 时跳过） */}
+      {digitData && <g>{digitData.map((row, ry) => row.map((px, rx) => {
         if (!px) return null;
         const x = 10 + rx * 2, y = 7 + ry * 2;
         return (<React.Fragment key={`${ry}-${rx}`}>
           <rect x={x+1} y={y+1} width="2" height="2" fill={colors.digitShadow} />
           <rect x={x} y={y} width="2" height="2" fill={colors.digit} />
         </React.Fragment>);
-      }))}</g>
+      }))}</g>}
       {/* 选中态 */}
       {selected && <g>
         <rect x="0" y="0" width="26" height="2" fill={colors.highlight} opacity="0.8" />
@@ -363,12 +365,14 @@ export const PixelDiceRenderer: React.FC<{
   diceDefId: string; value: number | string;
   size?: number; selected?: boolean; rolling?: boolean;
   element?: string; // 传入元素类型，坍缩后覆盖配色
-}> = React.memo(({ diceDefId, value, size = 56, selected = false, rolling = false, element }) => {
+  /** [2026-05-09] 列表/净化纯展示场景：true → 不渲染中央数字，只显示骰子图案 */
+  hideDigit?: boolean;
+}> = React.memo(({ diceDefId, value, size = 56, selected = false, rolling = false, element, hideDigit }) => {
   // 元素骰子坍缩后使用元素配色（打破职业色系）
   const elementColors = element && element !== 'normal' ? ELEMENT_COLORS[element] : null;
   const colors = elementColors || DICE_COLORS[diceDefId];
   if (!colors) return null;
   const pattern = elementColors ? ELEMENT_PATTERNS[element!] : P[diceDefId];
-  return <PixelDiceBody colors={colors} value={rolling ? '?' : value} pattern={pattern} size={size} selected={selected} />;
+  return <PixelDiceBody colors={colors} value={rolling ? '?' : value} pattern={pattern} size={size} selected={selected} hideDigit={hideDigit} />;
 });
 PixelDiceRenderer.displayName = 'PixelDiceRenderer';

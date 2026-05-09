@@ -1,4 +1,4 @@
-﻿/**
+/**
  * classes.ts — 职业系统核心数据
  * 
  * 定义三大职业的规则、初始配置和专属骰子池。
@@ -132,7 +132,7 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_bloodthirst', name: '血之渴望', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '出牌时以最大HP的2%为代价，对目标追加8点固定伤害', onPlay: { bonusDamage: 8, selfDamagePercent: 0.02 } },
   { id: 'w_ironwall', name: '铁壁', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
-    description: '出牌时获得护甲：本骰子点数 × 当前牌型综合伤害倍率（向上取整，多颗叠加）', onPlay: { armorFromValue: true } },
+    description: '出牌时获得护甲，数值等于所有选中骰子的总点数', onPlay: { armorFromTotalPoints: true } },
   { id: 'w_warcry', name: '战吼', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
     description: '对目标施加1层易伤，持续2回合', onPlay: { statusToEnemy: { type: 'vulnerable', value: 1, duration: 2 } } },
   { id: 'w_fury', name: '怒火', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'common',
@@ -162,7 +162,8 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_bloodblade', name: '浴血之刃', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '每次触发嗜血重投后，本骰子所有面值永久+1，最多+3', onPlay: { scaleWithBloodRerolls: true } },
   { id: 'w_giantshield', name: '巨人壁垒', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
-    description: '出牌时获得护甲，数值等于所有选中骰子的总点数', onPlay: { armorFromTotalPoints: true } },
+    description: '出牌时获得护甲，数值等于所有选中骰子总点数的2.5倍，并嘲讽全体敌人',
+    onPlay: { armorMultFromTotalPoints: 2.5, tauntAll: true } },
   { id: 'w_berserk', name: '狂暴之心', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '进入狂暴状态2回合：造成伤害+30%，但受到伤害也+20%', onPlay: { selfBerserk: true } },
   { id: 'w_whirlwind', name: '旋风斩', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',

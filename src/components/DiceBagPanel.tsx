@@ -1,4 +1,5 @@
 ﻿import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { getDiceDef } from '../data/dice';
 import { RARITY_COLORS, RARITY_LABELS, RARITY_TEXT_COLORS } from './PixelDiceShapes';
@@ -127,12 +128,13 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                             if (isTooltipActive) { setTooltipDef(null); return; }
                             const card = e.currentTarget as HTMLElement;
                             const cardRect = card.getBoundingClientRect();
-                            const TOOLTIP_H_EST = 80;
+                            // [2026-05-09] 用户要求 tooltip 始终在点击的骰子正上方居中
+                            //   水平：以卡片中心为锚（translate -50%）
+                            //   垂直：强制向上；仅当上方几乎无空间（< 60px）时才 fallback 向下
                             const spaceAbove = cardRect.top;
-                            const spaceBelow = window.innerHeight - cardRect.bottom;
-                            const dir: 'up' | 'down' = spaceAbove >= TOOLTIP_H_EST || spaceAbove >= spaceBelow ? 'up' : 'down';
+                            const dir: 'up' | 'down' = spaceAbove >= 60 ? 'up' : 'down';
                             const left = cardRect.left + cardRect.width / 2;
-                            const top = dir === 'up' ? cardRect.top - 6 : cardRect.bottom + 6;
+                            const top = dir === 'up' ? cardRect.top - 8 : cardRect.bottom + 8;
                             setTooltipPos({ left, top, dir });
                             setTooltipDef(tooltipKey);
                           }}
@@ -151,8 +153,8 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                 )}
               </div>
             </motion.div>
-            {/* tooltip 渲染在面板外层、用 fixed 定位避免被滚动容器/面板裁切 */}
-            {tooltipDef && (() => {
+            {/* tooltip 通过 Portal 挂到 document.body，避免父级 fixed 容器在 iOS Safari 下影响内部 fixed 定位 */}
+            {tooltipDef && ReactDOM.createPortal((() => {
               const activeId = tooltipDef.split('-').slice(0, -1).join('-');
               const def = getDiceDef(activeId);
               if (!def) return null;
@@ -189,7 +191,7 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
                   />
                 </motion.div>
               );
-            })()}
+            })(), document.body)}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,10 +1,15 @@
-/**
+﻿/**
  * StatusIcon — 状态徽章
  *
  * [2026-05-08 重构]
  *   - 视觉与 BuffTooltip 完全统一（彩色小徽章，不再深灰底框）
  *   - tooltip 通过 Portal 渲染到 body，避免被 PlayerHudView 的 overflow-y-hidden 裁切
  *   - 点击/悬停/触摸均可显示；点击外部或 3.5s 后自动关
+ *
+ * [2026-05-09]
+ *   - buff（armor / strength / dodge）→ 绿色外框/背景
+ *   - debuff（poison / burn / vulnerable / weak / slow / freeze）→ 红色外框/背景
+ *   - icon 与 label/value 文字色保持 STATUS_INFO 原色，保证辨识度
  */
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -19,8 +24,19 @@ interface StatusIconProps {
   align?: 'left' | 'right' | 'center';
 }
 
+const VARIANT_BG: Record<'buff' | 'debuff', string> = {
+  buff: 'rgba(74,222,128,0.15)',
+  debuff: 'rgba(248,113,113,0.18)',
+};
+const VARIANT_BORDER: Record<'buff' | 'debuff', string> = {
+  buff: 'rgba(74,222,128,0.55)',
+  debuff: 'rgba(248,113,113,0.6)',
+};
+
 export const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
   const info = STATUS_INFO[status.type];
+  const finalBg = VARIANT_BG[info.kind];
+  const finalBorder = VARIANT_BORDER[info.kind];
   const [hover, setHover] = React.useState(false);
   const [pinned, setPinned] = React.useState(false);
   const triggerRef = React.useRef<HTMLDivElement>(null);
@@ -66,10 +82,10 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
       onClick={toggle}
       onTouchEnd={(e) => { e.preventDefault(); toggle(e); }}
     >
-      {/* 彩色小徽章 —— 和 BuffTooltip 完全同款 */}
+      {/* 彩色小徽章 —— 外框/背景按 buff/debuff 分色，icon 与文字保留原色 */}
       <div
         className="flex items-center gap-0.5 px-1 py-0.5"
-        style={{ background: info.bgColor, border: `1px solid ${info.borderColor}`, borderRadius: '2px' }}
+        style={{ background: finalBg, border: `1px solid ${finalBorder}`, borderRadius: '2px' }}
       >
         {info.icon}
         <span

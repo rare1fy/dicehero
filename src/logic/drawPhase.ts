@@ -15,14 +15,14 @@ import { getDiceDef, rollDiceDef } from '../data/dice';
 import { drawFromBag } from '../data/diceBag';
 import { applyDiceSpecialEffects } from './diceEffects';
 import { hasRelic, hasLimitBreaker } from '../engine/relicQueries';
-import { PixelCards, PixelBloodDrop } from '../components/PixelIcons';
+import { PixelCards, PixelBloodthirst } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
 import { consumeReapSlotsForDraw } from './warriorReap';
 
 /** 浮字用 牌 icon */
 const cardsIcon = () => ReactNS.createElement(PixelCards, { size: 1.5 });
-/** 浮字用 血滴 icon */
-const bloodIcon = () => ReactNS.createElement(PixelBloodDrop, { size: 1.5 });
+/** 浮字用 噬血 icon（战场收割专用） */
+const bloodthirstIcon = () => ReactNS.createElement(PixelBloodthirst, { size: 1.5 });
 
 /** 统一奖励类飘字颜色 */
 const REWARD_COLOR = 'text-amber-200';
@@ -141,14 +141,21 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     const g = gameRef.current;
     setRerollCount(0);
     setGame(prev => ({ ...prev, boomerangFreeReroll: 0, comboFreeReroll: 0 }));
+    // [BULWARK-HEART 2026-05-09] 壁垒之心：每回合开始时 +N 护甲（升级永久叠加）
+    const turnStartArmor = g.levelTurnStartArmor || 0;
+    if (turnStartArmor > 0) {
+      setGame(prev => ({ ...prev, armor: (prev.armor || 0) + turnStartArmor }));
+      addFloatingText(`护甲+${turnStartArmor}`, 'text-cyan-300', undefined, 'player');
+    }
     // 计算抽牌数：法师按蓄力上限（硬顶6），战士按战场收割奖励（kill+block 两槽合计）
     const chargeBonus = g.playerClass === 'mage' ? (g.chargeStacks || 0) : 0;
     // [WARRIOR-REAP 2026-05-09] 替换旧的半血+1机制，改为战场收割槽位驱动
     const reap = consumeReapSlotsForDraw(g);
     const warriorBonus = reap.bonusDraw;
     if (warriorBonus > 0) {
-      addFloatingText(`战场收割: +${warriorBonus}`, REWARD_COLOR, bloodIcon(), 'player');
-      emitReward('fury', warriorBonus);
+      // [2026-05-09] "噬血"飘字 + 骰子爆发飞向手牌区（reapDice kind → alias 指向 data-reward-target="card"）
+      addFloatingText(`噬血: +${warriorBonus}`, REWARD_COLOR, bloodthirstIcon(), 'player');
+      emitReward('reapDice', warriorBonus);
       // 立刻清零槽位 + 写入 burst 标记（让 PlayerHudView 触发血怒粒子特效）
       setGame(prev => ({ ...prev, ...reap.gameUpdate }));
     }
