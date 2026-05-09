@@ -43,6 +43,7 @@ import { ReplacementModal } from './components/ReplacementModal';
 import { ToastDisplay } from './components/ToastDisplay';
 import { RelicDetailModal } from './components/RelicPanelView';
 import { BattleSceneView } from './components/BattleSceneView';
+import { DeathTransition } from './components/DeathTransition';
 
 // --- Hooks ---
 import { useBattleState } from './hooks/useBattleState';
@@ -60,6 +61,22 @@ const META_KEY = 'dicehero_meta';
 const loadMeta = () => {
   try { const raw = localStorage.getItem(META_KEY); if (raw) return JSON.parse(raw); } catch {}
   return { permanentQuota: 0, unlockedStartRelics: [], highestOverkill: 0, totalRuns: 0, totalWins: 0 };
+};
+
+/**
+ * GameOverWithTransition — 玩家死亡时先播 1.8s 过渡演出（双手抖落 + 黑幕淡入），
+ * 然后再显示 GameOverScreen 结算界面。避免"致命一击 → 硬切结算"的生硬体验。
+ */
+const GameOverWithTransition: React.FC = () => {
+  const [animDone, setAnimDone] = React.useState(false);
+  if (animDone) {
+    return <GameOverScreen />;
+  }
+  return (
+    <div className="fixed inset-0 bg-[var(--dungeon-bg)]">
+      <DeathTransition visible onComplete={() => setAnimDone(true)} />
+    </div>
+  );
 };
 
 export default function DiceHeroGame() {
@@ -123,7 +140,11 @@ export default function DiceHeroGame() {
   }
 
   if (game.phase === 'gameover') {
-    return <GameContext.Provider value={contextValue}><GameOverScreen /></GameContext.Provider>;
+    return (
+      <GameContext.Provider value={contextValue}>
+        <GameOverWithTransition />
+      </GameContext.Provider>
+    );
   }
 
   if (game.phase === 'chapterTransition') {

@@ -124,13 +124,11 @@ export const getEnemiesForNode = (node: MapNode, depth: number, hpMultiplier: nu
   const dmgScale = scaling.dmgMult * dmgMultiplier;
 
   if (node.type === 'boss') {
+    // [BOSS-SOLO 2026-05-09] 所有 BOSS 节点砍掉前置小怪波，只剩 BOSS 本尊单波。
+    // 理由：BOSS 节点流程改为 Taunt → Banner → Entrance 三段独立演出，前置小怪啰嗦。
     const isFinal = depth >= 12;
     const bossConfig = getBossForChapter(chapter, isFinal);
-    const normalPool = getNormalPool(chapter);
-    const minion1 = normalPool[Math.floor(Math.random() * normalPool.length)];
-    const minion2 = normalPool[Math.floor(Math.random() * normalPool.length)];
     return [
-      { enemies: [buildEnemy(minion1, hpScale * 0.6, dmgScale * 0.7), buildEnemy(minion2, hpScale * 0.6, dmgScale * 0.7)] },
       { enemies: [buildEnemy(bossConfig, hpScale, dmgScale)] },
     ];
   }
