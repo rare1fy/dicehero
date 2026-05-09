@@ -391,7 +391,10 @@ export function EnemyStageView() {
             </div>
             <div className="text-center mb-0.5">
               <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span><span className="ml-1 text-[9px] font-mono px-1 py-0" style={{borderRadius: '2px',border: '1px solid ' + ((enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange)' : 'var(--pixel-cyan)'),color: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'var(--pixel-orange-light)' : 'var(--pixel-cyan-light)',background: (enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? 'rgba(224,120,48,0.15)' : 'rgba(48,216,208,0.15)',}}>{(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') ? '近' : '远'}</span>
-              {/* [2026-05-09] 移除远程敌人头顶 \"距 N\" 距离指示器（玩家不需要看到） */}
+              {/* [2026-05-09] 仅近战敌人显示"距 N"距离指示，远程敌人不再显示 */}
+              {(enemy.combatType === 'warrior' || enemy.combatType === 'guardian') && (enemy.distance || 0) > 0 && (
+                <span className="ml-1 text-[9px] font-mono px-1 py-0" style={{ borderRadius: '2px', border: '1px solid var(--pixel-orange-dark)', color: 'var(--pixel-orange-light)', background: 'rgba(224,120,48,0.10)' }}>距 {enemy.distance}</span>
+              )}
             </div>
             <div className="pixel-hp-bar h-2.5 w-20 relative mb-1">
               <motion.div

@@ -50,18 +50,70 @@ interface Props {
 }
 
 /* ===== 行为描述生成 ===== */
-function describePhase(p: EnemyConfig['phases'][number], idx: number, total: number): string[] {
+
+/**
+ * 列出 phases.actions 配置（路线 B 后真实生效，每回合按 battleTurn 轮播）。
+ * 多阶段（hpThreshold）的怪会显示"阶段 1 / 阶段 2"分组。
+ */
+function describePhases(e: EnemyConfig): string[] {
   const lines: string[] = [];
-  const tag = p.hpThreshold != null
-    ? `阶段 ${idx + 1}（HP ≤ ${Math.round(p.hpThreshold * 100)}%）`
-    : total > 1 ? `阶段 ${idx + 1}（其余）` : '行为序列';
-  lines.push(tag);
-  for (const a of p.actions) {
-    const desc = a.description ? `·${a.description}` : '';
-    if (a.type === '攻击') lines.push(`  · 攻击 ${a.baseValue}${desc}`);
-    else if (a.type === '防御') lines.push(`  · 防御 ${a.baseValue}${desc}`);
-    else lines.push(`  · 技能 ${a.baseValue}${desc}`);
+  e.phases.forEach((p, idx) => {
+    const tag = p.hpThreshold != null
+      ? `阶段 ${idx + 1}（HP ≤ ${Math.round(p.hpThreshold * 100)}%）`
+      : e.phases.length > 1 ? `阶段 ${idx + 1}（其余）` : '行为序列（按回合轮播）';
+    lines.push(tag);
+    for (const a of p.actions) {
+      const desc = a.description ? `·${a.description}` : '';
+      if (a.type === '攻击') lines.push(`  · 攻击 ${a.baseValue}${desc}`);
+      else if (a.type === '防御') lines.push(`  · 防御 ${a.baseValue}${desc}`);
+      else lines.push(`  · 技能 ${a.baseValue}${desc}`);
+    }
+  });
+  return lines;
+}
+
+/**
+ * 列出实战机制（trait + archetype 等"phases.actions 之外的修正"）
+ */
+function describeTraits(e: EnemyConfig): string[] {
+  const lines: string[] = [];
+  const a = e.archetype;
+
+  if (e.combatType === 'warrior') {
+    if (a === 'paladin') {
+      lines.push('· paladin：偶数回合自动改为防御');
+      lines.push('· 攻击伤害 ×1.2（不积血怒）');
+    } else if (a === 'striker') {
+      lines.push('· striker：HP < 70% 后攻击 ×1.5');
+    } else if (a === 'berserker') {
+      lines.push('· berserker：受到伤害后【血怒】+1 层（每层 +40% 攻击，最高 ×2.0）');
+    } else {
+      lines.push('· 受到伤害后【血怒】+1 层（每层 +25% 攻击，最高 ×2.0）');
+    }
+  } else if (e.combatType === 'guardian') {
+    if (a === 'bulwark') {
+      lines.push('· bulwark：防御获得双倍护甲，但不积怒气');
+    } else {
+      lines.push('· 防御后【守护怒气】+1 层（每层让下次攻击 +60%，最高 ×2.8 单击）');
+      lines.push('· 攻击后怒气清零');
+    }
+  } else if (e.combatType === 'ranger') {
+    lines.push('· 每回合主攻 + 一次追击；每攻击 attackCount +2 让后续伤害递增');
+    if (a === 'marksman') lines.push('· marksman：attackCount 翻倍 + 单发 ×1.3');
+    if (a === 'trapper') lines.push('· trapper：每次攻击附带 1 层剧毒');
+  } else if (e.combatType === 'caster') {
+    lines.push('· 不直接造成攻击伤害');
+    if (a === 'pyromancer') lines.push('· pyromancer：DOT 放大 ×1.5/层（封顶 ×2.5）');
+    else if (a === 'toxicologist') lines.push('· toxicologist：DOT 放大 ×1.4/层（封顶 ×2.5）');
+    else if (a === 'cursemaster') lines.push('· cursemaster：始终释放诅咒（毒+虚弱）');
+    else lines.push('· DOT 放大 ×1.4/层（封顶 ×2.5）');
+  } else if (e.combatType === 'priest') {
+    lines.push('· 不直接造成攻击伤害');
+    if (a === 'inquisitor') lines.push('· inquisitor：跳过治疗/祝福，50% 概率双 debuff（虚弱 + 易伤）');
+    else lines.push('· 优先级：治疗友军 → 自疗 → 护甲祝福 → debuff');
+    lines.push('· 每 2 回合【圣怒】+1 层（提升 debuff 持续 / 护甲祝福 / 治疗量）');
   }
+
   return lines;
 }
 
@@ -84,32 +136,16 @@ function describeEnemy(e: EnemyConfig): { sections: { title: string; lines: stri
     sections.push({ title: '种族特性', lines: [ARCHETYPE_DESC[e.archetype]] });
   }
 
-  // 行为序列（caster/priest 真实行为不依赖 phases，特殊说明）
-  if (e.combatType === 'caster') {
-    sections.push({
-      title: '战斗行为',
-      lines: [
-        '· 法师不打直接攻击伤害',
-        '· 每回合按 archetype 决策施放 毒雾 / 火球 / 诅咒',
-        '· 连续施放同种 DOT 会累积 dotAmplifier 倍率',
-      ],
-    });
-  } else if (e.combatType === 'priest') {
-    sections.push({
-      title: '战斗行为',
-      lines: [
-        '· 牧师不打直接攻击伤害',
-        e.archetype === 'inquisitor'
-          ? '· 跳过治疗 / 祝福，永远对玩家施加 虚弱 + 易伤'
-          : '· 优先级：治疗友军 → 自疗 → 护甲祝福 → 减益玩家',
-        '· 每 2 回合积累 1 层圣怒，提升 debuff 持续 / 护甲 / 治疗量',
-      ],
-    });
-  } else {
-    // warrior / ranger / guardian: 列出配置中的 phase actions
-    const phaseLines: string[] = [];
-    e.phases.forEach((p, i) => phaseLines.push(...describePhase(p, i, e.phases.length)));
-    if (phaseLines.length > 0) sections.push({ title: '战斗行为', lines: phaseLines });
+  // 行为序列（按 phases 配置真实轮播）
+  const phaseLines = describePhases(e);
+  if (phaseLines.length > 0) {
+    sections.push({ title: '战斗行为', lines: phaseLines });
+  }
+
+  // 实战机制（trait/archetype 加成）
+  const traitLines = describeTraits(e);
+  if (traitLines.length > 0) {
+    sections.push({ title: '实战机制', lines: traitLines });
   }
 
   // 召唤

@@ -30,6 +30,14 @@ import { tryWaveTransition } from './enemyWaveTransition';
 import { absorbPlayerDamage, calcMageChantHitPenalty } from './battleHelpers';
 import { tryGainBlockSlot, isWarrior } from './warriorReap';
 import { emitReward } from './rewardEvents';
+import {
+  getDotFromDescription,
+  getControlFromDescription,
+  isArmorBlessDescription,
+  isFlavorOnlyAttack,
+  applyPlayerStatus,
+} from './enemyActionDispatch';
+import { getDotMultiplier as getDotMultiplierForDispatch } from './enemyTraits';
 import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config';
 
 /** 奥术屏障吸收飘字用的 icon，独立一处避免重复 createElement */
@@ -282,32 +290,51 @@ export async function executeEnemyTurn(
       continue;
     }
 
-    // Guardian: 攻防交替+嘲讽；Warrior paladin 也走偶数回合防御
-    let guardianDefended = false;
-    cb.setGame((prev: GameState) => {
-      if (e.combatType === 'guardian' && prev.battleTurn % GUARDIAN_CONFIG.defenseCycle === 0) {
-        guardianDefended = true;
-      } else if (paladinShouldDefendThisTurn(e, prev.battleTurn)) {
-        // [PALADIN 2026-05-09] warrior 子类型 paladin：偶数回合切换为防御
-        guardianDefended = true;
-      }
-      return prev; // 只读判断，不修改状态
-    });
+    // [PATTERN-DRIVEN 2026-05-09] 路线 B：让 enemy.pattern() 真正决定每回合行动
+    //   pattern 函数由 buildEnemy 注入，根据 EnemyConfig.phases.actions 按 battleTurn 轮播。
+    //   旧的"硬编码 combatType 分支"被移除，但保留：
+    //     - guardian/paladin 偶数防御回合的兼容（若 pattern 没指定，按硬编码补 fallback）
+    //     - ranger 主攻 + 追击双段
+    //     - caster/priest 当 description 不在字典里时回退 enemySkills（archetype 决策仍生效）
+    //     - 所有 trait（bloodFury / guardRage / dotAmplifier / holyWrath）累加
+    const turnT = cb.gameRef.current.battleTurn;
+    const action = e.pattern ? e.pattern(turnT, e, cb.gameRef.current) : null;
 
-    if (guardianDefended) {
+    // 派发：'防御' 走防御分支；caster/priest 的"攻击"也视为技能（不直伤）；其他攻击 + 技能各自处理
+    const isPriestOrCaster = e.combatType === 'priest' || e.combatType === 'caster';
+    let dispatchedType: '攻击' | '防御' | '技能' = action?.type || '攻击';
+    if (isPriestOrCaster && dispatchedType === '攻击') {
+      // 配置里 caster/priest 的"攻击 14 亡灵大军" → 视为技能（用 description 走字典 / 否则回退 enemySkills）
+      dispatchedType = '技能';
+    }
+    // [GUARDIAN/PALADIN 2026-05-09] 当 pattern 未要求防御但当前是 guardian/paladin 的"防御回合"时，仍然防御
+    //   这保留了配置以外的攻防交替节奏；如果 pattern 明确写了攻击/技能则按 pattern 走
+    if (dispatchedType === '攻击') {
+      const isGuardianDefendTurn = e.combatType === 'guardian' && turnT % GUARDIAN_CONFIG.defenseCycle === 0;
+      const isPaladinDefendTurn = paladinShouldDefendThisTurn(e, turnT);
+      if (isGuardianDefendTurn || isPaladinDefendTurn) {
+        dispatchedType = '防御';
+      }
+    }
+
+    // ─── 防御分支 ───
+    if (dispatchedType === '防御') {
       await cb.enemyPreAction(e, 'defend');
       cb.setGame((prev: GameState) => {
-        // [BULWARK 2026-05-09] guardian 子类型 bulwark 防御获双倍护甲
-        const shieldVal = Math.floor(e.attackDmg * GUARDIAN_CONFIG.shieldMult * archetypeArmorBoost(e));
+        // 防御值优先用 action.value（已 dmgScale 缩放），否则用 attackDmg × shieldMult fallback
+        const baseShield = action?.value ?? Math.floor(e.attackDmg * GUARDIAN_CONFIG.shieldMult);
+        // [BULWARK 2026-05-09] guardian bulwark 防御获双倍护甲
+        const shieldVal = Math.floor(baseShield * archetypeArmorBoost(e));
         cb.setEnemyEffectForUid(e.uid, 'defend');
         cb.playSound('enemy_defend');
-        // [GUARDIAN_TRAIT 2026-05-09] 防御后累 guardRage：每层下次攻击 +60%（bulwark 已被拦下）
+        // [GUARDIAN_TRAIT 2026-05-09] 防御后累 guardRage（bulwark 内部已拦下）
         cb.setEnemies(prevE => prevE.map(en =>
           en.uid === e.uid
             ? applyGuardRageOnDefend({ ...en, armor: en.armor + shieldVal })
             : en,
         ));
-        cb.addLog(`${e.name} 举盾防御（+${shieldVal}护甲），并嘲讽你！`);
+        const desc = action?.description ? `·${action.description}` : '';
+        cb.addLog(`${e.name} 举盾防御${desc}（+${shieldVal}护甲）！`);
         return { ...prev, targetEnemyUid: e.uid };
       });
       await new Promise(r => setTimeout(r, 300));
@@ -315,55 +342,118 @@ export async function executeEnemyTurn(
       continue;
     }
 
-    // Priest: 治疗→自疗→增益→减益
-    if (e.combatType === 'priest') {
-      await cb.enemyPreAction(e, 'heal');
-      cb.setEnemyEffectForUid(e.uid, 'skill');
-      cb.playSound('enemy_skill');
-      // Bug-22: 使用最新敌人状态选择治疗目标（currentEnemies快照可能过时）
-      const freshEnemies = cb.enemiesRef.current;
-      const freshSelf = freshEnemies.find(en => en.uid === e.uid) || e;
-      const allies = freshEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
-      const sr = executePriestSkill(freshSelf, allies, cb.gameRef.current);
-      for (const [uid, updates] of sr.enemyUpdates) {
-        cb.setEnemies(prev => prev.map(en => en.uid === uid ? { ...en, ...updates } : en));
+    // ─── 技能分支 ───
+    if (dispatchedType === '技能') {
+      const desc = action?.description;
+      const dotType = getDotFromDescription(desc);
+      const ctlType = getControlFromDescription(desc);
+      const isFlavorAttack = isFlavorOnlyAttack(desc);
+
+      // priest 的"护甲祝福" / 任意 description 进字典 → 直接派发；否则回退 enemySkills
+      const handledByDispatch = !!(dotType || ctlType || isArmorBlessDescription(desc));
+
+      if (handledByDispatch) {
+        await cb.enemyPreAction(e, 'skill');
+        cb.setEnemyEffectForUid(e.uid, 'skill');
+        cb.playSound('enemy_skill');
+
+        // 调整数值：caster 走 dotAmplifier 倍率
+        let val = action?.value ?? 1;
+        if (e.combatType === 'caster' && dotType) {
+          const ampMul = getDotMultiplierForDispatch(e);
+          val = Math.max(1, Math.floor(val * ampMul));
+        }
+        // priest 的护甲祝福 / debuff 受 holyWrath 加成
+        const wrath = e.combatType === 'priest' ? (e.holyWrath || 0) : 0;
+
+        if (dotType) {
+          cb.setGame(prev => ({
+            ...prev,
+            statuses: applyPlayerStatus(prev, dotType, val, dotType === 'burn' ? 3 : undefined),
+          }));
+          // 累 dotAmplifier（caster only）
+          if (e.combatType === 'caster') {
+            cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? bumpDotAmplifier(en) : en));
+          }
+          const label = dotType === 'burn' ? '灼烧' : '毒素';
+          const color = dotType === 'burn' ? 'text-orange-400' : 'text-emerald-400';
+          cb.addFloatingText(`${label}+${val}`, color, undefined, 'player');
+          cb.addLog(`${e.name} 施放【${desc}】，对你施加 ${val} 层${label}！`);
+        } else if (ctlType) {
+          const baseDur = ctlType === 'freeze' ? 1 : (ctlType === 'weak' ? 2 : 2);
+          const dur = baseDur + wrath;
+          cb.setGame(prev => ({
+            ...prev,
+            statuses: applyPlayerStatus(prev, ctlType, 1, dur),
+          }));
+          const label = ctlType === 'freeze' ? '冻结' : ctlType === 'weak' ? '虚弱' : '易伤';
+          const color = ctlType === 'freeze' ? 'text-cyan-400' : ctlType === 'weak' ? 'text-purple-400' : 'text-orange-400';
+          cb.addFloatingText(`${label}!`, color, undefined, 'player');
+          cb.addLog(`${e.name} 施放【${desc}】，让你陷入${label}（${dur}回合）！`);
+        } else if (isArmorBlessDescription(desc)) {
+          // priest 给随机友军（含自己）加护甲
+          const freshEnemies = cb.enemiesRef.current;
+          const candidates = freshEnemies.filter(en => en.hp > 0);
+          if (candidates.length > 0) {
+            const target = candidates[Math.floor(Math.random() * candidates.length)];
+            const armorVal = Math.floor((action?.value ?? 5) * (1 + 0.3 * wrath));
+            cb.setEnemies(prev => prev.map(en => en.uid === target.uid ? { ...en, armor: en.armor + armorVal } : en));
+            cb.addFloatingText(`护甲+${armorVal}`, 'text-cyan-400', shieldIcon(), 'enemy');
+            cb.addLog(`${e.name} 为 ${target.name} 施加护甲祝福（+${armorVal}护甲${wrath > 0 ? `，圣怒×${wrath}` : ''}）！`);
+          }
+        }
+        await new Promise(r => setTimeout(r, 300));
+        cb.setEnemyEffectForUid(e.uid, null);
+        continue;
       }
-      cb.setGame(prev => ({ ...prev, statuses: sr.gameUpdates.statuses(prev.statuses) }));
-      if (sr.gameUpdates.ownedDice) {
-        cb.setGame(prev => ({
-          ...prev,
-          ownedDice: sr.gameUpdates.ownedDice!,
-          diceBag: sr.gameUpdates.diceBag!,
-        }));
+
+      // description 不在字典 / 风味攻击 → 回退到原 enemySkills（archetype 决策）/ 直接走攻击分支
+      if (isFlavorAttack || isPriestOrCaster) {
+        // caster/priest 回退到 archetype 决策
+        if (e.combatType === 'priest') {
+          await cb.enemyPreAction(e, 'heal');
+          cb.setEnemyEffectForUid(e.uid, 'skill');
+          cb.playSound('enemy_skill');
+          const freshEnemies = cb.enemiesRef.current;
+          const freshSelf = freshEnemies.find(en => en.uid === e.uid) || e;
+          const allies = freshEnemies.filter(en => en.hp > 0 && en.uid !== e.uid);
+          const sr = executePriestSkill(freshSelf, allies, cb.gameRef.current);
+          for (const [uid, updates] of sr.enemyUpdates) {
+            cb.setEnemies(prev => prev.map(en => en.uid === uid ? { ...en, ...updates } : en));
+          }
+          cb.setGame(prev => ({ ...prev, statuses: sr.gameUpdates.statuses(prev.statuses) }));
+          if (sr.gameUpdates.ownedDice) {
+            cb.setGame(prev => ({ ...prev, ownedDice: sr.gameUpdates.ownedDice!, diceBag: sr.gameUpdates.diceBag! }));
+          }
+          for (const log of sr.logs) cb.addLog(log);
+          for (const ft of sr.floats) cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
+          if (sr.sound) cb.playSound(sr.sound);
+          await new Promise(r => setTimeout(r, 300));
+          cb.setEnemyEffectForUid(e.uid, null);
+          continue;
+        }
+        if (e.combatType === 'caster') {
+          await cb.enemyPreAction(e, 'skill');
+          cb.setEnemyEffectForUid(e.uid, 'skill');
+          cb.playSound('enemy_skill');
+          const sr = executeCasterSkill(e);
+          cb.setGame(prev => ({ ...prev, statuses: sr.updateStatuses(prev.statuses) }));
+          cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? bumpDotAmplifier(en) : en));
+          for (const log of sr.logs) cb.addLog(log);
+          for (const ft of sr.floats) {
+            if (ft.delay) setTimeout(() => cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy'), ft.delay);
+            else cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
+          }
+          await new Promise(r => setTimeout(r, 300));
+          cb.setEnemyEffectForUid(e.uid, null);
+          continue;
+        }
+        // warrior/guardian/ranger 的"风味技能"（如 isFlavorAttack=true）→ 当攻击处理（落到下面攻击分支）
+        dispatchedType = '攻击';
       }
-      for (const log of sr.logs) cb.addLog(log);
-      for (const ft of sr.floats) cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
-      if (sr.sound) cb.playSound(sr.sound);
-      await new Promise(r => setTimeout(r, 300));
-      cb.setEnemyEffectForUid(e.uid, null);
-      continue;
     }
 
-    // Caster: DoT专属
-    if (e.combatType === 'caster') {
-      await cb.enemyPreAction(e, 'skill');
-      cb.setEnemyEffectForUid(e.uid, 'skill');
-      cb.playSound('enemy_skill');
-      const sr = executeCasterSkill(e);
-      cb.setGame(prev => ({ ...prev, statuses: sr.updateStatuses(prev.statuses) }));
-      // [CASTER_TRAIT 2026-05-09] 施法成功后累 dotAmplifier，下次 DOT 会再 +1
-      cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? bumpDotAmplifier(en) : en));
-      for (const log of sr.logs) cb.addLog(log);
-      for (const ft of sr.floats) {
-        if (ft.delay) setTimeout(() => cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy'), ft.delay);
-        else cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy');
-      }
-      await new Promise(r => setTimeout(r, 300));
-      cb.setEnemyEffectForUid(e.uid, null);
-      continue;
-    }
-
-    // Warrior/Ranger/其他: 直接攻击
+    // ─── 攻击分支（warrior/guardian/ranger 默认或 dispatchedType==='攻击'） ───
     await cb.enemyPreAction(e, 'attack');
     cb.setEnemyEffectForUid(e.uid, 'attack');
     cb.setScreenShake(true);
@@ -377,10 +467,19 @@ export async function executeEnemyTurn(
       currentAttackCount = newCount;
     }
 
+    // 攻击伤害基础值：优先用 action.value（已 dmgScale 缩放，配置里 phases 写多少就打多少）
+    //   action.value 的 floor(baseValue × dmgScale) 已在 buildPattern 里完成
+    //   再经 trait/archetype/状态修正（getEffectiveAttackDmg 内部）
+    //   旧路径用 enemy.attackDmg → 改为 action.value 时同样让 trait 起效（覆盖 enemy.attackDmg 给 calc）
+    const overrideAttackDmg = (action && action.type === '攻击' && typeof action.value === 'number') ? action.value : undefined;
+    const flavorDesc = action?.description;
+
     let chantPenaltyMain = 0;
-    let blockGained = 0;  // [WARRIOR-REAP 2026-05-09] 本次攻击单元（主攻+追击）累计的完美防御次数，循环末尾合并飘一次
+    let blockGained = 0;  // 本次攻击单元（主攻+追击）累计的完美防御次数
     cb.setGame((prev: GameState) => {
-      const damage = getEffectiveAttackDmg(e, prev.statuses, {
+      // 用 action.value 临时覆盖 attackDmg（trait/archetype 修正在 getEffectiveAttackDmg 内）
+      const enemyForCalc = overrideAttackDmg !== undefined ? { ...e, attackDmg: overrideAttackDmg } : e;
+      const damage = getEffectiveAttackDmg(enemyForCalc, prev.statuses, {
         attackCount: currentAttackCount,
         isSlowed,
         arcaneBackfire: prev.arcaneBackfire,
@@ -396,7 +495,8 @@ export async function executeEnemyTurn(
       if (absorb.absorbedByShield === 0 && absorb.absorbedByArmor === 0 && absorb.hpDamage === 0) cb.addFloatingText('0', 'text-gray-400', undefined, 'player');
 
       cb.setPlayerEffect('flash');
-      cb.addLog(`${e.name} 攻击造成 ${damage} 伤害！`);
+      const flavorTag = flavorDesc ? `【${flavorDesc}】` : '';
+      cb.addLog(`${e.name} ${flavorTag}攻击造成 ${damage} 伤害！`);
       cb.playSound('enemy');
 
       const delayedQuotes = tryAttackTaunt(e, damage, cb);
@@ -404,7 +504,7 @@ export async function executeEnemyTurn(
         cb.scheduleDelayedQuote(dq);
       }
 
-      // 吟唱受击罚（用入射 damage，屏障吸收也算；累加不可净化的 arcaneBackfire）
+      // 吟唱受击罚
       const penalty = calcMageChantHitPenalty(prev.playerClass, prev.chargeStacks, prev.mageChantHitCount, damage);
       let newHitCount = prev.mageChantHitCount;
       let newBackfire = prev.arcaneBackfire || 0;
@@ -420,13 +520,13 @@ export async function executeEnemyTurn(
         }
         return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
       }
-      // [WARRIOR-REAP 2026-05-09] 完美防御：直接攻击 incoming>0 且护甲全额吸收（hpDamage=0 且 absorbedByShield=0）
+      // 完美防御
       let blockUpd: Partial<GameState> = {};
       if (isWarrior(prev) && damage > 0 && absorb.absorbedByArmor === damage && absorb.hpDamage === 0 && absorb.absorbedByShield === 0) {
         const r = tryGainBlockSlot(prev);
         if (r.changed) {
           blockUpd = r.gameUpdate;
-          blockGained += 1;  // 不在此处飘字，循环末统一飘合并 +N
+          blockGained += 1;
         }
       }
       return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd };
@@ -466,7 +566,8 @@ export async function executeEnemyTurn(
       let chantPenaltyR = 0;
       let loggedSecondHit = 0;
       cb.setGame((prev: GameState) => {
-        const secondHit = getRangerFollowUpDmg(e, hitCount, prev.arcaneBackfire);
+        const enemyForCalcR = overrideAttackDmg !== undefined ? { ...e, attackDmg: overrideAttackDmg } : e;
+        const secondHit = getRangerFollowUpDmg(enemyForCalcR, hitCount, prev.arcaneBackfire);
         loggedSecondHit = secondHit;
         const absorb2 = absorbPlayerDamage(secondHit, prev.chantShield || 0, prev.armor, false);
         const newHp = Math.max(0, prev.hp - absorb2.hpDamage);
@@ -491,13 +592,12 @@ export async function executeEnemyTurn(
           }
           return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
         }
-        // [WARRIOR-REAP 2026-05-09] 追击的完美防御判定（同主分支）
         let blockUpd2: Partial<GameState> = {};
         if (isWarrior(prev) && secondHit > 0 && absorb2.absorbedByArmor === secondHit && absorb2.hpDamage === 0 && absorb2.absorbedByShield === 0) {
           const r = tryGainBlockSlot(prev);
           if (r.changed) {
             blockUpd2 = r.gameUpdate;
-            blockGained += 1;  // 在循环末统一飘
+            blockGained += 1;
           }
         }
         return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd2 };
@@ -507,12 +607,12 @@ export async function executeEnemyTurn(
       cb.playSound('enemy');
     }
 
-    // [GUARDIAN_TRAIT 2026-05-09] 攻击后清空 guardRage（爆发已经体现在 damage 里）
+    // 攻击后清空 guardRage
     if (e.combatType === 'guardian') {
       cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? consumeGuardRageOnAttack(en) : en));
     }
 
-    // [TRAPPER 2026-05-09] ranger 子类型 trapper：攻击附带 1 层剧毒
+    // [TRAPPER] ranger trapper：攻击附带 1 层剧毒
     if (e.combatType === 'ranger' && e.archetype === 'trapper') {
       cb.setGame(prev => {
         const existing = prev.statuses.find(s => s.type === 'poison');
@@ -524,7 +624,7 @@ export async function executeEnemyTurn(
       cb.addFloatingText('毒素+1', 'text-emerald-400', undefined, 'player');
     }
 
-    // [WARRIOR-REAP 2026-05-09] 完美防御本次攻击合并飘字（含主攻+追击的累计）
+    // 完美防御本次攻击合并飘字（含主攻+追击的累计）
     if (blockGained > 0) {
       cb.addFloatingText(`完美防御: +${blockGained}`, REWARD_COLOR, cardsIcon(), 'player');
       emitReward('card', blockGained);
@@ -535,6 +635,7 @@ export async function executeEnemyTurn(
     cb.setEnemyEffectForUid(e.uid, null);
     cb.setPlayerEffect(null);
   }
+
 
   // 5. 精英/Boss：塞废骰子
   const gameForEliteDice = cb.gameRef.current;
