@@ -1,3 +1,5 @@
+// [RULES-B2-EXEMPT] 纯数据配置文件：5 章 × 每章 ~10 只小怪的 EnemyConfig + quotes 池，
+// 文件大小随敌人数量线性增长，拆分反而破坏"一章一段"的可读性。
 /**
  * enemyNormal.ts - 5章普通敌人配置
  *
@@ -98,6 +100,94 @@ export const ch1_normals: EnemyConfig[] = [
       attack: ['狼牙！', '月光之噬！'],
       hurt: ['嗷！', '这……不可能……'],
       lowHp: ['月光……给我力量……'],
+    },
+  },
+  // [CH1-EXPANSION 2026-05-09] 下面 5 只为章1每职业 +1 扩充：
+  {
+    id: 'forest_bone_reaver', name: '骸骨狂战', emoji: '', chapter: 1,
+    baseHp: 32, baseDmg: 11, category: 'normal', combatType: 'warrior',
+    drops: { gold: 22, relic: false },
+    phases: [{ actions: [
+      { type: '攻击', baseValue: 11 },
+      { type: '攻击', baseValue: 14, description: '狂暴劈砍' },
+      { type: '防御', baseValue: 4 },
+    ]}],
+    quotes: {
+      enter: ['骨刃——饥渴已久！', '（咔咔咔骨节作响）'],
+      death: ['散架……了……', '骨头归……尘土……', '风干的骨头，终究要散。'],
+      attack: ['劈！', '斩！', '碾碎你！'],
+      hurt: ['咔！', '骨裂……也算伤？', '皮外伤。'],
+      lowHp: ['骨髓……最后一滴，献给这场厮杀！'],
+    },
+  },
+  {
+    id: 'forest_poison_sprite', name: '毒雾林精', emoji: '', chapter: 1,
+    baseHp: 16, baseDmg: 5, category: 'normal', combatType: 'ranger',
+    drops: { gold: 22, relic: false },
+    phases: [{ actions: [
+      { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
+      { type: '攻击', baseValue: 5 },
+      { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+    ]}],
+    quotes: {
+      enter: ['（雾气弥漫）', '吸一口……就够了。'],
+      death: ['雾……散了……', '回归根须……', '下一阵风，我还会来。'],
+      attack: ['吐毒！', '雾刺！', '呼——'],
+      hurt: ['呃……', '叶片被撕了？'],
+      lowHp: ['最后一口毒雾——全吐出来！'],
+    },
+  },
+  {
+    id: 'forest_moss_golem', name: '苔岩泥像', emoji: '', chapter: 1,
+    baseHp: 48, baseDmg: 6, category: 'normal', combatType: 'guardian',
+    drops: { gold: 22, relic: false },
+    phases: [{ actions: [
+      { type: '防御', baseValue: 10 },
+      { type: '攻击', baseValue: 6 },
+      { type: '防御', baseValue: 8 },
+      { type: '攻击', baseValue: 9, description: '石拳' },
+    ]}],
+    quotes: {
+      enter: ['……（沉重的脚步）', '土……吞噬入侵者。'],
+      death: ['碎……', '归于土……', '（轰然倒塌）'],
+      attack: ['砸！', '碾！'],
+      hurt: ['……（岩石裂缝）', '一点小伤。'],
+      lowHp: ['最后的岩石……也要还击！'],
+    },
+  },
+  {
+    id: 'forest_wraith_cultist', name: '幽冥诅祝', emoji: '', chapter: 1,
+    baseHp: 18, baseDmg: 7, category: 'normal', combatType: 'caster',
+    drops: { gold: 22, relic: false },
+    phases: [{ actions: [
+      { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+      { type: '攻击', baseValue: 7 },
+      { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+    ]}],
+    quotes: {
+      enter: ['诅咒……降临！', '（低声吟诵）'],
+      death: ['咒文……断了……', '回归虚无……', '下一次仪式……我还会被召唤……'],
+      attack: ['诅咒！', '幽冥之击！', '灵魂剥离！'],
+      hurt: ['啊！', '仪式……被打断……'],
+      lowHp: ['黑暗……收我为仆吧——！'],
+    },
+  },
+  {
+    id: 'forest_old_willow', name: '老槐祭司', emoji: '', chapter: 1,
+    baseHp: 22, baseDmg: 6, category: 'normal', combatType: 'priest',
+    drops: { gold: 22, relic: false },
+    phases: [{ actions: [
+      { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+      { type: '防御', baseValue: 6 },
+      { type: '技能', baseValue: 1, description: '易伤', scalable: false },
+      { type: '攻击', baseValue: 6 },
+    ]}],
+    quotes: {
+      enter: ['孩儿们，饮下我的树液……', '古老的森林，借我一分力量。'],
+      death: ['枝叶……枯萎……', '根须……缩回……', '四季终究会再循环……'],
+      attack: ['树液灌注！', '藤鞭！'],
+      hurt: ['树皮……脱落……', '一点小伤不要紧。'],
+      lowHp: ['最后一片叶子——化作诅咒！'],
     },
   },
 ];

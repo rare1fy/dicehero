@@ -47,7 +47,7 @@ export function useBattleCombat(
     setShuffleAnimating, setDiceDrawAnim,
     setEnemyEffectForUid,
     setEnemyEffects, setDyingEnemies,
-    setEnemyQuotes, setEnemyQuotedLowHp,
+    setEnemyQuotes, setEnemyQuotedLowHp, setEnemyQuotedPhase2,
     setScreenShake,
     setHpGained, setArmorGained, setPlayerEffect,
     setBossEntrance, setWaveAnnouncement, setHandLeftThrow,
@@ -55,7 +55,7 @@ export function useBattleCombat(
     setShowRelicPanel, setShowDamageOverlay, setFlashingRelicIds,
     addLog, addToast, addFloatingText,
     showEnemyQuote, getEnemyQuotes, pickQuote,
-    enemyQuotedLowHp,
+    enemyQuotedLowHp, enemyQuotedPhase2,
   } = state;
 
   const { rollAllDice } = lifecycle;
@@ -245,6 +245,7 @@ export function useBattleCombat(
       playsPerEnemyRef,
       setEnemies, setGame, setArmorGained, setHpGained, setPlayerEffect,
       setEnemyEffectForUid, enemyQuotedLowHp, setEnemyQuotedLowHp,
+      enemyQuotedPhase2, setEnemyQuotedPhase2,
       addFloatingText, playSound, showEnemyQuote, getEnemyQuotes, pickQuote,
       setScreenShake,
     });

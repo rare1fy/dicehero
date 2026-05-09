@@ -53,6 +53,25 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
       lowHp: ['月光……赐予我……最后的狂暴！'],
     },
   },
+  // [CH1-EXPANSION 2026-05-09] 章1 精英 +1 (ranger 缺口)
+  {
+    id: 'elite_phantom_hunter', name: '魅影猎手', emoji: '', chapter: 1,
+    baseHp: 72, baseDmg: 12, category: 'elite', combatType: 'ranger',
+    drops: { gold: 50, relic: true, rerollReward: 2 },
+    phases: [{ actions: [
+      { type: '攻击', baseValue: 12 },
+      { type: '攻击', baseValue: 10, description: '穿林箭' },
+      { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+      { type: '攻击', baseValue: 14, description: '致命追击' },
+    ]}],
+    quotes: {
+      enter: ['你进入了我的猎场。', '（弓弦轻响）', '影子替我锁定了你。'],
+      death: ['箭袋……空了……', '一箭之差……我的狩猎……', '下一次……我会先瞄准喉咙……'],
+      attack: ['穿林箭！', '影刺！', '咻——'],
+      hurt: ['擦伤罢了。', '距离还不够近。', '我低估了你。'],
+      lowHp: ['最后一支箭——必须命中要害。'],
+    },
+  },
   // 章2
   {
     id: 'elite_frost_wyrm', name: '霜龙幼崽', emoji: '', chapter: 2,
@@ -234,7 +253,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章1 中Boss
   {
     id: 'boss_lich_forest', name: '枯骨巫妖', emoji: '', chapter: 1,
-    baseHp: 150, baseDmg: 10, category: 'boss', combatType: 'caster',
+    baseHp: 150, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -287,10 +306,81 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
       ],
     },
   },
+  // [CH1-EXPANSION 2026-05-09] 章1 中BOSS +2
+  {
+    id: 'boss_root_colossus', name: '根须巨像', emoji: '', chapter: 1,
+    baseHp: 170, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'guardian',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '攻击', baseValue: 14, description: '根须重拳' },
+        { type: '防御', baseValue: 24 },
+        { type: '攻击', baseValue: 12 },
+        { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+      ]},
+      { actions: [
+        { type: '防御', baseValue: 14 },
+        { type: '攻击', baseValue: 10 },
+        { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '森林把你交给了我——这片土地上，每一块石头都记得我的名字。',
+        '从树王的根系里生长出来，就是为了处理你们这样的访客。',
+        '你踏的每一步泥土，都会在我脚下凝成岩石。',
+      ],
+      dispatch: [
+        '泥像们，起。把他缠住——我走一步，泥土就长一尺。',
+        '根须卫士——上前。我很久没亲自挥拳了。',
+        '岩裂巨虫，出动。先让他在地里挣扎片刻。',
+      ],
+      enter: ['森林把你交给了我——这片土地上，每一块石头都记得我的名字。', '泥像们，起。把他缠住——我走一步，泥土就长一尺。'],
+      death: ['根系……断开……', '回归大地……养育下一代……', '土壤……会再次凝聚……', '这场战斗……滋养了森林……', '倒下的是我……活下来的是根……'],
+      attack: ['根须重拳！', '大地摇动！', '岩裂！'],
+      hurt: ['表皮裂开——里面还是石头。', '一层剥落，十层依旧。', '小伤。'],
+      lowHp: ['根须最深处——释放全部力量！', '大地之心——为我加压！', '和这片森林一起压碎他！'],
+    },
+  },
+  {
+    id: 'boss_coven_matriarch', name: '魇森巫母', emoji: '', chapter: 1,
+    baseHp: 145, baseDmg: 9, category: 'boss', bossRank: 'mid', combatType: 'caster',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+        { type: '攻击', baseValue: 12, description: '诅咒爆发' },
+        { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
+        { type: '防御', baseValue: 12 },
+      ]},
+      { actions: [
+        { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 9 },
+        { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '我养育了这片森林里所有的毒草，也养育了每一个诅咒。',
+        '你闻到的每一缕雾气，都是我的亲生孩子。',
+        '三百年前，我把第一个闯入者织进了我的丝网。今晚——轮到你了。',
+      ],
+      dispatch: [
+        '女儿们——起舞。让他看看诅咒真正的模样。',
+        '我的爪牙早已饥渴——先给他们一点开胃菜。',
+        '我的指甲不屑沾这种血。姐妹们，你们上。',
+      ],
+      enter: ['我养育了这片森林里所有的毒草，也养育了每一个诅咒。', '女儿们——起舞。让他看看诅咒真正的模样。'],
+      death: ['诅咒……反噬了我自己……', '（咳出墨绿色的烟）', '女儿们……记住这个名字……', '丝网……断了……', '我会在毒雾里等你……下次相见……'],
+      attack: ['诅咒爆发！', '毒瘴！', '千丝缠绕！'],
+      hurt: ['扰我施咒……代价不小。', '仪式服破了一角——无妨。', '一点皮肉伤。'],
+      lowHp: ['全部的毒素——融入最后一击！', '诅咒的精华——凝成一刀！', '我与森林同归于尽也无所谓！'],
+    },
+  },
   // 章1 终Boss
   {
     id: 'boss_ancient_treant', name: '远古树王', emoji: '', chapter: 1,
-    baseHp: 300, baseDmg: 15, category: 'boss', combatType: 'guardian',
+    baseHp: 300, baseDmg: 15, category: 'boss', bossRank: 'final', combatType: 'guardian',
     drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
@@ -334,6 +424,11 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '每一刀，我都会记下来。',
         '你的剑锋……还不够利。',
       ],
+      phase2_taunt: [
+        '划痕？你以为能砍倒我？——下一刀你会记得更深。',
+        '这点刀伤，我千年前就开始愈合了。',
+        '你激怒了我。森林会把你困在此刻，直到你耗尽。',
+      ],
       lowHp: [
         '大地啊——赐予我最后的力量！',
         '千年巨木，岂会倒于你手！',
@@ -344,7 +439,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章2 中Boss
   {
     id: 'boss_frost_queen', name: '霜寒女王', emoji: '', chapter: 2,
-    baseHp: 160, baseDmg: 10, category: 'boss', combatType: 'caster',
+    baseHp: 160, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -400,7 +495,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章2 终Boss
   {
     id: 'boss_frost_lich', name: '霜之巫妖王', emoji: '', chapter: 2,
-    baseHp: 320, baseDmg: 15, category: 'boss', combatType: 'warrior',
+    baseHp: 320, baseDmg: 15, category: 'boss', bossRank: 'final', combatType: 'warrior',
     drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
@@ -444,6 +539,11 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '我活了千年，可不止见过你这种英雄。',
         '想伤本王？再练三百年。',
       ],
+      phase2_taunt: [
+        '暖风……居然划破了我的霜甲？有意思。',
+        '本王千年没出过剑。今天，为了你，破例。',
+        '你让我流了血——那寒冬就要翻倍偿还。',
+      ],
       lowHp: [
         '所有人——都将臣服于寒冰王座！',
         '死亡，并不是终结！',
@@ -454,7 +554,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章3 中Boss
   {
     id: 'boss_ragnaros', name: '炎魔之王', emoji: '', chapter: 3,
-    baseHp: 200, baseDmg: 12, category: 'boss', combatType: 'warrior',
+    baseHp: 200, baseDmg: 12, category: 'boss', bossRank: 'mid', combatType: 'warrior',
     drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -508,7 +608,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章3 终Boss
   {
     id: 'boss_deathwing', name: '熔火死翼', emoji: '', chapter: 3,
-    baseHp: 380, baseDmg: 16, category: 'boss', combatType: 'caster',
+    baseHp: 380, baseDmg: 16, category: 'boss', bossRank: 'final', combatType: 'caster',
     drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
@@ -552,6 +652,11 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '一片鳞片下，是百年的厚甲。',
         '别得意——下一击我会让你后悔。',
       ],
+      phase2_taunt: [
+        '你……竟然能在我翼下留下伤痕？',
+        '鳞片掉一片不算什么——真正的灾变还没开始。',
+        '小虫子，你激怒了一条古龙。准备好尖叫吧。',
+      ],
       lowHp: [
         '即使我倒下——世界也已面目全非！',
         '用我的血，灌溉这片焦土！',
@@ -562,7 +667,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章4 中Boss
   {
     id: 'boss_archimonde', name: '深渊领主', emoji: '', chapter: 4,
-    baseHp: 200, baseDmg: 11, category: 'boss', combatType: 'caster',
+    baseHp: 200, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -618,7 +723,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章4 终Boss
   {
     id: 'boss_kiljaeden', name: '暗影之王', emoji: '', chapter: 4,
-    baseHp: 380, baseDmg: 16, category: 'boss', combatType: 'caster',
+    baseHp: 380, baseDmg: 16, category: 'boss', bossRank: 'final', combatType: 'caster',
     drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
@@ -662,6 +767,11 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '剧本里写过这一刀。我没说错台词。',
         '虚空允许你伤我一次——下一次，没有。',
       ],
+      phase2_taunt: [
+        '剧本……出现了偏差？这页我没写过。',
+        '有趣。你打破了第一幕的预设。第二幕会更黑。',
+        '连幻影都伤到我了——这局面，我自己都好奇结局。',
+      ],
       lowHp: [
         '用虚空的全部力量——毁灭这个世界！',
         '你走进的，是更深的陷阱！',
@@ -672,7 +782,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章5 中Boss
   {
     id: 'boss_titan_watcher', name: '泰坦看守者', emoji: '', chapter: 5,
-    baseHp: 200, baseDmg: 12, category: 'boss', combatType: 'guardian',
+    baseHp: 200, baseDmg: 12, category: 'boss', bossRank: 'mid', combatType: 'guardian',
     drops: { gold: 60, relic: true },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -726,7 +836,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
   // 章5 终Boss
   {
     id: 'boss_eternal_lord', name: '永恒主宰', emoji: '', chapter: 5,
-    baseHp: 480, baseDmg: 18, category: 'boss', combatType: 'caster',
+    baseHp: 480, baseDmg: 18, category: 'boss', bossRank: 'final', combatType: 'caster',
     drops: { gold: 0, relic: false },
     phases: [
       { hpThreshold: 0.5, actions: [
@@ -769,6 +879,11 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '我活过千万纪元，从未被这样冒犯。',
         '骰子……竟能伤永恒？',
         '记下这一击——它会成为传说，然后被我抹去。',
+      ],
+      phase2_taunt: [
+        '骰子……真的伤到我了？让我记下这一刻——它很快会被抹去。',
+        '有趣……所有时代里，没人让我走到这一步。',
+        '你让永恒流血了。那我会让你流尽时间。',
       ],
       lowHp: [
         '永恒动摇了——但我绝不会就此终结！终极之光——爆发！',

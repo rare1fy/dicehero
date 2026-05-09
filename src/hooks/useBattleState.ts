@@ -71,6 +71,8 @@ export function useBattleState() {
   // ==================== 敌人台词气泡 ====================
   const [enemyQuotes, setEnemyQuotes] = useState<Record<string, string>>({});
   const [enemyQuotedLowHp, setEnemyQuotedLowHp] = useState<Set<string>>(new Set());
+  /** [2026-05-09] Boss phase2 气泡专用 set（70% 阈值触发一次） */
+  const [enemyQuotedPhase2, setEnemyQuotedPhase2] = useState<Set<string>>(new Set());
 
   const showEnemyQuote = (uid: string, text: string, duration = 2500) => {
     setEnemyQuotes(prev => ({ ...prev, [uid]: text }));
@@ -274,6 +276,7 @@ export function useBattleState() {
     // 敌人台词
     enemyQuotes, setEnemyQuotes,
     enemyQuotedLowHp, setEnemyQuotedLowHp,
+    enemyQuotedPhase2, setEnemyQuotedPhase2,
     showEnemyQuote,
     pickQuote,
     getEnemyQuotes,

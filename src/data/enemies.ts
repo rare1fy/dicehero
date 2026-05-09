@@ -62,15 +62,19 @@ const getElitePool = (chapter: number): EnemyConfig[] => {
   return pool.length > 0 ? pool : ELITE_ENEMIES;
 };
 
-/** 获取指定章节的Boss（中Boss / 终Boss） */
+/** 获取指定章节的Boss（中Boss / 终Boss）
+ *  [2026-05-09] 改用 bossRank 字段显式区分，支持每章多个中 BOSS 随机抽取 */
 const getBossForChapter = (chapter: number, isFinalBoss: boolean): EnemyConfig => {
   const chapterBosses = BOSS_ENEMIES.filter(b => b.chapter === chapter);
-  if (chapterBosses.length >= 2) {
-    // 每章2个Boss: [0]=中Boss(HP200), [1]=终Boss(HP380)
-    return isFinalBoss ? chapterBosses[1] : chapterBosses[0];
+  const target = isFinalBoss ? 'final' : 'mid';
+  const filtered = chapterBosses.filter(b => b.bossRank === target);
+  if (filtered.length > 0) {
+    // 中 BOSS 多个时随机抽一只
+    return filtered[Math.floor(Math.random() * filtered.length)];
   }
+  // 兼容：bossRank 未标注时回退到原索引逻辑
+  if (chapterBosses.length >= 2) return isFinalBoss ? chapterBosses[1] : chapterBosses[0];
   if (chapterBosses.length === 1) return chapterBosses[0];
-  // fallback
   return isFinalBoss ? BOSS_ENEMIES[BOSS_ENEMIES.length - 1] : BOSS_ENEMIES[0];
 };
 
