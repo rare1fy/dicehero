@@ -34,11 +34,20 @@ const ENEMY_CATEGORY_MAP: Record<string, 'normal' | 'elite' | 'boss'> = (() => {
   BOSS_ENEMIES.forEach(e => { m[e.id] = 'boss'; });
   return m;
 })();
+
+// [2026-05-09] BOSS rank 反查：mid（中BOSS）/ final（终BOSS）/ undefined（非 BOSS）
+//   用于在 sprite 外层叠加 aura/光圈/粒子等"BOSS 独特感"特效，区分中BOSS与终BOSS的视觉强度。
+const BOSS_RANK_MAP: Record<string, 'mid' | 'final'> = (() => {
+  const m: Record<string, 'mid' | 'final'> = {};
+  BOSS_ENEMIES.forEach(e => { if (e.bossRank) m[e.id] = e.bossRank; });
+  return m;
+})();
 import { PixelSprite, hasSpriteData } from './PixelSprite';
 import { SettlementOverlay } from './SettlementOverlay';
 import { DamagePreviewCard } from './DamagePreviewCard';
 import { useBattleContext } from '../contexts/BattleContext';
 import { BossTauntScene } from './BossTauntEntrance';
+import { BossAura } from './BossAura';
 import { formatDescription } from '../utils/richText';
 import { renderFloatText } from '../utils/renderFloatText';
 import { ANIMATION_TIMING } from '../config';
@@ -407,6 +416,11 @@ export function EnemyStageView() {
               enemy.combatType === 'priest' ? 'animate-enemy-breathe-priest' :
               'animate-enemy-breathe'
             }`}>
+              {/* [BOSS-AURA 2026-05-09] 中BOSS / 终BOSS sprite 独特光效 + 粒子，按章节配色 */}
+              {(() => {
+                const rank = BOSS_RANK_MAP[enemy.configId];
+                return rank ? <BossAura rank={rank} chapter={game.chapter} /> : null;
+              })()}
               {hasSpriteData(enemy.name) ? <PixelSprite name={enemy.name} size={spriteSize} /> : <PixelSkull size={spriteSize} />}
               {enemy.statuses.some(s => s.type === 'burn') && (
                 <><div className="absolute inset-[-6px] pointer-events-none enemy-debuff-burn" style={{borderRadius:'50%'}} /><div className="absolute inset-[-8px] pointer-events-none enemy-burn-particles">{Array.from({length: 4}).map((_, pi) => (<div key={pi} className="enemy-burn-spark" style={{left: `${20 + Math.random() * 60}%`, animationDelay: `${Math.random() * 1.5}s`}} />))}</div></>

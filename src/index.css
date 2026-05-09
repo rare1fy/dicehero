@@ -4178,3 +4178,63 @@ input[type="range"]::-moz-range-track {
 .animate-player-death-vignette {
   animation: player-death-vignette 1.2s ease-out forwards;
 }
+
+/* === [BOSS-AURA 2026-05-09] BOSS sprite 独特光效与粒子 ===
+ *   .boss-aura-breath  : mid + final 都用，缓慢呼吸的环形光晕（2.4s 周期）
+ *   .boss-aura-core    : 仅 final，内层强光晕（1.8s 周期更紧凑）
+ *   .boss-aura-ring    : 仅 final，旋转光环（4s 一圈，配合脉动）
+ *   .boss-aura-particle: mid 5 粒子 / final 10 粒子，自下而上飘升（每条独立 delay）
+ */
+@keyframes boss-aura-breath {
+  0%, 100% { transform: scale(0.95); opacity: 0.55; }
+  50%      { transform: scale(1.08); opacity: 0.85; }
+}
+.boss-aura-breath {
+  animation: boss-aura-breath 2.4s ease-in-out infinite;
+  filter: blur(1px);
+}
+
+@keyframes boss-aura-core {
+  0%, 100% { transform: scale(0.9); opacity: 0.55; }
+  50%      { transform: scale(1.05); opacity: 0.95; }
+}
+.boss-aura-core {
+  animation: boss-aura-core 1.8s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes boss-aura-ring-spin {
+  0%   { transform: rotate(0deg) scale(1); opacity: 0.7; }
+  50%  { transform: rotate(180deg) scale(1.06); opacity: 1.0; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.7; }
+}
+.boss-aura-ring {
+  animation: boss-aura-ring-spin 4s linear infinite;
+}
+
+@keyframes boss-aura-particle-rise {
+  0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { opacity: 0.85; }
+  100% { transform: translateY(-46px) scale(0.2); opacity: 0; }
+}
+.boss-aura-particle {
+  position: absolute;
+  bottom: 8%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation-name: boss-aura-particle-rise;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+}
+.boss-aura-particle:nth-child(2n) {
+  width: 3px;
+  height: 3px;
+  filter: brightness(1.15);
+}
+.boss-aura-particle:nth-child(3n) {
+  width: 5px;
+  height: 5px;
+  filter: brightness(0.9);
+}
