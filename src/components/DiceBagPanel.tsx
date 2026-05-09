@@ -160,36 +160,46 @@ export const DiceBagPanel: React.FC<DiceBagPanelProps> = ({ ownedDice: _ownedDic
               if (!def) return null;
               const isUp = tooltipPos.dir === 'up';
               return (
-                <motion.div
-                  initial={{ opacity: 0, y: isUp ? 4 : -4, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.15 }}
-                  className="fixed p-2 text-[9px] leading-snug text-center pointer-events-none"
+                <div
+                  className="fixed pointer-events-none"
                   style={{
                     left: tooltipPos.left,
                     top: tooltipPos.top,
+                    // 锚点偏移：水平中心对齐 + 垂直方向贴近骰子
+                    // 必须放在外层静态 div 上，不能放在 motion.div 的 style.transform 里——
+                    // 否则会被 framer-motion 自己生成的 transform（驱动 y/scale 动画）覆盖，
+                    // 导致 tooltip 偏移到骰子右上角而非正上方居中。
                     transform: `translate(-50%, ${isUp ? '-100%' : '0'})`,
-                    width: '160px',
-                    background: 'rgba(12,10,20,0.96)',
-                    border: `2px solid ${RARITY_COLORS[def.rarity]}`,
-                    borderRadius: '3px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.6)',
                     zIndex: 100,
                   }}
                 >
-                  <div className="text-[var(--dungeon-text-dim)] mb-1 font-mono">[{def.faces.join(',')}]</div>
-                  <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2"
+                  <motion.div
+                    initial={{ opacity: 0, y: isUp ? 4 : -4, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.15 }}
+                    className="p-2 text-[9px] leading-snug text-center"
                     style={{
-                      [isUp ? 'bottom' : 'top']: '-6px',
-                      width: 0, height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      [isUp ? 'borderTop' : 'borderBottom']: `6px solid ${RARITY_COLORS[def.rarity]}`,
+                      width: '160px',
+                      background: 'rgba(12,10,20,0.96)',
+                      border: `2px solid ${RARITY_COLORS[def.rarity]}`,
+                      borderRadius: '3px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.6)',
                     }}
-                  />
-                </motion.div>
+                  >
+                    <div className="text-[var(--dungeon-text-dim)] mb-1 font-mono">[{def.faces.join(',')}]</div>
+                    <div className="text-[var(--dungeon-text)]">{formatDescription(def.description)}</div>
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2"
+                      style={{
+                        [isUp ? 'bottom' : 'top']: '-6px',
+                        width: 0, height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        [isUp ? 'borderTop' : 'borderBottom']: `6px solid ${RARITY_COLORS[def.rarity]}`,
+                      }}
+                    />
+                  </motion.div>
+                </div>
               );
             })(), document.body)}
           </motion.div>
