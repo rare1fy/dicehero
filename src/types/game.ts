@@ -103,6 +103,10 @@ export interface GameState {
   currentNode?: number;
   map: MapNode[];
   phase: 'start' | 'classSelect' | 'map' | 'battle' | 'merchant' | 'event' | 'campfire' | 'victory' | 'gameover' | 'loot' | 'skillSelect' | 'diceReward' | 'chapterTransition' | 'treasure';
+  /** [2026-05-09] 玩家死亡过渡中标记：HP 已归 0 但 DeathTransition 动画还在播。
+   *  phase 保持 'battle' 让底层战斗 UI 继续渲染作为过渡背景，避免"硬切 → 手穿帮"。
+   *  动画完成时切 phase='gameover' 并清零此 flag。 */
+  deathPending?: boolean;
   battleTurn: number;
   isEnemyTurn: boolean;
   targetEnemyUid: string | null;  // selected attack target

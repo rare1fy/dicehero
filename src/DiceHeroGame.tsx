@@ -64,19 +64,14 @@ const loadMeta = () => {
 };
 
 /**
- * GameOverWithTransition — 玩家死亡时先播 1.8s 过渡演出（双手抖落 + 黑幕淡入），
- * 然后再显示 GameOverScreen 结算界面。避免"致命一击 → 硬切结算"的生硬体验。
+ * GameOverWithTransition — 旧的"死亡动画"包装。
+ *
+ * [2026-05-09 v3] 死亡动画已迁移到战斗分支顶层（phase 仍为 'battle' 时渲染），
+ *   进入 phase='gameover' 时动画已经结束，直接显示结算界面即可。
+ *   保留组件名是为了兼容老路径；本质上已退化为"直接返回 GameOverScreen"。
  */
 const GameOverWithTransition: React.FC = () => {
-  const [animDone, setAnimDone] = React.useState(false);
-  if (animDone) {
-    return <GameOverScreen />;
-  }
-  return (
-    <div className="fixed inset-0 bg-[var(--dungeon-bg)]">
-      <DeathTransition visible onComplete={() => setAnimDone(true)} />
-    </div>
-  );
+  return <GameOverScreen />;
 };
 
 export default function DiceHeroGame() {
@@ -304,6 +299,13 @@ export default function DiceHeroGame() {
       <DiceGuideModal />
       {/* Global Hand Guide Modal */}
       <HandGuideModal />
+      {/* [2026-05-09 v3] 玩家死亡过渡：deathPending 标记 + phase 仍为 battle 时，
+          在战斗 UI 顶层叠加 DeathTransition；动画完成后才切 phase='gameover'，
+          避免"致命一击 → UI 硬切"的穿帮。 */}
+      <DeathTransition
+        visible={!!game.deathPending}
+        onComplete={() => setGame(prev => ({ ...prev, deathPending: false, phase: 'gameover' }))}
+      />
 </BattleContext.Provider>
 </GameContext.Provider>
   );

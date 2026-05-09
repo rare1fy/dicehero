@@ -314,9 +314,9 @@ export function useBattleCombat(
     await new Promise(r => setTimeout(r, 100));
 
     // [DIAG] 敌人回合结束后的状态
-    // [BUG-FIX-v2] 检查是否已在 enemyAI 内部设置了 gameover（避免重复设置）
-    // TS narrowing 破除：await 后 gameRef.current 可能已被异步修改为 gameover
-    if ((gameRef.current.phase as string) === 'gameover') {
+    // [BUG-FIX-v2] 检查是否已在 enemyAI 内部设置了 deathPending（避免重复处理）
+    // TS narrowing 破除：await 后 gameRef.current 可能已被异步修改
+    if (gameRef.current.deathPending) {
       return;
     }
     if (currentPlayerHp <= 0) {
@@ -327,7 +327,9 @@ export function useBattleCombat(
       await new Promise(r => setTimeout(r, 400));
       setScreenShake(false);
       setPlayerEffect(null);
-      setGame(prev => ({ ...prev, phase: 'gameover' }));
+      // [2026-05-09 v3] 仅标记 deathPending，phase 保持 battle 让战斗 UI 继续渲染，
+      //   DeathTransition 演出完毕后才在 DiceHeroGame 顶层切到 gameover。
+      setGame(prev => ({ ...prev, deathPending: true }));
       return;
     }
 
@@ -377,18 +379,18 @@ export function useBattleCombat(
   }, [enemies, game.phase, game.targetEnemyUid]);
 
   useEffect(() => {
-    // [BUG-FIX-v2] 只在玩家回合才检查 hp<=0 → gameover
-    // 敌人回合期间 hp 可能暂时 <=0（在 setGame 调度中），
-    // 但 enemyAI 内部已经设置了 phase:'gameover'，这里不需要重复处理
-    if (game.phase === 'battle' && !game.isEnemyTurn && game.hp <= 0) {
+    // [BUG-FIX-v2] 只在玩家回合才检查 hp<=0 → 标记 deathPending
+    // [2026-05-09 v3] 不再直接 phase=gameover，改走 deathPending，让 DeathTransition
+    //   演出完毕后 DiceHeroGame 顶层再切 gameover，避免战斗 UI 硬切消失。
+    if (game.phase === 'battle' && !game.isEnemyTurn && game.hp <= 0 && !game.deathPending) {
       playSound('player_death');
       setScreenShake(true);
       setPlayerEffect('death');
       const timerId = setTimeout(() => { setScreenShake(false); setPlayerEffect(null); }, 400);
-      setGame(prev => ({ ...prev, hp: 0, phase: 'gameover' }));
+      setGame(prev => ({ ...prev, hp: 0, deathPending: true }));
       return () => clearTimeout(timerId);
     }
-  }, [game.phase, game.hp, game.isEnemyTurn]);
+  }, [game.phase, game.hp, game.isEnemyTurn, game.deathPending]);
 
   useEffect(() => {
     const unspentDice = dice.filter(d => !d.spent);

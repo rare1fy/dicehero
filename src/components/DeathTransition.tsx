@@ -1,15 +1,14 @@
 /**
- * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v6)
+ * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v7)
  *
- * v6 调整（用户反馈：死亡太突然，要抖 2 拍再下落）：
- *   总时长 1000ms：抖动 420ms + 坠落 300ms + 黑幕 180ms + 缓冲 100ms。
- *   抖动阶段保留在原位（y 不变），先"定格颤抖"2 下节拍感；之后才失重下落。
+ * v7 调整（用户反馈："后面渐黑太久了"）：
+ *   总时长 850ms，压缩黑幕段：抖动 420ms + 坠落 300ms + 黑幕 120ms + 无 hold。
+ *   动画结束后立刻切 GameOverScreen。
  *
- * 时序（总 1000ms）：
- *   1. (0.00s - 0.42s) 双手原地抖动 2 拍（-3→+3→-3→+3→0）
+ * 时序（总 840ms）：
+ *   1. (0.00s - 0.42s) 双手原地抖动 2 拍（-3→+3→-3→+3→0，y 不变）
  *   2. (0.42s - 0.72s) 失重坠落出屏（y: 0 → 320）
- *   3. (0.72s - 0.90s) 黑幕在 0.18s 内 fade 满
- *   4. (0.90s - 1.00s) 黑幕保持，外层切换到 GameOverScreen
+ *   3. (0.72s - 0.84s) 黑幕 120ms 内 fade 满，立刻 onComplete
  */
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
@@ -24,9 +23,9 @@ interface DeathTransitionProps {
 const SHAKE_MS = 420;
 const FALL_MS = 300;
 const HANDS_DURATION_MS = SHAKE_MS + FALL_MS;  // 720
-const FADE_BLACK_MS = 180;
-const HOLD_MS = 100;
-const TOTAL_DURATION_MS = HANDS_DURATION_MS + FADE_BLACK_MS + HOLD_MS;  // 1000
+const FADE_BLACK_MS = 120;
+const HOLD_MS = 0;
+const TOTAL_DURATION_MS = HANDS_DURATION_MS + FADE_BLACK_MS + HOLD_MS;  // 840
 
 const LEFT_BASE_ROT = 15;
 const RIGHT_BASE_ROT = -15;

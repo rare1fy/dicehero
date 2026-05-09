@@ -208,10 +208,10 @@ export async function executeEnemyTurn(
         newHp = prev.hp;
         return { ...prev, hp: newHp, chantShield: absorb.newShield, relics: cb.triggerHourglass(prev.relics), statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
       }
-      return { ...prev, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
+      return { ...prev, hp: 0, chantShield: absorb.newShield, deathPending: true, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
     }
-    if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
-      return { ...prev, phase: 'gameover' as const };
+    if (prev.hp <= 0 && !prev.deathPending) {
+      return { ...prev, deathPending: true };
     }
     return { ...prev, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
   });
@@ -547,7 +547,7 @@ export async function executeEnemyTurn(
         if (cb.hasFatalProtection(prev.relics)) {
           return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, relics: cb.triggerHourglass(prev.relics) };
         }
-        return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
+        return { ...prev, hp: 0, deathPending: true, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
       }
       // 完美防御
       let blockUpd: Partial<GameState> = {};
@@ -620,7 +620,7 @@ export async function executeEnemyTurn(
           if (cb.hasFatalProtection(prev.relics)) {
             return { ...prev, hp: prev.hp, armor: prev.armor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, relics: cb.triggerHourglass(prev.relics) };
           }
-          return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
+          return { ...prev, hp: 0, deathPending: true, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
         }
         let blockUpd2: Partial<GameState> = {};
         if (isWarrior(prev) && secondHit > 0 && absorb2.absorbedByArmor === secondHit && absorb2.hpDamage === 0 && absorb2.absorbedByShield === 0) {
@@ -732,7 +732,7 @@ export async function executeEnemyTurn(
   let returnHp = cb.gameRef.current.hp;
   let chantPenaltyBurn = 0;
   cb.setGame((prev: GameState) => {
-    if (prev.phase === 'gameover') {
+    if (prev.deathPending) {
       returnHp = prev.hp;
       return prev;
     }
@@ -779,11 +779,11 @@ export async function executeEnemyTurn(
         return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: cb.triggerHourglass(relicsAfterCooldown) };
       }
       returnHp = 0;
-      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: relicsAfterCooldown };
+      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, deathPending: true, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: relicsAfterCooldown };
     }
-    if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
+    if (prev.hp <= 0 && !prev.deathPending) {
       returnHp = 0;
-      return { ...prev, battleTurn: nextTurn, phase: 'gameover' as const, isEnemyTurn: false, relics: relicsAfterCooldown };
+      return { ...prev, battleTurn: nextTurn, deathPending: true, isEnemyTurn: false, relics: relicsAfterCooldown };
     }
     returnHp = newHp;
     return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: relicsAfterCooldown };
