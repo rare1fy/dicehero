@@ -14,7 +14,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // 章1
   {
     id: 'elite_necromancer', name: '亡灵巫师', emoji: '', chapter: 1,
-    baseHp: 85, baseDmg: 8, category: 'elite', combatType: 'caster',
+    baseHp: 85, baseDmg: 8, category: 'elite', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     // [SUMMON 2026-05-09] 亡灵巫师每3回合召唤食尸鬼，maxTotal=2
     summons: { minionId: 'forest_ghoul', interval: 3, count: 1, maxTotal: 2, waveCap: 4 },
@@ -41,7 +41,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'elite_alpha_wolf', name: '狼人首领', emoji: '', chapter: 1,
-    baseHp: 100, baseDmg: 11, category: 'elite', combatType: 'warrior',
+    baseHp: 100, baseDmg: 11, category: 'elite', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
@@ -59,7 +59,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // [CH1-EXPANSION 2026-05-09] 章1 精英 +1 (ranger 缺口)
   {
     id: 'elite_phantom_hunter', name: '魅影猎手', emoji: '', chapter: 1,
-    baseHp: 72, baseDmg: 12, category: 'elite', combatType: 'ranger',
+    baseHp: 72, baseDmg: 12, category: 'elite', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 12 },
@@ -78,7 +78,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // 章2
   {
     id: 'elite_frost_wyrm', name: '霜龙幼崽', emoji: '', chapter: 2,
-    baseHp: 95, baseDmg: 10, category: 'elite', combatType: 'caster',
+    baseHp: 95, baseDmg: 10, category: 'elite', combatType: 'caster', archetype: 'pyromancer',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.3, actions: [
@@ -102,7 +102,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'elite_ice_lord', name: '冰霜巨人王', emoji: '', chapter: 2,
-    baseHp: 120, baseDmg: 7, category: 'elite', combatType: 'guardian',
+    baseHp: 120, baseDmg: 7, category: 'elite', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '防御', baseValue: 20 },
@@ -121,7 +121,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // [CH2-EXPANSION 2026-05-09] 章2 精英 +1 (priest 职业)
   {
     id: 'elite_frost_archon', name: '霜誓执政', emoji: '', chapter: 2,
-    baseHp: 88, baseDmg: 9, category: 'elite', combatType: 'priest',
+    baseHp: 88, baseDmg: 9, category: 'elite', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -141,7 +141,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // 章3
   {
     id: 'elite_infernal', name: '地狱火', emoji: '', chapter: 3,
-    baseHp: 100, baseDmg: 12, category: 'elite', combatType: 'warrior',
+    baseHp: 100, baseDmg: 12, category: 'elite', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 12 },
@@ -159,7 +159,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'elite_dark_iron', name: '黑铁议员', emoji: '', chapter: 3,
-    baseHp: 90, baseDmg: 9, category: 'elite', combatType: 'caster',
+    baseHp: 90, baseDmg: 9, category: 'elite', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.4, actions: [
@@ -183,7 +183,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // [CH3-EXPANSION 2026-05-09] 章3 精英 +1 (priest 职业)
   {
     id: 'elite_flame_oracle', name: '烈焰谕者', emoji: '', chapter: 3,
-    baseHp: 85, baseDmg: 9, category: 'elite', combatType: 'priest',
+    baseHp: 85, baseDmg: 9, category: 'elite', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '技能', baseValue: 3, description: '灼烧', scalable: false },
@@ -203,7 +203,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // 章4
   {
     id: 'elite_doomguard', name: '末日守卫', emoji: '', chapter: 4,
-    baseHp: 110, baseDmg: 11, category: 'elite', combatType: 'warrior',
+    baseHp: 110, baseDmg: 11, category: 'elite', combatType: 'warrior', archetype: 'paladin',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
@@ -222,7 +222,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'elite_shadow_priest', name: '暗影大主教', emoji: '', chapter: 4,
-    baseHp: 80, baseDmg: 8, category: 'elite', combatType: 'priest',
+    baseHp: 80, baseDmg: 8, category: 'elite', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.3, actions: [
@@ -247,7 +247,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // [CH4-EXPANSION 2026-05-09] 章4 精英 +1 (ranger 职业)
   {
     id: 'elite_nightfang_stalker', name: '夜牙潜影', emoji: '', chapter: 4,
-    baseHp: 95, baseDmg: 13, category: 'elite', combatType: 'ranger',
+    baseHp: 95, baseDmg: 13, category: 'elite', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 13 },
@@ -266,7 +266,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // 章5
   {
     id: 'elite_titan_construct', name: '泰坦守护者', emoji: '', chapter: 5,
-    baseHp: 130, baseDmg: 10, category: 'elite', combatType: 'guardian',
+    baseHp: 130, baseDmg: 10, category: 'elite', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '防御', baseValue: 22 },
@@ -284,7 +284,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'elite_void_walker', name: '虚空行者', emoji: '', chapter: 5,
-    baseHp: 90, baseDmg: 13, category: 'elite', combatType: 'caster',
+    baseHp: 90, baseDmg: 13, category: 'elite', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [
       { hpThreshold: 0.35, actions: [
@@ -309,7 +309,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
   // [CH5-EXPANSION 2026-05-09] 章5 精英 +1 (warrior 职业 — 章5 原无 warrior)
   {
     id: 'elite_celestial_champion', name: '天裁斗神', emoji: '', chapter: 5,
-    baseHp: 110, baseDmg: 14, category: 'elite', combatType: 'warrior',
+    baseHp: 110, baseDmg: 14, category: 'elite', combatType: 'warrior', archetype: 'paladin',
     drops: { gold: 50, relic: true, rerollReward: 2 },
     phases: [{ actions: [
       { type: '攻击', baseValue: 14 },

@@ -18,7 +18,7 @@ import type { EnemyConfig } from './enemyTypes';
 export const ch1_normals: EnemyConfig[] = [
   {
     id: 'forest_ghoul', name: '食尸鬼', emoji: '', chapter: 1,
-    baseHp: 28, baseDmg: 10, category: 'normal', combatType: 'warrior',
+    baseHp: 28, baseDmg: 10, category: 'normal', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
@@ -35,7 +35,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_spider', name: '剧毒蛛母', emoji: '', chapter: 1,
-    baseHp: 18, baseDmg: 6, category: 'normal', combatType: 'ranger',
+    baseHp: 18, baseDmg: 6, category: 'normal', combatType: 'ranger', archetype: 'trapper',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
@@ -52,7 +52,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_treant', name: '腐化树人', emoji: '', chapter: 1,
-    baseHp: 42, baseDmg: 7, category: 'normal', combatType: 'guardian',
+    baseHp: 42, baseDmg: 7, category: 'normal', combatType: 'guardian', archetype: 'enforcer',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 8 },
@@ -70,7 +70,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_banshee', name: '哀嚎女妖', emoji: '', chapter: 1,
-    baseHp: 16, baseDmg: 8, category: 'normal', combatType: 'caster',
+    baseHp: 16, baseDmg: 8, category: 'normal', combatType: 'caster', archetype: 'pyromancer',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
@@ -87,7 +87,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_wolf_priest', name: '月光狼灵', emoji: '', chapter: 1,
-    baseHp: 20, baseDmg: 7, category: 'normal', combatType: 'priest',
+    baseHp: 20, baseDmg: 7, category: 'normal', combatType: 'priest', archetype: 'healer',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
@@ -105,7 +105,7 @@ export const ch1_normals: EnemyConfig[] = [
   // [CH1-EXPANSION 2026-05-09] 下面 5 只为章1每职业 +1 扩充：
   {
     id: 'forest_bone_reaver', name: '骸骨狂战', emoji: '', chapter: 1,
-    baseHp: 32, baseDmg: 11, category: 'normal', combatType: 'warrior',
+    baseHp: 32, baseDmg: 11, category: 'normal', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
@@ -122,7 +122,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_poison_sprite', name: '毒雾林精', emoji: '', chapter: 1,
-    baseHp: 16, baseDmg: 5, category: 'normal', combatType: 'ranger',
+    baseHp: 16, baseDmg: 5, category: 'normal', combatType: 'ranger', archetype: 'trapper',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
@@ -139,7 +139,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_moss_golem', name: '苔岩泥像', emoji: '', chapter: 1,
-    baseHp: 48, baseDmg: 6, category: 'normal', combatType: 'guardian',
+    baseHp: 48, baseDmg: 6, category: 'normal', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 10 },
@@ -157,7 +157,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_wraith_cultist', name: '幽冥诅祝', emoji: '', chapter: 1,
-    baseHp: 18, baseDmg: 7, category: 'normal', combatType: 'caster',
+    baseHp: 18, baseDmg: 7, category: 'normal', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -174,7 +174,7 @@ export const ch1_normals: EnemyConfig[] = [
   },
   {
     id: 'forest_old_willow', name: '老槐祭司', emoji: '', chapter: 1,
-    baseHp: 22, baseDmg: 6, category: 'normal', combatType: 'priest',
+    baseHp: 22, baseDmg: 6, category: 'normal', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
@@ -198,7 +198,7 @@ export const ch1_normals: EnemyConfig[] = [
 export const ch2_normals: EnemyConfig[] = [
   {
     id: 'ice_yeti', name: '雪原雪人', emoji: '', chapter: 2,
-    baseHp: 36, baseDmg: 9, category: 'normal', combatType: 'warrior',
+    baseHp: 36, baseDmg: 9, category: 'normal', combatType: 'warrior', archetype: 'striker',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 9 },
@@ -214,7 +214,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_mage', name: '霜寒女巫', emoji: '', chapter: 2,
-    baseHp: 18, baseDmg: 4, category: 'normal', combatType: 'caster',
+    baseHp: 18, baseDmg: 4, category: 'normal', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 1, description: '冻结', scalable: false },
@@ -231,7 +231,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_wolf', name: '霜鬃狼', emoji: '', chapter: 2,
-    baseHp: 22, baseDmg: 5, category: 'normal', combatType: 'ranger',
+    baseHp: 22, baseDmg: 5, category: 'normal', combatType: 'ranger', archetype: 'hunter',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 5 },
@@ -248,7 +248,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_golem', name: '寒冰石像', emoji: '', chapter: 2,
-    baseHp: 44, baseDmg: 4, category: 'normal', combatType: 'guardian',
+    baseHp: 44, baseDmg: 4, category: 'normal', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 10 },
@@ -266,7 +266,7 @@ export const ch2_normals: EnemyConfig[] = [
   // [CH2-EXPANSION 2026-05-09] 章2 扩充：每职业 +1 + priest×2 补空缺
   {
     id: 'ice_storm_wolf', name: '暴风战狼', emoji: '', chapter: 2,
-    baseHp: 40, baseDmg: 10, category: 'normal', combatType: 'warrior',
+    baseHp: 40, baseDmg: 10, category: 'normal', combatType: 'warrior', archetype: 'striker',
     drops: { gold: 22, relic: false },
     // [2026-05-09] 移除"力量"装饰 action：warrior 现走 bloodFury 自动递增（受伤累 +1 ATK）
     phases: [{ actions: [
@@ -283,7 +283,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_crystal_archer', name: '冰晶射手', emoji: '', chapter: 2,
-    baseHp: 20, baseDmg: 7, category: 'normal', combatType: 'ranger',
+    baseHp: 20, baseDmg: 7, category: 'normal', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 7 },
@@ -300,7 +300,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_avalanche_watch', name: '雪峦守望', emoji: '', chapter: 2,
-    baseHp: 54, baseDmg: 6, category: 'normal', combatType: 'guardian',
+    baseHp: 54, baseDmg: 6, category: 'normal', combatType: 'guardian', archetype: 'enforcer',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 12 },
@@ -318,7 +318,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_coffin_wraith', name: '冰棺咒灵', emoji: '', chapter: 2,
-    baseHp: 20, baseDmg: 8, category: 'normal', combatType: 'caster',
+    baseHp: 20, baseDmg: 8, category: 'normal', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -335,7 +335,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_frost_elder', name: '霜祭冰尊', emoji: '', chapter: 2,
-    baseHp: 26, baseDmg: 6, category: 'normal', combatType: 'priest',
+    baseHp: 26, baseDmg: 6, category: 'normal', combatType: 'priest', archetype: 'healer',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -353,7 +353,7 @@ export const ch2_normals: EnemyConfig[] = [
   },
   {
     id: 'ice_holy_bishop', name: '圣冰牧首', emoji: '', chapter: 2,
-    baseHp: 30, baseDmg: 5, category: 'normal', combatType: 'priest',
+    baseHp: 30, baseDmg: 5, category: 'normal', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 22, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 10 },
@@ -377,7 +377,7 @@ export const ch2_normals: EnemyConfig[] = [
 export const ch3_normals: EnemyConfig[] = [
   {
     id: 'lava_hound', name: '地狱火犬', emoji: '', chapter: 3,
-    baseHp: 30, baseDmg: 8, category: 'normal', combatType: 'warrior',
+    baseHp: 30, baseDmg: 8, category: 'normal', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 8 },
@@ -394,7 +394,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_imp', name: '小恶魔', emoji: '', chapter: 3,
-    baseHp: 16, baseDmg: 4, category: 'normal', combatType: 'caster',
+    baseHp: 16, baseDmg: 4, category: 'normal', combatType: 'caster', archetype: 'pyromancer',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '灼烧', scalable: false },
@@ -412,7 +412,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_guardian', name: '黑铁卫士', emoji: '', chapter: 3,
-    baseHp: 48, baseDmg: 5, category: 'normal', combatType: 'guardian',
+    baseHp: 48, baseDmg: 5, category: 'normal', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 12 },
@@ -430,7 +430,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_shaman', name: '火焰萨满', emoji: '', chapter: 3,
-    baseHp: 22, baseDmg: 3, category: 'normal', combatType: 'priest',
+    baseHp: 22, baseDmg: 3, category: 'normal', combatType: 'priest', archetype: 'healer',
     drops: { gold: 20, relic: false },
     // [2026-05-09] priest 不直接打攻击伤害；description 仅作 intent 提示。
     // 实际行为由 executePriestSkill 决定（治疗→自疗→护甲祝福→减益）。
@@ -450,7 +450,7 @@ export const ch3_normals: EnemyConfig[] = [
   // [CH3-EXPANSION 2026-05-09] 章3 每职业 +1 + priest×2
   {
     id: 'lava_bruiser', name: '熔岩重锤兵', emoji: '', chapter: 3,
-    baseHp: 38, baseDmg: 10, category: 'normal', combatType: 'warrior',
+    baseHp: 38, baseDmg: 10, category: 'normal', combatType: 'warrior', archetype: 'striker',
     drops: { gold: 24, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
@@ -467,7 +467,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_sparkshooter', name: '火星箭手', emoji: '', chapter: 3,
-    baseHp: 22, baseDmg: 8, category: 'normal', combatType: 'ranger',
+    baseHp: 22, baseDmg: 8, category: 'normal', combatType: 'ranger', archetype: 'trapper',
     drops: { gold: 24, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 8 },
@@ -484,7 +484,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_warden', name: '黑铁哨卫', emoji: '', chapter: 3,
-    baseHp: 52, baseDmg: 6, category: 'normal', combatType: 'guardian',
+    baseHp: 52, baseDmg: 6, category: 'normal', combatType: 'guardian', archetype: 'enforcer',
     drops: { gold: 24, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 12 },
@@ -502,7 +502,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_fire_mage', name: '焚心法师', emoji: '', chapter: 3,
-    baseHp: 22, baseDmg: 9, category: 'normal', combatType: 'caster',
+    baseHp: 22, baseDmg: 9, category: 'normal', combatType: 'caster', archetype: 'pyromancer',
     drops: { gold: 24, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 3, description: '灼烧', scalable: false },
@@ -519,7 +519,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_ember_priest', name: '熔心祭司', emoji: '', chapter: 3,
-    baseHp: 28, baseDmg: 6, category: 'normal', combatType: 'priest',
+    baseHp: 28, baseDmg: 6, category: 'normal', combatType: 'priest', archetype: 'healer',
     drops: { gold: 24, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '灼烧', scalable: false },
@@ -537,7 +537,7 @@ export const ch3_normals: EnemyConfig[] = [
   },
   {
     id: 'lava_cinder_oracle', name: '余烬圣司', emoji: '', chapter: 3,
-    baseHp: 32, baseDmg: 5, category: 'normal', combatType: 'priest',
+    baseHp: 32, baseDmg: 5, category: 'normal', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 24, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 10 },
@@ -561,7 +561,7 @@ export const ch3_normals: EnemyConfig[] = [
 export const ch4_normals: EnemyConfig[] = [
   {
     id: 'shadow_assassin', name: '暗影刺客', emoji: '', chapter: 4,
-    baseHp: 24, baseDmg: 12, category: 'normal', combatType: 'ranger',
+    baseHp: 24, baseDmg: 12, category: 'normal', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 12, description: '背刺' },
@@ -578,7 +578,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_felguard', name: '邪能卫兵', emoji: '', chapter: 4,
-    baseHp: 46, baseDmg: 6, category: 'normal', combatType: 'guardian',
+    baseHp: 46, baseDmg: 6, category: 'normal', combatType: 'guardian', archetype: 'enforcer',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 7 },
@@ -595,7 +595,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_warlock', name: '邪能术士', emoji: '', chapter: 4,
-    baseHp: 20, baseDmg: 5, category: 'normal', combatType: 'caster',
+    baseHp: 20, baseDmg: 5, category: 'normal', combatType: 'caster', archetype: 'toxicologist',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
@@ -613,7 +613,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_knight', name: '堕落死亡骑士', emoji: '', chapter: 4,
-    baseHp: 34, baseDmg: 10, category: 'normal', combatType: 'warrior',
+    baseHp: 34, baseDmg: 10, category: 'normal', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
@@ -631,7 +631,7 @@ export const ch4_normals: EnemyConfig[] = [
   // [CH4-EXPANSION 2026-05-09] 章4 每职业 +1 + priest×2
   {
     id: 'shadow_reaver', name: '虚空狂徒', emoji: '', chapter: 4,
-    baseHp: 40, baseDmg: 11, category: 'normal', combatType: 'warrior',
+    baseHp: 40, baseDmg: 11, category: 'normal', combatType: 'warrior', archetype: 'berserker',
     drops: { gold: 26, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
@@ -647,7 +647,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_crossbow', name: '邪能弩手', emoji: '', chapter: 4,
-    baseHp: 26, baseDmg: 10, category: 'normal', combatType: 'ranger',
+    baseHp: 26, baseDmg: 10, category: 'normal', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 26, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
@@ -664,7 +664,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_gatekeeper', name: '深渊守门', emoji: '', chapter: 4,
-    baseHp: 58, baseDmg: 6, category: 'normal', combatType: 'guardian',
+    baseHp: 58, baseDmg: 6, category: 'normal', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 26, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 14 },
@@ -682,7 +682,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_oracle', name: '虚空卜者', emoji: '', chapter: 4,
-    baseHp: 22, baseDmg: 8, category: 'normal', combatType: 'caster',
+    baseHp: 22, baseDmg: 8, category: 'normal', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 26, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -699,7 +699,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_sin_priest', name: '堕落司祭', emoji: '', chapter: 4,
-    baseHp: 28, baseDmg: 6, category: 'normal', combatType: 'priest',
+    baseHp: 28, baseDmg: 6, category: 'normal', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 26, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
@@ -717,7 +717,7 @@ export const ch4_normals: EnemyConfig[] = [
   },
   {
     id: 'shadow_void_prophet', name: '渊影预言者', emoji: '', chapter: 4,
-    baseHp: 32, baseDmg: 5, category: 'normal', combatType: 'priest',
+    baseHp: 32, baseDmg: 5, category: 'normal', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 26, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 10 },
@@ -741,7 +741,7 @@ export const ch4_normals: EnemyConfig[] = [
 export const ch5_normals: EnemyConfig[] = [
   {
     id: 'eternal_sentinel', name: '光铸哨兵', emoji: '', chapter: 5,
-    baseHp: 40, baseDmg: 8, category: 'normal', combatType: 'guardian',
+    baseHp: 40, baseDmg: 8, category: 'normal', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 14 },
@@ -759,7 +759,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_chrono', name: '时光龙人', emoji: '', chapter: 5,
-    baseHp: 26, baseDmg: 7, category: 'normal', combatType: 'caster',
+    baseHp: 26, baseDmg: 7, category: 'normal', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '虚弱', scalable: false },
@@ -776,7 +776,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_archer', name: '星界游侠', emoji: '', chapter: 5,
-    baseHp: 22, baseDmg: 10, category: 'normal', combatType: 'ranger',
+    baseHp: 22, baseDmg: 10, category: 'normal', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 20, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
@@ -793,7 +793,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_priest', name: '泰坦祭司', emoji: '', chapter: 5,
-    baseHp: 24, baseDmg: 3, category: 'normal', combatType: 'priest',
+    baseHp: 24, baseDmg: 3, category: 'normal', combatType: 'priest', archetype: 'healer',
     drops: { gold: 20, relic: false },
     // [2026-05-09] priest 不直接打攻击伤害；description 仅作 intent 提示。
     phases: [{ actions: [
@@ -812,7 +812,7 @@ export const ch5_normals: EnemyConfig[] = [
   // [CH5-EXPANSION 2026-05-09] 章5 每职业 +1 + warrior×2（原无 warrior）
   {
     id: 'eternal_champion', name: '永恒斗士', emoji: '', chapter: 5,
-    baseHp: 42, baseDmg: 12, category: 'normal', combatType: 'warrior',
+    baseHp: 42, baseDmg: 12, category: 'normal', combatType: 'warrior', archetype: 'paladin',
     drops: { gold: 28, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 12 },
@@ -828,7 +828,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_paladin', name: '白金骑士', emoji: '', chapter: 5,
-    baseHp: 48, baseDmg: 10, category: 'normal', combatType: 'warrior',
+    baseHp: 48, baseDmg: 10, category: 'normal', combatType: 'warrior', archetype: 'paladin',
     drops: { gold: 28, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
@@ -845,7 +845,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_skyknight', name: '穹苍骑兵', emoji: '', chapter: 5,
-    baseHp: 26, baseDmg: 9, category: 'normal', combatType: 'ranger',
+    baseHp: 26, baseDmg: 9, category: 'normal', combatType: 'ranger', archetype: 'marksman',
     drops: { gold: 28, relic: false },
     phases: [{ actions: [
       { type: '攻击', baseValue: 9 },
@@ -862,7 +862,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_bulwark', name: '永光壁垒', emoji: '', chapter: 5,
-    baseHp: 56, baseDmg: 7, category: 'normal', combatType: 'guardian',
+    baseHp: 56, baseDmg: 7, category: 'normal', combatType: 'guardian', archetype: 'bulwark',
     drops: { gold: 28, relic: false },
     phases: [{ actions: [
       { type: '防御', baseValue: 14 },
@@ -880,7 +880,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_chronomancer', name: '时砂法师', emoji: '', chapter: 5,
-    baseHp: 24, baseDmg: 9, category: 'normal', combatType: 'caster',
+    baseHp: 24, baseDmg: 9, category: 'normal', combatType: 'caster', archetype: 'cursemaster',
     drops: { gold: 28, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -897,7 +897,7 @@ export const ch5_normals: EnemyConfig[] = [
   },
   {
     id: 'eternal_lightcantor', name: '永光吟唱者', emoji: '', chapter: 5,
-    baseHp: 30, baseDmg: 6, category: 'normal', combatType: 'priest',
+    baseHp: 30, baseDmg: 6, category: 'normal', combatType: 'priest', archetype: 'inquisitor',
     drops: { gold: 28, relic: false },
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '易伤', scalable: false },

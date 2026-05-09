@@ -21,7 +21,7 @@ import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueri
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
 import { getEffectiveAttackDmg, getRangerFollowUpDmg } from './attackCalc';
 import { executePriestSkill, executeCasterSkill, tickStatuses } from './enemySkills';
-import { applyGuardRageOnDefend, consumeGuardRageOnAttack, bumpDotAmplifier, bumpHolyWrathPerTurn } from './enemyTraits';
+import { applyGuardRageOnDefend, consumeGuardRageOnAttack, bumpDotAmplifier, bumpHolyWrathPerTurn, archetypeArmorBoost, paladinShouldDefendThisTurn } from './enemyTraits';
 import { trySummonForEnemy } from './enemySummonRevive';
 import { processEliteDice, processEliteArmor } from './elites';
 import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
@@ -275,10 +275,13 @@ export async function executeEnemyTurn(
       continue;
     }
 
-    // Guardian: 攻防交替+嘲讽
+    // Guardian: 攻防交替+嘲讽；Warrior paladin 也走偶数回合防御
     let guardianDefended = false;
     cb.setGame((prev: GameState) => {
       if (e.combatType === 'guardian' && prev.battleTurn % GUARDIAN_CONFIG.defenseCycle === 0) {
+        guardianDefended = true;
+      } else if (paladinShouldDefendThisTurn(e, prev.battleTurn)) {
+        // [PALADIN 2026-05-09] warrior 子类型 paladin：偶数回合切换为防御
         guardianDefended = true;
       }
       return prev; // 只读判断，不修改状态
@@ -287,10 +290,11 @@ export async function executeEnemyTurn(
     if (guardianDefended) {
       await cb.enemyPreAction(e, 'defend');
       cb.setGame((prev: GameState) => {
-        const shieldVal = Math.floor(e.attackDmg * GUARDIAN_CONFIG.shieldMult);
+        // [BULWARK 2026-05-09] guardian 子类型 bulwark 防御获双倍护甲
+        const shieldVal = Math.floor(e.attackDmg * GUARDIAN_CONFIG.shieldMult * archetypeArmorBoost(e));
         cb.setEnemyEffectForUid(e.uid, 'defend');
         cb.playSound('enemy_defend');
-        // [GUARDIAN_TRAIT 2026-05-09] 防御后累 guardRage：每层下次攻击 +50%
+        // [GUARDIAN_TRAIT 2026-05-09] 防御后累 guardRage：每层下次攻击 +60%（bulwark 已被拦下）
         cb.setEnemies(prevE => prevE.map(en =>
           en.uid === e.uid
             ? applyGuardRageOnDefend({ ...en, armor: en.armor + shieldVal })
@@ -480,6 +484,18 @@ export async function executeEnemyTurn(
     // [GUARDIAN_TRAIT 2026-05-09] 攻击后清空 guardRage（爆发已经体现在 damage 里）
     if (e.combatType === 'guardian') {
       cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? consumeGuardRageOnAttack(en) : en));
+    }
+
+    // [TRAPPER 2026-05-09] ranger 子类型 trapper：攻击附带 1 层剧毒
+    if (e.combatType === 'ranger' && e.archetype === 'trapper') {
+      cb.setGame(prev => {
+        const existing = prev.statuses.find(s => s.type === 'poison');
+        const next = existing
+          ? prev.statuses.map(s => s.type === 'poison' ? { ...s, value: s.value + 1 } : s)
+          : [...prev.statuses, { type: 'poison' as const, value: 1 }];
+        return { ...prev, statuses: next };
+      });
+      cb.addFloatingText('毒素+1', 'text-emerald-400', undefined, 'player');
     }
 
     await new Promise(r => setTimeout(r, 300));

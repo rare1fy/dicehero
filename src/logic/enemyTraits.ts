@@ -1,91 +1,74 @@
 /**
- * enemyTraits.ts — 五职业敌人各自的"递增 trait"维护
+ * enemyTraits.ts — 五职业 + 子类型（archetype）的递增 trait 维护
  *
- * [2026-05-09] 设计理念：
- *   全局狂暴（每回合 +6%）已废弃。每个职业有独立的"越打越强"机制：
+ * [2026-05-09 v2] 强化：
+ *   bloodFury 从 +1 ATK 改为 ×1.25/层（上限 ×2.0），逼玩家"两回合内清理"
+ *   guardRage  +60%/层（上限 +180%）
+ *   dotAmplifier DOT ×1.4/层（上限 ×2.5）
+ *   holyWrath  weak/vulnerable 持续 +1/层 + 护甲祝福 +30%/层（封顶 4 层）
  *
- *   warrior  : bloodFury  → 受到伤害累计 +1 永久攻击；上限 +6
- *   ranger   : 沿用 attackCount（已存在）→ enemyAI 在攻击后自增
- *   guardian : guardRage  → 每防御 1 次 +1，下次攻击爆发 +50%/层后清零；上限 3 层
- *   caster   : dotAmplifier → 同种 DOT 连续施加，每次 +1 stack；上限 4
- *   priest   : holyWrath  → 战斗每过 2 回合 +1（叠加 weak/vulnerable 持续 +1）；上限 4
+ *   archetype 修正在 attackTraitMultiplier / archetypeArmorBoost 等纯函数里集中处理。
  *
- *   normal/elite 才会触发；BOSS 走自身 phase[hpThreshold] 阶段递进，不再叠 trait。
- *
- *   纯函数模块，不依赖 React。
+ *   normal/elite 才会触发 bloodFury / guardRage / dotAmplifier / holyWrath；
+ *   BOSS 走自身 phase[hpThreshold] 阶段递进，不再叠 trait。
  */
 import type { Enemy } from '../types/game';
 
-const BLOOD_FURY_CAP = 6;
+const BLOOD_FURY_CAP = 4;
+const BLOOD_FURY_PER_STACK = 0.25;       // 每层 +25%（封顶 ×2.0）
 const GUARD_RAGE_CAP = 3;
+const GUARD_RAGE_PER_STACK = 0.6;        // 每层 +60%（封顶 ×2.8 单击）
 const DOT_AMPLIFIER_CAP = 4;
+const DOT_AMPLIFIER_PER_STACK = 0.4;     // 每层 ×1.4（封顶 ×2.5）
 const HOLY_WRATH_CAP = 4;
 
-/**
- * 该敌人是否启用 trait 系统（仅 normal/elite，不含 BOSS）
- *
- * 通过 configId 前缀判断：BOSS 的 configId 都以 `boss_` 开头，详见 enemyEliteBoss.ts。
- * 这样无需运行时存 category 字段。
- */
 export function shouldApplyTrait(enemy: Enemy): boolean {
+  // BOSS 走自身阶段，不叠 trait
   return !enemy.configId.startsWith('boss_');
 }
 
-/**
- * Warrior 受伤后累计 bloodFury（+1 ATK 直接加成，封顶 BLOOD_FURY_CAP）
- *
- * 调用时机：玩家攻击造成实际伤害后，由 useBattleCombat 在 setEnemies 内对所有受伤的 warrior 应用。
- */
+// ============================================================
+// trait 累加
+// ============================================================
+
+/** Warrior 受伤后累计 bloodFury（berserker 加倍） */
 export function applyBloodFuryOnHurt(enemy: Enemy): Enemy {
   if (!shouldApplyTrait(enemy)) return enemy;
   if (enemy.combatType !== 'warrior') return enemy;
+  // paladin 不走 bloodFury（攻防交替型，靠护甲爆发不靠攻击递增）
+  if (enemy.archetype === 'paladin') return enemy;
   const cur = enemy.bloodFury || 0;
   if (cur >= BLOOD_FURY_CAP) return enemy;
   return { ...enemy, bloodFury: cur + 1 };
 }
 
-/**
- * Guardian 防御后累计 guardRage（每层下次攻击 +50%；攻击后归零）
- */
+/** Guardian 防御后累计 guardRage（bulwark 不爆发，纯肉盾） */
 export function applyGuardRageOnDefend(enemy: Enemy): Enemy {
   if (!shouldApplyTrait(enemy)) return enemy;
   if (enemy.combatType !== 'guardian') return enemy;
+  if (enemy.archetype === 'bulwark') return enemy;  // 纯肉盾不爆发
   const cur = enemy.guardRage || 0;
   if (cur >= GUARD_RAGE_CAP) return enemy;
   return { ...enemy, guardRage: cur + 1 };
 }
 
-/** Guardian 攻击后清空 guardRage（爆发完归零） */
+/** Guardian 攻击后清空 guardRage */
 export function consumeGuardRageOnAttack(enemy: Enemy): Enemy {
   if (!enemy.guardRage) return enemy;
   return { ...enemy, guardRage: 0 };
 }
 
-/**
- * Caster DOT 放大：每次施加 DOT（poison/burn）调用一次，叠加 dotAmplifier（封顶 4）
- *
- * 调用时机：executeCasterSkill 决定 DOT 类型后，本函数返回的"额外加成值"加到 DOT 数值上。
- */
+/** Caster DOT 放大累加 */
 export function bumpDotAmplifier(enemy: Enemy): Enemy {
   if (!shouldApplyTrait(enemy)) return enemy;
   if (enemy.combatType !== 'caster') return enemy;
+  if (enemy.archetype === 'cursemaster') return enemy;  // 诅咒师不放 DOT，不累加
   const cur = enemy.dotAmplifier || 0;
   if (cur >= DOT_AMPLIFIER_CAP) return enemy;
   return { ...enemy, dotAmplifier: cur + 1 };
 }
 
-/** 当前 DOT 加成值（注入到 poisonVal/burnVal） */
-export function getDotAmplifierBonus(enemy: Enemy): number {
-  if (!shouldApplyTrait(enemy)) return 0;
-  if (enemy.combatType !== 'caster') return 0;
-  return enemy.dotAmplifier || 0;
-}
-
-/**
- * Priest 圣怒：战斗每过 2 回合 +1。每层让 priest 施加的 weak/vulnerable duration +1，护甲祝福 +20%。
- *
- * 调用时机：battleTurn 切换时（敌人回合开始处），每个 priest 检查 turn % 2 === 0 时累加。
- */
+/** Priest 圣怒：每 2 回合 +1 */
 export function bumpHolyWrathPerTurn(enemy: Enemy, battleTurn: number): Enemy {
   if (!shouldApplyTrait(enemy)) return enemy;
   if (enemy.combatType !== 'priest') return enemy;
@@ -95,10 +78,88 @@ export function bumpHolyWrathPerTurn(enemy: Enemy, battleTurn: number): Enemy {
   return { ...enemy, holyWrath: cur + 1 };
 }
 
+// ============================================================
+// 攻击力修正（被 attackCalc 调用）
+// ============================================================
+
+/**
+ * trait 与 archetype 联合的攻击力修正乘数（已合并 bloodFury / guardRage / archetype 静态加成）
+ *
+ * 每个组件单独乘起来——在 attackCalc 顶层做一次 floor。
+ */
+export function attackTraitMultiplier(enemy: Enemy): number {
+  let mul = 1;
+
+  // bloodFury：基础 +25%/层；berserker +40%/层（=ATK 翻倍只需 3 层而非 4 层）
+  if (enemy.combatType === 'warrior' && enemy.bloodFury) {
+    const perStack = enemy.archetype === 'berserker' ? 0.40 : BLOOD_FURY_PER_STACK;
+    mul *= 1 + perStack * enemy.bloodFury;
+  }
+
+  // guardRage：每层 +60%（bulwark 已在累加阶段拦下，这里只对 enforcer 起效）
+  if (enemy.combatType === 'guardian' && enemy.guardRage && enemy.guardRage > 0) {
+    mul *= 1 + GUARD_RAGE_PER_STACK * enemy.guardRage;
+  }
+
+  // archetype 静态修正（不受 stack 影响）
+  if (enemy.combatType === 'warrior') {
+    if (enemy.archetype === 'striker') {
+      // striker：第 2 步必爆发（用 attackCount 模拟回合数；warrior 没用 attackCount，退而求其次用 bloodFury 触发条件）
+      // 用 hp 比例做判定：当 hp < maxHp * 0.7 时进入"出手期"，攻击 ×1.5
+      if (enemy.hp / enemy.maxHp < 0.7) mul *= 1.5;
+    } else if (enemy.archetype === 'paladin') {
+      // paladin：每次攻击都是 ×1.2（稳定输出 + 防御切换）
+      mul *= 1.2;
+    }
+  }
+
+  if (enemy.combatType === 'ranger') {
+    if (enemy.archetype === 'marksman') {
+      // marksman：神射手单发高伤，整体 ×1.3
+      mul *= 1.3;
+    }
+    // trapper / hunter 不加攻击修正（trapper 加的是状态而非伤害）
+  }
+
+  return mul;
+}
+
+/** Caster DOT 加成倍率（dotAmplifier × archetype） */
+export function getDotMultiplier(enemy: Enemy): number {
+  if (!shouldApplyTrait(enemy)) return 1;
+  if (enemy.combatType !== 'caster') return 1;
+  let mul = 1;
+  if (enemy.dotAmplifier) {
+    const perStack = enemy.archetype === 'pyromancer' ? 0.5 : DOT_AMPLIFIER_PER_STACK;
+    mul *= 1 + perStack * enemy.dotAmplifier;
+  }
+  return mul;
+}
+
+/** Priest holyWrath 层数（用于 enemySkills 内的护甲祝福 / debuff 持续修正） */
 export function getHolyWrath(enemy: Enemy): number {
   if (!shouldApplyTrait(enemy)) return 0;
   if (enemy.combatType !== 'priest') return 0;
   return enemy.holyWrath || 0;
+}
+
+/**
+ * Guardian bulwark 防御获双倍护甲；其他守护者保持原有倍率
+ * 调用方在 GUARDIAN_CONFIG.shieldMult 之上再乘这个值
+ */
+export function archetypeArmorBoost(enemy: Enemy): number {
+  if (enemy.combatType === 'guardian' && enemy.archetype === 'bulwark') return 2.0;
+  return 1.0;
+}
+
+/**
+ * Paladin 攻击轮回：偶数回合（battleTurn % 2 === 0）改为防御
+ * 用于 enemyAI 在 guardian 选举防御时混入 paladin 也走这条路径
+ */
+export function paladinShouldDefendThisTurn(enemy: Enemy, battleTurn: number): boolean {
+  if (enemy.combatType !== 'warrior') return false;
+  if (enemy.archetype !== 'paladin') return false;
+  return battleTurn > 0 && battleTurn % 2 === 0;
 }
 
 export const TRAIT_CAPS = {
@@ -106,4 +167,7 @@ export const TRAIT_CAPS = {
   GUARD_RAGE: GUARD_RAGE_CAP,
   DOT_AMPLIFIER: DOT_AMPLIFIER_CAP,
   HOLY_WRATH: HOLY_WRATH_CAP,
+  BLOOD_FURY_PER_STACK,
+  GUARD_RAGE_PER_STACK,
+  DOT_AMPLIFIER_PER_STACK,
 } as const;

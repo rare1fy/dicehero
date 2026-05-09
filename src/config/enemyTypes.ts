@@ -82,6 +82,38 @@ export interface ReviveRule {
   splitMinionId?: string;
 }
 
+/**
+ * [2026-05-09] Archetype 子类型 — 在 combatType 之上的"种族细分"
+ *
+ * 一个 combatType 内允许多个 archetype，每个有差异化的行为修正。详见 enemyTraits.ts。
+ *
+ * 命名规则：`<combatType>_<flavor>`
+ *   warrior:
+ *     berserker  : bloodFury 倍率加倍（×1.4/层而非 ×1.25），\"越打越疯\"
+ *     striker    : 第二回合大招直接 +50% 爆发（不依赖 bloodFury）
+ *     paladin    : 攻防交替；防御后获额外护甲；不走 bloodFury
+ *   ranger:
+ *     marksman   : hitCount 每次 +2（神射手）
+ *     trapper    : 主攻附带 1 层剧毒（陷阱型）
+ *     hunter     : 默认（普通弓箭手）
+ *   guardian:
+ *     bulwark    : 防御获双倍护甲；不走 guardRage（纯肉盾）
+ *     enforcer   : 默认（攻防爆发，guardRage 起效）
+ *   caster:
+ *     pyromancer : 优先释放灼烧；dotAmplifier 触发时再 +1（焚化型）
+ *     toxicologist: 优先释放毒雾（毒师型）
+ *     cursemaster: 不放 DOT，固定每 2 回合塞诅咒/碎裂骰子（诅咒型）
+ *   priest:
+ *     healer     : 默认（治疗 + 护甲祝福）
+ *     inquisitor : 不治疗，永远只对玩家施加 debuff（审判型）
+ */
+export type EnemyArchetype =
+  | 'berserker' | 'striker' | 'paladin'
+  | 'marksman' | 'trapper' | 'hunter'
+  | 'bulwark' | 'enforcer'
+  | 'pyromancer' | 'toxicologist' | 'cursemaster'
+  | 'healer' | 'inquisitor';
+
 export interface EnemyConfig {
   id: string;
   name: string;
@@ -91,6 +123,8 @@ export interface EnemyConfig {
   phases: PhaseConfig[];
   category: 'normal' | 'elite' | 'boss';
   combatType: 'warrior' | 'guardian' | 'ranger' | 'caster' | 'priest';
+  /** [2026-05-09] 种族子类型——同 combatType 内的差异化行为标签 */
+  archetype?: EnemyArchetype;
   chapter?: number; // 1-5, undefined = 通用
   /** [2026-05-09] BOSS 专用：区分中层/终极 BOSS（原来靠 BOSS_ENEMIES 索引 [0]/[1] 脆弱，
    *  中 BOSS 扩充到每章 3 只后必须用显式字段）。category !== 'boss' 时忽略。 */

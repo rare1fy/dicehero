@@ -30,6 +30,8 @@ export interface Enemy {
   attackDmg: number;
   /** 战斗类型 */
   combatType: EnemyCombatType;
+  /** [2026-05-09] 种族子类型——同 combatType 内的差异化行为标签 */
+  archetype?: import('../config/enemyTypes').EnemyArchetype;
   /** 敌人描述（用于弹窗） */
   description?: string;
   dropGold: number;
@@ -42,13 +44,13 @@ export interface Enemy {
   statuses: import('./dice').StatusEffect[];
   distance: number;  // distance to player: 0=melee, >0=approaching
   attackCount?: number; // 弓箭手攻击次数计数（伤害递增用）
-  /** [2026-05-09 traits] 战士 BLOOD_FURY：受到伤害一次累积 +1 永久攻击 */
+  /** [2026-05-09 traits] 战士 BLOOD_FURY：受到伤害一次累积 +1（封顶 4） */
   bloodFury?: number;
-  /** [2026-05-09 traits] 守护者 GUARD_RAGE：连续防御回合数（每 stack 下次攻击 +50%） */
+  /** [2026-05-09 traits] 守护者 GUARD_RAGE：连续防御回合数（每 stack 下次攻击 +60%） */
   guardRage?: number;
-  /** [2026-05-09 traits] 法师 DOT_AMPLIFIER：连续施加同种 DOT 的层数（每层让 DOT +1） */
+  /** [2026-05-09 traits] 法师 DOT_AMPLIFIER：连续施加同种 DOT 的层数（每层让 DOT ×1.4） */
   dotAmplifier?: number;
-  /** [2026-05-09 traits] 牧师 HOLY_WRATH：本场战斗内累计的"圣怒"层数（每 +1 上调 debuff 强度/护甲） */
+  /** [2026-05-09 traits] 牧师 HOLY_WRATH：本场战斗内累计的"圣怒"层数（每 +1 上调 debuff 强度/护甲/治疗） */
   holyWrath?: number;
   /** [2026-05-09 召唤累计] 已召唤次数（用于 SummonRule.maxTotal 上限判断） */
   summonCount?: number;

@@ -44,6 +44,7 @@ export const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: numbe
     armor: 0,
     attackDmg: Math.floor(config.baseDmg * dmgScale),
     combatType: config.combatType || 'warrior',
+    archetype: config.archetype,  // [2026-05-09] 镜像子类型到运行时
     dropGold: config.drops.gold,
     dropRelic: config.drops.relic,
     rerollReward: config.drops.rerollReward,
