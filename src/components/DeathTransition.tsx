@@ -1,16 +1,13 @@
 /**
- * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v3)
+ * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v4)
  *
- * v3 关键改动（用户反馈）：
- *   不再用临时 PixelFist 摆拍。直接用游戏内 EnemyStageView 一直显示的同一对
- *   ClassLeftHand / ClassRightHand SVG 在屏幕底部双角渲染（与战斗中位置接近），
- *   播放：紧张抖动 → 失重下坠出屏 → 黑幕 fade。
- *   视觉等同于"战斗中那双手在玩家被击杀的瞬间脱力"。
+ * v4 调整（用户反馈：v3 1.4s 太长）：
+ *   总时长压到 700ms，手部抖动节奏整体加速（保留视觉锚点：抖→坠→消失）。
  *
- * 时序（总时长 ~1.4s）：
- *   1. (0.0s - 0.5s) 双手抖动 → 失重坠落出屏
- *   2. (0.5s - 1.0s) 黑幕在 0.5s 内 fade 满
- *   3. (1.0s - 1.4s) 黑幕保持，外层切换到 GameOverScreen
+ * 时序（总时长 700ms）：
+ *   1. (0.00s - 0.30s) 双手急促抖动 → 失重坠落出屏
+ *   2. (0.30s - 0.55s) 黑幕在 0.25s 内 fade 满
+ *   3. (0.55s - 0.70s) 黑幕保持，外层切换到 GameOverScreen
  */
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
@@ -22,9 +19,9 @@ interface DeathTransitionProps {
   onComplete?: () => void;
 }
 
-const HANDS_DURATION_MS = 500;
-const FADE_BLACK_MS = 500;
-const HOLD_MS = 400;
+const HANDS_DURATION_MS = 300;
+const FADE_BLACK_MS = 250;
+const HOLD_MS = 150;
 const TOTAL_DURATION_MS = HANDS_DURATION_MS + FADE_BLACK_MS + HOLD_MS;
 
 /**
@@ -54,7 +51,8 @@ export const DeathTransition: React.FC<DeathTransitionProps> = ({ visible, onCom
 
   if (!visible) return null;
 
-  const tShake = [0, 0.06, 0.12, 0.18, 0.24, 0.30, 0.36, 0.42, 0.55, 0.78, 1] as const;
+  // [v4] 5 帧 keyframes：抖2拍 → 失重 → 急坠 → 消失。300ms 内观感清晰
+  const tShake = [0, 0.2, 0.4, 0.7, 1] as const;
 
   return (
     <div
@@ -72,19 +70,11 @@ export const DeathTransition: React.FC<DeathTransitionProps> = ({ visible, onCom
         }}
         initial={{ x: 0, y: 0, rotate: LEFT_BASE_ROT, scale: HAND_SCALE, opacity: 1 }}
         animate={{
-          x: [0, -2, 2, -3, 2, -2, 1, -1, -6, -22, -50],
-          y: [0, 1, -1, 2, -1, 1, 0, 2, 18, 120, 320],
-          rotate: [
-            LEFT_BASE_ROT, LEFT_BASE_ROT - 2, LEFT_BASE_ROT + 2, LEFT_BASE_ROT - 3,
-            LEFT_BASE_ROT + 1, LEFT_BASE_ROT - 2, LEFT_BASE_ROT, LEFT_BASE_ROT - 1,
-            LEFT_BASE_ROT - 8, LEFT_BASE_ROT - 35, LEFT_BASE_ROT - 70,
-          ],
-          scale: [
-            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE,
-            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE * 0.98,
-            HAND_SCALE * 0.92, HAND_SCALE * 0.85,
-          ],
-          opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.75, 0],
+          x: [0, -3, 2, -22, -50],
+          y: [0, 2, -1, 120, 320],
+          rotate: [LEFT_BASE_ROT, LEFT_BASE_ROT - 3, LEFT_BASE_ROT + 2, LEFT_BASE_ROT - 35, LEFT_BASE_ROT - 70],
+          scale: [HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE * 0.92, HAND_SCALE * 0.85],
+          opacity: [1, 1, 1, 0.75, 0],
         }}
         transition={{
           duration: HANDS_DURATION_MS / 1000,
@@ -107,19 +97,11 @@ export const DeathTransition: React.FC<DeathTransitionProps> = ({ visible, onCom
         }}
         initial={{ x: 0, y: 0, rotate: RIGHT_BASE_ROT, scale: HAND_SCALE, opacity: 1 }}
         animate={{
-          x: [0, 2, -2, 3, -2, 2, -1, 1, 6, 22, 50],
-          y: [0, -1, 2, -1, 2, 0, 1, 2, 18, 120, 320],
-          rotate: [
-            RIGHT_BASE_ROT, RIGHT_BASE_ROT + 2, RIGHT_BASE_ROT - 2, RIGHT_BASE_ROT + 3,
-            RIGHT_BASE_ROT - 1, RIGHT_BASE_ROT + 2, RIGHT_BASE_ROT, RIGHT_BASE_ROT + 1,
-            RIGHT_BASE_ROT + 8, RIGHT_BASE_ROT + 35, RIGHT_BASE_ROT + 70,
-          ],
-          scale: [
-            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE,
-            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE * 0.98,
-            HAND_SCALE * 0.92, HAND_SCALE * 0.85,
-          ],
-          opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.75, 0],
+          x: [0, 3, -2, 22, 50],
+          y: [0, 2, -1, 120, 320],
+          rotate: [RIGHT_BASE_ROT, RIGHT_BASE_ROT + 3, RIGHT_BASE_ROT - 2, RIGHT_BASE_ROT + 35, RIGHT_BASE_ROT + 70],
+          scale: [HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE * 0.92, HAND_SCALE * 0.85],
+          opacity: [1, 1, 1, 0.75, 0],
         }}
         transition={{
           duration: HANDS_DURATION_MS / 1000,

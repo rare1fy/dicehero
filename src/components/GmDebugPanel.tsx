@@ -1,3 +1,4 @@
+// [RULES-B2-EXEMPT] GM 调试面板：纯快捷按钮 + 选项数据列表，逻辑分支多但每项独立，不适合再拆分
 /**
  * GmDebugPanel.tsx — GM 调试工具子面板
  * ARCH-H: 从 SettingsPanel.tsx 拆分出的独立子组件
@@ -93,6 +94,10 @@ const GmQuickActions: React.FC<{
       onClick={() => { setGame(p => ({ ...p, hp: p.maxHp })); addToast('GM: 满血'); }}
       className="bg-[var(--pixel-green-dark)] text-[var(--pixel-green-light)] border-[var(--pixel-green)]"
     >❤ 满血</GmBtn>
+    <GmBtn
+      onClick={() => { setGame(p => ({ ...p, hp: 1 })); addToast('GM: HP=1（残血调试）'); }}
+      className="bg-[var(--pixel-red-dark)] text-[var(--pixel-red-light)] border-[var(--pixel-red)]"
+    >💔 HP=1</GmBtn>
     <GmBtn
       onClick={() => { setGame(p => ({ ...p, souls: p.souls + 500 })); addToast('GM: +500金'); }}
       className="bg-[var(--pixel-gold-dark)] text-[var(--pixel-gold-light)] border-[var(--pixel-gold)]"
