@@ -115,6 +115,26 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
       lowHp: ['冰封王座……不会倒塌！'],
     },
   },
+  // [CH2-EXPANSION 2026-05-09] 章2 精英 +1 (priest 职业)
+  {
+    id: 'elite_frost_archon', name: '霜誓执政', emoji: '', chapter: 2,
+    baseHp: 88, baseDmg: 9, category: 'elite', combatType: 'priest',
+    drops: { gold: 50, relic: true, rerollReward: 2 },
+    phases: [{ actions: [
+      { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+      { type: '防御', baseValue: 16 },
+      { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
+      { type: '攻击', baseValue: 9 },
+      { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+    ]}],
+    quotes: {
+      enter: ['冰霜之律——判你缄默。', '（圣冰权杖轻敲大地）', '执政的意志，就是寒冬的边界。'],
+      death: ['权杖……折了……', '寒冬法庭……无法再审……', '律令……归于死寂……'],
+      attack: ['缄默之咒！', '霜律刃！', '判！'],
+      hurt: ['亵渎律令……可斩。', '袍服划破，律意不改。', '哼。'],
+      lowHp: ['以本座性命——判你永冻不超生！'],
+    },
+  },
   // 章3
   {
     id: 'elite_infernal', name: '地狱火', emoji: '', chapter: 3,
@@ -155,6 +175,26 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
       attack: ['熔岩之怒！', '黑铁审判！', '锻造碎骨！'],
       hurt: ['黑铁……不碎！', '嘁……'],
       lowHp: ['启动……自毁程序……一起下地狱！'],
+    },
+  },
+  // [CH3-EXPANSION 2026-05-09] 章3 精英 +1 (priest 职业)
+  {
+    id: 'elite_flame_oracle', name: '烈焰谕者', emoji: '', chapter: 3,
+    baseHp: 85, baseDmg: 9, category: 'elite', combatType: 'priest',
+    drops: { gold: 50, relic: true, rerollReward: 2 },
+    phases: [{ actions: [
+      { type: '技能', baseValue: 3, description: '灼烧', scalable: false },
+      { type: '防御', baseValue: 16 },
+      { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+      { type: '攻击', baseValue: 9 },
+      { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+    ]}],
+    quotes: {
+      enter: ['火神的谕旨——已经写在你的灰烬上。', '（经文在火中燃烧成咒）', '你听不到火神的声音——那我替他说。'],
+      death: ['经书……化为灰烬……', '谕旨……无人传达……', '火神……终究收回了目光……'],
+      attack: ['烈焰谕旨！', '灼骨审判！', '炼狱经文！'],
+      hurt: ['扰圣——有罪。', '经书烧得更亮了。', '哼，虔诚者不怕火。'],
+      lowHp: ['以我之灰——铸最后一段谕旨！'],
     },
   },
   // 章4
@@ -201,6 +241,25 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
       lowHp: ['暗影……形态——最终手段！'],
     },
   },
+  // [CH4-EXPANSION 2026-05-09] 章4 精英 +1 (ranger 职业)
+  {
+    id: 'elite_nightfang_stalker', name: '夜牙潜影', emoji: '', chapter: 4,
+    baseHp: 95, baseDmg: 13, category: 'elite', combatType: 'ranger',
+    drops: { gold: 50, relic: true, rerollReward: 2 },
+    phases: [{ actions: [
+      { type: '攻击', baseValue: 13 },
+      { type: '攻击', baseValue: 11, description: '影刃穿刺' },
+      { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+      { type: '攻击', baseValue: 15, description: '致命暗袭' },
+    ]}],
+    quotes: {
+      enter: ['影子，是我的猎场。', '（弦响不可闻）', '你已经被瞄准了两步之久。'],
+      death: ['脚步……没能再次融进影里……', '（一刀没扎中——只差一寸……）', '暗影……拒绝再庇护我了……'],
+      attack: ['影刃穿刺！', '致命暗袭！', '咻——'],
+      hurt: ['擦伤而已。', '暴露了半步。', '下一回我走得更无声。'],
+      lowHp: ['最后一刀——影子替我推进去！'],
+    },
+  },
   // 章5
   {
     id: 'elite_titan_construct', name: '泰坦守护者', emoji: '', chapter: 5,
@@ -242,6 +301,26 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
       attack: ['虚空爆裂！', '维度撕裂！', '消散吧！'],
       hurt: ['虚空……波动了……', '有趣……你能触碰到虚空？'],
       lowHp: ['虚空的全部力量……释放！'],
+    },
+  },
+  // [CH5-EXPANSION 2026-05-09] 章5 精英 +1 (warrior 职业 — 章5 原无 warrior)
+  {
+    id: 'elite_celestial_champion', name: '天裁斗神', emoji: '', chapter: 5,
+    baseHp: 110, baseDmg: 14, category: 'elite', combatType: 'warrior',
+    drops: { gold: 50, relic: true, rerollReward: 2 },
+    phases: [{ actions: [
+      { type: '攻击', baseValue: 14 },
+      { type: '攻击', baseValue: 18, description: '天裁一击' },
+      { type: '技能', baseValue: 2, description: '力量', scalable: false },
+      { type: '防御', baseValue: 14 },
+      { type: '攻击', baseValue: 12 },
+    ]}],
+    quotes: {
+      enter: ['斗神之名——写于天空。', '（圣剑破鞘声）', '我曾一剑斩开星幕——你不过是落在剑痕里的一粒灰。'],
+      death: ['圣剑……失手了？……', '斗神的名字……也会有人夺去……', '天空……收回了我的剑痕……'],
+      attack: ['天裁一击！', '圣剑斩！', '破空！'],
+      hurt: ['肉伤不碍剑锋。', '剑痕只会更深。', '哼。'],
+      lowHp: ['以我剑命——斩破这世所有妄徒！'],
     },
   },
 ];
@@ -492,6 +571,77 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
       ],
     },
   },
+  // [CH2-EXPANSION 2026-05-09] 章2 中BOSS +2
+  {
+    id: 'boss_frost_hammer', name: '冰锤领主', emoji: '', chapter: 2,
+    baseHp: 175, baseDmg: 12, category: 'boss', bossRank: 'mid', combatType: 'warrior',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '攻击', baseValue: 16, description: '冰锤粉碎' },
+        { type: '技能', baseValue: 2, description: '冻结', scalable: false },
+        { type: '攻击', baseValue: 13 },
+        { type: '防御', baseValue: 18 },
+      ]},
+      { actions: [
+        { type: '防御', baseValue: 14 },
+        { type: '攻击', baseValue: 10 },
+        { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '冰锤锻造于千年冰河——它只认一件事：敲平一切拒绝臣服之物。',
+        '我曾用一锤砸碎十层敌军盾阵。你这根骨头，够不够我暖锤头。',
+        '冬王座下，我是手——而手，从不与尘土交谈。',
+      ],
+      dispatch: [
+        '冰锤士——去。我不喜欢为一个蝼蚁弯腰。',
+        '霜兵上前——让他先尝尝锤影之下的膝盖。',
+        '爪牙优先——本尊的锤头只留给值得的目标。',
+      ],
+      enter: ['冰锤锻造于千年冰河——它只认一件事：敲平一切拒绝臣服之物。', '冰锤士——去。我不喜欢为一个蝼蚁弯腰。'],
+      death: ['锤……落地……', '冰河……封冻了我的名字……', '下一个持锤之人……会为我报仇……', '（锤柄碎裂）', '冬之手……到此为止……'],
+      attack: ['冰锤砸下！', '粉碎！', '跪！'],
+      hurt: ['区区划痕。', '锤还在。', '还不够让锤头松手。'],
+      lowHp: ['最后一锤——把天砸下来！', '冰锤全力——敲平！', '让冬天用我的死重新咆哮！'],
+    },
+  },
+  {
+    id: 'boss_winter_huntress', name: '寒霜女猎', emoji: '', chapter: 2,
+    baseHp: 150, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'ranger',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '攻击', baseValue: 11, description: '冰棱连发' },
+        { type: '技能', baseValue: 2, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 13, description: '致命一箭' },
+        { type: '防御', baseValue: 10 },
+      ]},
+      { actions: [
+        { type: '攻击', baseValue: 9 },
+        { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 10 },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '风雪里的脚印——是我给你的最后警告。',
+        '我射下过一只奔腾中的雪崩。你不会比它更难瞄准。',
+        '我只猎一次——因为从没需要第二次。',
+      ],
+      dispatch: [
+        '雪狼群——上。我要先看清你的步法。',
+        '冰晶猎犬，去。我的弦，还不愿为你松开。',
+        '我不浪费箭——爪牙够用了。',
+      ],
+      enter: ['风雪里的脚印——是我给你的最后警告。', '雪狼群——上。我要先看清你的步法。'],
+      death: ['箭……偏了……', '今夜的风……怪我……', '（雪地里只留下一截冰箭）', '下一次……我会更近再放……', '雪融时……我的弓……会被找到……'],
+      attack: ['致命一箭！', '冰棱连发！', '咻——'],
+      hurt: ['擦伤罢了。', '距离没算准。', '下一箭会学会教训。'],
+      lowHp: ['搭上最后一支箭——必须命中心脏！', '屏息——所有风都为这一箭让路！', '我的弓——做最后一次弯折！'],
+    },
+  },
   // 章2 终Boss
   {
     id: 'boss_frost_lich', name: '霜之巫妖王', emoji: '', chapter: 2,
@@ -603,6 +753,77 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '燃烧！继续燃烧！',
         '炎魔之怒——连熔岩都要沸腾！',
       ],
+    },
+  },
+  // [CH3-EXPANSION 2026-05-09] 章3 中BOSS +2
+  {
+    id: 'boss_magma_tyrant', name: '岩浆暴君', emoji: '', chapter: 3,
+    baseHp: 180, baseDmg: 13, category: 'boss', bossRank: 'mid', combatType: 'guardian',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '攻击', baseValue: 16, description: '熔岩巨锤' },
+        { type: '防御', baseValue: 26 },
+        { type: '技能', baseValue: 3, description: '灼烧', scalable: false },
+        { type: '攻击', baseValue: 12 },
+      ]},
+      { actions: [
+        { type: '防御', baseValue: 18 },
+        { type: '攻击', baseValue: 10 },
+        { type: '技能', baseValue: 2, description: '虚弱', scalable: false },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '熔岩从我足下流出——我走一步，大地就要塌一层。',
+        '我统治的是熔岩，不是什么王座。王座会冷，熔岩不会。',
+        '你走进的每一块岩壁，都是我睡过的床。',
+      ],
+      dispatch: [
+        '熔岩犬，去。我要看看你能撑到第几口火焰。',
+        '熔铁爪牙——先行。我不屑踩你这种脆壳。',
+        '小兵上。只要你能活着见到我，我就亲自烤熟你。',
+      ],
+      enter: ['熔岩从我足下流出——我走一步，大地就要塌一层。', '熔岩犬，去。我要看看你能撑到第几口火焰。'],
+      death: ['熔岩……降温了……', '王座……成灰……', '（一声轰然，没有任何话语）', '下一座火山，会再有暴君……', '我的名字会被刻在熔岩石上……等待复活……'],
+      attack: ['熔岩巨锤！', '熔地！', '跪下！'],
+      hurt: ['钢铁外壳，不过皮毛被烧。', '烫——也比被劈强。', '一点小伤，不影响我沉睡。'],
+      lowHp: ['最后一锤——把我连同熔岩砸向你！', '熔岩核心——为我释放全部高温！', '和我一起沉入火中！'],
+    },
+  },
+  {
+    id: 'boss_soulforge_warlock', name: '魂炉术士', emoji: '', chapter: 3,
+    baseHp: 150, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '技能', baseValue: 1, description: '诅咒注入', scalable: false, curseDice: 'cursed', curseDiceCount: 1 },
+        { type: '攻击', baseValue: 12, description: '魂炉熔诅' },
+        { type: '技能', baseValue: 3, description: '灼烧', scalable: false },
+        { type: '防御', baseValue: 12 },
+      ]},
+      { actions: [
+        { type: '攻击', baseValue: 10 },
+        { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+        { type: '技能', baseValue: 2, description: '灼烧', scalable: false },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '我把灵魂丢进熔炉——看它融成什么，就成什么。',
+        '你的灵魂是什么质地？——正好，我今天想试炼一口新锭。',
+        '魂炉从不熄火。今晚，你来添一把薪。',
+      ],
+      dispatch: [
+        '锻灵们，起。先把他的意志敲软。',
+        '魂焰仆从——上场。让他闻闻自己魂魄的焦味。',
+        '爪牙打前阵。我好专心炼这一勺新灵。',
+      ],
+      enter: ['我把灵魂丢进熔炉——看它融成什么，就成什么。', '锻灵们，起。先把他的意志敲软。'],
+      death: ['炉——冷了……', '灵魂……炸开……', '熔不化的东西……也有吗……', '（熔炉塌陷的巨响）', '我的熔炉……将为别人所用……'],
+      attack: ['魂炉熔诅！', '炼魂刃！', '熔！'],
+      hurt: ['炉盖松动，不算大事。', '灵魂滴水，不够溅起火花。', '刺我一下？我回你一炉。'],
+      lowHp: ['最后的魂焰——把我自己一起炼进去！', '熔！熔！熔！—— 通通变成我的刃！', '魂炉全开！一起进熔化池！'],
     },
   },
   // 章3 终Boss
@@ -720,6 +941,77 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
       ],
     },
   },
+  // [CH4-EXPANSION 2026-05-09] 章4 中BOSS +2
+  {
+    id: 'boss_void_inquisitor', name: '虚空审判官', emoji: '', chapter: 4,
+    baseHp: 170, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'priest',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+        { type: '攻击', baseValue: 13, description: '虚空审决' },
+        { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
+        { type: '防御', baseValue: 18 },
+      ]},
+      { actions: [
+        { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 10 },
+        { type: '技能', baseValue: 2, description: '剧毒', scalable: false },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '虚空议会——已对你作出终审判决。',
+        '我带来的不是问答，是执行。',
+        '每一个灵魂在我面前都只有一次机会——不，你连那一次都错过了。',
+      ],
+      dispatch: [
+        '执法侍者，出列。让他先感受\'审判\'这个词的重量。',
+        '爪牙——执行初步判决。我保留对复杂案件的亲自处置。',
+        '我不动手——罪名需要被亲手证明，但宣判只需一个眼神。',
+      ],
+      enter: ['虚空议会——已对你作出终审判决。', '执法侍者，出列。让他先感受\'审判\'这个词的重量。'],
+      death: ['判决……被撤回了？……', '虚空议会……会记住这个名字……', '第一次……有人推翻了我的判决……', '（权杖坠地）', '下一位审判官……会更严厉……'],
+      attack: ['虚空审决！', '宣判！', '罪有应得！'],
+      hurt: ['不敬——记录在案。', '污了圣服，加重罪行。', '哼。'],
+      lowHp: ['以我性命——作最后一纸判决！', '权杖——把所有罪全部宣读出来！', '虚空议会——倾巢出动！'],
+    },
+  },
+  {
+    id: 'boss_chaos_tactician', name: '混沌谋略家', emoji: '', chapter: 4,
+    baseHp: 155, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '攻击', baseValue: 12, description: '混乱之触' },
+        { type: '技能', baseValue: 1, description: '诅咒注入', scalable: false, curseDice: 'cursed', curseDiceCount: 1 },
+        { type: '技能', baseValue: 2, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 10 },
+      ]},
+      { actions: [
+        { type: '攻击', baseValue: 9 },
+        { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+        { type: '防御', baseValue: 12 },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '我不需要你理解我的棋局——你的任务是成为一枚被牺牲的子。',
+        '混沌不是无序——是我还没向你解释的那种秩序。',
+        '你脑子里每一个\'意外\'，其实都是我三回合前埋下的注脚。',
+      ],
+      dispatch: [
+        '小卒们——布阵。我的价值不在于挥剑，在于预言谁该倒下。',
+        '爪牙先行。我还在计算下一个奇迹该如何解释。',
+        '先让棋子去消耗他——我需要看他的反应速度。',
+      ],
+      enter: ['我不需要你理解我的棋局——你的任务是成为一枚被牺牲的子。', '小卒们——布阵。我的价值不在于挥剑，在于预言谁该倒下。'],
+      death: ['这一步——我没算进去……', '原来……有人不按棋谱走……', '棋盘……被掀翻了……', '（笔落地）', '下一局……我会多留一颗后手……'],
+      attack: ['混乱之触！', '将军！', '落子！'],
+      hurt: ['这一子——我低估了。', '棋盘上多了一粒灰尘。', '走得太急，我容后调整。'],
+      lowHp: ['最后一子——把整个棋盘翻过来！', '弃子——全盘皆毒！', '混沌最终解——你也一起被解出！'],
+    },
+  },
   // 章4 终Boss
   {
     id: 'boss_kiljaeden', name: '暗影之王', emoji: '', chapter: 4,
@@ -831,6 +1123,77 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
         '战斗协议升级：毁灭模式。',
         '修正：消灭威胁优先级——最高。',
       ],
+    },
+  },
+  // [CH5-EXPANSION 2026-05-09] 章5 中BOSS +2
+  {
+    id: 'boss_chrono_archon', name: '时流执政', emoji: '', chapter: 5,
+    baseHp: 180, baseDmg: 12, category: 'boss', bossRank: 'mid', combatType: 'caster',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '攻击', baseValue: 14, description: '时流撕裂' },
+        { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+        { type: '防御', baseValue: 18 },
+        { type: '攻击', baseValue: 11 },
+      ]},
+      { actions: [
+        { type: '攻击', baseValue: 10 },
+        { type: '技能', baseValue: 2, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 12 },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '时流在我手里是一卷可以翻阅的书——你的结局，我已经读到最后一页。',
+        '你每一次挥剑，对我来说都是已经发生的往事。',
+        '我站在你未来的尽头——回望你此刻的挣扎。',
+      ],
+      dispatch: [
+        '时流侍从——从过去与未来同时召唤出来。',
+        '分身们，去。让他不知道自己正在与第几个我交手。',
+        '爪牙先行。我要从你下一步的选择里，挑最有趣的继续。',
+      ],
+      enter: ['时流在我手里是一卷可以翻阅的书——你的结局，我已经读到最后一页。', '时流侍从——从过去与未来同时召唤出来。'],
+      death: ['这一页……没有记录过……', '时流……抛弃了我的预言……', '骰子……比时间更早一步……', '（沙漏倒置却停止流动）', '下一次循环……我会记得提防你……'],
+      attack: ['时流撕裂！', '时之刃！', '翻页！'],
+      hurt: ['时差……被扰了一步。', '剧本没写到这。', '下一页会更厚——我保证。'],
+      lowHp: ['把所有时流——逆向灌入最后一击！', '过去与未来——合为同一刃！', '时流尽头——与我共葬！'],
+    },
+  },
+  {
+    id: 'boss_celestial_archon', name: '圣辉执政', emoji: '', chapter: 5,
+    baseHp: 170, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'priest',
+    drops: { gold: 55, relic: true, rerollReward: 3 },
+    phases: [
+      { hpThreshold: 0.5, actions: [
+        { type: '技能', baseValue: 2, description: '易伤', scalable: false },
+        { type: '攻击', baseValue: 13, description: '圣辉审判' },
+        { type: '防御', baseValue: 20 },
+        { type: '技能', baseValue: 3, description: '剧毒', scalable: false },
+      ]},
+      { actions: [
+        { type: '技能', baseValue: 1, description: '虚弱', scalable: false },
+        { type: '攻击', baseValue: 10 },
+        { type: '防御', baseValue: 14 },
+      ]},
+    ],
+    quotes: {
+      greet: [
+        '圣辉议会——已将你列于\'可以审判之物\'的末位。',
+        '我是圣光的手。圣光不怕脏——因为我替它脏。',
+        '凡活着的生物，都要为活着这件事向我交账。',
+      ],
+      dispatch: [
+        '圣辉护卫——执行初审。我只处理不可饶恕的罪人。',
+        '爪牙出动。让他先听完审问词，再开始求饶也不迟。',
+        '我不沾凡尘——侍者们替我念起诉状。',
+      ],
+      enter: ['圣辉议会——已将你列于\'可以审判之物\'的末位。', '圣辉护卫——执行初审。我只处理不可饶恕的罪人。'],
+      death: ['议会……撤回我的判例了……', '圣辉……收回了他的注视……', '（金权杖坠落成灰）', '我的审判……第一次被推翻……', '下一位议员……会更严格……'],
+      attack: ['圣辉审判！', '审决！', '宣判！'],
+      hurt: ['对圣者动手——罪加一等。', '圣服破了一角——不影响判决。', '哼。'],
+      lowHp: ['以我性命——把最后一纸判决印在他灵魂上！', '圣辉全开——照穿他每一寸阴影！', '议会终审——我与他一同归于尘埃！'],
     },
   },
   // 章5 终Boss
