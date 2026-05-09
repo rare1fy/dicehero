@@ -452,6 +452,8 @@ export function EnemyStageView() {
             }`}>
               {/* [BOSS-AURA 2026-05-09] 中/终 BOSS sprite 光效+粒子（章节配色） */}
               {(() => { const rank = BOSS_RANK_MAP[enemy.configId]; return rank ? <BossAura rank={rank} chapter={game.chapter} /> : null; })()}
+              {/* [2026-05-10 SELECT-RING-Z-FIX] 选中光环渲染在 PixelSprite 之前 → DOM 先 = z 序低 → 精灵盖住光环上半，营造"敌人站在光圈中"的层次感 */}
+              {isTarget && <EnemySelectionFx />}
               {hasSpriteData(enemy.name) ? <PixelSprite name={enemy.name} size={spriteSize} /> : <PixelSkull size={spriteSize} />}
               {enemy.statuses.some(s => s.type === 'burn') && (
                 <><div className="absolute inset-[-6px] pointer-events-none enemy-debuff-burn" style={{borderRadius:'50%'}} /><div className="absolute inset-[-8px] pointer-events-none enemy-burn-particles">{Array.from({length: 4}).map((_, pi) => (<div key={pi} className="enemy-burn-spark" style={{left: `${20 + Math.random() * 60}%`, animationDelay: `${Math.random() * 1.5}s`}} />))}</div></>
@@ -461,8 +463,6 @@ export function EnemyStageView() {
               )}
               {enemy.statuses.some(s => s.type === 'weak') && <div className="absolute inset-[-4px] pointer-events-none enemy-debuff-weak" style={{borderRadius:'50%'}} />}
               {enemy.statuses.some(s => s.type === 'vulnerable') && <div className="absolute inset-[-4px] pointer-events-none enemy-debuff-vulnerable" style={{borderRadius:'50%'}} />}
-              {/* [2026-05-10 像素风选中三层] 替代旧 enemy-target-glow 矩形外框 */}
-              {isTarget && <EnemySelectionFx />}
             </div>
             <div className="mt-1 animate-enemy-shadow" style={{width: '150%', height: '18px', background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 45%, transparent 70%)', borderRadius: '50%', marginLeft: '-25%', filter: 'blur(3px)'}} />
             {/* [2026-05-09] 移除脚下距离指示点（distance-indicator） */}
