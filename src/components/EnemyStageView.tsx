@@ -47,6 +47,7 @@ import { SettlementOverlay } from './SettlementOverlay';
 import { DamagePreviewCard } from './DamagePreviewCard';
 import { EnemySelectionFx } from './EnemySelectionFx';
 import { EnemyRangeBadge } from './EnemyRangeBadge';
+import { isFinalBossId } from '../data/finalBosses';
 import { useBattleContext } from '../contexts/BattleContext';
 import { BossTauntScene } from './BossTauntEntrance';
 import { BossAura } from './BossAura';
@@ -320,9 +321,12 @@ export function EnemyStageView() {
           }
         const isTarget = isAoeActive ? (enemy.hp > 0) : (enemy.uid === (targetEnemyUid_ || enemies.find(e => e.hp > 0)?.uid));
         const currentNode = game.map.find(n => n.id === game.currentNodeId);
-        const baseSpriteSize = currentNode?.type === 'boss' ? 12 : currentNode?.type === 'elite' ? 10 : 7;
+        const isBossNode = currentNode?.type === 'boss';
+        const isFinalBoss = isBossNode && isFinalBossId(enemy.configId);
+        const baseSpriteSize = isBossNode ? 12 : currentNode?.type === 'elite' ? 10 : 7;
         const dist = enemy.distance || 0;
-        const depthScale = dist === 0 ? 1.25 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6;
+        // [2026-05-10 FINAL-BOSS-DEPTH-CAP v4] 三层级缩放：普通 1.25 / 章中 BOSS 1.05 / 终极 BOSS 0.85（避免撑满屏挡 HUD，气场靠粒子补偿）
+        const depthScale = isFinalBoss ? (dist === 0 ? 0.85 : dist === 1 ? 0.78 : dist === 2 ? 0.70 : 0.58) : isBossNode ? (dist === 0 ? 1.05 : dist === 1 ? 0.92 : dist === 2 ? 0.75 : 0.6) : (dist === 0 ? 1.25 : dist === 1 ? 0.95 : dist === 2 ? 0.75 : 0.6);
         const depthY = dist >= 3 ? -50 : dist === 2 ? -25 : dist === 1 ? -5 : 30;
         const depthOpacity = 1.0;
         const depthBrightness = dist >= 3 ? 0.82 : dist === 2 ? 0.9 : dist === 1 ? 0.95 : 1.0;
