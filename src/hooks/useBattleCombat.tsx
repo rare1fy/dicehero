@@ -12,7 +12,7 @@ import {
 } from '../engine/relicQueries';
 import { triggerHourglass } from '../engine/relicUpdates';
 import { buildRelicContext } from '../engine/buildRelicContext';
-import { detectAoeActive, shouldWarnWarriorMultiNormal } from '../logic/aoeDetection';
+import { detectAoeActive } from '../logic/aoeDetection';
 import { computeHandHintIds } from '../logic/handHintCalc';
 import { checkHands } from '../utils/handEvaluator';
 import { playSound } from '../utils/sound';
@@ -79,14 +79,8 @@ export function useBattleCombat(
     playSound('select');
     setDice(prev => {
       const next = prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d);
-      const newSelected = next.filter(d => d.selected && !d.spent);
-
-      if (game.playerClass === 'warrior' && !isCurrentlySelected && shouldWarnWarriorMultiNormal(newSelected)) {
-        const handResult = checkHands(newSelected, { straightUpgrade: getStraightUpgrade(game.relics) });
-        if (handResult.activeHands.includes('普通攻击') && handResult.activeHands.length === 1) {
-          setTimeout(() => addToast('多选普通攻击：特殊骰子效果将被禁用！', 'info'), 50);
-        }
-      }
+      // [2026-05-10] 移除多选普攻 toast 提示——用户反馈每次切换骰子都弹太烦人，
+      //   且玩家熟悉机制后此提示属于噪音。规则本身（特殊骰效果禁用）仍在结算时生效。
       return next;
     });
   };
