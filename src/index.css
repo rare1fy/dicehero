@@ -1949,81 +1949,72 @@ input[type="range"]::-moz-range-track {
 /* v2 ?????????????????????????? + ??? + 12 ???????? HUD ? */
 /* ??????? radial-gradient / blur / drop-shadow blur / border-radius??????? */
 
-/* ???????? ?? 12 ? 2?2 ????? (rx=30, ry=7) ????????? */
+/* [2026-05-10 SELECT-RING v5] 脚下金色流光椭圆环（SVG 实现，绝不翻转）
+ *   v2/v3/v4 皆败于 transform 旋转 + 扁椭圆产生的伪 3D 翻滚错觉。
+ *   v5 用 SVG <ellipse> + stroke-dasharray + 动画 stroke-dashoffset：
+ *     - 椭圆形态由 SVG 几何固定，整个生命周期不存在 rotate
+ *     - 流光由虚线偏移产生：金光沿椭圆周长流动（"光在地面跑"）
+ *     - shape-rendering: crispEdges 保持像素硬切感，无矢量软边
+ *   组件直接渲染 <svg>，CSS 只负责定位。 */
 .enemy-target-ring {
   position: absolute;
   left: 50%;
   bottom: -2px;
-  width: 2px;
-  height: 2px;
+  width: 64px;
+  height: 18px;
   transform: translateX(-50%);
   pointer-events: none;
-  background: transparent;
-  /* 12 ??????30? ?????/?/???????"??"???? */
-  box-shadow:
-      30px 0px     0 0 #fff2a8,
-      26px 3.5px   0 0 #ffe066,
-      15px 6px     0 0 #c89818,
-      0px  7px     0 0 #fff2a8,
-    -15px  6px     0 0 #ffe066,
-    -26px  3.5px   0 0 #c89818,
-    -30px  0px     0 0 #fff2a8,
-    -26px -3.5px   0 0 #ffe066,
-    -15px -6px     0 0 #c89818,
-      0px -7px     0 0 #fff2a8,
-     15px -6px     0 0 #ffe066,
-     26px -3.5px   0 0 #c89818;
-  image-rendering: pixelated;
-  animation: target-ring-flow 2.4s linear infinite;
+  overflow: visible;
+  filter: drop-shadow(0 0 3px rgba(255,224,102,0.55));
+}
+.enemy-target-ring__ellipse {
+  fill: none;
+  stroke: #ffe066;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  shape-rendering: crispEdges;
+  animation: target-ring-flow 1.6s linear infinite;
+}
+.enemy-target-ring__ellipse--inner {
+  stroke: #fff7c8;
+  stroke-width: 1;
+  stroke-dasharray: 3 7;
+  animation: target-ring-flow 1.1s linear infinite reverse;
+  opacity: 0.85;
 }
 @keyframes target-ring-flow {
-  0%   { transform: translateX(-50%) rotate(0deg); }
-  100% { transform: translateX(-50%) rotate(360deg); }
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -40; }
 }
 
-/* HUD ??? ?? ???????????? EnemyStageView ??? HUD ????
-   7?4 ???????????????????? */
+/* [2026-05-10 HUD-ARROW v3] HUD 上方选中指示箭头
+ *   v2 用 3 行 box-shadow 方块阵（7/5/3/1 颗 2×2px）模拟像素倒三角，放大/缩小时
+ *   子像素渲染导致边缘糊掉，不再"尖"。v3 改为 CSS border 切角硬三角 +
+ *   金色线性渐变 + 1px 暗描边，无论缩放始终锐利；再加一个小幅 steps 跳动。
+ *   （border 三角本质是两个三角形合成的尖角，不是矢量"圆润"，边缘永远像素硬切，
+ *   配合 image-rendering: pixelated 保持像素风协调） */
 .enemy-hud-arrow {
   position: absolute;
   left: 50%;
-  top: -12px;
-  width: 2px;
-  height: 2px;
+  top: -10px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #ffe066;
   transform: translateX(-50%);
   pointer-events: none;
-  background: transparent;
-  /* ????
-     ?0: ? ? ? ? ? ? ? (7 ?)
-     ?1:   ? ? ? ? ?   (5 ?)
-     ?2:     ? ? ?     (3 ?)
-     ?3:       ?       (1 ?)  */
-  box-shadow:
-    /* ? 0?7 ? */
-    -12px 0px 0 0 #c89818,
-    -8px  0px 0 0 #ffe066,
-    -4px  0px 0 0 #fff2a8,
-     0px  0px 0 0 #fff7c8,
-     4px  0px 0 0 #fff2a8,
-     8px  0px 0 0 #ffe066,
-    12px  0px 0 0 #c89818,
-    /* ? 1?5 ? */
-    -8px  4px 0 0 #c89818,
-    -4px  4px 0 0 #ffe066,
-     0px  4px 0 0 #fff2a8,
-     4px  4px 0 0 #ffe066,
-     8px  4px 0 0 #c89818,
-    /* ? 2?3 ? */
-    -4px  8px 0 0 #c89818,
-     0px  8px 0 0 #ffe066,
-     4px  8px 0 0 #c89818,
-    /* ? 3?1 ? */
-     0px 12px 0 0 #8a6410;
-  image-rendering: pixelated;
+  /* 下方阴影模拟"描边"（三角形不能直接 border，用 filter drop-shadow 勾边） */
+  filter:
+    drop-shadow(0 1px 0 #8a6410)
+    drop-shadow(1px 0 0 #8a6410)
+    drop-shadow(-1px 0 0 #8a6410)
+    drop-shadow(0 0 4px rgba(255,224,102,0.55));
   animation: hud-arrow-bob 0.7s steps(2) infinite;
 }
 @keyframes hud-arrow-bob {
   0%,100% { transform: translateX(-50%) translateY(0); }
-  50%     { transform: translateX(-50%) translateY(-2px); }
+  50%     { transform: translateX(-50%) translateY(-3px); }
 }
 
 
