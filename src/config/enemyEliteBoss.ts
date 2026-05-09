@@ -16,6 +16,10 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     id: 'elite_necromancer', name: '亡灵巫师', emoji: '', chapter: 1,
     baseHp: 85, baseDmg: 8, category: 'elite', combatType: 'caster',
     drops: { gold: 50, relic: true, rerollReward: 2 },
+    // [SUMMON 2026-05-09] 亡灵巫师每3回合召唤食尸鬼，maxTotal=2
+    summons: { minionId: 'forest_ghoul', interval: 3, count: 1, maxTotal: 2, waveCap: 4 },
+    // [REVIVE 2026-05-09] 不死巫师不死：死亡时回 50% HP 一次
+    revive: { reviveHpRatio: 0.5 },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 14, description: '亡灵大军' },
@@ -42,7 +46,6 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
       { type: '攻击', baseValue: 14, description: '狂暴撕咬' },
-      { type: '技能', baseValue: 2, description: '力量', scalable: false },
       { type: '攻击', baseValue: 9 },
     ]}],
     quotes: {
@@ -311,7 +314,6 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     phases: [{ actions: [
       { type: '攻击', baseValue: 14 },
       { type: '攻击', baseValue: 18, description: '天裁一击' },
-      { type: '技能', baseValue: 2, description: '力量', scalable: false },
       { type: '防御', baseValue: 14 },
       { type: '攻击', baseValue: 12 },
     ]}],
@@ -334,6 +336,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_lich_forest', name: '枯骨巫妖', emoji: '', chapter: 1,
     baseHp: 150, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 60, relic: true },
+    // [SUMMON 2026-05-09] 死灵法师召唤亡灵：每3回合召唤食尸鬼，最多4只
+    summons: { minionId: 'forest_ghoul', interval: 3, count: 1, maxTotal: 4, waveCap: 4 },
     phases: [
       { hpThreshold: 0.4, actions: [
         { type: '攻击', baseValue: 16, description: '亡灵风暴' },
@@ -390,6 +394,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_root_colossus', name: '根须巨像', emoji: '', chapter: 1,
     baseHp: 170, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'guardian',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [REVIVE 2026-05-09] 树魔死亡分裂为 2 只腐化树人（半血，攻击力 70%）
+    revive: { reviveHpRatio: 0.5, splitInto: 2, splitMinionId: 'forest_treant' },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 14, description: '根须重拳' },
@@ -425,6 +431,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_coven_matriarch', name: '魇森巫母', emoji: '', chapter: 1,
     baseHp: 145, baseDmg: 9, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 巫母召唤蛛群：每3回合召唤剧毒蛛母，最多3只
+    summons: { minionId: 'forest_spider', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -461,6 +469,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_ancient_treant', name: '远古树王', emoji: '', chapter: 1,
     baseHp: 300, baseDmg: 15, category: 'boss', bossRank: 'final', combatType: 'guardian',
     drops: { gold: 0, relic: false },
+    // [SUMMON 2026-05-09] 终BOSS 二阶段（hp<50%）召唤幽冥诅祝
+    summons: { minionId: 'forest_wraith_cultist', interval: 4, count: 1, maxTotal: 3, waveCap: 4, hpThreshold: 0.5 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 22, description: '大地之怒' },
@@ -576,6 +586,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_frost_hammer', name: '冰锤领主', emoji: '', chapter: 2,
     baseHp: 175, baseDmg: 12, category: 'boss', bossRank: 'mid', combatType: 'warrior',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 冰巨人召唤雪峦守望，每3回合
+    summons: { minionId: 'ice_avalanche_watch', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 16, description: '冰锤粉碎' },
@@ -611,6 +623,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_winter_huntress', name: '寒霜女猎', emoji: '', chapter: 2,
     baseHp: 150, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'ranger',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 女猎召唤暴风战狼群，每3回合，最多3只
+    summons: { minionId: 'ice_storm_wolf', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 11, description: '冰棱连发' },
@@ -647,6 +661,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_frost_lich', name: '霜之巫妖王', emoji: '', chapter: 2,
     baseHp: 320, baseDmg: 15, category: 'boss', bossRank: 'final', combatType: 'warrior',
     drops: { gold: 0, relic: false },
+    // [SUMMON 2026-05-09] 终BOSS 二阶段（hp<50%）召唤冰棺咒灵
+    summons: { minionId: 'ice_coffin_wraith', interval: 4, count: 1, maxTotal: 3, waveCap: 4, hpThreshold: 0.5 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 28, description: '霜之哀伤' },
@@ -760,6 +776,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_magma_tyrant', name: '岩浆暴君', emoji: '', chapter: 3,
     baseHp: 180, baseDmg: 13, category: 'boss', bossRank: 'mid', combatType: 'guardian',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 暴君召唤地狱火犬，每3回合
+    summons: { minionId: 'lava_hound', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 16, description: '熔岩巨锤' },
@@ -795,6 +813,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_soulforge_warlock', name: '魂炉术士', emoji: '', chapter: 3,
     baseHp: 150, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 术士召唤小恶魔，每3回合
+    summons: { minionId: 'lava_imp', interval: 3, count: 1, maxTotal: 4, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '技能', baseValue: 1, description: '诅咒注入', scalable: false, curseDice: 'cursed', curseDiceCount: 1 },
@@ -831,6 +851,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_deathwing', name: '熔火死翼', emoji: '', chapter: 3,
     baseHp: 380, baseDmg: 16, category: 'boss', bossRank: 'final', combatType: 'caster',
     drops: { gold: 0, relic: false },
+    // [SUMMON 2026-05-09] 终BOSS 二阶段（hp<50%）召唤小恶魔
+    summons: { minionId: 'lava_imp', interval: 4, count: 1, maxTotal: 4, waveCap: 4, hpThreshold: 0.5 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 30, description: '大灾变' },
@@ -946,6 +968,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_void_inquisitor', name: '虚空审判官', emoji: '', chapter: 4,
     baseHp: 170, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'priest',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 审判官召唤暗影刺客，每3回合
+    summons: { minionId: 'shadow_assassin', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -981,6 +1005,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_chaos_tactician', name: '混沌谋略家', emoji: '', chapter: 4,
     baseHp: 155, baseDmg: 10, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 谋略家召唤邪能术士，每3回合
+    summons: { minionId: 'shadow_warlock', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 12, description: '混乱之触' },
@@ -1017,6 +1043,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_kiljaeden', name: '暗影之王', emoji: '', chapter: 4,
     baseHp: 380, baseDmg: 16, category: 'boss', bossRank: 'final', combatType: 'caster',
     drops: { gold: 0, relic: false },
+    // [REVIVE 2026-05-09] 死亡分裂为 2 只暗影刺客（半血，影分身）
+    revive: { reviveHpRatio: 0.5, splitInto: 2, splitMinionId: 'shadow_assassin' },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 28, description: '黑暗终焉' },
@@ -1130,6 +1158,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_chrono_archon', name: '时流执政', emoji: '', chapter: 5,
     baseHp: 180, baseDmg: 12, category: 'boss', bossRank: 'mid', combatType: 'caster',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 时流执政召唤时砂法师，每3回合
+    summons: { minionId: 'eternal_chronomancer', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 14, description: '时流撕裂' },
@@ -1165,6 +1195,8 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_celestial_archon', name: '圣辉执政', emoji: '', chapter: 5,
     baseHp: 170, baseDmg: 11, category: 'boss', bossRank: 'mid', combatType: 'priest',
     drops: { gold: 55, relic: true, rerollReward: 3 },
+    // [SUMMON 2026-05-09] 圣辉执政召唤永光吟唱者，每3回合
+    summons: { minionId: 'eternal_lightcantor', interval: 3, count: 1, maxTotal: 3, waveCap: 4 },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '技能', baseValue: 2, description: '易伤', scalable: false },
@@ -1201,6 +1233,9 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     id: 'boss_eternal_lord', name: '永恒主宰', emoji: '', chapter: 5,
     baseHp: 480, baseDmg: 18, category: 'boss', bossRank: 'final', combatType: 'caster',
     drops: { gold: 0, relic: false },
+    // [SUMMON+REVIVE 2026-05-09] 终极 BOSS 双机制：召唤时砂法师 + 死亡分裂成 2 只穹苍骑兵
+    summons: { minionId: 'eternal_chronomancer', interval: 4, count: 1, maxTotal: 3, waveCap: 4, hpThreshold: 0.7 },
+    revive: { reviveHpRatio: 0.5, splitInto: 2, splitMinionId: 'eternal_skyknight' },
     phases: [
       { hpThreshold: 0.5, actions: [
         { type: '攻击', baseValue: 28, description: '终极之光' },

@@ -32,17 +32,15 @@ let uidCounter = 0;
 
 /** [2026-05-09] 导出供 GM 训练场单独构造敌人使用 */
 export const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Enemy => {
-  // [2026-05-09 BOSS-BUFF] BOSS 全局再加强：HP×1.20 让玩家感受"耐打"
-  // 攻击加成走 attackCalc 的 calcBossDmgBuff（动态乘子，方便后续调整）
-  const isBoss = config.category === 'boss';
-  const bossHpMul = isBoss ? 1.20 : 1.0;
-  return {
+  // [2026-05-09 v2] 移除 BOSS 全局 HP×1.20 / ATK×1.15 加成 —— 改为 BOSS 自身阶段递进 + 配置数值直出，
+  // 保证"BOSS 强度提升"由独立机制承担，不污染 normal/elite 的数值。
+  const enemy: Enemy = {
     uid: `enemy_${++uidCounter}_${Date.now()}`,
     configId: config.id,
     name: config.name,
     emoji: config.emoji,
-    hp: Math.floor(config.baseHp * hpScale * bossHpMul),
-    maxHp: Math.floor(config.baseHp * hpScale * bossHpMul),
+    hp: Math.floor(config.baseHp * hpScale),
+    maxHp: Math.floor(config.baseHp * hpScale),
     armor: 0,
     attackDmg: Math.floor(config.baseDmg * dmgScale),
     combatType: config.combatType || 'warrior',
@@ -53,6 +51,7 @@ export const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: numbe
     distance: (config.combatType === 'warrior' || config.combatType === 'guardian') ? 2 : 3,
     pattern: buildPattern(config, dmgScale),
   };
+  return enemy;
 };
 
 /** 获取指定章节的普通敌人池 */

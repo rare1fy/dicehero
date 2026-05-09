@@ -15,6 +15,7 @@ import { getDiceDef } from '../data/dice';
 import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
 import { PixelHeart, PixelShield } from '../components/PixelIcons';
+import { applyBloodFuryOnHurt } from './enemyTraits';
 
 // ============================================================
 // Context 接口
@@ -182,6 +183,13 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         if (dl2) showEnemyQuote(e.uid, dl2, ANIMATION_TIMING.enemyDeathDuration + 200);
       }
       return { ...e, hp: newHp, armor: arm, statuses: newStatuses };
+    }).map(e => {
+      // [WARRIOR_TRAIT 2026-05-09] AOE 受伤后累 bloodFury（先收 hp 完成，再统一遍历所有受伤的 warrior）
+      // 注：上一个 .map 闭包里 e 是新值，所以用 hp < maxHp 简化判断（AOE 必然被打了一下）
+      if (e.combatType === 'warrior' && e.hp > 0 && e.hp < e.maxHp) {
+        return applyBloodFuryOnHurt(e);
+      }
+      return e;
     }));
     // shadowClonePlay: 影分身 — AOE路径下对原目标追加50%伤害
     const hasShadowCloneAoe = selected.some(d => getDiceDef(d.diceDefId).onPlay?.shadowClonePlay);
@@ -305,7 +313,12 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         });
       }
       // 高阶同元素：状态也施加给其他敌人
-      return { ...e, hp: Math.max(0, finalEnemyHp), armor: enemyArmor, statuses: newStatuses };
+      const damaged = { ...e, hp: Math.max(0, finalEnemyHp), armor: enemyArmor, statuses: newStatuses };
+      // [WARRIOR_TRAIT 2026-05-09] 受伤后累 bloodFury（仅活着且确实掉了血时；只 warrior normal/elite 起效）
+      if (damaged.hp > 0 && damaged.hp < e.hp) {
+        return applyBloodFuryOnHurt(damaged);
+      }
+      return damaged;
     }));
     
     // 高阶同元素牌型：状态效果AOE施加给非目标敌人

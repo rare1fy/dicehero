@@ -1,18 +1,24 @@
 /**
- * attackCalc.ts — 敌人攻击力计算纯函数
- * 从 DiceHeroGame.tsx / enemyAI.ts 提取，ARCH-6
+ * attackCalc.ts — 敌人攻击力 / 显示攻击力的纯函数
  *
- * 职责：计算敌人的有效攻击伤害值
- * - combatType 乘数修正（近战/远程）
- * - 减速(slow)修正
- * - 虚弱(weak)修正
- * - 玩家易伤(vulnerable)修正
- * - 力量(strength)加成
+ * [2026-05-09 v3] 改造：
+ *   - 移除全局狂暴（>=5 回合 +6%/回合）：这种"全敌人通用"的递增违背"每职业独特"原则
+ *   - 移除 BOSS 全局 ×1.15 / HP×1.20：BOSS 强度由 phases[hpThreshold] 阶段切换 + 配置数值承担
+ *   - 五职业各自的"递增 trait"（详见 EnemyTraitsLogic）：
+ *       warrior  : bloodFury (受伤累计 +1 ATK)
+ *       ranger   : 沿用 attackCount 的 hitCount 递增（rangerAttackCountStep）
+ *       guardian : guardRage (连续防御后下次攻击 +50%)
+ *       caster   : DOT 放大（dotAmplifier，由 enemySkills 内部处理 DOT 数值，不影响攻击力）
+ *       priest   : 圣怒（debuff/护甲叠加，不直伤，不影响攻击力）
  */
-
 import type { Enemy, StatusEffect } from '../types/game';
-import { STATUS_EFFECT_MULT, ENEMY_ATTACK_MULT } from '../config';
-import { calcArcaneBackfireMult } from './battleHelpers';
+import { ENEMY_ATTACK_MULT, STATUS_EFFECT_MULT } from '../config';
+
+/** 法师反噬：每层 +10% 玩家受到的伤害 */
+function calcArcaneBackfireMult(stacks?: number): number {
+  if (!stacks) return 1;
+  return 1 + stacks * 0.1;
+}
 
 /** 攻击力计算的额外参数 */
 export interface AttackCalcExtras {
@@ -22,44 +28,20 @@ export interface AttackCalcExtras {
   isSlowed?: boolean;
   /** 法师【法术反噬】层数（不可净化的独立 debuff） */
   arcaneBackfire?: number;
-  /** [2026-05-09 RAGE] 当前战斗回合数（≥5 后敌人进入"狂暴"，攻击递增） */
-  battleTurn?: number;
 }
 
 /**
- * [2026-05-09] 战斗节奏控制：从第 5 回合起，所有敌人进入"狂暴"——
- *   攻击力 ×(1 + 0.06 × (turn - 4))，每回合 +6%
- *   - 第 5 回合 +6% / 第 8 回合 +24% / 第 12 回合 +48% / 第 20 回合 +96%
- *   防止玩家"龟缩拖延"策略。BOSS 关同样适用。
- */
-function calcRageMult(battleTurn?: number): number {
-  const t = battleTurn || 0;
-  if (t < 5) return 1;
-  return 1 + 0.06 * (t - 4);
-}
-
-/**
- * [2026-05-09 BOSS-BUFF] BOSS 全局攻击加成 ×1.15。
- * 原 baseDmg 偏温和，玩家普遍反馈"BOSS 不够厉害"。改在战斗时挂乘子，
- * 而不是改每个 boss 的 baseDmg 数据，方便后续按章节单独微调。
- */
-function calcBossDmgBuff(enemy: Enemy): number {
-  const isBoss = typeof enemy.configId === 'string' && enemy.configId.startsWith('boss_');
-  return isBoss ? 1.15 : 1;
-}
-
-/**
- * 计算敌人的有效攻击力（考虑 combatType 乘数 + 状态效果修正）
+ * 计算敌人的有效攻击力（考虑 combatType 乘数 + 状态效果修正 + 职业 trait）
  *
  * 修正顺序：
- * 1. combatType 乘数（warrior ×1.3, ranger ×0.4 + hitCount 递增）
- * 2. 力量(strength): 攻击力 + strength.value
- * 3. 虚弱(weak): 攻击力 ×STATUS_EFFECT_MULT.weak（下限1）
- * 4. 玩家易伤(vulnerable): 攻击力 ×1.5（固定）
- * 5. 法术反噬(arcaneBackfire): 攻击力 ×(1 + 0.1×层数)  —— 法师专属、不可净化
- * 6. 减速(slow): 仅 ranger 受影响，攻击力 ×ENEMY_ATTACK_MULT.slow
- * 7. [2026-05-09] 狂暴(turn≥5): 攻击力 ×(1 + 0.06 × (turn - 4))
- * 8. [2026-05-09] BOSS 全局加成 ×1.15
+ * 1. combatType 乘数（warrior ×1.3, ranger ×0.20 + hitCount 递增）
+ * 2. [WARRIOR_TRAIT] bloodFury：每层 +1 直接攻击力（线性，符合"越打越疯"）
+ * 3. [GUARDIAN_TRAIT] guardRage：每层 +50% 下次攻击伤害（消耗一次后归零，由 enemyAI 维护）
+ * 4. 力量(strength): 攻击力 + strength.value
+ * 5. 虚弱(weak): 攻击力 ×STATUS_EFFECT_MULT.weak（下限1）
+ * 6. 玩家易伤(vulnerable): 攻击力 ×1.5（固定）
+ * 7. 法术反噬(arcaneBackfire): 攻击力 ×(1 + 0.1×层数)  —— 法师专属、不可净化
+ * 8. 减速(slow): 仅 ranger 受影响，攻击力 ×ENEMY_ATTACK_MULT.slow
  */
 export function getEffectiveAttackDmg(
   enemy: Enemy,
@@ -80,65 +62,53 @@ export function getEffectiveAttackDmg(
     }
   }
 
-  // 2. 力量加成
+  // 2. 战士血怒：每层 +1 直接攻击
+  if (enemy.combatType === 'warrior' && enemy.bloodFury) {
+    val += enemy.bloodFury;
+  }
+
+  // 3. 守护者怒气：每层 ×1.5（攻防交替的爆发瞬间）
+  if (enemy.combatType === 'guardian' && enemy.guardRage && enemy.guardRage > 0) {
+    val = Math.floor(val * (1 + 0.5 * enemy.guardRage));
+  }
+
+  // 4. 力量加成
   const strength = enemy.statuses.find(s => s.type === 'strength');
   if (strength) val += strength.value;
 
-  // 3. 虚弱修正（下限1）
+  // 5. 虚弱修正（下限1）
   const weak = enemy.statuses.find(s => s.type === 'weak');
   if (weak) val = Math.max(1, Math.floor(val * STATUS_EFFECT_MULT.weak));
 
-  // 4. 玩家易伤修正（固定 ×1.5，不随层数变化）
+  // 6. 玩家易伤修正（固定 ×1.5，不随层数变化）
   const playerVuln = playerStatuses.find(s => s.type === 'vulnerable');
   if (playerVuln) val = Math.floor(val * STATUS_EFFECT_MULT.vulnerable);
 
-  // 5. 法术反噬（法师专属，独立于 statuses 不可净化）
+  // 7. 法术反噬（法师专属，独立于 statuses 不可净化）
   const backfireMult = calcArcaneBackfireMult(extras.arcaneBackfire);
   if (backfireMult !== 1) val = Math.floor(val * backfireMult);
-
-  // 6. 狂暴：拖久越凶
-  const rageMult = calcRageMult(extras.battleTurn);
-  if (rageMult !== 1) val = Math.floor(val * rageMult);
-
-  // 7. BOSS 全局加成
-  const bossBuff = calcBossDmgBuff(enemy);
-  if (bossBuff !== 1) val = Math.floor(val * bossBuff);
 
   return val;
 }
 
 /**
- * 计算 ranger 追击伤害（第二击）
- * 追击伤害 = max(1, floor(attackDmg × rangerHit) + attackCount + 1)
+ * 弓箭手追击伤害（递增式：基础 +hitCount +1）
  */
 export function getRangerFollowUpDmg(
   enemy: Enemy,
   attackCount: number,
   arcaneBackfire?: number,
-  battleTurn?: number,
 ): number {
   let val = Math.max(1, Math.floor(enemy.attackDmg * ENEMY_ATTACK_MULT.rangerHit) + attackCount + 1);
   const backfireMult = calcArcaneBackfireMult(arcaneBackfire);
   if (backfireMult !== 1) val = Math.floor(val * backfireMult);
-  // [2026-05-09] 狂暴 + BOSS 加成同步生效
-  const rageMult = calcRageMult(battleTurn);
-  if (rageMult !== 1) val = Math.floor(val * rageMult);
-  const bossBuff = calcBossDmgBuff(enemy);
-  if (bossBuff !== 1) val = Math.floor(val * bossBuff);
   return val;
 }
 
 /**
- * 计算敌人在面板 UI 上应显示的"当前实际攻击力"（供玩家预判）
- *
- * [2026-05-07] 此前 UI 直接读 enemy.attackDmg，而 ranger 实际打出的值是
- * `floor(attackDmg × 0.2) + hitCount`，且 hitCount 每次攻击递增 +2，
- * 导致成长期面板数值脱节。此函数对齐实战值。
- *
- * 不考虑玩家状态（虚弱/易伤）和减速，因为这些是战斗瞬时修正，
- * 面板只展示"敌人自身当前的攻击能力"。
+ * 玩家面板预测显示用（不考虑减速、玩家 debuff），仅含 combatType 乘数 + 职业 trait
  */
-export function getDisplayAttackDmg(enemy: Enemy, battleTurn?: number): number {
+export function getDisplayAttackDmg(enemy: Enemy): number {
   let val = enemy.attackDmg;
   if (enemy.combatType === 'warrior') {
     val = Math.floor(val * ENEMY_ATTACK_MULT.warrior);
@@ -146,14 +116,13 @@ export function getDisplayAttackDmg(enemy: Enemy, battleTurn?: number): number {
     const nextHitCount = enemy.attackCount ?? 0;
     val = Math.max(1, Math.floor(val * ENEMY_ATTACK_MULT.rangerHit) + nextHitCount);
   }
+  if (enemy.combatType === 'warrior' && enemy.bloodFury) val += enemy.bloodFury;
+  if (enemy.combatType === 'guardian' && enemy.guardRage && enemy.guardRage > 0) {
+    val = Math.floor(val * (1 + 0.5 * enemy.guardRage));
+  }
   const strength = enemy.statuses.find(s => s.type === 'strength');
   if (strength) val += strength.value;
   const weak = enemy.statuses.find(s => s.type === 'weak');
   if (weak) val = Math.max(1, Math.floor(val * STATUS_EFFECT_MULT.weak));
-  // [2026-05-09] 显示值同步含狂暴 + BOSS 加成
-  const rageMult = calcRageMult(battleTurn);
-  if (rageMult !== 1) val = Math.floor(val * rageMult);
-  const bossBuff = calcBossDmgBuff(enemy);
-  if (bossBuff !== 1) val = Math.floor(val * bossBuff);
   return val;
 }

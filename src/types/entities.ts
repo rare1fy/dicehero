@@ -42,6 +42,20 @@ export interface Enemy {
   statuses: import('./dice').StatusEffect[];
   distance: number;  // distance to player: 0=melee, >0=approaching
   attackCount?: number; // 弓箭手攻击次数计数（伤害递增用）
+  /** [2026-05-09 traits] 战士 BLOOD_FURY：受到伤害一次累积 +1 永久攻击 */
+  bloodFury?: number;
+  /** [2026-05-09 traits] 守护者 GUARD_RAGE：连续防御回合数（每 stack 下次攻击 +50%） */
+  guardRage?: number;
+  /** [2026-05-09 traits] 法师 DOT_AMPLIFIER：连续施加同种 DOT 的层数（每层让 DOT +1） */
+  dotAmplifier?: number;
+  /** [2026-05-09 traits] 牧师 HOLY_WRATH：本场战斗内累计的"圣怒"层数（每 +1 上调 debuff 强度/护甲） */
+  holyWrath?: number;
+  /** [2026-05-09 召唤累计] 已召唤次数（用于 SummonRule.maxTotal 上限判断） */
+  summonCount?: number;
+  /** [2026-05-09 复活] 已复活/分裂次数（每个 enemy 仅触发一次） */
+  revivedOnce?: boolean;
+  /** [2026-05-09] 标记此敌人是召唤生成的子单位，避免给召唤物再赋 summons 配置（防递归召唤雪崩） */
+  isSummoned?: boolean;
 }
 
 // ============================================================

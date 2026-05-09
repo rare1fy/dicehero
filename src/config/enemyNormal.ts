@@ -268,10 +268,10 @@ export const ch2_normals: EnemyConfig[] = [
     id: 'ice_storm_wolf', name: '暴风战狼', emoji: '', chapter: 2,
     baseHp: 40, baseDmg: 10, category: 'normal', combatType: 'warrior',
     drops: { gold: 22, relic: false },
+    // [2026-05-09] 移除"力量"装饰 action：warrior 现走 bloodFury 自动递增（受伤累 +1 ATK）
     phases: [{ actions: [
       { type: '攻击', baseValue: 10 },
       { type: '攻击', baseValue: 13, description: '暴风突袭' },
-      { type: '技能', baseValue: 1, description: '力量', scalable: false },
     ]}],
     quotes: {
       enter: ['嗷——风雪为我引路！', '（狂吠声回荡）'],
@@ -432,9 +432,11 @@ export const ch3_normals: EnemyConfig[] = [
     id: 'lava_shaman', name: '火焰萨满', emoji: '', chapter: 3,
     baseHp: 22, baseDmg: 3, category: 'normal', combatType: 'priest',
     drops: { gold: 20, relic: false },
+    // [2026-05-09] priest 不直接打攻击伤害；description 仅作 intent 提示。
+    // 实际行为由 executePriestSkill 决定（治疗→自疗→护甲祝福→减益）。
     phases: [{ actions: [
       { type: '技能', baseValue: 2, description: '灼烧', scalable: false },
-      { type: '技能', baseValue: 1, description: '力量', scalable: false },
+      { type: '技能', baseValue: 1, description: '护甲祝福', scalable: false },
       { type: '攻击', baseValue: 5 },
     ]}],
     quotes: {
@@ -634,7 +636,6 @@ export const ch4_normals: EnemyConfig[] = [
     phases: [{ actions: [
       { type: '攻击', baseValue: 11 },
       { type: '攻击', baseValue: 14, description: '虚空撕扯' },
-      { type: '技能', baseValue: 1, description: '力量', scalable: false },
     ]}],
     quotes: {
       enter: ['虚空——在我身后蠕动。', '（扭曲的笑声）'],
@@ -794,8 +795,9 @@ export const ch5_normals: EnemyConfig[] = [
     id: 'eternal_priest', name: '泰坦祭司', emoji: '', chapter: 5,
     baseHp: 24, baseDmg: 3, category: 'normal', combatType: 'priest',
     drops: { gold: 20, relic: false },
+    // [2026-05-09] priest 不直接打攻击伤害；description 仅作 intent 提示。
     phases: [{ actions: [
-      { type: '技能', baseValue: 2, description: '力量', scalable: false },
+      { type: '技能', baseValue: 2, description: '护甲祝福', scalable: false },
       { type: '技能', baseValue: 1, description: '易伤', scalable: false },
       { type: '攻击', baseValue: 6, description: '圣光惩击' },
     ]}],
@@ -815,7 +817,6 @@ export const ch5_normals: EnemyConfig[] = [
     phases: [{ actions: [
       { type: '攻击', baseValue: 12 },
       { type: '攻击', baseValue: 15, description: '圣裁一击' },
-      { type: '技能', baseValue: 1, description: '力量', scalable: false },
     ]}],
     quotes: {
       enter: ['斗技场永不熄灯。', '（金属轻响）'],
@@ -833,7 +834,6 @@ export const ch5_normals: EnemyConfig[] = [
       { type: '攻击', baseValue: 10 },
       { type: '防御', baseValue: 10 },
       { type: '攻击', baseValue: 13, description: '圣光重击' },
-      { type: '技能', baseValue: 1, description: '力量', scalable: false },
     ]}],
     quotes: {
       enter: ['圣光——与我同行。', '（甲胄铿锵）'],

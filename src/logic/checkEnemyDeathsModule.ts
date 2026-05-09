@@ -8,6 +8,7 @@
 import type { PostPlayContext } from './postPlayEffects';
 import { generateChallenge } from '../utils/instakillChallenge';
 import { ANIMATION_TIMING } from '../config';
+import { tryReviveOnDeath } from './enemySummonRevive';
 
 // ============================================================
 // 异步部分：敌人死亡检测
@@ -43,6 +44,67 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
     // Bug-3: 死亡动画已在 enemyDeathCleanupDelay (2200ms) 等待期间完成
     // 无需额外等待，直接检查存活敌人
     
+    // [REVIVE 2026-05-09] 检查刚死的敌人有没有 ReviveRule，有则原地复活/分裂。
+    //   单体击杀路径：finalEnemyHp <= 0 时尝试 revive(targetEnemy)
+    //   AOE 路径：遍历 enemies，对每只 hp <= 0 但有 revive 配置的尝试
+    if (!hasAoe && finalEnemyHp <= 0) {
+      const r = tryReviveOnDeath(targetEnemy);
+      if (r.revivedSelf) {
+        setEnemies(prev => prev.map(e => e.uid === targetUid ? r.revivedSelf! : e));
+        setEnemyEffectForUid(targetUid, null);
+        if (r.log) {
+          addLog(r.log);
+          addToast(r.log, 'buff');
+          showEnemyQuote(targetUid, r.log, 2400);
+        }
+        playSound('boss_laugh');
+        return;  // 不再进入波次切换 / 胜利判定
+      }
+      if (r.splits.length > 0) {
+        // 分裂：移除原敌人，插入子代
+        setEnemies(prev => {
+          const next = prev.filter(e => e.uid !== targetUid);
+          next.push(...r.splits);
+          return next;
+        });
+        if (r.log) {
+          addLog(r.log);
+          addToast(r.log, 'buff');
+        }
+        playSound('enemy_skill');
+        return;
+      }
+    }
+    if (hasAoe) {
+      // AOE 后所有 hp<=0 的复活检查
+      const dyingWithRevive: string[] = [];
+      enemies.forEach(en => {
+        if (en.hp - outcome.damage <= 0 && en.hp > 0) {
+          const r = tryReviveOnDeath(en);
+          if (r.revivedSelf || r.splits.length > 0) dyingWithRevive.push(en.uid);
+        }
+      });
+      if (dyingWithRevive.length > 0) {
+        setEnemies(prev => {
+          let next = [...prev];
+          for (const uid of dyingWithRevive) {
+            const target = prev.find(e => e.uid === uid);
+            if (!target) continue;
+            const r = tryReviveOnDeath(target);
+            if (r.revivedSelf) {
+              next = next.map(e => e.uid === uid ? r.revivedSelf! : e);
+            } else if (r.splits.length > 0) {
+              next = next.filter(e => e.uid !== uid);
+              next.push(...r.splits);
+            }
+            if (r.log) addLog(r.log);
+          }
+          return next;
+        });
+        playSound('boss_laugh');
+      }
+    }
+
     // 单体攻击：检查目标是否死亡，若存活则无需波次检测
     if (!hasAoe) {
       const targetDied = finalEnemyHp <= 0;

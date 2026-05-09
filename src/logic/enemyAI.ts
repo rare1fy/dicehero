@@ -21,6 +21,8 @@ import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueri
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
 import { getEffectiveAttackDmg, getRangerFollowUpDmg } from './attackCalc';
 import { executePriestSkill, executeCasterSkill, tickStatuses } from './enemySkills';
+import { applyGuardRageOnDefend, consumeGuardRageOnAttack, bumpDotAmplifier, bumpHolyWrathPerTurn } from './enemyTraits';
+import { trySummonForEnemy } from './enemySummonRevive';
 import { processEliteDice, processEliteArmor } from './elites';
 import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
 import { tryWaveTransition } from './enemyWaveTransition';
@@ -117,6 +119,43 @@ export async function executeEnemyTurn(
 ): Promise<EnemyTurnResult> {
   // 0. 标记进入敌人回合
   cb.setGame(prev => ({ ...prev, isEnemyTurn: true, bloodRerollCount: 0, comboCount: 0, lastPlayHandType: undefined, blackMarketUsedThisTurn: false }));
+
+  // [PRIEST_TRAIT 2026-05-09] 圣怒：每 2 回合自动 +1（在敌人回合最开始统一累加）
+  cb.setEnemies(prev => prev.map(en => bumpHolyWrathPerTurn(en, game.battleTurn)));
+
+  // [SUMMON 2026-05-09] 敌人回合开始时检查召唤——在所有 DOT 结算前完成，
+  // 让新召唤的小怪也参与本回合的 AI 决策（不会跑两个回合后才动）
+  {
+    const livingNow = enemies.filter(en => en.hp > 0);
+    let waveSize = livingNow.length;
+    const allNewMinions: Enemy[] = [];
+    const summonerUpdates = new Map<string, Partial<Enemy>>();
+    for (const en of livingNow) {
+      const r = trySummonForEnemy(en, game.battleTurn, waveSize);
+      if (r.newMinions.length > 0) {
+        allNewMinions.push(...r.newMinions);
+        summonerUpdates.set(en.uid, { summonCount: r.updatedSummoner.summonCount });
+        waveSize += r.newMinions.length;
+        if (r.log) {
+          cb.addLog(r.log);
+          cb.addToast(r.log, 'warning');
+          cb.showEnemyQuote(en.uid, r.log, 2200);
+        }
+        cb.playSound('enemy_skill');
+      }
+    }
+    if (allNewMinions.length > 0) {
+      cb.setEnemies(prev => {
+        const updated = prev.map(en => {
+          const upd = summonerUpdates.get(en.uid);
+          return upd ? { ...en, ...upd } : en;
+        });
+        return [...updated, ...allNewMinions];
+      });
+      // 等召唤动画一拍
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
 
   // 1. 玩家中毒结算（E5: death check 在回调内部完成）
   // [2026-05-07] 奥术屏障优先抵挡 DOT；护甲对 DOT 无效（bypassArmor=true）
@@ -251,7 +290,12 @@ export async function executeEnemyTurn(
         const shieldVal = Math.floor(e.attackDmg * GUARDIAN_CONFIG.shieldMult);
         cb.setEnemyEffectForUid(e.uid, 'defend');
         cb.playSound('enemy_defend');
-        cb.setEnemies(prevE => prevE.map(en => en.uid === e.uid ? { ...en, armor: en.armor + shieldVal } : en));
+        // [GUARDIAN_TRAIT 2026-05-09] 防御后累 guardRage：每层下次攻击 +50%
+        cb.setEnemies(prevE => prevE.map(en =>
+          en.uid === e.uid
+            ? applyGuardRageOnDefend({ ...en, armor: en.armor + shieldVal })
+            : en,
+        ));
         cb.addLog(`${e.name} 举盾防御（+${shieldVal}护甲），并嘲讽你！`);
         return { ...prev, targetEnemyUid: e.uid };
       });
@@ -296,6 +340,8 @@ export async function executeEnemyTurn(
       cb.playSound('enemy_skill');
       const sr = executeCasterSkill(e);
       cb.setGame(prev => ({ ...prev, statuses: sr.updateStatuses(prev.statuses) }));
+      // [CASTER_TRAIT 2026-05-09] 施法成功后累 dotAmplifier，下次 DOT 会再 +1
+      cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? bumpDotAmplifier(en) : en));
       for (const log of sr.logs) cb.addLog(log);
       for (const ft of sr.floats) {
         if (ft.delay) setTimeout(() => cb.addFloatingText(ft.text, ft.color, ft.icon, ft.target as 'player' | 'enemy'), ft.delay);
@@ -326,7 +372,6 @@ export async function executeEnemyTurn(
         attackCount: currentAttackCount,
         isSlowed,
         arcaneBackfire: prev.arcaneBackfire,
-        battleTurn: prev.battleTurn,
       });
 
       const absorb = absorbPlayerDamage(damage, prev.chantShield || 0, prev.armor, false);
@@ -400,7 +445,7 @@ export async function executeEnemyTurn(
       let chantPenaltyR = 0;
       let loggedSecondHit = 0;
       cb.setGame((prev: GameState) => {
-        const secondHit = getRangerFollowUpDmg(e, hitCount, prev.arcaneBackfire, prev.battleTurn);
+        const secondHit = getRangerFollowUpDmg(e, hitCount, prev.arcaneBackfire);
         loggedSecondHit = secondHit;
         const absorb2 = absorbPlayerDamage(secondHit, prev.chantShield || 0, prev.armor, false);
         const newHp = Math.max(0, prev.hp - absorb2.hpDamage);
@@ -430,6 +475,11 @@ export async function executeEnemyTurn(
       if (chantPenaltyR > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyR}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
       cb.addLog(`${e.name} 追击造成 ${loggedSecondHit} 伤害！`);
       cb.playSound('enemy');
+    }
+
+    // [GUARDIAN_TRAIT 2026-05-09] 攻击后清空 guardRage（爆发已经体现在 damage 里）
+    if (e.combatType === 'guardian') {
+      cb.setEnemies(prev => prev.map(en => en.uid === e.uid ? consumeGuardRageOnAttack(en) : en));
     }
 
     await new Promise(r => setTimeout(r, 300));
