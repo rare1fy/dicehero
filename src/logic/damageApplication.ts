@@ -197,7 +197,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       if (e.combatType === 'warrior' && e.hp > 0 && e.hp < e.maxHp) {
         const after = applyBloodFuryOnHurt(e);
         if (after.bloodFury && (after.bloodFury > (e.bloodFury || 0))) {
-          addFloatingText(`${e.name} 血怒+1 (${after.bloodFury}层)`, 'text-red-400', undefined, 'enemy');
+          addFloatingText(`血怒: ×${after.bloodFury}`, 'text-red-400', undefined, 'enemy');
         }
         return after;
       }
@@ -351,9 +351,8 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       // [WARRIOR_TRAIT 2026-05-09] 受伤后累 bloodFury（仅活着且确实掉了血时；只 warrior normal/elite 起效）
       if (damaged.hp > 0 && damaged.hp < e.hp) {
         const after = applyBloodFuryOnHurt(damaged);
-        // 反馈：确实累了一层时飘字，避免玩家以为没生效
         if (after.bloodFury && (after.bloodFury > (e.bloodFury || 0))) {
-          addFloatingText(`${e.name} 血怒+1 (${after.bloodFury}层)`, 'text-red-400', undefined, 'enemy');
+          addFloatingText(`血怒: ×${after.bloodFury}`, 'text-red-400', undefined, 'enemy');
         }
         return after;
       }

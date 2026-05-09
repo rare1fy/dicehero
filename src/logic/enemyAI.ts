@@ -16,7 +16,7 @@
 
 import type { Enemy, GameState, Die, Relic } from '../types/game';
 import * as ReactNS from 'react';
-import { PixelArcaneShield, PixelHeart, PixelShield, PixelArcaneSkull } from '../components/PixelIcons';
+import { PixelArcaneShield, PixelHeart, PixelShield, PixelArcaneSkull, PixelCards } from '../components/PixelIcons';
 import type { buildRelicContext as BuildRelicContextFn } from '../engine/buildRelicContext';
 import { hasFatalProtection as HasFatalProtectionFn } from '../engine/relicQueries';
 import { triggerHourglass as TriggerHourglassFn } from '../engine/relicUpdates';
@@ -29,6 +29,7 @@ import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
 import { tryWaveTransition } from './enemyWaveTransition';
 import { absorbPlayerDamage, calcMageChantHitPenalty } from './battleHelpers';
 import { tryGainBlockSlot, isWarrior } from './warriorReap';
+import { emitReward } from './rewardEvents';
 import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config';
 
 /** 奥术屏障吸收飘字用的 icon，独立一处避免重复 createElement */
@@ -39,6 +40,10 @@ const heartIcon = () => ReactNS.createElement(PixelHeart, { size: 1.3 });
 const shieldIcon = () => ReactNS.createElement(PixelShield, { size: 1.3 });
 /** 法术反噬专用：紫色骷髅，法师专属不可净化 debuff */
 const arcaneSkullIcon = () => ReactNS.createElement(PixelArcaneSkull, { size: 1.3 });
+/** 战场收割·完防奖励飘字 icon（手牌图标） */
+const cardsIcon = () => ReactNS.createElement(PixelCards, { size: 1.5 });
+/** 战场收割·完防奖励统一金色（与全局奖励色一致） */
+const REWARD_COLOR = 'text-amber-200';
 import { settleEnemyBurn, settleEnemyPoison, type DotLogEntry } from './enemyStatusSettlement';
 
 // === EnemyAI 回调接口 ===
@@ -420,7 +425,8 @@ export async function executeEnemyTurn(
         const r = tryGainBlockSlot(prev);
         if (r.changed) {
           blockUpd = r.gameUpdate;
-          cb.addFloatingText('完美防御! 下回合手牌 +1', 'text-cyan-300', shieldIcon(), 'player');
+          cb.addFloatingText(`完美防御: +1`, REWARD_COLOR, cardsIcon(), 'player');
+          emitReward('card', 1);
         }
       }
       return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd };
@@ -491,7 +497,8 @@ export async function executeEnemyTurn(
           const r = tryGainBlockSlot(prev);
           if (r.changed) {
             blockUpd2 = r.gameUpdate;
-            cb.addFloatingText('完美防御! 下回合手牌 +1', 'text-cyan-300', shieldIcon(), 'player');
+            cb.addFloatingText(`完美防御: +1`, REWARD_COLOR, cardsIcon(), 'player');
+            emitReward('card', 1);
           }
         }
         return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd2 };

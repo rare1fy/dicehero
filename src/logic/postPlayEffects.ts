@@ -126,7 +126,8 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
           gained++;
         }
         if (gained > 0) {
-          addFloatingText(`斩首! 下回合手牌 +${gained}`, 'text-red-400', undefined, 'player');
+          addFloatingText(`斩首: +${gained}`, REWARD_COLOR, cardsIcon(), 'player');
+          emitReward('card', gained);
         }
         next = cur;
       }
