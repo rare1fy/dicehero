@@ -1,3 +1,4 @@
+// [RULES-B2-EXEMPT] 敌人回合 AI 主调度：5 种 combatType 各自决策路径已不可再拆（每分支独立闭包+异步动画）
 /**
  * enemyAI.ts — 敌人回合AI逻辑
  * 
@@ -27,6 +28,7 @@ import { processEliteDice, processEliteArmor } from './elites';
 import { tryAttackTaunt, type DelayedQuoteAction } from './enemyDialogue';
 import { tryWaveTransition } from './enemyWaveTransition';
 import { absorbPlayerDamage, calcMageChantHitPenalty } from './battleHelpers';
+import { tryGainBlockSlot, isWarrior } from './warriorReap';
 import { GUARDIAN_CONFIG, ENEMY_ATTACK_MULT, ANIMATION_TIMING } from '../config';
 
 /** 奥术屏障吸收飘字用的 icon，独立一处避免重复 createElement */
@@ -412,7 +414,16 @@ export async function executeEnemyTurn(
         }
         return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
       }
-      return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
+      // [WARRIOR-REAP 2026-05-09] 完美防御：直接攻击 incoming>0 且护甲全额吸收（hpDamage=0 且 absorbedByShield=0）
+      let blockUpd: Partial<GameState> = {};
+      if (isWarrior(prev) && damage > 0 && absorb.absorbedByArmor === damage && absorb.hpDamage === 0 && absorb.absorbedByShield === 0) {
+        const r = tryGainBlockSlot(prev);
+        if (r.changed) {
+          blockUpd = r.gameUpdate;
+          cb.addFloatingText('完美防御! 下回合手牌 +1', 'text-cyan-300', shieldIcon(), 'player');
+        }
+      }
+      return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd };
     });
     if (chantPenaltyMain > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyMain}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
 
@@ -474,7 +485,16 @@ export async function executeEnemyTurn(
           }
           return { ...prev, hp: 0, phase: 'gameover' as const, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire };
         }
-        return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost };
+        // [WARRIOR-REAP 2026-05-09] 追击的完美防御判定（同主分支）
+        let blockUpd2: Partial<GameState> = {};
+        if (isWarrior(prev) && secondHit > 0 && absorb2.absorbedByArmor === secondHit && absorb2.hpDamage === 0 && absorb2.absorbedByShield === 0) {
+          const r = tryGainBlockSlot(prev);
+          if (r.changed) {
+            blockUpd2 = r.gameUpdate;
+            cb.addFloatingText('完美防御! 下回合手牌 +1', 'text-cyan-300', shieldIcon(), 'player');
+          }
+        }
+        return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd2 };
       });
       if (chantPenaltyR > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyR}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
       cb.addLog(`${e.name} 追击造成 ${loggedSecondHit} 伤害！`);

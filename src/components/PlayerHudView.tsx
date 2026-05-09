@@ -159,7 +159,10 @@ export function PlayerHudView() {
       </AnimatePresence>
 
       {(() => {
-        const isWarriorRage = game.playerClass === 'warrior' && game.hp <= game.maxHp * 0.5;
+        // [WARRIOR-REAP 2026-05-09] 血怒粒子特效：触发条件从"半血"改为"战场收割爆发回合"
+        // 上回合获得了 kill/block 槽位奖励 → 本回合 warriorReapBurstActive=true → 显示血雾粒子
+        // 出牌后或回合切换后会被清掉（drawPhase / playHand 内）
+        const isWarriorRage = game.playerClass === 'warrior' && !!game.warriorReapBurstActive;
         return (
         <div className={`px-2 pb-3 pt-0.5 border-t-2 relative overflow-hidden ${isWarriorRage ? 'warrior-rage-panel' : ''}`} style={{ borderColor: isWarriorRage ? 'rgba(200,40,40,0.6)' : 'var(--dungeon-panel-border)', background: isWarriorRage ? 'linear-gradient(180deg, rgba(80,10,10,0.3) 0%, transparent 40%)' : undefined }}>
           {isWarriorRage && <div className="absolute inset-0 pointer-events-none z-[1]">{[...Array(8)].map((_, i) => (<motion.div key={`blood-particle-${i}`} className="absolute w-1.5 h-1.5" style={{ left: `${10 + i * 11}%`, bottom: 0, background: i % 3 === 0 ? '#c04040' : i % 3 === 1 ? '#a02020' : '#e06060', borderRadius: '1px', boxShadow: `0 0 4px ${i % 2 === 0 ? 'rgba(200,40,40,0.6)' : 'rgba(255,80,60,0.4)'}` }} animate={{ y: [0, -60 - Math.random() * 40], opacity: [0.8, 0], scale: [1, 0.3] }} transition={{ duration: 1.8 + Math.random() * 1.2, repeat: Infinity, delay: i * 0.35, ease: 'easeOut' }} />))}</div>}

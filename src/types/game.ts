@@ -132,6 +132,18 @@ export interface GameState {
   furyBonusDamage?: number;            // 怒火骰子：本局游戏永久叠加的额外基础伤害（受敌人攻击时+N）
   blackMarketUsedThisTurn?: boolean;   // 黑市合同本回合是否已触发
   warriorRageMult?: number;            // 战士狂暴本能：受伤百分比对应的伤害倍率加成
+  /** [2026-05-09 战场收割] 战士天赋：本回合斩首槽（直伤击杀）累计次数 —— 默认 +1，遗物/骰子破限可更多 */
+  warriorReapKillSlot?: number;
+  /** [2026-05-09 战场收割] 战士天赋：本回合完防槽（敌人直攻被护甲全额吸收）累计次数 —— 默认 +1，遗物/骰子破限可更多 */
+  warriorReapBlockSlot?: number;
+  /** [2026-05-09 战场收割] 下回合应该额外抽多少牌（= 上回合两槽合计；抽牌阶段消耗清零） */
+  warriorReapNextDraw?: number;
+  /** [2026-05-09 战场收割] 本回合是否处于"战场收割·爆发回合"——上回合奖励兑现的回合，
+   *   触发血怒粒子特效（PlayerHudView 下半区红色血雾粒子），出牌或回合末后归 false。 */
+  warriorReapBurstActive?: boolean;
+  /** [2026-05-09 战场收割] 槽位上限破限：默认每槽 1，遗物/骰子触发时本回合 +N（kill / block 各一） */
+  warriorReapKillSlotCap?: number;
+  warriorReapBlockSlotCap?: number;
   rogueComboDrawBonus?: number;        // 盗贼连击心得：下回合额外抽牌数
   relicTempDrawBonus?: number;         // 魔法手套遗物：下回合临时+N手牌
   relicKeepHighest?: number;           // 血之契约遗物：保留N颗最高点骰子

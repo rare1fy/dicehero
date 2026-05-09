@@ -1,3 +1,4 @@
+// [RULES-B2-EXEMPT] 出牌后效主调度：on_play / on_kill / 元素 / 经验 / 战场收割 多触发分支并联，已是 SRP 拆分边界
 /**
 * postPlayEffects.ts — 出牌后效处理
 * checkEnemyDeaths 已提取到 checkEnemyDeathsModule.ts
@@ -23,6 +24,7 @@ import { emitXpKill } from './xpEvents';
 import { emitSoulGain } from './soulEvents';
 import { PixelRefresh, PixelDice, PixelCards, PixelHeart } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
+import { tryGainKillSlot, isWarrior } from './warriorReap';
 
 // 浮字 icon 工厂（统一 size=1.5）
 const rerollIcon = () => React.createElement(PixelRefresh, { size: 1.5 });
@@ -91,6 +93,36 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   const killCount = enemies.filter(e => e.hp <= 0).length;
   if (killCount > 0) {
     setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + killCount }));
+  }
+
+  // [WARRIOR-REAP 2026-05-09] 战场收割·斩首槽：直伤击杀任意敌人 → 累 1 次（含遗物破限上限）
+  // 多次击杀（AOE 多杀 / w_cleave 顺劈）会循环尝试 +1，直到达到当前 cap
+  // 选中骰子带 splinterDamage（w_cleave 顺劈斩）→ 本次出牌斩首槽 cap 提到 2
+  // 选中骰子带 damageFromArmor（w_overlord 霸体铠甲）→ 本次出牌完防槽 cap 提到 2
+  if (isWarrior(game)) {
+    const hasCleave = selected.some(d => getDiceDef(d.diceDefId).onPlay?.splinterDamage);
+    const hasOverlord = selected.some(d => getDiceDef(d.diceDefId).onPlay?.damageFromArmor);
+    setGame(prev => {
+      let next: GameState = { ...prev };
+      if (hasCleave) next.warriorReapKillSlotCap = Math.max(prev.warriorReapKillSlotCap || 1, 2);
+      if (hasOverlord) next.warriorReapBlockSlotCap = Math.max(prev.warriorReapBlockSlotCap || 1, 2);
+      // 在新的 cap 基础上尝试斩首
+      if (killCount > 0) {
+        let cur = next;
+        let gained = 0;
+        for (let i = 0; i < killCount; i++) {
+          const r = tryGainKillSlot(cur);
+          if (!r.changed) break;
+          cur = { ...cur, ...r.gameUpdate } as GameState;
+          gained++;
+        }
+        if (gained > 0) {
+          addFloatingText(`斩首! 下回合手牌 +${gained}`, 'text-red-400', undefined, 'player');
+        }
+        next = cur;
+      }
+      return next;
+    });
   }
 
   // ===== 经验值增益：按当前节点类型给奖励 =====

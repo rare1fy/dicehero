@@ -65,10 +65,12 @@ export const CLASS_DEFS: Record<ClassId, ClassDef> = {
     hp: 120,
     maxHp: 120,
     initialDice: ['standard', 'standard', 'standard', 'standard', 'w_bloodthirst', 'w_ironwall'],
-    passiveDesc: '【血怒战意】嗜血每次+15%最终伤害（最多5层+75%）；叠满后卖血改为+5护甲；血量≤50%手牌+1；手牌溢出上限时按受伤百分比加伤害倍率；普攻可多选',
+    passiveDesc: '【战场收割】斩首+完防双触发：直伤击杀任意敌人 → 下回合手牌+1；敌人攻击被护甲全额吸收 → 下回合手牌+1（默认每槽 1 次/回合，可被遗物/骰子破限）。手牌溢出 6 颗时每多 1 颗本回合 +10% 伤害。普攻可多选；嗜血卖血保留',
     skills: [
-      { name: '血怒战意', desc: '每次嗜血，最终伤害+15%（最多叠加5层+75%），叠满后卖血获得5点护甲' },
-      { name: '狂暴本能', desc: '血量≤50%时手牌上限+1颗；手牌达到6颗上限时，按受伤百分比获得等比例伤害倍率加成' },
+      { name: '战场收割·斩首', desc: '本回合直伤击杀任意敌人时，下回合开局手牌临时 +1（每回合上限 1，可被遗物/骰子破限）' },
+      { name: '战场收割·完防', desc: '敌人直接攻击命中你时，若护甲完全吸收（HP 未掉一滴），下回合开局手牌临时 +1（每回合上限 1）' },
+      { name: '过充溢出', desc: '战场收割让手牌应抽数超过 6 颗时，每溢出 1 颗为本回合伤害 +10%' },
+      { name: '血怒战意', desc: '每次嗜血重投，最终伤害 +15%（最多 5 层 +75%），叠满后卖血改获得 5 点护甲' },
       { name: '铁拳连打', desc: '普攻牌型可多选骰子，一次打出所有选中骰子的伤害' },
     ],
     normalAttackMultiSelect: true,
@@ -169,13 +171,13 @@ const WARRIOR_DICE: DiceDef[] = [
   { id: 'w_whirlwind', name: '旋风斩', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
     description: '对全体敌人造成伤害，每个敌人额外承受6点固定伤害', onPlay: { aoe: true, aoeDamage: 6 } },
   { id: 'w_cleave', name: '顺劈斩', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'rare',
-    description: '击杀目标后，溢出伤害全额转移给随机另一个敌人', onPlay: { splinterDamage: 1.0 } },
+    description: '击杀目标后，溢出伤害全额转移给随机另一个敌人；本次出牌斩首槽上限+1（最多 +2 临时手牌）', onPlay: { splinterDamage: 1.0 } },
 
   // === Legendary (2) ===
   { id: 'w_bloodgod', name: '血神之眼', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
     description: '本回合每损失最大HP的1%，最终伤害提升20%', onPlay: { scaleWithSelfDamage: true } },
   { id: 'w_overlord', name: '霸体铠甲', element: 'normal', faces: [1,2,3,4,5,6], rarity: 'legendary',
-    description: '出牌时获得20点护甲，最终伤害按当前护甲总量的20%提升', onPlay: { armor: 20, damageFromArmor: 0.2 } },
+    description: '出牌时获得20点护甲，最终伤害按当前护甲总量的20%提升；本次出牌完防槽上限+1（最多 +2 临时手牌）', onPlay: { armor: 20, damageFromArmor: 0.2 } },
 ];
 
 // ============================================================

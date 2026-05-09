@@ -186,6 +186,8 @@ export function useBattleCombat(
       lastPlayHandType: thisHandType,
       // [2026-05-08] 法师出牌瞬间立即清零法术反噬 + 吟唱受击计数，让玩家第一时间看到 debuff 消失
       ...(prev.playerClass === 'mage' ? { arcaneBackfire: 0, mageChantHitCount: 0 } : {}),
+      // [WARRIOR-REAP 2026-05-09] 战士出牌后关闭爆发态（粒子特效消失）
+      ...(prev.playerClass === 'warrior' ? { warriorReapBurstActive: false } : {}),
     }));
 
     // [Bug-FIX 2026-05-07] 严格重投规则：每次出牌后清零所有未使用的免费重投。

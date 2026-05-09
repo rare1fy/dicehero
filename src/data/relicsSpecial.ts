@@ -157,6 +157,19 @@ export const undyingSpirit: Relic = {
   }),
 };
 
+/** [WARRIOR-REAP 2026-05-09] 战士：战神纹章 - 战场收割双槽位上限 +1（变成 2+2 → 最多 +4 临时手牌）
+ *  实际效果通过 isWarlordEmblemActive 在 warriorReap 检测路径生效，effect 函数返回空（passive 状态信号） */
+export const warlordEmblem: Relic = {
+  id: 'warlord_emblem',
+  name: '战神纹章',
+  description: '战场收割天赋：斩首槽 / 完防槽各 +1 上限（一回合最多触发 2 次斩首+2 次完防 → 下回合最多 +4 临时手牌）',
+  icon: 'sword',
+  rarity: 'rare',
+  trigger: 'passive',
+  classRestriction: 'warrior',
+  effect: () => ({}),
+};
+
 /** 法师：蓄力晶核 - 蓄力回合额外获得4护甲+回复3HP */
 export const chargeCore: Relic = {
   id: 'charge_core',

@@ -1,3 +1,4 @@
+// [RULES-B2-EXEMPT] 战斗生命周期主控：startBattle / startNode / rollAllDice / resetGame / 多个 useEffect 已是 SRP 拆分单元
 /**
  * useBattleLifecycle.ts — 战斗生命周期 Hook
  * 提取自 DiceHeroGame.tsx Phase H (Round3)
@@ -184,10 +185,8 @@ export function useBattleLifecycle(state: BattleState) {
     }
     const freshBag = initDiceBag(game.ownedDice);
     const drawCountBonus = 0;
-    const startWarriorBonus = (game.playerClass === 'warrior' && game.hp <= game.maxHp * 0.5) ? 1 : 0;
-    if (startWarriorBonus > 0) {
-    setTimeout(() => addFloatingText('+1', 'text-red-400', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 500);
-    }
+    // [WARRIOR-REAP 2026-05-09] 战斗开始时战场收割槽位本来就是 0；旧"半血+1"规则已移除
+    const startWarriorBonus = 0;
     const freshCount = Math.min(6, game.drawCount + drawCountBonus + startWarriorBonus);
     const { drawn: freshDrawn, newBag: fBag, newDiscard: fDiscard, shuffled: fShuffled } = drawFromBag(freshBag, [], freshCount);
     if (fShuffled) addToast('弃骰库已洗回骰子库!', 'buff', { icon: 'shuffle' });
@@ -317,18 +316,33 @@ export function useBattleLifecycle(state: BattleState) {
     }
 
     const chargeStacks = forceResetHand ? 0 : (g.chargeStacks || 0);
-    const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
-    if (warriorBonus > 0) {
-      setTimeout(() => addFloatingText('+1', 'text-red-400', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 200);
+    // [WARRIOR-REAP 2026-05-09] 波次切换时把战场收割槽位兑现为额外抽牌 + 触发爆发态
+    let warriorBonus = 0;
+    if (g.playerClass === 'warrior') {
+      const killSlots = g.warriorReapKillSlot || 0;
+      const blockSlots = g.warriorReapBlockSlot || 0;
+      warriorBonus = killSlots + blockSlots;
+      if (warriorBonus > 0) {
+        setTimeout(() => addFloatingText(`战场收割: +${warriorBonus}`, REWARD_COLOR, React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 200);
+        setGame(prev => ({
+          ...prev,
+          warriorReapKillSlot: 0,
+          warriorReapBlockSlot: 0,
+          warriorReapKillSlotCap: 1,
+          warriorReapBlockSlotCap: 1,
+          warriorReapNextDraw: warriorBonus,
+          warriorReapBurstActive: true,
+        }));
+      }
     }
     const rawHandLimit = g.playerClass === 'mage' ? (g.drawCount + chargeStacks) : (g.drawCount + warriorBonus);
     const handLimit = Math.min(6, rawHandLimit);
     if (g.playerClass === 'warrior' && rawHandLimit > 6) {
-      const hpLostPct = Math.max(0, 1 - g.hp / g.maxHp);
-      const rageMult = Math.round(hpLostPct * 100) / 100;
-      setGame(prev => ({ ...prev, warriorRageMult: rageMult }));
-      if (rageMult > 0) {
-        setTimeout(() => addFloatingText(`狂暴 +${Math.round(rageMult * 100)}%`, 'text-red-500', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 400);
+      const overflowCount = rawHandLimit - 6;
+      const overflowMult = overflowCount * 0.1;
+      setGame(prev => ({ ...prev, warriorRageMult: overflowMult }));
+      if (overflowMult > 0) {
+        setTimeout(() => addFloatingText(`过充 +${Math.round(overflowMult * 100)}%`, 'text-red-500', React.createElement(PixelBloodDrop, { size: 1.5 }), 'player'), 400);
       }
     } else if (g.playerClass === 'warrior') {
       setGame(prev => ({ ...prev, warriorRageMult: 0 }));

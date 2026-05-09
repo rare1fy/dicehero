@@ -50,6 +50,7 @@ import {
   floorConqueror,
   bloodForgeArmor,
   undyingSpirit,
+  warlordEmblem,
   chargeCore,
   overflowMana,
   comboLeech,
@@ -181,6 +182,7 @@ export const ALL_RELICS: Record<string, Relic> = {
   // 职业适配遗物
   blood_forge_armor: bloodForgeArmor,
   undying_spirit: undyingSpirit,
+  warlord_emblem: warlordEmblem,
   charge_core: chargeCore,
   overflow_mana: overflowMana,
   combo_leech: comboLeech,
@@ -198,7 +200,7 @@ export const ALL_RELICS: Record<string, Relic> = {
 export const RELICS_BY_RARITY: Record<string, Relic[]> = {
   common: [grindstone, heavyMetalCore, chaosPendulum, ironSkinRelic, scattershotRelic, merchantsEyeRelic, navigatorCompass, healingBreeze, sharpEdgeRelic, luckyCoinRelic, thickHideRelic, basicInstinctRelic, treasureMapRelic, turnArmor],
   uncommon: [ironBanner, blackMarketContract, scrapYard, twinStarsRelic, voidEchoRelic, warProfiteerRelic, interestRelic, comboMasterRelic, pointAccumulator, warmEmberRelic, treasureSenseRelic, goldenTouchRelic, hagglerRelic, rapidStrikesRelic, bloodPactRelic, rerollFrenzyRelic, battleMedicRelic, rageFireRelic, lessIsMoreRelic, bloodForgeArmor, chargeCore, comboLeech, killReroll],
-  rare: [bloodEyeRelic, crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity, bloodDiceRelic, purifyWaterRelic, undyingSpirit, overflowMana, venomCrystal, extraHandSlot],
+  rare: [bloodEyeRelic, crimsonGrail, arithmeticGauge, mirrorPrism, vampireFangs, schrodingerBag, emergencyHourglass, glassCannonRelic, painAmplifierRelic, masochistRelic, floorConqueror, elementOverloadRelic, fullHouseBlastRelic, chainLightningRelic, frostBarrierRelic, soulHarvestRelic, pressurePointRelic, minimalistRelic, adrenalineRushRelic, symmetrySeeker, chaosFace, greedyHand, fateCoin, elementAffinity, bloodDiceRelic, purifyWaterRelic, undyingSpirit, warlordEmblem, overflowMana, venomCrystal, extraHandSlot],
   legendary: [elementalResonator, perfectionist, overflowConduit, quantumObserver, limitBreaker, diceMasterRelic, fortuneWheelRelic, dimensionCrush, universalPair, doubleStrike, extraFreeReroll],
 };
 

@@ -17,6 +17,7 @@ import { applyDiceSpecialEffects } from './diceEffects';
 import { hasRelic, hasLimitBreaker } from '../engine/relicQueries';
 import { PixelCards, PixelBloodDrop } from '../components/PixelIcons';
 import { emitReward } from './rewardEvents';
+import { consumeReapSlotsForDraw } from './warriorReap';
 
 /** 浮字用 牌 icon */
 const cardsIcon = () => ReactNS.createElement(PixelCards, { size: 1.5 });
@@ -140,22 +141,26 @@ export function executeDrawPhase(ctx: DrawPhaseContext): void {
     const g = gameRef.current;
     setRerollCount(0);
     setGame(prev => ({ ...prev, boomerangFreeReroll: 0, comboFreeReroll: 0 }));
-    // 计算抽牌数：法师按蓄力上限（硬顶6），战士可能+1
+    // 计算抽牌数：法师按蓄力上限（硬顶6），战士按战场收割奖励（kill+block 两槽合计）
     const chargeBonus = g.playerClass === 'mage' ? (g.chargeStacks || 0) : 0;
-    const warriorBonus = (g.playerClass === 'warrior' && g.hp <= g.maxHp * 0.5) ? 1 : 0;
+    // [WARRIOR-REAP 2026-05-09] 替换旧的半血+1机制，改为战场收割槽位驱动
+    const reap = consumeReapSlotsForDraw(g);
+    const warriorBonus = reap.bonusDraw;
     if (warriorBonus > 0) {
-      addFloatingText(`血怒: +1`, REWARD_COLOR, bloodIcon(), 'player');
-      emitReward('fury', 1);
+      addFloatingText(`战场收割: +${warriorBonus}`, REWARD_COLOR, bloodIcon(), 'player');
+      emitReward('fury', warriorBonus);
+      // 立刻清零槽位 + 写入 burst 标记（让 PlayerHudView 触发血怒粒子特效）
+      setGame(prev => ({ ...prev, ...reap.gameUpdate }));
     }
     const rawTargetHandSize = g.drawCount + chargeBonus + warriorBonus;
     const targetHandSize = Math.min(6, rawTargetHandSize);
-    // 战士：手牌已达6上限时，按受伤百分比给伤害倍率补偿
+    // 战士：手牌已达6上限时，按受伤百分比给伤害倍率补偿（保留旧机制，过充溢出转为 +10%/颗）
     if (g.playerClass === 'warrior' && rawTargetHandSize > 6) {
-      const hpLostPct = Math.max(0, 1 - g.hp / g.maxHp);
-      const rageMult = Math.round(hpLostPct * 100) / 100;
-      setGame(prev => ({ ...prev, warriorRageMult: rageMult }));
-      if (rageMult > 0) {
-        setTimeout(() => addFloatingText(`狂暴+${Math.round(rageMult * 100)}%`, 'text-red-500', undefined, 'player'), 200);
+      const overflowCount = rawTargetHandSize - 6;
+      const overflowMult = overflowCount * 0.1; // 每溢出 1 颗 +10%（与法师过充共同语言）
+      setGame(prev => ({ ...prev, warriorRageMult: overflowMult }));
+      if (overflowMult > 0) {
+        setTimeout(() => addFloatingText(`过充+${Math.round(overflowMult * 100)}%`, 'text-red-500', undefined, 'player'), 200);
       }
     } else if (g.playerClass === 'warrior') {
       setGame(prev => ({ ...prev, warriorRageMult: 0 }));
