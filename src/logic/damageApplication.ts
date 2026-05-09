@@ -195,7 +195,11 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       // [WARRIOR_TRAIT 2026-05-09] AOE 受伤后累 bloodFury（先收 hp 完成，再统一遍历所有受伤的 warrior）
       // 注：上一个 .map 闭包里 e 是新值，所以用 hp < maxHp 简化判断（AOE 必然被打了一下）
       if (e.combatType === 'warrior' && e.hp > 0 && e.hp < e.maxHp) {
-        return applyBloodFuryOnHurt(e);
+        const after = applyBloodFuryOnHurt(e);
+        if (after.bloodFury && (after.bloodFury > (e.bloodFury || 0))) {
+          addFloatingText(`${e.name} 血怒+1 (${after.bloodFury}层)`, 'text-red-400', undefined, 'enemy');
+        }
+        return after;
       }
       return e;
     }));
@@ -346,7 +350,12 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       const damaged = { ...e, hp: Math.max(0, finalEnemyHp), armor: enemyArmor, statuses: newStatuses };
       // [WARRIOR_TRAIT 2026-05-09] 受伤后累 bloodFury（仅活着且确实掉了血时；只 warrior normal/elite 起效）
       if (damaged.hp > 0 && damaged.hp < e.hp) {
-        return applyBloodFuryOnHurt(damaged);
+        const after = applyBloodFuryOnHurt(damaged);
+        // 反馈：确实累了一层时飘字，避免玩家以为没生效
+        if (after.bloodFury && (after.bloodFury > (e.bloodFury || 0))) {
+          addFloatingText(`${e.name} 血怒+1 (${after.bloodFury}层)`, 'text-red-400', undefined, 'enemy');
+        }
+        return after;
       }
       return damaged;
     }));
