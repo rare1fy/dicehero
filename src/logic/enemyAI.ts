@@ -560,6 +560,13 @@ export async function executeEnemyTurn(
       return prev;
     }
     const nextTurn = prev.battleTurn + 1;
+    // [BUGFIX 2026-05-09] 遗物 counter 按"回合"递减——魔法手套等以 counter 计冷却的遗物在此处统一减 1
+    const relicsAfterCooldown = prev.relics.map(r => {
+      if (r.id === 'extra_hand_slot' && (r.counter || 0) > 0) {
+        return { ...r, counter: Math.max(0, (r.counter || 0) - 1) };
+      }
+      return r;
+    });
     let nextStatuses = [...prev.statuses];
     let burnDamage = 0;
     const burn = prev.statuses.find(s => s.type === 'burn');
@@ -592,17 +599,17 @@ export async function executeEnemyTurn(
       if (cb.hasFatalProtection(prev.relics)) {
         newHp = prev.hp;
         returnHp = newHp;
-        return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: cb.triggerHourglass(prev.relics) };
+        return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: cb.triggerHourglass(relicsAfterCooldown) };
       }
       returnHp = 0;
-      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false };
+      return { ...prev, battleTurn: nextTurn, hp: 0, chantShield: absorb.newShield, phase: 'gameover' as const, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: relicsAfterCooldown };
     }
     if (prev.hp <= 0 && (prev as { phase: string }).phase !== 'gameover') {
       returnHp = 0;
-      return { ...prev, battleTurn: nextTurn, phase: 'gameover' as const, isEnemyTurn: false };
+      return { ...prev, battleTurn: nextTurn, phase: 'gameover' as const, isEnemyTurn: false, relics: relicsAfterCooldown };
     }
     returnHp = newHp;
-    return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false };
+    return { ...prev, battleTurn: nextTurn, hp: newHp, chantShield: absorb.newShield, statuses: nextStatuses, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, isEnemyTurn: false, relics: relicsAfterCooldown };
   });
   if (chantPenaltyBurn > 0) cb.addFloatingText(`法术反噬: +${chantPenaltyBurn}`, 'text-fuchsia-400', arcaneSkullIcon(), 'player');
 

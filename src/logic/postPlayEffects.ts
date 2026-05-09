@@ -89,16 +89,25 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
     setScreenShake, setEnemyEffectForUid, showEnemyQuote, getEnemyQuotes, pickQuote,
   } = ctx;
 
+  // [BUGFIX 2026-05-09] enemies 是 stale 快照（出牌前的状态），不能用 enemies.filter(e=>e.hp<=0) 判定击杀。
+  //   正确做法：用 outcome / finalEnemyHp 反推谁会死（与下面 killedUids 计算同源）。
+  const realKilledCount = hasAoe
+    ? enemies.filter(e => {
+        let dmg = outcome.damage; let arm = e.armor;
+        if (outcome.armorBreak) arm = 0;
+        if (arm > 0) dmg = Math.max(0, dmg - arm);
+        return e.hp > 0 && (e.hp - dmg) <= 0;
+      }).length
+    : (finalEnemyHp <= 0 && targetEnemy.hp > 0 ? 1 : 0);
+
   // Track kills for war_profiteer_relic
-  const killCount = enemies.filter(e => e.hp <= 0).length;
-  if (killCount > 0) {
-    setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + killCount }));
+  if (realKilledCount > 0) {
+    setGame(prev => ({ ...prev, enemiesKilledThisBattle: (prev.enemiesKilledThisBattle || 0) + realKilledCount }));
   }
 
   // [WARRIOR-REAP 2026-05-09] 战场收割·斩首槽：直伤击杀任意敌人 → 累 1 次（含遗物破限上限）
-  // 多次击杀（AOE 多杀 / w_cleave 顺劈）会循环尝试 +1，直到达到当前 cap
-  // 选中骰子带 splinterDamage（w_cleave 顺劈斩）→ 本次出牌斩首槽 cap 提到 2
-  // 选中骰子带 damageFromArmor（w_overlord 霸体铠甲）→ 本次出牌完防槽 cap 提到 2
+  //   选中骰子带 splinterDamage（w_cleave 顺劈斩）→ 本次出牌斩首槽 cap 提到 2
+  //   选中骰子带 damageFromArmor（w_overlord 霸体铠甲）→ 本次出牌完防槽 cap 提到 2
   if (isWarrior(game)) {
     const hasCleave = selected.some(d => getDiceDef(d.diceDefId).onPlay?.splinterDamage);
     const hasOverlord = selected.some(d => getDiceDef(d.diceDefId).onPlay?.damageFromArmor);
@@ -107,10 +116,10 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
       if (hasCleave) next.warriorReapKillSlotCap = Math.max(prev.warriorReapKillSlotCap || 1, 2);
       if (hasOverlord) next.warriorReapBlockSlotCap = Math.max(prev.warriorReapBlockSlotCap || 1, 2);
       // 在新的 cap 基础上尝试斩首
-      if (killCount > 0) {
+      if (realKilledCount > 0) {
         let cur = next;
         let gained = 0;
-        for (let i = 0; i < killCount; i++) {
+        for (let i = 0; i < realKilledCount; i++) {
           const r = tryGainKillSlot(cur);
           if (!r.changed) break;
           cur = { ...cur, ...r.gameUpdate } as GameState;
@@ -416,25 +425,22 @@ export function executePostPlayEffects(ctx: PostPlayContext): void {
   // [Bug-11] 魔法手套：打出对子时下回合临时+1手牌（触发后1次出牌冷却）
   // 从 expectedOutcomeCalc 移到此处，确保只在实际出牌时应用 tempDrawBonus，
   // 避免预览阶段切换牌型时 tempDrawBonus 残留到非对子牌型
+  // [BUGFIX 2026-05-09] 魔法手套：CD 改为按"回合"递减（在敌人回合结束的 enemyAI 末尾），
+  //   不再按"出牌"递减——避免盗贼 maxPlays=2 一回合连出两次时直接抹掉冷却。
   const gloveRelic = game.relics.find(r => r.id === 'extra_hand_slot');
   if (gloveRelic) {
     const gloveCounter = gloveRelic.counter || 0;
     if (bestHand === '对子' && gloveCounter === 0) {
-      // 触发：对子牌型 + 冷却就绪 → 下回合+1手牌 + 进入冷却
+      // 触发：对子牌型 + 冷却就绪 → 下回合+1手牌 + 进入冷却（counter=2，敌人回合结束时-1，下次玩家回合开始为1，过完那回合再-1=0 重新可用）
       setGame(prev => ({
         ...prev,
         relicTempDrawBonus: (prev.relicTempDrawBonus || 0) + 1,
-        relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: 1 } : r),
+        relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: 2 } : r),
       }));
       addFloatingText(`${gloveRelic.name}: +1`, REWARD_COLOR, cardsIcon(), 'player');
       emitReward('card', 1);
-    } else if (gloveCounter > 0) {
-      // 冷却中：每次出牌递减冷却计数
-      setGame(prev => ({
-        ...prev,
-        relics: prev.relics.map(r => r.id === 'extra_hand_slot' ? { ...r, counter: Math.max(0, (r.counter || 0) - 1) } : r),
-      }));
     }
+    // 注：counter 递减由 enemyAI 末尾统一处理（保证盗贼连出 2 次只递减 1 次）
   }
 
   // grantPlayOnThird: 三连闪 — 第3次出牌时+1出牌机会

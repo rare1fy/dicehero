@@ -227,11 +227,11 @@ export const venomCrystal: Relic = {
   }),
 };
 
-/** 通用：魔法手套 - 打出对子时，下回合临时+1手牌（触发后需1次出牌冷却） */
+/** 通用：魔法手套 - 打出对子时，下回合临时+1手牌（CD 1 回合） */
 export const extraHandSlot: Relic = {
   id: 'extra_hand_slot',
   name: '魔法手套',
-  description: '打出对子时，下回合临时+1骰子（触发后需1次出牌冷却）',
+  description: '打出对子时，下回合临时+1骰子（每隔 1 回合最多触发一次）',
   icon: 'hand',
   rarity: 'rare',
   trigger: 'on_play',
