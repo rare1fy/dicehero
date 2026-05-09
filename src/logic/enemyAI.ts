@@ -378,6 +378,7 @@ export async function executeEnemyTurn(
     }
 
     let chantPenaltyMain = 0;
+    let blockGained = 0;  // [WARRIOR-REAP 2026-05-09] 本次攻击单元（主攻+追击）累计的完美防御次数，循环末尾合并飘一次
     cb.setGame((prev: GameState) => {
       const damage = getEffectiveAttackDmg(e, prev.statuses, {
         attackCount: currentAttackCount,
@@ -425,8 +426,7 @@ export async function executeEnemyTurn(
         const r = tryGainBlockSlot(prev);
         if (r.changed) {
           blockUpd = r.gameUpdate;
-          cb.addFloatingText(`完美防御: +1`, REWARD_COLOR, cardsIcon(), 'player');
-          emitReward('card', 1);
+          blockGained += 1;  // 不在此处飘字，循环末统一飘合并 +N
         }
       }
       return { ...prev, hp: newHp, armor: absorb.newArmor, chantShield: absorb.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd };
@@ -497,8 +497,7 @@ export async function executeEnemyTurn(
           const r = tryGainBlockSlot(prev);
           if (r.changed) {
             blockUpd2 = r.gameUpdate;
-            cb.addFloatingText(`完美防御: +1`, REWARD_COLOR, cardsIcon(), 'player');
-            emitReward('card', 1);
+            blockGained += 1;  // 在循环末统一飘
           }
         }
         return { ...prev, hp: newHp, armor: absorb2.newArmor, chantShield: absorb2.newShield, mageChantHitCount: newHitCount, arcaneBackfire: newBackfire, hpLostThisTurn: (prev.hpLostThisTurn || 0) + hpLost, hpLostThisBattle: (prev.hpLostThisBattle || 0) + hpLost, ...blockUpd2 };
@@ -523,6 +522,12 @@ export async function executeEnemyTurn(
         return { ...prev, statuses: next };
       });
       cb.addFloatingText('毒素+1', 'text-emerald-400', undefined, 'player');
+    }
+
+    // [WARRIOR-REAP 2026-05-09] 完美防御本次攻击合并飘字（含主攻+追击的累计）
+    if (blockGained > 0) {
+      cb.addFloatingText(`完美防御: +${blockGained}`, REWARD_COLOR, cardsIcon(), 'player');
+      emitReward('card', blockGained);
     }
 
     await new Promise(r => setTimeout(r, 300));
