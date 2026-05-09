@@ -14,7 +14,7 @@ import type { EnemyQuotes } from '../config/enemies';
 import { getDiceDef } from '../data/dice';
 import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
-import { PixelHeart, PixelShield } from '../components/PixelIcons';
+import { PixelHeart, PixelShield, PixelZap } from '../components/PixelIcons';
 import { applyBloodFuryOnHurt, applyVengeanceToBerserkers } from './enemyTraits';
 import { checkBossPhaseSwitch } from './bossPhaseSwitch';
 
@@ -216,7 +216,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       curr.forEach(before => {
         const after = withVengeance.find(x => x.uid === before.uid);
         if (after && (after.vengeance || 0) > (before.vengeance || 0)) {
-          addFloatingText(`⚡ 复仇 ×${after.vengeance}`, 'text-red-400 font-bold', undefined, 'enemy', true);
+          addFloatingText(`复仇 ×${after.vengeance}`, 'text-red-400 font-bold', React.createElement(PixelZap, { size: 1.6 }), 'enemy', true);
           anyTriggered = true;
         }
       });
@@ -389,7 +389,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         curr.forEach(before => {
           const after = withVengeance.find(x => x.uid === before.uid);
           if (after && (after.vengeance || 0) > (before.vengeance || 0)) {
-            addFloatingText(`⚡ 复仇 ×${after.vengeance}`, 'text-red-400 font-bold', undefined, 'enemy', true);
+            addFloatingText(`复仇 ×${after.vengeance}`, 'text-red-400 font-bold', React.createElement(PixelZap, { size: 1.6 }), 'enemy', true);
             anyTriggered = true;
           }
         });

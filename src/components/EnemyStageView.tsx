@@ -378,6 +378,9 @@ export function EnemyStageView() {
             {/* [2026-05-10] 选中箭头已迁移至 .enemy-target-arrow（像素方块阵），此处 SVG 三角移除 */}
             {/* [HUD-COUNTER-SCALE 2026-05-10] 反向缩放抵消 depthScale，让远处敌人 HUD 字保持可读 */}
             <div className="flex flex-col items-center" style={{ transform: `scale(${1/depthScale})`, transformOrigin: 'bottom center' }}>
+            {/* [2026-05-10 HUD-ARROW] ????????????????? ?? ??????/??????????????? */}
+            <div className="relative">
+            {isTarget && <div className="enemy-hud-arrow" aria-hidden="true" />}
             <div className="flex items-center justify-center mb-1 px-1.5 py-0.5 cursor-pointer hover:brightness-125 transition-all"
               onClick={(e) => { e.stopPropagation(); setEnemyInfoTarget(enemy.uid); }}
               style={{
@@ -403,6 +406,7 @@ export function EnemyStageView() {
               {enemy.combatType === 'caster' && <><PixelMagic size={2} /><span className="ml-0.5">术</span></>}
               {enemy.combatType === 'priest' && <><PixelHeart size={2} /><span className="ml-0.5">牧</span></>}
               <span className="ml-1 font-mono text-[var(--dungeon-text-dim)]">{getDisplayAttackDmg(enemy)}</span>
+            </div>
             </div>
             <div className="text-center mb-0.5">
               <span className="font-bold text-[var(--dungeon-text-bright)] text-[12px] pixel-text-shadow">{enemy.name}</span>

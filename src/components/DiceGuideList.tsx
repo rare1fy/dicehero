@@ -90,7 +90,7 @@ const DiceGuideItem: React.FC<{
       <div className="text-[10px] text-[var(--dungeon-text-dim)] mt-0.5 leading-tight">{formatDescription(def.description)}</div>
       <div className="text-[10px] text-[var(--dungeon-text-dim)] mt-0.5 opacity-60">面: [{def.faces.join(', ')}]</div>
       {def.isElemental && (
-        <div className="text-[10px] text-[var(--pixel-cyan)] mt-0.5">⚡ 元素效果：抽到时随机坍缩</div>
+        <div className="text-[10px] text-[var(--pixel-cyan)] mt-0.5">[元素] 抽到时随机坍缩</div>
       )}
       {def.id === 'split' && (
         <div className="text-[10px] text-[var(--pixel-cyan)] mt-0.5">✦ 结算时分裂出一颗随机点数骰子</div>
