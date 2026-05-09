@@ -16,6 +16,7 @@ import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
 import { PixelHeart, PixelShield } from '../components/PixelIcons';
 import { applyBloodFuryOnHurt } from './enemyTraits';
+import { checkBossPhaseSwitch } from './bossPhaseSwitch';
 
 // ============================================================
 // Context 接口
@@ -48,6 +49,12 @@ export interface DamageAppContext {
   /** [2026-05-09] Boss phase2（70% 血量）气泡专用 set */
   enemyQuotedPhase2: Set<string>;
   setEnemyQuotedPhase2: React.Dispatch<React.SetStateAction<Set<string>>>;
+  /** [2026-05-09 v2] BOSS 已进入第几阶段（key=uid, value=stage）
+   *  跨过 phases[].hpThreshold 时累加；用于触发"阶段切换"全屏横幅 + boss_entrance 演出 */
+  enemyPhaseStage: Map<string, number>;
+  setEnemyPhaseStage: React.Dispatch<React.SetStateAction<Map<string, number>>>;
+  /** [2026-05-09 v2] BOSS 阶段切换全屏横幅 setter */
+  setPhaseAnnouncement: (v: { stage: number; taunt: string; bossName: string } | null) => void;
   addFloatingText: (text: string, color: string, icon?: React.ReactNode, target?: string, persistent?: boolean) => void;
   playSound: (id: string) => void;
   showEnemyQuote: (uid: string, text: string, duration: number) => void;
@@ -72,6 +79,7 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
     setEnemies, setGame, setArmorGained, setHpGained, setPlayerEffect,
     setEnemyEffectForUid, enemyQuotedLowHp, setEnemyQuotedLowHp,
     enemyQuotedPhase2, setEnemyQuotedPhase2,
+    enemyPhaseStage, setEnemyPhaseStage, setPhaseAnnouncement,
     addFloatingText, playSound, showEnemyQuote, getEnemyQuotes, pickQuote,
     setScreenShake,
   } = ctx;
@@ -258,28 +266,49 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       // [BOSS-LOW-HP-ROAR 2026-05-08] Boss 专属低血怒吼：阈值 50%，普通敌人仍是 30%
       const isBossTarget = typeof targetEnemy.configId === 'string' && targetEnemy.configId.startsWith('boss_');
       const lowHpThreshold = isBossTarget ? 0.5 : 0.3;
-      // [BOSS-PHASE2 2026-05-09] 终 BOSS 专属 phase2 台词触发点（跨 70% 阈值，狂暴前奏）
-      const hpRatio = finalEnemyHp / targetEnemy.maxHp;
-      const phase2Threshold = 0.7;
-      const willSpeakPhase2 = isBossTarget
-        && hpRatio < phase2Threshold
-        && hpRatio >= lowHpThreshold  // 还没进 lowHp 阶段
-        && !enemyQuotedPhase2.has(targetUid);
-      if (willSpeakPhase2) {
-        const p2q = getEnemyQuotes(targetEnemy.configId);
-        const p2l = pickQuote(p2q?.phase2_taunt);
-        if (p2l) {
+      let phaseSwitchFired = false;
+
+      // [BOSS-PHASE-SWITCH 2026-05-09 v2] 基于 EnemyConfig.phases[].hpThreshold 的真阶段切换演出。
+      //   原 70% 写死阈值改为读取配置真实阈值，跨任一阈值就触发"阶段切换"全屏横幅 + boss_entrance 特效。
+      //   每个阈值仅触发一次，使用 enemyPhaseStage Map 记忆。
+      if (isBossTarget) {
+        const curStage = enemyPhaseStage.get(targetUid) || 1;
+        const sw = checkBossPhaseSwitch(targetEnemy, targetEnemy.hp, finalEnemyHp, curStage);
+        if (sw.stageReached) {
+          phaseSwitchFired = true;
+          // 立刻记录阶段，避免 React state 异步更新导致的同帧重复触发
+          setEnemyPhaseStage(prev => {
+            const m = new Map(prev);
+            m.set(targetUid, sw.stageReached!);
+            return m;
+          });
+          // 选取阶段切换台词：phase2_taunt 池为优先（专为阶段切换设计），缺则用 lowHp 池
+          const psQ = getEnemyQuotes(targetEnemy.configId);
+          const psLine = pickQuote(psQ?.phase2_taunt) || pickQuote(psQ?.lowHp) || '哼……';
+          // 延迟 350ms（让 hit 飘字先出来），再播阶段横幅
           setTimeout(() => {
-            showEnemyQuote(targetUid, p2l, ANIMATION_TIMING.bossLowHpDuration);
-            playSound('enemy_speak');
-            setEnemyEffectForUid(targetUid, 'boss_low_hp');
-            setTimeout(() => setEnemyEffectForUid(targetUid, null), ANIMATION_TIMING.bossLowHpDuration);
-          }, 400);
+            setPhaseAnnouncement({
+              stage: sw.stageReached!,
+              taunt: psLine,
+              bossName: targetEnemy.name,
+            });
+            playSound('boss_laugh');
+            setScreenShake(true);
+            setTimeout(() => setScreenShake(false), 600);
+            // boss_entrance 压迫感动画（与 BossEntrance 横幅相同的特效）
+            setEnemyEffectForUid(targetUid, 'boss_entrance');
+            setTimeout(() => setEnemyEffectForUid(targetUid, null), ANIMATION_TIMING.bossEntranceDuration);
+            // 同步给本尊一个 BOSS 气泡台词
+            showEnemyQuote(targetUid, psLine, ANIMATION_TIMING.bossLowHpDuration);
+          }, 350);
+          // 标记 phase2 已说过，避免外层 phase2 70% 块再重复
           setEnemyQuotedPhase2(prev => new Set([...prev, targetUid]));
         }
       }
+
+      const hpRatio = finalEnemyHp / targetEnemy.maxHp;
       const willSpeakLowHp = hpRatio < lowHpThreshold && !enemyQuotedLowHp.has(targetUid);
-      if (willSpeakLowHp) {
+      if (willSpeakLowHp && !phaseSwitchFired) {
         const lqc = getEnemyQuotes(targetEnemy.configId);
         const ll = pickQuote(lqc?.lowHp);
         if (ll) {
@@ -297,9 +326,10 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
         } else {
           setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
         }
-      } else {
+      } else if (!phaseSwitchFired) {
         setTimeout(() => setEnemyEffectForUid(targetUid, null), 400);
       }
+      // phaseSwitchFired 时不在这里 clear effect，由 phase-switch 自己控制 boss_entrance 的清理
     }
     
     setEnemies(prev => prev.map(e => {

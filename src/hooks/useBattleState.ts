@@ -73,6 +73,10 @@ export function useBattleState() {
   const [enemyQuotedLowHp, setEnemyQuotedLowHp] = useState<Set<string>>(new Set());
   /** [2026-05-09] Boss phase2 气泡专用 set（70% 阈值触发一次） */
   const [enemyQuotedPhase2, setEnemyQuotedPhase2] = useState<Set<string>>(new Set());
+  /** [2026-05-09 v2] BOSS 已进入第几阶段（基于 EnemyConfig.phases[].hpThreshold 跨阈值时累加）。
+   *   key = enemy.uid，value = 当前 stage（首次进战为 1，跨越第一个 hpThreshold 后变 2，依此类推）。
+   *   每个 stage 只触发一次"阶段切换"全屏横幅 + boss_entrance 特效。 */
+  const [enemyPhaseStage, setEnemyPhaseStage] = useState<Map<string, number>>(new Map());
 
   const showEnemyQuote = (uid: string, text: string, duration = 2500) => {
     setEnemyQuotes(prev => ({ ...prev, [uid]: text }));
@@ -175,6 +179,8 @@ export function useBattleState() {
   const [skillTriggerTexts, _setSkillTriggerTexts] = useState<{ id: string; name: string; icon: React.ReactNode; color: string; x: number; delay: number }[]>([]);
   const [handLeftThrow, setHandLeftThrow] = useState(false);
   const [waveAnnouncement, setWaveAnnouncement] = useState<number | null>(null);
+  /** [2026-05-09] BOSS 阶段切换全屏横幅（仿 waveAnnouncement）：null 时不显示 */
+  const [phaseAnnouncement, setPhaseAnnouncement] = useState<{ stage: number; taunt: string; bossName: string } | null>(null);
   const [showWaveDetail, setShowWaveDetail] = useState(false);
   const [showChallengeDetail, setShowChallengeDetail] = useState(false);
 
@@ -277,6 +283,7 @@ export function useBattleState() {
     enemyQuotes, setEnemyQuotes,
     enemyQuotedLowHp, setEnemyQuotedLowHp,
     enemyQuotedPhase2, setEnemyQuotedPhase2,
+    enemyPhaseStage, setEnemyPhaseStage,
     showEnemyQuote,
     pickQuote,
     getEnemyQuotes,
@@ -298,6 +305,7 @@ export function useBattleState() {
     skillTriggerTexts,
     handLeftThrow, setHandLeftThrow,
     waveAnnouncement, setWaveAnnouncement,
+    phaseAnnouncement, setPhaseAnnouncement,
     showWaveDetail, setShowWaveDetail,
     showChallengeDetail, setShowChallengeDetail,
 

@@ -61,6 +61,8 @@ export function EnemyStageView() {
     setShowWaveDetail,
     waveAnnouncement,
     setWaveAnnouncement: _setWaveAnnouncement,
+    phaseAnnouncement,
+    setPhaseAnnouncement,
     isAoeActive,
     isNormalAttackMulti,
     handHintIds,
@@ -442,6 +444,32 @@ export function EnemyStageView() {
             <div className="text-center">
               <div className="text-3xl font-black pixel-text-shadow" style={{ color: 'var(--pixel-orange)', letterSpacing: '4px' }}>{'\u7b2c'} {waveAnnouncement} {'\u6ce2'}</div>
               <div className="text-sm font-bold mt-1 pixel-text-shadow" style={{ color: 'var(--pixel-orange-light)' }}>{'\u654c\u4eba\u6765\u88ad\uff01'}</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* [PHASE-ANN 2026-05-09] BOSS 阶段切换全屏横幅 — 红紫主色 + 嘲讽台词 */}
+      <AnimatePresence>
+        {phaseAnnouncement !== null && (
+          <motion.div
+            key={`phase-${phaseAnnouncement.bossName}-${phaseAnnouncement.stage}`}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 1, 1, 0], scale: [0.5, 1.25, 1, 1, 0.85], y: [0, 0, 0, 0, -36] }}
+            transition={{ duration: 2.8, times: [0, 0.15, 0.3, 0.78, 1] }}
+            onAnimationComplete={() => setPhaseAnnouncement(null)}
+            className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+          >
+            <div className="text-center" style={{ filter: 'drop-shadow(0 0 12px rgba(220,40,40,0.7))' }}>
+              <div className="text-2xl font-black pixel-text-shadow" style={{ color: '#ff7878', letterSpacing: '6px' }}>
+                ◆ 阶段 {phaseAnnouncement.stage} ◆
+              </div>
+              <div className="text-base font-black mt-1 pixel-text-shadow" style={{ color: 'var(--pixel-red-light)', letterSpacing: '3px' }}>
+                {phaseAnnouncement.bossName}·变身
+              </div>
+              <div className="text-xs font-bold mt-2 pixel-text-shadow max-w-[280px] mx-auto" style={{ color: '#ffd0d0' }}>
+                「{phaseAnnouncement.taunt}」
+              </div>
             </div>
           </motion.div>
         )}

@@ -91,6 +91,9 @@ export interface BattleContextType {
   bossTaunt: { visible: boolean; name: string; chapter: number; lines: string[]; onDismiss?: () => void };
   waveAnnouncement: number | null;
   setWaveAnnouncement: (n: number | null) => void;
+  /** [2026-05-09] BOSS 阶段切换全屏横幅 */
+  phaseAnnouncement: { stage: number; taunt: string; bossName: string } | null;
+  setPhaseAnnouncement: (v: { stage: number; taunt: string; bossName: string } | null) => void;
   showWaveDetail: boolean;
   setShowWaveDetail: React.Dispatch<React.SetStateAction<boolean>>;
   showChallengeDetail: boolean;
