@@ -37,7 +37,7 @@ export interface GameContextType {
   
   // Actions
   startNode: (node: MapNode) => void;
-  startBattle: (node: MapNode | number) => void;
+  startBattle: (node: MapNode | number, overrideWaves?: import('../types/game').BattleWave[]) => void;
   collectLoot: (id: string) => void;
   finishLoot: () => void;
   pickReward: (relic: Relic) => void;

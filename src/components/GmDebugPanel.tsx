@@ -7,8 +7,11 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useGameContext } from '../contexts/GameContext';
 import { ALL_RELICS } from '../data/relics';
-import type { GameState } from '../types/game';
+import type { GameState, MapNode } from '../types/game';
 import { ALL_DICE } from '../data/dice';
+import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES } from '../config';
+import type { EnemyConfig } from '../config';
+import { buildEnemy } from '../data/enemies';
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'var(--dungeon-text-dim)',
@@ -26,9 +29,12 @@ interface GmDebugPanelProps {
   onClose: () => void;
 }
 
+/** GM 子面板状态类型（提取为 type alias，新增 training 不需到处改签名） */
+type GmSubPanel = 'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice' | 'training';
+
 export const GmDebugPanel: React.FC<GmDebugPanelProps> = ({ onClose }) => {
   const { game, setGame, addToast } = useGameContext();
-  const [gmSubPanel, setGmSubPanel] = useState<'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice'>('none');
+  const [gmSubPanel, setGmSubPanel] = useState<GmSubPanel>('none');
   const [gmFilter, setGmFilter] = useState('');
 
   return (
@@ -43,6 +49,15 @@ export const GmDebugPanel: React.FC<GmDebugPanelProps> = ({ onClose }) => {
 
       {/* 战斗/出牌/重掷 */}
       <GmBattleActions game={game} setGame={setGame} addToast={addToast} onClose={onClose} />
+
+      {/* 训练场 (GM 单独抓任意敌人来打) */}
+      <GmTrainingGround
+        gmSubPanel={gmSubPanel}
+        setGmSubPanel={setGmSubPanel}
+        gmFilter={gmFilter}
+        setGmFilter={setGmFilter}
+        onClose={onClose}
+      />
 
       {/* 遗物管理 */}
       <GmRelicManager
@@ -199,13 +214,201 @@ const GmBattleActions: React.FC<{
   </>
 );
 
+/* ── 训练场（GM 抓任意敌人单挑） ──
+ *
+ * [GM-TRAINING 2026-05-09] 用于快速验证敌人精灵图、AI 行为、台词触发节点：
+ *   greet/dispatch（BOSS Taunt）/ enter / hurt / phase2_taunt / lowHp / death
+ *
+ * 实现策略（最小改动）：
+ *   1. 仅在 phase==='battle' 时可用（依赖当前 game.currentNodeId 作为载体节点）
+ *   2. 用户选择敌人 → 调 startBattle(fakeNode, [{enemies:[buildEnemy(target)]}])
+ *      其中 fakeNode 沿用当前 currentNode.id 但 type 改为 'normal' / 'boss' (按敌人 category)
+ *   3. startBattle 完整复用：fadeIn / Taunt / BossEntrance / 出场台词 / 骰子动画
+ *   4. 战后正常进 loot 流（用户可选 GM"立即胜利"或正常通关）
+ */
+const ENEMY_CATEGORY_LABEL: Record<string, string> = {
+  normal: '小怪', elite: '精英', boss_mid: '中BOSS', boss_final: '终BOSS',
+};
+const ENEMY_CATEGORY_COLOR: Record<string, string> = {
+  normal: 'var(--dungeon-text)', elite: 'var(--pixel-cyan-light)',
+  boss_mid: 'var(--pixel-orange-light)', boss_final: 'var(--pixel-red-light)',
+};
+const COMBAT_TYPE_LABEL: Record<string, string> = {
+  warrior: '战', ranger: '射', guardian: '盾', caster: '法', priest: '祭',
+};
+
+interface TrainingEntry {
+  config: EnemyConfig;
+  category: 'normal' | 'elite' | 'boss_mid' | 'boss_final';
+}
+
+/** 收集全部敌人，分类标记（用 bossRank 区分中/终） */
+function collectAllEnemies(): TrainingEntry[] {
+  const list: TrainingEntry[] = [];
+  for (const cfg of NORMAL_ENEMIES) list.push({ config: cfg, category: 'normal' });
+  for (const cfg of ELITE_ENEMIES) list.push({ config: cfg, category: 'elite' });
+  for (const cfg of BOSS_ENEMIES) {
+    list.push({ config: cfg, category: cfg.bossRank === 'final' ? 'boss_final' : 'boss_mid' });
+  }
+  return list;
+}
+
+const GmTrainingGround: React.FC<{
+  gmSubPanel: GmSubPanel;
+  setGmSubPanel: (v: GmSubPanel) => void;
+  gmFilter: string;
+  setGmFilter: (v: string) => void;
+  onClose: () => void;
+}> = ({ gmSubPanel, setGmSubPanel, gmFilter, setGmFilter, onClose }) => {
+  const { game, addToast, startBattle } = useGameContext();
+  const [chapterFilter, setChapterFilter] = useState<number | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'normal' | 'elite' | 'boss_mid' | 'boss_final'>('all');
+
+  const allEnemies = React.useMemo(() => collectAllEnemies(), []);
+  const filtered = allEnemies.filter(e => {
+    if (chapterFilter !== 'all' && (e.config.chapter || 0) !== chapterFilter) return false;
+    if (categoryFilter !== 'all' && e.category !== categoryFilter) return false;
+    if (gmFilter && !e.config.name.includes(gmFilter) && !e.config.id.includes(gmFilter)) return false;
+    return true;
+  });
+
+  const inBattle = game.phase === 'battle';
+
+  const launchTraining = (entry: TrainingEntry) => {
+    if (!inBattle) {
+      addToast('训练场仅在战斗中可用，请先进入任意战斗');
+      return;
+    }
+    const realNode = game.map.find(n => n.id === game.currentNodeId);
+    if (!realNode) {
+      addToast('找不到当前节点，无法启动训练');
+      return;
+    }
+    // 伪造 node：保留 id 但根据敌人类别决定 type（影响演出路径）
+    const fakeNode: MapNode = {
+      ...realNode,
+      type: (entry.category === 'boss_mid' || entry.category === 'boss_final') ? 'boss' : 'enemy',
+    };
+    const enemy = buildEnemy(entry.config, 1, 1);
+    addToast(`训练场: 出战「${entry.config.name}」`, 'buff');
+    onClose();
+    // 异步等关闭面板后再触发战斗演出
+    setTimeout(() => startBattle(fakeNode, [{ enemies: [enemy] }]), 80);
+  };
+
+  return (
+    <>
+      <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">训练场（敌人测试）</div>
+      <div className="grid grid-cols-1 gap-1.5">
+        <GmBtn
+          onClick={() => { setGmSubPanel(gmSubPanel === 'training' ? 'none' : 'training'); setGmFilter(''); }}
+          className={gmSubPanel === 'training'
+            ? 'bg-[var(--pixel-cyan)] text-black border-[var(--pixel-cyan)]'
+            : 'bg-[var(--dungeon-panel)] text-[var(--pixel-cyan-light)] border-[var(--pixel-cyan)]'}
+        >🎯 训练场（{allEnemies.length} 只敌人）</GmBtn>
+      </div>
+
+      {gmSubPanel === 'training' && (
+        <div className="border border-[var(--pixel-cyan-dark)] p-1.5 space-y-1" style={{ borderRadius: '4px', maxHeight: '320px', display: 'flex', flexDirection: 'column' }}>
+          {!inBattle && (
+            <div className="text-[8px] text-[var(--pixel-orange)] text-center py-1 px-2"
+              style={{ background: 'rgba(255,140,40,0.08)', border: '1px solid var(--pixel-orange-dark)', borderRadius: '3px' }}>
+              ⚠ 训练场需在战斗中启动，请先点地图任一节点进入战斗
+            </div>
+          )}
+
+          {/* 章节筛选 */}
+          <div className="flex gap-1 flex-wrap">
+            {[
+              { v: 'all' as const, label: '全部' },
+              { v: 1 as const, label: '章1' }, { v: 2 as const, label: '章2' },
+              { v: 3 as const, label: '章3' }, { v: 4 as const, label: '章4' },
+              { v: 5 as const, label: '章5' },
+            ].map(opt => (
+              <button key={String(opt.v)} onClick={() => setChapterFilter(opt.v)}
+                className="text-[8px] px-1.5 py-0.5 border"
+                style={{
+                  borderRadius: '2px',
+                  background: chapterFilter === opt.v ? 'var(--pixel-cyan)' : 'transparent',
+                  color: chapterFilter === opt.v ? '#000' : 'var(--dungeon-text)',
+                  borderColor: 'var(--pixel-cyan-dark)',
+                }}
+              >{opt.label}</button>
+            ))}
+          </div>
+
+          {/* 类别筛选 */}
+          <div className="flex gap-1 flex-wrap">
+            {[
+              { v: 'all' as const, label: '全部' },
+              { v: 'normal' as const, label: '小怪' },
+              { v: 'elite' as const, label: '精英' },
+              { v: 'boss_mid' as const, label: '中BOSS' },
+              { v: 'boss_final' as const, label: '终BOSS' },
+            ].map(opt => (
+              <button key={opt.v} onClick={() => setCategoryFilter(opt.v)}
+                className="text-[8px] px-1.5 py-0.5 border"
+                style={{
+                  borderRadius: '2px',
+                  background: categoryFilter === opt.v ? 'var(--pixel-orange)' : 'transparent',
+                  color: categoryFilter === opt.v ? '#000' : 'var(--dungeon-text)',
+                  borderColor: 'var(--pixel-orange-dark)',
+                }}
+              >{opt.label}</button>
+            ))}
+          </div>
+
+          {/* 搜索框 */}
+          <input
+            type="text" placeholder="搜索敌人名或 ID..."
+            value={gmFilter} onChange={e => setGmFilter(e.target.value)}
+            className="w-full px-2 py-1 text-[9px] bg-[var(--dungeon-bg)] text-[var(--dungeon-text)] border border-[var(--dungeon-panel-border)] outline-none"
+            style={{ borderRadius: '3px', flexShrink: 0 }}
+          />
+
+          {/* 敌人列表 */}
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+            {filtered.length === 0 ? (
+              <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center py-2">无匹配敌人</div>
+            ) : filtered.map(entry => (
+              <button key={entry.config.id} onClick={() => launchTraining(entry)}
+                disabled={!inBattle}
+                className="w-full text-left px-1.5 py-1 text-[8px] flex items-center gap-1 hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+                style={{ opacity: inBattle ? 1 : 0.4 }}
+              >
+                <span style={{ color: ENEMY_CATEGORY_COLOR[entry.category], fontWeight: 'bold', minWidth: '36px', fontSize: '7px' }}>
+                  [{ENEMY_CATEGORY_LABEL[entry.category]}]
+                </span>
+                <span style={{ color: 'var(--dungeon-text-dim)', minWidth: '14px', fontSize: '7px' }}>
+                  {COMBAT_TYPE_LABEL[entry.config.combatType] || '?'}
+                </span>
+                <span style={{ color: 'var(--dungeon-text-dim)', minWidth: '20px', fontSize: '7px' }}>
+                  ch{entry.config.chapter || '?'}
+                </span>
+                <span className="text-[var(--dungeon-text)] flex-1">{entry.config.name}</span>
+                <span style={{ color: 'var(--pixel-red-light)', fontSize: '7px' }}>
+                  HP{entry.config.baseHp}
+                </span>
+                <span style={{ color: 'var(--pixel-orange-light)', fontSize: '7px' }}>
+                  /AT{entry.config.baseDmg}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+
 /* ── 遗物管理 ── */
 const GmRelicManager: React.FC<{
   game: ReturnType<typeof useGameContext>['game'];
   setGame: ReturnType<typeof useGameContext>['setGame'];
   addToast: ReturnType<typeof useGameContext>['addToast'];
-  gmSubPanel: 'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice';
-  setGmSubPanel: (v: 'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice') => void;
+  gmSubPanel: GmSubPanel;
+  setGmSubPanel: (v: GmSubPanel) => void;
   gmFilter: string;
   setGmFilter: (v: string) => void;
 }> = ({ game, setGame, addToast, gmSubPanel, setGmSubPanel, gmFilter, setGmFilter }) => (
@@ -290,8 +493,8 @@ const GmDiceManager: React.FC<{
   game: ReturnType<typeof useGameContext>['game'];
   setGame: ReturnType<typeof useGameContext>['setGame'];
   addToast: ReturnType<typeof useGameContext>['addToast'];
-  gmSubPanel: 'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice';
-  setGmSubPanel: (v: 'none' | 'addRelic' | 'removeRelic' | 'addDice' | 'removeDice') => void;
+  gmSubPanel: GmSubPanel;
+  setGmSubPanel: (v: GmSubPanel) => void;
 }> = ({ game, setGame, addToast, gmSubPanel, setGmSubPanel }) => (
   <>
     <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-2">骰子管理</div>

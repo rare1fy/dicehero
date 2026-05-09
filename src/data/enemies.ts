@@ -30,7 +30,8 @@ const buildPattern = (config: EnemyConfig, dmgScale: number) => {
 
 let uidCounter = 0;
 
-const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Enemy => {
+/** [2026-05-09] 导出供 GM 训练场单独构造敌人使用 */
+export const buildEnemy = (config: EnemyConfig, hpScale: number, dmgScale: number): Enemy => {
   return {
     uid: `enemy_${++uidCounter}_${Date.now()}`,
     configId: config.id,

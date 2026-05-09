@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef } from 'react';
 import * as React from 'react';
-import type { Die, MapNode, Enemy, GameState, Relic } from '../types/game';
+import type { Die, MapNode, Enemy, GameState, Relic, BattleWave } from '../types/game';
 import { createInitialGameState } from '../logic/gameInit';
 import { drawFromBag, initDiceBag } from '../data/diceBag';
 import { getDiceDef, rollDiceDef } from '../data/dice';
@@ -67,16 +67,14 @@ export function useBattleLifecycle(state: BattleState) {
   const handleVictoryRef = useRef<() => void>(() => {});
 
   // ==================== startBattle ====================
-  const startBattle = async (nodeOrIndex: MapNode | number) => {
-    // nextNode() 可能传入数字索引，需从 map 中查找
-    const node: MapNode = typeof nodeOrIndex === 'number'
-      ? game.map.find(n => n.depth === nodeOrIndex)!
-      : nodeOrIndex;
+  // [GM-TRAINING] overrideWaves: GM 训练场注入自定义敌人，跳过 chapter scaling
+  const startBattle = async (nodeOrIndex: MapNode | number, overrideWaves?: BattleWave[]) => {
+    const node: MapNode = typeof nodeOrIndex === 'number' ? game.map.find(n => n.depth === nodeOrIndex)! : nodeOrIndex;
     setBattleTransition('fadeIn');
     await new Promise(r => setTimeout(r, 200));
     setBattleTransition('hold');
 
-    const waves = (() => {
+    const waves = overrideWaves ?? (() => {
       const chapterScale = CHAPTER_CONFIG.chapterScaling[Math.min(game.chapter - 1, CHAPTER_CONFIG.chapterScaling.length - 1)];
       return getEnemiesForNode(node, node.depth, game.enemyHpMultiplier * chapterScale.hpMult, chapterScale.dmgMult, game.chapter);
     })();
