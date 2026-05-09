@@ -106,45 +106,42 @@ export function createCheckEnemyDeaths(ctx: PostPlayContext): () => Promise<void
     }
 
     // 单体攻击：检查目标是否死亡，若存活则无需波次检测
-    // [BUGFIX 2026-05-09 chainBolt] 附带伤害（奥术飞弹/溅射）可能击杀其他敌人，
-    //   此时主目标 finalEnemyHp>0 但场上可能已全灭。必须先扫最新 enemies 数组而非仅看主目标。
-    let latestEnemiesSnapshot: import('../types/game').Enemy[] = enemies;
-    setEnemies(prev => {
-      latestEnemiesSnapshot = prev;
-      return prev; // 不改数据，仅读取最新快照
-    });
-    const latestAlive = latestEnemiesSnapshot.filter(e => e.hp > 0);
+    // [BUGFIX 2026-05-10] 上一版用 setEnemies(updater) 旁路同步读取最新 state，
+    //   但 React 18 automatic batching 下 updater 是延迟执行（同事件循环 microtask 内不跑），
+    //   闭包变量 latestEnemiesSnapshot 仍是 stale 的入参 enemies（含尚未扣血的目标）。
+    //   后果：单体击杀场上唯一敌人时 latestAlive.length>0 → 既不切目标也不进 victory → 战斗卡死。
+    //   正确做法：基于已知事实 (finalEnemyHp + 闭包 enemies) 投影出当前活敌人列表。
+    //   注：附带伤害（奥术飞弹 chainBolt）发生在 hasAoe 分支或独立路径，
+    //   单体直伤路径下，闭包 enemies 里非目标敌人的 hp 是准确的。
+    const projectedAlive = enemies
+      .map(e => e.uid === targetUid ? { ...e, hp: finalEnemyHp } : e)
+      .filter(e => e.hp > 0);
 
     if (!hasAoe) {
       const targetDied = finalEnemyHp <= 0;
-      const fieldCleared = latestAlive.length === 0;
-      if (targetDied || fieldCleared) {
-        // 目标已死或被附带伤害全灭
-        if (!fieldCleared) {
-          const remainingAlive = latestAlive.filter(e => e.uid !== targetUid);
-          if (remainingAlive.length > 0) {
-            setGame(prev => ({ ...prev, targetEnemyUid: (remainingAlive.find(e => e.combatType === 'guardian') || remainingAlive[0]).uid }));
-            addLog(`当前目标被击败！还有 ${remainingAlive.length} 个敌人存活。`);
-            return;
-          }
-        } else {
-          // 附带伤害全灭场上敌人——为没播死亡动画的敌人补 death 特效
-          latestEnemiesSnapshot.forEach(e => {
-            if (e.hp <= 0) {
-              setEnemyEffectForUid(e.uid, 'death');
-              setDyingEnemies(prevSet => new Set([...prevSet, e.uid]));
-            }
-          });
-          playSound('enemy_death');
-          // 全灭直接落到下方波次切换
-        }
-      } else {
-        return; // 目标存活、场上也还有活的敌人，无需波次检测
+      if (!targetDied) {
+        return; // 目标存活，单体出牌后无需推进波次
       }
+      // 目标已死：场上是否还有其它活敌人？
+      if (projectedAlive.length > 0) {
+        const nextTarget = projectedAlive.find(e => e.combatType === 'guardian') || projectedAlive[0];
+        setGame(prev => ({ ...prev, targetEnemyUid: nextTarget.uid }));
+        addLog(`当前目标被击败！还有 ${projectedAlive.length} 个敌人存活。`);
+        return;
+      }
+      // 全灭：为已死且未播死亡动画的敌人补 death 特效，再落到下方波次/胜利分支
+      enemies.forEach(e => {
+        const eHp = e.uid === targetUid ? finalEnemyHp : e.hp;
+        if (eHp <= 0) {
+          setEnemyEffectForUid(e.uid, 'death');
+          setDyingEnemies(prevSet => new Set([...prevSet, e.uid]));
+        }
+      });
+      playSound('enemy_death');
     }
-    
-    // 全灭检测：AOE 用伤害快照判定，单体已确认目标死亡，或 chainBolt 清场
-    const anyAlive = hasAoe ? enemies.some(e => e.hp - outcome.damage > 0) : latestAlive.length > 0;
+
+    // 全灭检测：AOE 用伤害快照判定，单体已通过 projectedAlive 确认无活敌人
+    const anyAlive = hasAoe ? enemies.some(e => e.hp - outcome.damage > 0) : projectedAlive.length > 0;
     
     if (!anyAlive) {
       const nextWaveIdx = game.currentWaveIndex + 1;

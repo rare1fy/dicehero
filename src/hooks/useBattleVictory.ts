@@ -24,13 +24,23 @@ export function useBattleVictory(
     game, setGame,
     dice,
     enemies,
+    enemiesRef,
     targetEnemy,
+    gameRef,
     addLog, addToast,
   } = state;
 
   // ==================== handleVictory ====================
   const handleVictory = () => {
-    if (enemies.length === 0) return;
+    // [BUG-FIX 2026-05-10] 优先使用 ref 取最新 enemies，避免 playHand 闭包传进的快照过期
+    // 之前：闭包 enemies 经常已被 setEnemies 修改但 React 还没重渲染 → 走到这里 enemies 仍是旧数组
+    // 现在：用 enemiesRef.current 永远拿最新数组，且只在 phase 已离开 battle 时静默返回
+    const liveEnemies = enemiesRef?.current ?? enemies;
+    if (gameRef?.current && gameRef.current.phase !== 'battle') return;
+    if (liveEnemies.length === 0) {
+      // 兜底：异常路径下场上没敌人但仍处 battle phase，仍然推进胜利流程，避免死锁
+      // 用 battleWaves 估算 killedCount/nodeType 即可
+    }
     const allWaveEnemies = game.battleWaves.flatMap(w => w.enemies);
     const currentNode = game.map.find(n => n.id === game.currentNodeId);
     const nodeType = currentNode?.type || 'enemy';
