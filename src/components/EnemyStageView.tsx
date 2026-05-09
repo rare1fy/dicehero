@@ -218,6 +218,18 @@ export function EnemyStageView() {
               <div className="text-[8px] text-[var(--pixel-gold)] font-bold tracking-[0.15em] text-center mb-1">◆ 洞察弱点 ◆</div>
               <div className="text-[13px] font-bold text-[var(--dungeon-text-bright)] text-center mb-2 pixel-text-shadow">{game.instakillChallenge.label}</div>
               <div className="text-[10px] text-[var(--dungeon-text)] leading-relaxed text-center mb-3">{formatDescription(game.instakillChallenge.description)}</div>
+              {/* 进度条（仅在进行中且 value 存在时显示） */}
+              {!game.instakillCompleted && game.instakillChallenge.value !== undefined && (
+                <div className="mb-3 px-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[8px] text-[var(--dungeon-text-dim)] tracking-wider font-bold">进度</span>
+                    <span className="text-[11px] font-mono font-bold text-[var(--pixel-gold-light)]">{game.instakillChallenge.progress || 0} / {game.instakillChallenge.value}</span>
+                  </div>
+                  <div className="h-1.5 bg-[rgba(0,0,0,0.4)] border border-[var(--dungeon-panel-border)] relative overflow-hidden" style={{borderRadius:'1px'}}>
+                    <div className="h-full bg-[var(--pixel-gold)]" style={{ width: `${Math.min(100, ((game.instakillChallenge.progress || 0) / (game.instakillChallenge.value || 1)) * 100)}%`, transition: 'width 0.35s ease-out', boxShadow: '0 0 6px rgba(212,160,48,0.4)' }} />
+                  </div>
+                </div>
+              )}
               <div className="border-t border-[var(--dungeon-panel-border)] pt-2 mb-3">
                 {game.instakillCompleted && game.instakillAidType ? (
                   <>
@@ -227,15 +239,16 @@ export function EnemyStageView() {
                         <li>◆ 全场敌人受到 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '30%' : '50%'} 最大HP伤害</li>
                       )}
                       {game.instakillAidType === 2 && (
-                        <li>◆ 全场敌人HP直接降至 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '50%' : '35%'}（保底1HP）</li>
+                        <li>◆ 全场敌人当前HP减半（保底1HP）</li>
                       )}
                       {game.instakillAidType === 3 && (
                         <li>◆ 全场敌人叠加大量灼烧+中毒</li>
                       )}
                       {game.instakillAidType === 4 && (
-                        (((game.drawCount || 0) + (game.challengeDrawBonus || 0)) >= 6)
-                          ? <li>◆ 本场战斗 +50% 伤害倍率</li>
-                          : <li>◆ 本场战斗 +1 手牌上限</li>
+                        <li>◆ 本场战斗 +1 手牌上限</li>
+                      )}
+                      {game.instakillAidType === 5 && (
+                        <li>◆ 立刻回复 25% 最大生命值 + 获得 30 金币</li>
                       )}
                     </ul>
                   </>
@@ -247,21 +260,21 @@ export function EnemyStageView() {
                         <li>◆ 全场敌人受到 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '30%' : '50%'} 最大HP伤害</li>
                       )}
                       {game.instakillChallenge.aidType === 2 && (
-                        <li>◆ 全场敌人HP直接降至 {game.map.find(n => n.id === game.currentNodeId)?.type === 'boss' ? '50%' : '35%'}（保底1HP）</li>
+                        <li>◆ 全场敌人当前HP减半（保底1HP）</li>
                       )}
                       {game.instakillChallenge.aidType === 3 && (
                         <li>◆ 全场敌人叠加大量灼烧+中毒</li>
                       )}
                       {game.instakillChallenge.aidType === 4 && (
-                        (((game.drawCount || 0) + (game.challengeDrawBonus || 0)) >= 6)
-                          ? <li>◆ 本场战斗 +50% 伤害倍率</li>
-                          : <li>◆ 本场战斗 +1 手牌上限</li>
+                        <li>◆ 本场战斗 +1 手牌上限</li>
+                      )}
+                      {game.instakillChallenge.aidType === 5 && (
+                        <li>◆ 立刻回复 25% 最大生命值 + 获得 30 金币</li>
                       )}
                       {!game.instakillChallenge.aidType && (
                         <li className="text-[var(--dungeon-text)]">◆ 触发一种随机援助效果</li>
                       )}
                     </ul>
-                    <div className="text-[8px] text-[var(--dungeon-text-dim)] text-center mt-1.5">并获得额外宝箱奖励</div>
                   </>
                 )}
               </div>

@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PixelSprite, hasSpriteData } from './PixelSprite';
 import { PixelClose } from './PixelIcons';
 import { NORMAL_ENEMIES, ELITE_ENEMIES, BOSS_ENEMIES, type EnemyConfig } from '../config/enemies';
+import { renderEnemyLine } from './enemyLineRenderer';
 import { CHAPTER_CONFIG } from '../config';
 
 export const COMBAT_LABELS: Record<string, { label: string; color: string; full: string }> = {
@@ -29,7 +30,7 @@ const CAT_COLORS: Record<string, string> = {
 
 // archetype → 玩家语言说明（第一行是短标签，第二行是实际效果）
 const ARCHETYPE_DESC: Record<string, string> = {
-  berserker:    '【狂战】你每打他一次，他攻击力 +40%（最多累 4 次，变成原来的 2.6 倍），越打越凶',
+  berserker:    '【狂战】你每打他一次，他攻击力 +40%（最多累 4 次，变成原来的 2.6 倍）。队友死亡触发【复仇】，攻击力再 +50%/层',
   striker:      '【突袭】血量掉到 70% 以下时进入爆发，攻击伤害 +50%',
   paladin:      '【圣骑】每次攻击伤害 +20%，但不会被激怒（不叠血怒）',
   marksman:     '【神射】远程追击伤害随命中次数翻倍叠加，单发多 +30%',
@@ -83,63 +84,54 @@ function describeAction(e: EnemyConfig, a: { type: string; baseValue: number; de
 
   // 防御
   if (a.type === '防御') {
-    const flavor = desc ? `（${desc}）` : '';
-    return `自身 +${a.baseValue} 护甲${flavor}`;
+    return `[守] 自身 +${a.baseValue} 护甲${desc ? `（${desc}）` : ''}`;
   }
 
   // 攻击：caster/priest 实际不直伤，按技能/风味词处理
   if (a.type === '攻击') {
     if (isPriestOrCaster) {
-      // 风味攻击词（亡灵大军/亡灵风暴/骸骨之矛/诅咒/诅咒爆发）：实际只播动画+台词，不直伤
       if (desc) {
-        if (DOT_DESC_MAP[desc]) return `施放【${desc}】 → 给你上 ${DOT_DESC_MAP[desc]} ×${a.baseValue}`;
-        if (CONTROL_DESC_MAP[desc]) return `施放【${desc}】 → 给你上 ${CONTROL_DESC_MAP[desc]} ×${a.baseValue}`;
-        return `施放【${desc}】（仅演出，不直接造成伤害）`;
+        if (DOT_DESC_MAP[desc]) return `[法] 【${desc}】→ ${DOT_DESC_MAP[desc]} ×${a.baseValue}`;
+        if (CONTROL_DESC_MAP[desc]) return `[法] 【${desc}】→ ${CONTROL_DESC_MAP[desc]} ×${a.baseValue}`;
+        return `[法] 【${desc}】（仅演出，无直伤）`;
       }
-      return `蓄力（不直接造成伤害）`;
+      return `[法] 蓄力（无直伤）`;
     }
     // 战士 / 守护 / 弓手：真实直伤
-    const flavor = desc ? `（${desc}）` : '';
-    if (e.combatType === 'ranger') {
-      return `远程射击 ${a.baseValue} 伤害 + 一次追击${flavor}`;
-    }
-    if (e.combatType === 'guardian') {
-      return `挥击 ${a.baseValue} 伤害${flavor}（攻击后清空守护怒气）`;
-    }
-    return `挥击 ${a.baseValue} 伤害${flavor}`;
+    if (e.combatType === 'ranger') return `[攻] 远程 ${a.baseValue} 伤害 + 追击${desc ? `（${desc}）` : ''}`;
+    if (e.combatType === 'guardian') return `[攻] 挥击 ${a.baseValue} 伤害${desc ? `（${desc}）` : ''}`;
+    return `[攻] 挥击 ${a.baseValue} 伤害${desc ? `（${desc}）` : ''}`;
   }
 
   // 技能：按 description 字典翻译
   if (a.type === '技能') {
-    if (!desc) return `施放技能 ×${a.baseValue}`;
-    // [MARTIAL_RIDER 2026-05-09] warrior/ranger/guardian 不再"专门施法"——
-    //   "技能"action 在实战中转化为"普攻 + 弱化 rider"（数值减半），图鉴同步显示。
+    if (!desc) return `[技] 施放技能 ×${a.baseValue}`;
     const isMartial = e.combatType === 'warrior' || e.combatType === 'ranger' || e.combatType === 'guardian';
     if (isMartial) {
       const halfVal = Math.max(1, Math.floor(a.baseValue / 2));
       if (DOT_DESC_MAP[desc]) {
         const label = DOT_DESC_MAP[desc] === 'burn' ? '灼烧' : '毒素';
-        return `挥击造成普攻伤害，并顺势附加【${desc}】 → ${label} +${halfVal} 层（弱化）`;
+        return `[技] 普攻 + 附加【${desc}】→ ${label} +${halfVal} 层`;
       }
       if (CONTROL_DESC_MAP[desc]) {
         const label = CONTROL_DESC_MAP[desc] === 'freeze' ? '冻结' : CONTROL_DESC_MAP[desc] === 'weak' ? '虚弱' : '易伤';
         const turnHint = CONTROL_DESC_MAP[desc] === 'freeze' ? '（1 回合）' : '（2 回合）';
-        return `挥击造成普攻伤害，并顺势附加【${desc}】 → ${label} 1 层${turnHint}`;
+        return `[技] 普攻 + 附加【${desc}】→ ${label} 1 层${turnHint}`;
       }
     }
-    if (DOT_DESC_MAP[desc]) return `给你上 ${DOT_DESC_MAP[desc]} ×${a.baseValue} 层（持续伤害）`;
+    if (DOT_DESC_MAP[desc]) return `[技] ${DOT_DESC_MAP[desc]} ×${a.baseValue}（持续）`;
     if (CONTROL_DESC_MAP[desc]) {
       const stacksStr = a.baseValue > 1 ? `${a.baseValue} 层` : `1 层`;
-      const turnHint = desc === '冻结' ? '（被冻结当回合无法出牌）' : '';
-      return `给你上 ${CONTROL_DESC_MAP[desc]} ${stacksStr}${turnHint}`;
+      const turnHint = desc === '冻结' ? '（当回合无法出牌）' : '';
+      return `[技] ${CONTROL_DESC_MAP[desc]} ${stacksStr}${turnHint}`;
     }
-    if (desc === '护甲祝福') return `给友军/自己加 ${a.baseValue} 护甲`;
-    if (desc.includes('治疗')) return `治疗友军 ${a.baseValue} HP`;
-    if (desc.includes('召唤')) return `召唤增援 ×${a.baseValue}`;
+    if (desc === '护甲祝福') return `[技] 给友军 +${a.baseValue} 护甲`;
+    if (desc.includes('治疗')) return `[技] 治疗友军 ${a.baseValue} HP`;
+    if (desc.includes('召唤')) return `[技] 召唤增援 ×${a.baseValue}`;
     if (desc.includes('诅咒') && (desc.includes('骰子') || desc.includes('cracked') || desc.includes('cursed'))) {
-      return `往你的骰子库塞入 ${a.baseValue} 颗诅咒骰子`;
+      return `[技] 塞 ${a.baseValue} 颗诅咒骰子进你的骰子库`;
     }
-    return `施放【${desc}】×${a.baseValue}`;
+    return `[技] 【${desc}】×${a.baseValue}`;
   }
 
   return `${a.type} ${a.baseValue}${desc ? `·${desc}` : ''}`;
@@ -151,18 +143,19 @@ function describeAction(e: EnemyConfig, a: { type: string; baseValue: number; de
  */
 function describePhases(e: EnemyConfig): string[] {
   const lines: string[] = [];
+  const multiPhase = e.phases.length > 1;
   e.phases.forEach((p, idx) => {
-    // [DOC 2026-05-09 v2] 阈值语义已与 bossPhaseSwitch 对齐：phases[i] 带 hpThreshold 表示
-    //   "血量 ≥ 阈值"时启用该 phase；不带阈值的 phase 是低血量阶段（兜底）。
-    const tag = p.hpThreshold != null
-      ? `阶段 ${idx + 1}（血量 ≥ ${Math.round(p.hpThreshold * 100)}% 时）`
-      : e.phases.length > 1 ? `阶段 ${idx + 1}（血量低于上述阈值时启用）` : '每回合循环';
-    lines.push(tag);
-    p.actions.forEach((a, ai) => {
-      lines.push(`  第 ${ai + 1} 回合：${describeAction(e, a)}`);
-    });
-    if (p.actions.length > 0) {
-      lines.push(`  （以上 ${p.actions.length} 步循环执行）`);
+    if (multiPhase) {
+      const tag = p.hpThreshold != null
+        ? `◆ 阶段 ${idx + 1}（HP ≥ ${Math.round(p.hpThreshold * 100)}%）`
+        : `◆ 阶段 ${idx + 1}（HP 低于上述阈值）`;
+      lines.push(tag);
+    }
+    // 把 actions 压成一行循环表达式，节省空间
+    const actionStr = p.actions.map(a => describeAction(e, a)).join('  →  ');
+    lines.push(actionStr);
+    if (p.actions.length > 1) {
+      lines.push(`  └ 以上 ${p.actions.length} 步循环`);
     }
   });
   return lines;
@@ -182,6 +175,7 @@ function describeTraits(e: EnemyConfig): string[] {
       lines.push('· 血量掉到 70% 以下后进入爆发，攻击伤害 +50%');
     } else if (a === 'berserker') {
       lines.push('· 你每打他一次，他攻击力 +40%（最多累 4 次，变成原 2.6 倍）');
+      lines.push('· 【复仇】每死 1 个队友，他攻击力 +50%（无上限，越孤立越恐怖）');
     } else {
       lines.push('· 你每打他一次，他攻击力 +25%（最多累 4 次，变成原 2 倍）');
     }
@@ -356,8 +350,8 @@ const EnemyDetailModal: React.FC<{ enemy: EnemyConfig | null; onClose: () => voi
               {desc.sections.map((sec, si) => (
                 <div key={si}>
                   <div className="text-[10px] font-bold text-[var(--pixel-gold-light)] tracking-wider mb-1">— {sec.title} —</div>
-                  <div className="space-y-0.5 text-[10px] text-[var(--dungeon-text)] leading-relaxed">
-                    {sec.lines.map((ln, li) => <div key={li}>{ln}</div>)}
+                  <div className="space-y-1">
+                    {sec.lines.map((ln, li) => renderEnemyLine(ln, li))}
                   </div>
                 </div>
               ))}

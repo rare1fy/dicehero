@@ -15,7 +15,7 @@ import { getDiceDef } from '../data/dice';
 import { STATUS_INFO } from '../data/statusInfo';
 import { ANIMATION_TIMING } from '../config';
 import { PixelHeart, PixelShield } from '../components/PixelIcons';
-import { applyBloodFuryOnHurt } from './enemyTraits';
+import { applyBloodFuryOnHurt, applyVengeanceToBerserkers } from './enemyTraits';
 import { checkBossPhaseSwitch } from './bossPhaseSwitch';
 
 // ============================================================
@@ -203,6 +203,23 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       }
       return e;
     }));
+    // [VENGEANCE 2026-05-10] AOE 后：基于闭包 enemies 快照统计本帧新死亡数，给所有存活 berserker 累加复仇层
+    setEnemies(curr => {
+      let deadCount = 0;
+      enemies.forEach(p => {
+        const after = curr.find(x => x.uid === p.uid);
+        if (p.hp > 0 && after && after.hp <= 0) deadCount += 1;
+      });
+      if (deadCount === 0) return curr;
+      const withVengeance = applyVengeanceToBerserkers(curr, deadCount);
+      curr.forEach(before => {
+        const after = withVengeance.find(x => x.uid === before.uid);
+        if (after && (after.vengeance || 0) > (before.vengeance || 0)) {
+          addFloatingText(`复仇: ×${after.vengeance}`, 'text-red-500', undefined, 'enemy');
+        }
+      });
+      return withVengeance;
+    });
     // shadowClonePlay: 影分身 — AOE路径下对原目标追加50%伤害
     const hasShadowCloneAoe = selected.some(d => getDiceDef(d.diceDefId).onPlay?.shadowClonePlay);
     if (hasShadowCloneAoe && outcome.damage > 0) {
@@ -358,6 +375,19 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
       }
       return damaged;
     }));
+    // [VENGEANCE 2026-05-10] 单体击杀后：若目标本帧死亡，给所有存活 berserker 累加 1 层复仇
+    if (finalEnemyHp <= 0 && targetEnemy.hp > 0) {
+      setEnemies(curr => {
+        const withVengeance = applyVengeanceToBerserkers(curr, 1);
+        curr.forEach(before => {
+          const after = withVengeance.find(x => x.uid === before.uid);
+          if (after && (after.vengeance || 0) > (before.vengeance || 0)) {
+            addFloatingText(`复仇: ×${after.vengeance}`, 'text-red-500', undefined, 'enemy');
+          }
+        });
+        return withVengeance;
+      });
+    }
     
     // 高阶同元素牌型：状态效果AOE施加给非目标敌人
     if (isElementalAoe && outcome.statusEffects && outcome.statusEffects.length > 0) {

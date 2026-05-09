@@ -21,6 +21,7 @@ const GUARD_RAGE_PER_STACK = 0.6;        // 每层 +60%（封顶 ×2.8 单击）
 const DOT_AMPLIFIER_CAP = 4;
 const DOT_AMPLIFIER_PER_STACK = 0.4;     // 每层 ×1.4（封顶 ×2.5）
 const HOLY_WRATH_CAP = 4;
+const VENGEANCE_PER_STACK = 0.5;            // 每层 +50% 攻击（仅 berserker）
 
 export function shouldApplyTrait(enemy: Enemy): boolean {
   // BOSS 走自身阶段，不叠 trait
@@ -96,6 +97,11 @@ export function attackTraitMultiplier(enemy: Enemy): number {
     mul *= 1 + perStack * enemy.bloodFury;
   }
 
+  // [VENGEANCE 2026-05-10] berserker 专属：每死一个队友 +50% 攻击（无上限）
+  if (enemy.archetype === 'berserker' && enemy.vengeance && enemy.vengeance > 0) {
+    mul *= 1 + VENGEANCE_PER_STACK * enemy.vengeance;
+  }
+
   // guardRage：每层 +60%（bulwark 已在累加阶段拦下，这里只对 enforcer 起效）
   if (enemy.combatType === 'guardian' && enemy.guardRage && enemy.guardRage > 0) {
     mul *= 1 + GUARD_RAGE_PER_STACK * enemy.guardRage;
@@ -160,6 +166,24 @@ export function paladinShouldDefendThisTurn(enemy: Enemy, battleTurn: number): b
   if (enemy.combatType !== 'warrior') return false;
   if (enemy.archetype !== 'paladin') return false;
   return battleTurn > 0 && battleTurn % 2 === 0;
+}
+
+/**
+ * [VENGEANCE 2026-05-10] 每死亡 deadCount 个队友，给数组中存活的 berserker 累加 vengeance。
+ *   - 仅 archetype === 'berserker' 起效（即使是 warrior/normal/elite）
+ *   - 已死亡(hp<=0)的不再叠
+ *   - 返回新数组（不变更入参）
+ */
+export function applyVengeanceToBerserkers(enemies: Enemy[], deadCount: number): Enemy[] {
+  if (deadCount <= 0) return enemies;
+  let changed = false;
+  const next = enemies.map(e => {
+    if (e.hp <= 0) return e;
+    if (e.archetype !== 'berserker') return e;
+    changed = true;
+    return { ...e, vengeance: (e.vengeance || 0) + deadCount };
+  });
+  return changed ? next : enemies;
 }
 
 export const TRAIT_CAPS = {

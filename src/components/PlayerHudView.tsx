@@ -28,6 +28,7 @@ import { formatDescription } from '../utils/richText';
 import { renderFloatText } from '../utils/renderFloatText';
 import { COMBAT_TYPE_DESC } from '../logic/battleHelpers';
 import { describeEnemy, COMBAT_LABELS as BESTIARY_LABELS } from './EnemyBestiary';
+import { renderEnemyLine } from './enemyLineRenderer';
 import { getEnemyConfig } from '../logic/enemySummonRevive';
 import { getDisplayAttackDmg } from '../logic/attackCalc';
 import { FURY_CONFIG } from '../config/gameBalance';
@@ -173,23 +174,24 @@ export function PlayerHudView() {
                   <div className="px-2 py-1 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)]" style={{borderRadius:'2px'}}><div className="text-[9px] text-[var(--dungeon-text-dim)]">行动</div><div className="text-[12px] font-mono font-bold text-[var(--dungeon-text)]">{isMelee && infoEnemy.distance > 0 ? '逼近中' : '攻击'}</div></div>
                 </div>
                 {/* 实时 buff/debuff/怒气 */}
-                {(infoEnemy.statuses.length > 0 || (infoEnemy.bloodFury || 0) > 0 || (infoEnemy.guardRage || 0) > 0 || (infoEnemy.dotAmplifier || 0) > 0 || (infoEnemy.holyWrath || 0) > 0) && (
+                {(infoEnemy.statuses.length > 0 || (infoEnemy.bloodFury || 0) > 0 || (infoEnemy.guardRage || 0) > 0 || (infoEnemy.dotAmplifier || 0) > 0 || (infoEnemy.holyWrath || 0) > 0 || (infoEnemy.vengeance || 0) > 0) && (
                   <div className="flex flex-wrap gap-1 mb-2 shrink-0">
                     {(infoEnemy.bloodFury || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(120,20,20,0.5)] border border-[var(--pixel-red)] text-[var(--pixel-red-light)]" style={{borderRadius:'2px'}}>血怒 ×{infoEnemy.bloodFury}</span>}
                     {(infoEnemy.guardRage || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(40,60,120,0.5)] border border-[var(--pixel-blue)] text-[var(--pixel-blue-light)]" style={{borderRadius:'2px'}}>守护怒气 ×{infoEnemy.guardRage}</span>}
                     {(infoEnemy.dotAmplifier || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(80,20,100,0.5)] border border-[var(--pixel-purple)] text-[#d0a0ff]" style={{borderRadius:'2px'}}>持续伤害放大 ×{infoEnemy.dotAmplifier}</span>}
                     {(infoEnemy.holyWrath || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(120,100,20,0.5)] border border-[var(--pixel-gold)] text-[var(--pixel-gold-light)]" style={{borderRadius:'2px'}}>圣怒 ×{infoEnemy.holyWrath}</span>}
+                    {(infoEnemy.vengeance || 0) > 0 && <span className="text-[10px] px-1 py-0.5 bg-[rgba(180,20,20,0.55)] border border-[var(--pixel-red)] text-[var(--pixel-red-light)] font-bold" style={{borderRadius:'2px'}}>复仇 ×{infoEnemy.vengeance}</span>}
                     {infoEnemy.statuses.map((s, idx) => <span key={idx} className="text-[10px] px-1 py-0.5 bg-[rgba(8,11,14,0.6)] border border-[var(--dungeon-panel-border)] text-[var(--dungeon-text)]" style={{borderRadius:'2px'}}>{s.type} {s.value}</span>)}
                   </div>
                 )}
-                {/* 详细信息（与图鉴一致） */}
+                {/* 详细信息（与图鉴一致） — [2026-05-10] 改用 renderEnemyLine 做关键词富文本高亮 */}
                 {detail && (
                   <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {detail.sections.map((sec, si) => (
                       <div key={si}>
                         <div className="text-[10px] font-bold text-[var(--pixel-gold-light)] tracking-wider mb-1">— {sec.title} —</div>
-                        <div className="space-y-0.5 text-[10px] text-[var(--dungeon-text)] leading-relaxed">
-                          {sec.lines.map((ln, li) => <div key={li}>{ln}</div>)}
+                        <div className="space-y-1">
+                          {sec.lines.map((ln, li) => renderEnemyLine(ln, li))}
                         </div>
                       </div>
                     ))}

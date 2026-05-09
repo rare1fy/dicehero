@@ -62,11 +62,11 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
   const isBoss = currentNode?.type === 'boss';
 
   // [AID-LOCK 2026-05-09] 优先使用挑战生成时就确定的 aidType；兼容旧存档走 fallback roll
-  const aidType: 1 | 2 | 3 | 4 =
+  // [AID-POOL 2026-05-10] 5 种奖励（原 4 种 + 掠夺者印记），各 20%
+  const aidType: 1 | 2 | 3 | 4 | 5 =
     currentChallenge.aidType
     ?? (() => {
-      const r = Math.random();
-      return r < 0.25 ? 1 : r < 0.5 ? 2 : r < 0.75 ? 3 : 4;
+      return (Math.floor(Math.random() * 5) + 1) as 1 | 2 | 3 | 4 | 5;
     })();
   setGame(prev => ({ ...prev, instakillAidType: aidType }));
 
@@ -161,36 +161,45 @@ export function triggerInstakillChallengeAid(ctx: PostPlayContext): void {
         affectedUids.forEach(uid => setEnemyEffectForUid(uid, 'debuff'));
       }, 0);
     });
+  } else if (aidType === 4) {
+    // [2026-05-10 简化] 战意觉醒：纯粹 +1 手牌上限（本场战斗内，胜利时清零）
+    //   原"drawCount>=6 时改为 +50% 伤害"分支移除，行为更一致、玩家预期更清晰
+    addFloatingText(`✦ 战意觉醒 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+    addToast(`洞察弱点！本场战斗 +1 手牌上限`, 'buff', { icon: 'star' });
+    addLog(`洞察弱点达成！本场战斗 +1 手牌上限`);
+    scheduleAidEffect(800, () => {
+      setGame(prev => ({
+        ...prev,
+        // 不直接改 drawCount；改走 challengeDrawBonus，确保战斗结束清零
+        // 硬顶 6 张：已达则不再叠加（避免无效飘字）
+        challengeDrawBonus: Math.min(6 - (prev.drawCount || 3), (prev.challengeDrawBonus || 0) + 1),
+      }));
+      addFloatingText(`手牌上限 +1`, REWARD_COLOR, diceIcon(), 'player');
+      emitReward('dice', 1);
+    });
   } else {
-    // 效果4：本场战斗 +1 手牌上限；已达上限（drawCount+挑战已加≥6）则改为本场战斗 +50% 伤害倍率
-    // [2026-05-09] 从 drawCount/levelDamageMultBonus（整局永久）改为 challengeDrawBonus/challengeDamageMultBonus（本场战斗永久，胜利时清零）
-    const gNow = gameRef.current;
-    const effectiveDraw = (gNow.drawCount || 0) + (gNow.challengeDrawBonus || 0);
-    const atCap = effectiveDraw >= 6;
-    if (atCap) {
-      addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-      addToast(`洞察弱点！本场战斗 +50% 伤害倍率`, 'buff', { icon: 'star' });
-      addLog(`洞察弱点达成！本场战斗伤害倍率 +50%`);
-      scheduleAidEffect(800, () => {
-        setGame(prev => ({
+    // [AID-POOL 2026-05-10] 效果5：掠夺者印记 — 立刻回复 25% 最大HP + 立刻获得 30 灵魂金币
+    //   一次性爆发型奖励，不增加新系统/持续字段，保持结构简洁
+    addFloatingText(`✦ 掠夺者印记 ✦`, 'text-yellow-300', undefined, 'enemy', true);
+    addToast(`洞察弱点！回血 + 获得金币`, 'buff', { icon: 'star' });
+    addLog(`洞察弱点达成！掠夺者印记：回血 25% 最大生命 + 30 金币`);
+    scheduleAidEffect(800, () => {
+      setGame(prev => {
+        const healAmount = Math.floor(prev.maxHp * 0.25);
+        const goldAmount = 30;
+        return {
           ...prev,
-          challengeDamageMultBonus: (prev.challengeDamageMultBonus || 0) + 0.5,
-        }));
-        addFloatingText(`伤害 +50%`, REWARD_COLOR, undefined, 'player');
+          hp: Math.min(prev.maxHp, prev.hp + healAmount),
+          souls: prev.souls + goldAmount,
+          stats: { ...prev.stats, goldEarned: prev.stats.goldEarned + goldAmount },
+        };
       });
-    } else {
-      addFloatingText(`✦ 弱点击破 ✦`, 'text-yellow-300', undefined, 'enemy', true);
-      addToast(`洞察弱点！本场战斗 +1 手牌上限`, 'buff', { icon: 'star' });
-      addLog(`洞察弱点达成！本场战斗 +1 手牌上限`);
-      scheduleAidEffect(800, () => {
-        setGame(prev => ({
-          ...prev,
-          // 不直接改 drawCount；改走 challengeDrawBonus，确保战斗结束清零
-          challengeDrawBonus: Math.min(6 - (prev.drawCount || 3), (prev.challengeDrawBonus || 0) + 1),
-        }));
-        addFloatingText(`手牌上限 +1`, REWARD_COLOR, diceIcon(), 'player');
-        emitReward('dice', 1);
-      });
-    }
+      const gNow2 = gameRef.current;
+      const healAmount = Math.floor(gNow2.maxHp * 0.25);
+      addFloatingText(`+${healAmount} HP`, REWARD_COLOR, heartIcon(), 'player');
+      addFloatingText(`+30 金币`, REWARD_COLOR, undefined, 'player');
+      emitReward('heart', healAmount);
+      emitReward('gold', 30);
+    });
   }
 }

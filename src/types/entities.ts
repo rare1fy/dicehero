@@ -56,6 +56,8 @@ export interface Enemy {
   summonCount?: number;
   /** [2026-05-09 复活] 已复活/分裂次数（每个 enemy 仅触发一次） */
   revivedOnce?: boolean;
+  /** [2026-05-10 复仇] 仅 berserker 起效：每死一个队友 +1 层，每层 +50% 攻击力（无上限）。新战斗清零。 */
+  vengeance?: number;
   /** [2026-05-09] 标记此敌人是召唤生成的子单位，避免给召唤物再赋 summons 配置（防递归召唤雪崩） */
   isSummoned?: boolean;
 }

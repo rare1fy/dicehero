@@ -29,7 +29,8 @@ export interface InstakillChallenge {
   trackSet?: string[];
   completed: boolean;
   /** 进入战斗时就确定好的奖励效果类型（1-4），完成挑战后按此触发 */
-  aidType?: 1 | 2 | 3 | 4;
+  /** 1=百分比伤害 / 2=当前HP减半 / 3=灼烧+中毒 / 4=+1手牌上限 / 5=掠夺者印记（回血+金币） */
+  aidType?: 1 | 2 | 3 | 4 | 5;
 }
 
 interface ChallengeTemplate {
@@ -196,8 +197,9 @@ export function generateChallenge(
   }
 
   // [AID-LOCK 2026-05-09] 进入战斗时就确定奖励类型，避免弹窗展示"可能奖励"模糊体验
-  const aidRoll = Math.random();
-  challenge.aidType = aidRoll < 0.25 ? 1 : aidRoll < 0.5 ? 2 : aidRoll < 0.75 ? 3 : 4;
+  // [AID-POOL 2026-05-10] 5 种奖励各 20% 概率
+  const aidRoll = Math.floor(Math.random() * 5) + 1;
+  challenge.aidType = aidRoll as 1 | 2 | 3 | 4 | 5;
   return challenge;
 }
 

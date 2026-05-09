@@ -5,6 +5,7 @@ import { playSound } from '../utils/sound';
 import { formatDescription } from '../utils/richText';
 import { MiniDice } from './MiniDice';
 import { PixelCoin, PixelDice } from './PixelIcons';
+import { RelicPixelIcon } from './PixelRelicIcons';
 import { getDiceDef, DICE_BY_RARITY } from '../data/dice';
 import { pickRandomRelics, RELICS_BY_RARITY } from '../data/relics';
 import { ELEMENT_COLORS } from '../utils/uiHelpers';
@@ -176,7 +177,7 @@ export const MerchantScreen: React.FC = () => {
                   <div className="w-10 h-10 flex items-center justify-center shrink-0 border"
                     style={{ borderColor: elemColor + '44', backgroundColor: elemColor + '22', borderRadius: '2px' }}>
                     {item.type === 'dice' && item.diceDefId ? <MiniDice defId={item.diceDefId} size={16} /> : item.type === 'dice' && <PixelDice size={2} />}
-                    {item.type === 'relic' && <span className="text-lg">{'✨'}</span>}
+                    {item.type === 'relic' && (item.relicData ? <RelicPixelIcon relicId={item.relicData.id} size={2} /> : <span className="text-lg">{'✨'}</span>)}
                     {item.type === 'heal' && <span className="text-lg">{'\u{1F48A}'}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
