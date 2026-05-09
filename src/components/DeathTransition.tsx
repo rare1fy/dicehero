@@ -1,19 +1,21 @@
 /**
- * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v2)
+ * DeathTransition.tsx — 玩家致命一击后的死亡过渡演出 (2026-05-09 v3)
  *
- * v2 时序（总时长约 1.4s）：
- *   1. (0.0s - 0.5s) 双手在屏幕底部紧张抖动（颤抖）→ 失重坠落出屏外
- *   2. (0.5s - 1.0s) 黑幕在 0.5s 内 fade 满（用户要求加速）
- *   3. (1.0s - 1.4s) 黑幕保持，外层切换到 GameOverScreen，由它自身 fade in
+ * v3 关键改动（用户反馈）：
+ *   不再用临时 PixelFist 摆拍。直接用游戏内 EnemyStageView 一直显示的同一对
+ *   ClassLeftHand / ClassRightHand SVG 在屏幕底部双角渲染（与战斗中位置接近），
+ *   播放：紧张抖动 → 失重下坠出屏 → 黑幕 fade。
+ *   视觉等同于"战斗中那双手在玩家被击杀的瞬间脱力"。
  *
- * v2 改动：
- *   - 双手用大尺寸 PixelFist（size 8），放屏幕底部偏左+偏右模拟"玩家自己的手"
- *   - 抖动幅度更紧张（高频小幅），坠落带向下旋转 + 透明度衰减
- *   - 黑幕 fade 从 1.1s 缩到 0.5s
+ * 时序（总时长 ~1.4s）：
+ *   1. (0.0s - 0.5s) 双手抖动 → 失重坠落出屏
+ *   2. (0.5s - 1.0s) 黑幕在 0.5s 内 fade 满
+ *   3. (1.0s - 1.4s) 黑幕保持，外层切换到 GameOverScreen
  */
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { PixelFist } from './PixelIcons';
+import { useGameContext } from '../contexts/GameContext';
+import { ClassLeftHand, ClassRightHand } from './ClassHands';
 
 interface DeathTransitionProps {
   visible: boolean;
@@ -25,7 +27,25 @@ const FADE_BLACK_MS = 500;
 const HOLD_MS = 400;
 const TOTAL_DURATION_MS = HANDS_DURATION_MS + FADE_BLACK_MS + HOLD_MS;
 
+/**
+ * 战斗场景双手 transform（来自 index.css .hand-left/right）：
+ *   .hand-left  : rotate(15deg)  scale(0.92), 锚 bottom-left, left:-32px bottom:-42px
+ *   .hand-right : rotate(-15deg) scale(0.92), 锚 bottom-right, right:-32px bottom:-42px
+ * 在战斗布局中，stage 容器底部约对应屏幕约 60~70% vh 处（BattleHud 占下半部）。
+ * DeathTransition 是 fullscreen 覆盖，把双手 anchor 定在屏幕底部 35vh 附近，
+ * 让用户视觉上看到"那双手还在原位"。
+ */
+const LEFT_BASE_ROT = 15;
+const RIGHT_BASE_ROT = -15;
+const HAND_SCALE = 0.92;
+/** 双手垂直位置：从屏幕底部往上 28%（≈ 360px on 1280h），近似战斗中 stage 容器底部 */
+const HAND_BOTTOM_VH = '28vh';
+const HAND_OFFSET_X = '-32px';
+
 export const DeathTransition: React.FC<DeathTransitionProps> = ({ visible, onComplete }) => {
+  const { game } = useGameContext();
+  const playerClass = game.playerClass;
+
   useEffect(() => {
     if (!visible) return;
     const t = window.setTimeout(() => onComplete?.(), TOTAL_DURATION_MS);
@@ -34,56 +54,81 @@ export const DeathTransition: React.FC<DeathTransitionProps> = ({ visible, onCom
 
   if (!visible) return null;
 
+  const tShake = [0, 0.06, 0.12, 0.18, 0.24, 0.30, 0.36, 0.42, 0.55, 0.78, 1] as const;
+
   return (
     <div
-      className="fixed inset-0 pointer-events-auto"
-      style={{ zIndex: 9998 }}
+      className="fixed inset-0 pointer-events-auto overflow-hidden"
+      style={{ zIndex: 9998, background: 'var(--dungeon-bg)' }}
       aria-hidden
     >
-      {/* 双手抖动→坠落：屏幕底部 1/4 处左右开展，模拟玩家视角双手 */}
-      {/* 左手（偏左、稍微向内倾） */}
+      {/* 左手 */}
       <motion.div
         className="absolute"
-        style={{ left: '20%', bottom: '25%' }}
-        initial={{ x: 0, y: 0, opacity: 1, rotate: -22 }}
+        style={{
+          left: HAND_OFFSET_X,
+          bottom: HAND_BOTTOM_VH,
+          transformOrigin: 'bottom left',
+        }}
+        initial={{ x: 0, y: 0, rotate: LEFT_BASE_ROT, scale: HAND_SCALE, opacity: 1 }}
         animate={{
-          // 紧张抖动（前 60%）→ 坠落（后 40%）
-          x: [0, -3, 3, -2, 2, -2, 2, -1, 0, -8, -16],
-          y: [0, 2, -1, 2, -1, 1, 0, 1, 6, 80, 220],
-          opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.7, 0],
-          rotate: [-22, -25, -19, -24, -20, -23, -20, -22, -22, -45, -75],
+          x: [0, -2, 2, -3, 2, -2, 1, -1, -6, -22, -50],
+          y: [0, 1, -1, 2, -1, 1, 0, 2, 18, 120, 320],
+          rotate: [
+            LEFT_BASE_ROT, LEFT_BASE_ROT - 2, LEFT_BASE_ROT + 2, LEFT_BASE_ROT - 3,
+            LEFT_BASE_ROT + 1, LEFT_BASE_ROT - 2, LEFT_BASE_ROT, LEFT_BASE_ROT - 1,
+            LEFT_BASE_ROT - 8, LEFT_BASE_ROT - 35, LEFT_BASE_ROT - 70,
+          ],
+          scale: [
+            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE,
+            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE * 0.98,
+            HAND_SCALE * 0.92, HAND_SCALE * 0.85,
+          ],
+          opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.75, 0],
         }}
         transition={{
           duration: HANDS_DURATION_MS / 1000,
           ease: 'easeIn',
-          times: [0, 0.06, 0.13, 0.2, 0.27, 0.34, 0.41, 0.48, 0.55, 0.78, 1],
+          times: [...tShake],
         }}
       >
-        <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.8)) drop-shadow(0 0 8px rgba(220,50,50,0.4))' }}>
-          <PixelFist size={8} />
+        <div style={{ filter: 'drop-shadow(0 0 6px rgba(220,40,40,0.55))' }}>
+          <ClassLeftHand playerClass={playerClass} />
         </div>
       </motion.div>
 
-      {/* 右手（偏右、镜像、稍微向内倾） */}
+      {/* 右手 */}
       <motion.div
         className="absolute"
-        style={{ right: '20%', bottom: '25%' }}
-        initial={{ x: 0, y: 0, opacity: 1, rotate: 22 }}
+        style={{
+          right: HAND_OFFSET_X,
+          bottom: HAND_BOTTOM_VH,
+          transformOrigin: 'bottom right',
+        }}
+        initial={{ x: 0, y: 0, rotate: RIGHT_BASE_ROT, scale: HAND_SCALE, opacity: 1 }}
         animate={{
-          x: [0, 3, -3, 2, -2, 2, -2, 1, 0, 8, 16],
-          y: [0, -1, 2, -1, 2, 0, 1, 0, 6, 80, 220],
-          opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.7, 0],
-          rotate: [22, 19, 25, 20, 24, 21, 23, 22, 22, 45, 75],
+          x: [0, 2, -2, 3, -2, 2, -1, 1, 6, 22, 50],
+          y: [0, -1, 2, -1, 2, 0, 1, 2, 18, 120, 320],
+          rotate: [
+            RIGHT_BASE_ROT, RIGHT_BASE_ROT + 2, RIGHT_BASE_ROT - 2, RIGHT_BASE_ROT + 3,
+            RIGHT_BASE_ROT - 1, RIGHT_BASE_ROT + 2, RIGHT_BASE_ROT, RIGHT_BASE_ROT + 1,
+            RIGHT_BASE_ROT + 8, RIGHT_BASE_ROT + 35, RIGHT_BASE_ROT + 70,
+          ],
+          scale: [
+            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE,
+            HAND_SCALE, HAND_SCALE, HAND_SCALE, HAND_SCALE * 0.98,
+            HAND_SCALE * 0.92, HAND_SCALE * 0.85,
+          ],
+          opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.75, 0],
         }}
         transition={{
           duration: HANDS_DURATION_MS / 1000,
           ease: 'easeIn',
-          times: [0, 0.06, 0.13, 0.2, 0.27, 0.34, 0.41, 0.48, 0.55, 0.78, 1],
+          times: [...tShake],
         }}
       >
-        {/* 右手用 scaleX(-1) 镜像 */}
-        <div style={{ transform: 'scaleX(-1)', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.8)) drop-shadow(0 0 8px rgba(220,50,50,0.4))' }}>
-          <PixelFist size={8} />
+        <div style={{ filter: 'drop-shadow(0 0 6px rgba(220,40,40,0.55))' }}>
+          <ClassRightHand playerClass={playerClass} />
         </div>
       </motion.div>
 
