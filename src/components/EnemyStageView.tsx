@@ -1,4 +1,4 @@
-﻿/**
+/**
  * EnemyStageView.tsx — 战斗上半区：敌人舞台
  *
  * 从 DiceHeroGame.tsx 提取（ARCH-F Round2）。
@@ -87,6 +87,7 @@ export function EnemyStageView() {
     targetEnemyUid,
     addToast,
     toggleSelect,
+    currentHands,
 
   } = useBattleContext();
 
@@ -339,7 +340,9 @@ export function EnemyStageView() {
             data-enemy-uid={enemy.uid}
             onClick={() => {
               const aliveGuardian = enemies.find(e => e.hp > 0 && e.combatType === 'guardian' && e.uid !== enemy.uid);
-              if (aliveGuardian && enemy.combatType !== 'guardian') {
+              // [v2 2026-05-10] 葫芦/大葫芦：无视嘲讽（圣裁之印 / 王葬可越过盾卫直击目标）
+              const bypassTaunt = currentHands?.activeHands?.some(h => h === '葫芦' || h === '大葫芦');
+              if (aliveGuardian && enemy.combatType !== 'guardian' && !bypassTaunt) {
                 addToast('盾卫强制嘲讽！必须先击败盾卫');
                 return;
               }

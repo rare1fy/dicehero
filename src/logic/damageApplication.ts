@@ -88,8 +88,8 @@ export function applyDamageToEnemies(ctx: DamageAppContext): {
   const selectedDefs = selected.map(d => getDiceDef(d.diceDefId));
   const hasThunderElement = selected.some(d => d.element === 'thunder');
   const hasAoe = hasThunderElement || selectedDefs.some(def => def.onPlay?.aoe) || currentHands.activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h));
-  // 同元素牌型的状态效果AOE（对所有敌人施加状态）
-  const isElementalAoe = currentHands.activeHands.some(h => ['元素顺', '元素葫芦', '皇家元素顺'].includes(h));
+  // [v2 2026-05-10] 元素牌型已移除，isElementalAoe 永远为 false，保留变量名兼容下游
+  const isElementalAoe = false;
   
   if (outcome.damage > 0) {
     if (hasAoe) {

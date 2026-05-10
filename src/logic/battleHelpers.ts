@@ -34,7 +34,7 @@ export function tickStatuses(statuses: StatusEffect[]): StatusEffect[] {
 
 /** 判断是否为AOE牌型 */
 export function isAoeHand(activeHands: string[]): boolean {
-  return activeHands.some(h => ['顺子', '4顺', '5顺', '6顺', '元素顺', '元素葫芦', '皇家元素顺'].includes(h));
+  return activeHands.some(h => ['顺子', '4顺', '5顺', '6顺'].includes(h));
 }
 
 /** 获取敌人距离对应的视觉缩放参数 */

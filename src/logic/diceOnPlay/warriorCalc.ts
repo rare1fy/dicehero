@@ -69,7 +69,7 @@ export function applyWarriorCalc(
     }
   }
   if (op.requiresTriple && op.bonusDamageFromPoints) {
-    const tripleHands = ['三条', '四条', '五条', '六条', '葫芦'];
+    const tripleHands = ['三条', '四条', '五条', '六条', '葫芦', '大葫芦'];
     if (activeHands.some((h: string) => tripleHands.includes(h))) {
       const totalPoints = selected.reduce((sum, sd) => sum + sd.value, 0);
       out.extraDamage += Math.ceil(totalPoints * op.bonusDamageFromPoints);

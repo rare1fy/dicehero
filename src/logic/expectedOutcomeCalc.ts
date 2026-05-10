@@ -23,29 +23,29 @@ import { processDiceOnPlayEffects } from './diceOnPlay';
 export type { PendingSideEffect, ExpectedOutcomeResult, CalculateExpectedOutcomeParams } from './expectedOutcomeTypes';
 export { applyPendingSideEffects } from './expectedOutcomeApply';
 
-/** 手牌效果查找表：手牌名 → { baseArmor, statusEffect } */
+/**
+ * 手牌效果查找表（v2 收敛版 · 2026-05-10）
+ *
+ * 重构原则：牌型本身不再附加 易伤/虚弱/护甲 等状态效果，
+ *   这些效果统一交给"骰子 onPlay"和"遗物 effect"双通道实现。
+ *   葫芦/大葫芦的"无视嘲讽 + 真伤"机制由 outcome 直接读 activeHands 在结算阶段处理。
+ */
 const HAND_EFFECT_TABLE: Record<string, { baseArmor?: number; statusEffect?: StatusEffect }> = {
   '普通攻击': {},
   '对子': {},
   '顺子': {},
-  '连对': { baseArmor: 5 },
-  '三连对': { baseArmor: 8 },
-  '三条': { statusEffect: { type: 'vulnerable', value: 1, duration: 2 } },
-  '4顺': { statusEffect: { type: 'weak', value: 1, duration: 2 } },
-  '同元素': {},
-  '葫芦': { baseArmor: 15 },
-  '5顺': { statusEffect: { type: 'weak', value: 2, duration: 2 } },
-  '四条': { statusEffect: { type: 'vulnerable', value: 2, duration: 2 } },
-  '6顺': { baseArmor: 10, statusEffect: { type: 'weak', value: 3, duration: 2 } },
-  '元素顺': {},
-  '元素葫芦': { baseArmor: 25 },
-  '五条': { statusEffect: { type: 'vulnerable', value: 3, duration: 2 } },
-  '六条': { statusEffect: { type: 'vulnerable', value: 5, duration: 3 } },
-  '皇家元素顺': { baseArmor: 50 },
+  '连对': {},
+  '三连对': {},
+  '三条': {},
+  '4顺': {},
+  '葫芦': {},
+  '大葫芦': {},
+  '5顺': {},
+  '四条': {},
+  '6顺': {},
+  '五条': {},
+  '六条': {},
 };
-
-/** 同元素手牌列表 */
-const SAME_ELEMENT_HANDS = ['同元素', '元素顺', '元素葫芦', '皇家元素顺'];
 
 /**
  * 计算预期出牌结果（纯函数，无副作用）
@@ -86,10 +86,6 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
 
   baseDamage = Math.ceil(X * handMultiplier); // [CEIL-FIX 2026-05-08] 向上取整，如3×1.2=4
 
-  // 同元素手牌：护甲 += 基础伤害
-  if (activeHands.some((h: string) => SAME_ELEMENT_HANDS.includes(h))) {
-    baseArmor += baseDamage;
-  }
 
   // ─── 累加变量 ───
   let extraDamage = 0;
@@ -98,6 +94,11 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
   let holyPurify = 0;
   let pierceDamage = 0;
   let armorBreak = false;
+  // [v2 2026-05-10] 葫芦/大葫芦：真伤化 — 自动设 armorBreak=true（无视护甲）
+  // "无视嘲讽"机制由 UI 目标选择层另行处理（标记 outcome.bypassTaunt 留作扩展）
+  if (activeHands.includes('葫芦') || activeHands.includes('大葫芦')) {
+    armorBreak = true;
+  }
   let multiplier = 1;
   let goldBonus = 0;
   const triggeredAugments: { name: string, details: string, rawDamage?: number, rawMult?: number, relicId?: string, icon?: string }[] = [];
@@ -178,9 +179,8 @@ export function calculateExpectedOutcome(params: CalculateExpectedOutcomeParams)
 
   // ─── 骰子 onPlay 效果（委托给 diceOnPlayCalc） ───
   const skipOnPlay = selected.length > 1 && activeHands.includes('普通攻击') && activeHands.length === 1;
-  const isSameElementHand = activeHands.some((h: string) => SAME_ELEMENT_HANDS.includes(h));
-  const isRoyalElement = activeHands.some((h) => h === '皇家元素顺');
-  const elementBonus = isRoyalElement ? 3.0 : (isSameElementHand ? 2.0 : 1.0);
+  // [v2 2026-05-10] 元素牌型已移除，elementBonus 永远为 1.0；保留变量名兼容下游调用
+  const elementBonus = 1.0;
 
   // [BUGFIX 2026-05-09] 即使 skipOnPlay（战士铁拳连打多选普攻），破甲类效果也应生效——
   //   破甲是"目标状态"层面而非数值放大，与"多选普攻只取基础伤害"的设计不冲突。

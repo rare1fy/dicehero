@@ -46,7 +46,7 @@ export async function runPhase1HandDisplay(ctx: SettlementContext): Promise<void
     finalArmor: outcome.armor,
     finalHeal: outcome.heal,
     statusEffects: outcome.statusEffects,
-    isSameElement: currentHands.activeHands.some(h => ['同元素', '元素顺', '元素葫芦', '皇家元素顺'].includes(h)),
+    isSameElement: false, // [v2 2026-05-10] 元素牌型已移除
   });
   playSound('relic_activate');
   await new Promise(r => setTimeout(r, 600));

@@ -19,9 +19,9 @@ export const StatsModal: React.FC<StatsModalProps> = ({ onClose }) => {
     .sort((a, b) => (b[1] as number) - (a[1] as number))[0] as [string, number] | undefined;
 
   const handRank: Record<string, number> = {
-    '普通攻击': 0, '对子': 1, '连对': 2, '三条': 3, '顺子': 4,
-    '同元素': 5, '葫芦': 6, '四条': 7, '元素顺': 8, '元素葫芦': 9,
-    '五条': 10, '六条': 11, '皇家元素顺': 12,
+    '普通攻击': 0, '对子': 1, '顺子': 2, '连对': 3, '4顺': 4,
+    '三条': 5, '5顺': 6, '三连对': 7, '6顺': 8,
+    '葫芦': 9, '四条': 10, '大葫芦': 11, '五条': 12, '六条': 13,
   };
   const bestHand = Object.keys(s.handTypeCounts)
     .sort((a, b) => (handRank[b] ?? 0) - (handRank[a] ?? 0))[0] || '-';

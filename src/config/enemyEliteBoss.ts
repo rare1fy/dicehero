@@ -1328,4 +1328,4 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
 ];
 
 /** 可升级牌型池（用于事件中随机选择） */
-export const UPGRADEABLE_HAND_TYPES = ['对子', '连值', '顺子', '同元素', '葡萄'];
+export const UPGRADEABLE_HAND_TYPES = ['对子', '连对', '顺子', '三条', '葫芦', '4顺', '5顺'];
